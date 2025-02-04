@@ -7,13 +7,13 @@ import Dashboard from './pages/Dashboard';
 import Attendance from './pages/Attendance';
 import Leave from './pages/Leave';
 import Tasks from './pages/Tasks';
+import AdminPage from './pages/AdminPage'; // Corrected import
 
-const PrivateRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+// PrivateRoute component for protected routes
+const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
 
-  if (!user) {
-    return <Navigate to="/login" />;
-  }
+  if (!user) return <Navigate to="/login" replace />;
 
   return <>{children}</>;
 };
@@ -22,9 +22,20 @@ function App() {
   return (
     <Router>
       <Routes>
+        {/* Public Route: Login */}
         <Route path="/login" element={<Login />} />
-        
-        {/* Employee Routes */}
+
+        {/* Admin Route (Protected) */}
+        <Route
+          path="/admin"
+          element={
+            <PrivateRoute adminOnly>
+              <AdminPage />
+            </PrivateRoute>
+          }
+        />
+
+        {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
         <Route
           path="/"
           element={
@@ -38,9 +49,12 @@ function App() {
           <Route path="leave" element={<Leave />} />
           <Route path="tasks" element={<Tasks />} />
         </Route>
+
+        {/* Redirect unknown routes to login */}
+        <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
   );
 }
 
-export default App;
+export default App

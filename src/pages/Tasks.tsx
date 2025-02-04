@@ -89,24 +89,28 @@ const Tasks: React.FC = () => {
       setError(null);
 
       // Load tasks with related data
-      const { data: tasksData, error: tasksError } = await withRetry(() =>
-        supabase
-          .from('tasks')
-          .select(`
-            *,
-            status:task_statuses(name, color),
-            priority:task_priorities(name, color),
-            assignee:users!tasks_assignee_id_fkey(full_name),
-            reporter:users!tasks_reporter_id_fkey(full_name),
-            comments:task_comments(
-              id,
-              content,
-              user_id,
-              created_at,
-              user:users(full_name)
-            )
-          `)
-          .order('created_at', { ascending: false })
+      const { data: tasksData, error: tasksError } = await withRetry(() => 
+        new Promise((resolve, reject) => {
+          supabase
+            .from('tasks')
+            .select(`
+              *,
+              status:task_statuses(name, color),
+              priority:task_priorities(name, color),
+              assignee:users!tasks_assignee_id_fkey(full_name),
+              reporter:users!tasks_reporter_id_fkey(full_name),
+              comments:task_comments(
+                id,
+                content,
+                user_id,
+                created_at,
+                user:users(full_name)
+              )
+            `)
+            .order('created_at', { ascending: false })
+            .then(resolve)
+            .catch(reject);
+        })
       );
 
       if (tasksError) throw tasksError;
@@ -114,10 +118,14 @@ const Tasks: React.FC = () => {
 
       // Load statuses
       const { data: statusesData, error: statusesError } = await withRetry(() =>
-        supabase
-          .from('task_statuses')
-          .select('*')
-          .order('order_position', { ascending: true })
+        new Promise((resolve, reject) => {
+          supabase
+            .from('task_statuses')
+            .select('*')
+            .order('order_position', { ascending: true })
+            .then(resolve)
+            .catch(reject);
+        })
       );
 
       if (statusesError) throw statusesError;
