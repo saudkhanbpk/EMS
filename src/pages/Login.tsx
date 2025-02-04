@@ -23,6 +23,9 @@ const Login: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      // Check if it's an admin email
+      const isAdmin = email.endsWith('@admin.com');
+
       // First, try to sign in
       const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
         email,
@@ -38,6 +41,7 @@ const Login: React.FC = () => {
             options: {
               data: {
                 full_name: email.split('@')[0], // Use part before @ as default name
+                is_admin: isAdmin, // Store admin status in user metadata
               },
             },
           });
@@ -46,7 +50,7 @@ const Login: React.FC = () => {
           if (signUpData.user) {
             // Set user and navigate
             setUser(signUpData.user);
-            navigate('/');
+            navigate(isAdmin ? '/admin' : '/');
           }
         } else {
           throw signInError;
@@ -54,7 +58,7 @@ const Login: React.FC = () => {
       } else if (authData.user) {
         // Set user and navigate
         setUser(authData.user);
-        navigate('/');
+        navigate(isAdmin ? '/admin' : '/');
       }
     } catch (err) {
       console.error('Authentication error:', err);
