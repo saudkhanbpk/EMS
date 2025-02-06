@@ -8,6 +8,8 @@ import Attendance from './pages/Attendance';
 import Leave from './pages/Leave';
 import Tasks from './pages/Tasks';
 import AdminPage from './pages/AdminPage'; // Corrected import
+import SoftwareComplaintSection from './components/SoftwareComplaintSection';
+import OfficeComplaintSection from './components/OfficeComplaintSection'; 
 
 // PrivateRoute component for protected routes
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
@@ -48,6 +50,8 @@ function App() {
           <Route path="attendance" element={<Attendance />} />
           <Route path="leave" element={<Leave />} />
           <Route path="tasks" element={<Tasks />} />
+          <Route path="software-complaint" element={<SoftwareComplaintSection />}/>
+          <Route path="office-complaint" element={<OfficeComplaintSection />}/>
         </Route>
 
         {/* Redirect unknown routes to login */}
