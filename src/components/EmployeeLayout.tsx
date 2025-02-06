@@ -1,13 +1,7 @@
 import React from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import { 
-  LayoutDashboard, 
-  Clock, 
-  Calendar,
-  LogOut,
-  User,
-  ListTodo
-} from 'lucide-react';
+  LayoutDashboard,Clock,Calendar,LogOut,User,ListTodo,CloudCog,Building2} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 
@@ -28,6 +22,8 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'Leave', href: '/leave', icon: Calendar },
     { name: 'Tasks', href: '/tasks', icon: ListTodo },
+    { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog  },
+    { name: 'Office Complaint', href: '/office-complaint', icon: Building2  },
   ];
 
   return (

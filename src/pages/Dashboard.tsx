@@ -4,6 +4,7 @@ import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
 
+
 interface AttendanceRecord {
   id: string;
   check_in: string;

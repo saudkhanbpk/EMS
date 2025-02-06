@@ -35,23 +35,24 @@ const Login: React.FC = () => {
       if (signInError) {
         // If sign in fails, try to sign up
         if (signInError.message.includes('Invalid login credentials')) {
-          const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-            email,
-            password,
-            options: {
-              data: {
-                full_name: email.split('@')[0], // Use part before @ as default name
-                is_admin: isAdmin, // Store admin status in user metadata
-              },
-            },
-          });
+          setError("Invalid User, Please Check Your Email and Password")
+          // const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
+          //   email,
+          //   password,
+          //   options: {
+          //     data: {
+          //       full_name: email.split('@')[0], // Use part before @ as default name
+          //       is_admin: isAdmin, // Store admin status in user metadata
+          //     },
+          //   },
+          // });
 
-          if (signUpError) throw signUpError;
-          if (signUpData.user) {
-            // Set user and navigate
-            setUser(signUpData.user);
-            navigate(isAdmin ? '/admin' : '/');
-          }
+          // if (signUpError) throw signUpError;
+          // if (signUpData.user) {
+          //   // Set user and navigate
+          //   setUser(signUpData.user);
+          //   navigate(isAdmin ? '/admin' : '/');
+          // }
         } else {
           throw signInError;
         }
