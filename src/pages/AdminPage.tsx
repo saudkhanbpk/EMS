@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+
+
 import {
   ShieldCheck,
   LogOut,
@@ -40,17 +42,106 @@ interface MonthlyStats {
   averageWorkHours: number;
   expectedWorkingDays: number;
 }
+interface SoftwareComplaint {
+  id: number;
+  complaint_text: string;
+  created_at: string;
+  user_id:string;
+}
 
 const AdminPage: React.FC = () => {
   const [selectedTab, setSelectedTab] = useState<string>('Employees');
   const [employees, setEmployees] = useState<any[]>([]);
+  const [officeComplaints, setofficeComplaints] = useState<any[]>([]);
+  const [softwareComplaints, setsoftwareComplaints] = useState<SoftwareComplaint[]>([]);
+  // const [softwarePendingComplaints, setsoftwarePendingComplaints] = useState<any[]>([]);
+  // const [softwareResolvedComplaints, setsoftwareResolvedComplaints] = useState<any[]>([]);
+  // const [officePendingComplaints, setsofficePedingComplaints] = useState<any[]>([]);
+  // const [officeResolvedComplaints, setofficeResolvedComplaints] = useState<any[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>([]);
   const [employeeTasks, setEmployeeTasks] = useState<any[]>([]);
   const [todayBreak, setTodayBreak] = useState<BreakRecord[]>([]);
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
+  
+
+  //Fetching Software Complaints From Database
+
+    const fetchsoftwareComplaints = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data, error: fetchError } = await supabase
+        .from('software_complaints')
+        .select('*, users:users(email, full_name)') // Join users table
+        .order('created_at', { ascending: false });
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (data) {
+          console.log("Complaints Data are: ",data);
+          setsoftwareComplaints(data);
+          
+          
+        }
+        console.log("officeComplaints : ", officeComplaints);
+
+      } catch (err) {
+        console.error('Error fetching complaints:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
+      } finally {
+        setLoading(false);
+      }
+    };
+  const handleSoftwareComplaintsClick = () => {
+    fetchsoftwareComplaints();
+   }
+
+   
+
+
+     //Fetching Office Complaints From Database
+     const fetchofficeComplaints = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const { data, error: fetchError } = await supabase
+        .from('office_complaints')
+        .select('*, users:users(email, full_name)') // Join users table
+        .order('created_at', { ascending: false });
+
+        if (fetchError) {
+          throw fetchError;
+        }
+
+        if (data) {
+          console.log("Complaints Data are: ",data);
+          setofficeComplaints(data);
+          
+          
+        }
+        console.log("softwareComplaints : ", softwareComplaints);
+
+      } catch (err) {
+        console.error('Error fetching complaints:', err);
+        setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
+      } finally {
+        setLoading(false);
+      }
+    };
+  const handleOfficeComplaintsClick = () => {
+    fetchofficeComplaints();
+   }
+
+
+
 
   // Fetch employees when the "Employees" tab is active.
   useEffect(() => {
@@ -234,7 +325,8 @@ const AdminPage: React.FC = () => {
 
 
 
-
+  // if (loading) return <div>Loading complaints...</div>;
+  if (error) return <div>Error: {error}</div>;
   return (
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar */}
@@ -253,6 +345,32 @@ const AdminPage: React.FC = () => {
           >
             Employees
           </button>
+
+          <button
+            onClick={() => {setSelectedTab('OfficeComplaints');
+              handleOfficeComplaintsClick();
+            }}
+            className={`w-full text-left p-2 rounded ${
+              selectedTab === 'OfficeComplaints'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Office Complaints
+          </button>
+
+          <button
+            onClick={() => {setSelectedTab('SoftwareComplaints');
+              handleSoftwareComplaintsClick();
+            }}
+            className={`w-full text-left p-2 rounded ${
+              selectedTab === 'SoftwareComplaints'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Software Complaints
+          </button>
           <button
             onClick={handleSignOut}
             className="flex items-center w-full px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50"
@@ -263,7 +381,10 @@ const AdminPage: React.FC = () => {
         </div>
       </div>
 
+
+      
       {/* Main Content */}
+      {selectedTab === 'Employees' && (
       <div className="flex-1 p-8">
         <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
           Admin Dashboard
@@ -525,6 +646,195 @@ const AdminPage: React.FC = () => {
           )}
         </div>
       </div>
+      )}
+
+ {/* These two components Shows a Bar For Pending Complaints And Resolved Complaints */}
+{/* {selectedTab === 'OfficeComplaints' && (
+
+  <div className="flex-1 p-8">
+    <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
+        Admin Dashboard
+      </h1>
+
+      <div className="grid grid-cols-4 gap-5">
+        <div className="col-span-1">
+          <h2 className="text-xl font-semibold mb-6">Office Complaints</h2>
+          <div className="space-y-4">
+            <div>
+            
+              <h3 onClick={() => setSelectedTab('officePendingComplaints')}
+              className={`w-full text-left p-2 rounded ${
+              selectedTab === 'officePendingComplaints'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-200'
+                 }`}>Pending Complaints</h3>
+            </div>
+           <div >
+              <h3  onClick={() => setSelectedTab('officeResolvedComplaints')} 
+              className={`w-full text-left p-2 rounded ${
+              selectedTab === 'officeResolvedComplaints'
+                ? 'bg-blue-100 text-blue-600'
+                : 'text-gray-700 hover:bg-gray-200'
+                 }`}>Resolved Complaints</h3>
+            </div>
+          </div>
+        </div>
+        </div>
+      </div>
+      )}
+      */}
+
+
+{/* Test Complaints Showing
+     {selectedTab === "officePendingComplaints" && (
+        <div className="bg-white rounded-2xl shadow-md p-6 mx-auto max-w-3xl">
+          <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">
+            Office Pending Complaints
+          </h1>
+
+          <div className="space-y-4">
+            {complaints.map((complaint) => (
+              <div key={complaint.id} className="bg-gray-100 p-4 rounded-lg">
+                <p className="text-lg font-semibold text-gray-800">
+                  Complaint By: {complaint.complainant}
+                </p>
+                <p className="text-sm text-gray-600">{complaint.timestamp}</p>
+                <p className="text-gray-700 mt-2">{complaint.description}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+      )} */}
+
+{/* 
+{selectedTab === 'SoftwareComplaints' && (
+  <div className="flex-1 p-8">
+    <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
+      Admin Dashboard
+    </h1>
+
+    <div className="grid grid-cols-4 gap-5">
+      <div className="col-span-1">
+        <div >
+          <h2 className="text-xl font-semibold mb-6">Software Complaints</h2>
+          <div className="space-y-4">
+            <div>
+              <h3
+                onClick={() => setSelectedTab('softwarePendingComplaints')}
+                className={`w-full text-left p-2 rounded ${
+                  selectedTab === 'softwarePendingComplaints'
+                    ? 'bg-blue-100 text-blue-600'
+                    : 'text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Pending Complaints
+              </h3>
+            </div>
+            <div>
+              <h3
+                onClick={() => setSelectedTab('softwareResolvedComplaints')}
+                className={`w-full text-left p-2 rounded ${
+                  selectedTab === 'softwareResolvedComplaints'
+                    ? 'bg-blue-100 text-blue-600'
+                    : 'text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Resolved Complaints
+              </h3>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+)} */}
+
+   {selectedTab === 'SoftwareComplaints' && (
+      <div className="flex-1 p-8">
+      <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
+        Admin Dashboard
+      </h1>
+
+      <div className="bg-white shadow-lg rounded-2xl p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Software Complaints</h2>
+        {softwareComplaints.length === 0 ? (
+          <p className="text-gray-600 text-center">No complaints found.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4">
+            {softwareComplaints.map((softwareComplaints, index) => (
+              <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
+                {/* <h3 className="text-lg font-medium text-gray-900">{softwareComplaints.title}</h3> */}
+                <p className="text-15px text-gray-700 mt-1">{softwareComplaints.complaint_text}</p>
+                <p className="text-17px text-gray-800 mt-3">By : {softwareComplaints.users?.full_name || 'Unknown'}</p>
+                <p className="text-17px text-gray-800 mt-0.6"> {new Date(softwareComplaints.created_at).toLocaleString('en-US', {
+                                   year: 'numeric',
+                                   month: 'short', // "Feb"
+                                   day: 'numeric',
+                                   hour: '2-digit',
+                                   minute: '2-digit',
+                                   hour12: true, // AM/PM format
+                                 })}                               </p>
+                <span
+                  className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${
+                    softwareComplaints.status === "Pending"
+                      ? "bg-yellow-300 text-yellow-800"
+                      : "bg-green-300 text-green-800"
+                  }`}
+                >
+                  {softwareComplaints.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+   )}
+
+     
+{selectedTab === 'OfficeComplaints' && (
+      <div className="flex-1 p-8">
+      <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
+        Admin Dashboard
+      </h1>
+
+      <div className="bg-white shadow-lg rounded-2xl p-6">
+        <h2 className="text-xl font-semibold text-gray-800 mb-4">Office Complaints</h2>
+        {officeComplaints.length === 0 ? (
+          <p className="text-gray-600 text-center">No complaints found.</p>
+        ) : (
+          <div className="grid md:grid-cols-2 gap-4">
+            {officeComplaints.map((officeComplaints, index) => (
+              <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
+                {/* <h3 className="text-lg font-medium text-gray-900">{officeComplaints.title}</h3> */}
+                <p className="text-15px text-gray-700 mt-1">{officeComplaints.complaint_text}</p>
+                <p className="text-17px text-gray-900 mt-3">By : {officeComplaints.users?.full_name || 'Unknown'}</p>
+                <p className="text-17px text-gray-900 mt-0.6"> {new Date(officeComplaints.created_at).toLocaleString('en-US', {
+                                year: 'numeric',
+                                 month: 'short', // "Feb"
+                                 day: 'numeric',
+                                 hour: '2-digit',
+                                 minute: '2-digit',
+                                 hour12: true, // AM/PM format
+                               })}</p>
+                <span
+                  className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${
+                    officeComplaints.status === "Pending"
+                      ? "bg-yellow-300 text-yellow-800"
+                      : "bg-green-300 text-green-800"
+                  }`}
+                >
+                  {officeComplaints.status}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    </div>
+   )}
+
+
     </div>
   );
 };
