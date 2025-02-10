@@ -3,6 +3,7 @@ import { format, parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, s
 import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { log } from 'node:console';
 
 const OFFICE_LATITUDE = 34.1299;
 const OFFICE_LONGITUDE = 72.4656;
@@ -54,7 +55,7 @@ const Attendance: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [currentLocation, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
   const [attendanceId, setAttendanceId] = useState<string | null>(null);
   const [view, setView] = useState<ViewType>('daily');
   const [selectedDate, setSelectedDate] = useState(new Date());
@@ -62,9 +63,10 @@ const Attendance: React.FC = () => {
   const [breakRecords, setBreakRecords] = useState<Record<string, BreakRecord[]>>({});
 
   useEffect(() => {
+    
     const loadCurrentAttendance = async () => {
-      if (!user || !isCheckedIn) return;
-
+      if (!user ) return;
+      // || !isCheckedIn
       try {
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
@@ -74,7 +76,7 @@ const Attendance: React.FC = () => {
         const { data, error } = await withRetry(() => 
           supabase
             .from('attendance_logs')
-            .select('id')
+            .select('id, check_in, check_out')
             .eq('user_id', user.id)
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
@@ -85,30 +87,51 @@ const Attendance: React.FC = () => {
         );
 
         if (error) {
-          if (error.code !== 'PGRST116') { // Not found is okay
+          if (error.code !== 'PGRST116') { // If no record exists, it's okay
             console.error('Error loading current attendance:', error);
           }
           return;
         }
-
+  
         if (data) {
-          setAttendanceId(data.id);
+          console.log("Fetched attendance record:", data);
+  
+          if (data.check_out === null) {
+            // User has an active session (not checked out)
+            setIsCheckedIn(true);
+            setAttendanceId(data.id);
+            setCheckIn(data.check_in)
+            console.log('User is still checked in');
+          } else {
+            // User has checked out
+            setIsCheckedIn(false);
+            console.log('User has checked out');
+          }
+        } else {
+          // No record found means user is not checked in
+          setIsCheckedIn(false);
+          console.log('No attendance record found');
         }
       } catch (err) {
         console.error('Error in loadCurrentAttendance:', err);
         setError(handleSupabaseError(err));
       }
     };
-
+  
     loadCurrentAttendance();
-  }, [user, isCheckedIn]);
+  }, [user]);
+
+
+
+
+
 
   const loadAttendanceRecords = async () => {
     if (!user) return;
-
+  
     try {
       let startDate, endDate;
-
+  
       switch (view) {
         case 'daily':
           startDate = format(selectedDate, 'yyyy-MM-dd');
@@ -123,7 +146,7 @@ const Attendance: React.FC = () => {
           endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
           break;
       }
-
+  
       const { data: records, error: recordsError } = await withRetry(() => 
         supabase
           .from('attendance_logs')
@@ -133,39 +156,73 @@ const Attendance: React.FC = () => {
           .lt('check_in', `${endDate}T23:59:59Z`)
           .order('check_in', { ascending: false })
       );
-
+    
+  
       if (recordsError) throw recordsError;
-
-      if (records) {
+  
+      if (records && records.length > 0) {
         setAttendanceRecords(records);
-
-        // Load break records for each attendance
+  
+        // Use the most recent attendance record to determine break status
+        const latestRecord = records[0];
+  
+        // Load break records only for the latest attendance record
+        const { data: breaks, error: breaksError }: { data: BreakRecord[], error: any } = await withRetry(() =>
+          supabase
+            .from('breaks')
+            .select('*')
+            .eq('attendance_id', latestRecord.id)
+            .order('start_time', { ascending: true })
+        );
+        
+        if (breaksError) throw breaksError;
+        
         const breakData: Record<string, BreakRecord[]> = {};
-        for (const record of records) {
-          const { data: breaks, error: breaksError } = await withRetry(() =>
-            supabase
-              .from('breaks')
-              .select('*')
-              .eq('attendance_id', record.id)
-              .order('start_time', { ascending: true })
-          );
+        if (breaks) {
+          breakData[latestRecord.id] = breaks;
           
-          if (breaksError) throw breaksError;
-          if (breaks) {
-            breakData[record.id] = breaks;
+          // Check the last break for this attendance record
+          const previousBreak = breaks[breaks.length - 1];
+          if (previousBreak) {
+            if (!previousBreak.end_time) {
+              // If the last break has no end_time, user is still on break.
+              setIsOnBreak(true);
+              setBreakTime(previousBreak.start_time); // Record when the break started
+            } else {
+              // Otherwise, user is not on break.
+              setIsOnBreak(false);
+              setBreakTime(null);
+            }
+          } else {
+            // If no breaks exist for this attendance record, user is not on break.
+            setIsOnBreak(false);
+            setBreakTime(null);
           }
+        } else {
+          // No break data for the latest attendance record
+          setIsOnBreak(false);
+          setBreakTime(null);
         }
+        
         setBreakRecords(breakData);
+      } else {
+        // No attendance records found for the period
+        setAttendanceRecords([]);
+        setBreakRecords({});
+        setIsOnBreak(false);
+        setBreakTime(null);
       }
     } catch (err) {
       console.error('Error loading attendance records:', err);
       setError(handleSupabaseError(err));
     }
   };
-
+  
   useEffect(() => {
     loadAttendanceRecords();
   }, [user, view, selectedDate]);
+  
+
 
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
@@ -173,9 +230,22 @@ const Attendance: React.FC = () => {
         reject(new Error('Geolocation is not supported'));
         return;
       }
+
       navigator.geolocation.getCurrentPosition(resolve, reject);
     });
   };
+
+  getCurrentLocation()
+  .then((position)=>{
+    console.log(position.coords.latitude);
+    console.log(position.coords.longitude);
+    
+  }).catch(()=>{
+    console.log("User Location Undefined");
+    
+  })
+
+
 
   const handleCheckIn = async () => {
     if (!user) {
@@ -186,14 +256,17 @@ const Attendance: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      
 
       const position = await getCurrentLocation();
+      console.log("User is HEre");
       const { latitude, longitude } = position.coords;
+    
       setCurrentLocation({ lat: latitude, lng: longitude });
-
+      
       const now = new Date();
       const checkInTimeLimit = parse('09:30', 'HH:mm', now);
-      
+ 
       let attendanceStatus = 'present';
       if (isAfter(now, checkInTimeLimit)) {
         attendanceStatus = 'late';
@@ -202,7 +275,7 @@ const Attendance: React.FC = () => {
       const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
       const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
 
-      const { data, error: dbError } = await withRetry(() =>
+      const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
         supabase
           .from('attendance_logs')
           .insert([
@@ -227,6 +300,8 @@ const Attendance: React.FC = () => {
       setAttendanceId(data.id);
       await loadAttendanceRecords();
     } catch (err) {
+      console.log("User Is In catch");
+      
       setError(handleSupabaseError(err));
     } finally {
       setLoading(false);
@@ -247,7 +322,7 @@ const Attendance: React.FC = () => {
 
       // First, end any ongoing breaks
       if (isOnBreak) {
-        const { error: breakError } = await withRetry(() =>
+        const { error: breakError }: { error: any } = await withRetry(() =>
           supabase
             .from('breaks')
             .update({ 
@@ -265,7 +340,7 @@ const Attendance: React.FC = () => {
       }
 
       // Then update the attendance record with check-out time
-      const { error: dbError } = await withRetry(() =>
+      const { error: dbError }: { error: any } = await withRetry(() =>
         supabase
           .from('attendance_logs')
           .update({ 
