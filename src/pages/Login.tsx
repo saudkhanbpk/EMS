@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
-import { Clock } from 'lucide-react';
+import { Clock, User } from 'lucide-react';
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -36,23 +36,6 @@ const Login: React.FC = () => {
         // If sign in fails, try to sign up
         if (signInError.message.includes('Invalid login credentials')) {
           setError("Invalid User, Please Check Your Email and Password")
-          // const { data: signUpData, error: signUpError } = await supabase.auth.signUp({
-          //   email,
-          //   password,
-          //   options: {
-          //     data: {
-          //       full_name: email.split('@')[0], // Use part before @ as default name
-          //       is_admin: isAdmin, // Store admin status in user metadata
-          //     },
-          //   },
-          // });
-
-          // if (signUpError) throw signUpError;
-          // if (signUpData.user) {
-          //   // Set user and navigate
-          //   setUser(signUpData.user);
-          //   navigate(isAdmin ? '/admin' : '/');
-          // }
         } else {
           throw signInError;
         }
@@ -60,6 +43,13 @@ const Login: React.FC = () => {
         // Set user and navigate
         setUser(authData.user);
         navigate(isAdmin ? '/admin' : '/');
+        
+        // Saving session in localStorage
+        const session = authData.session;
+        localStorage.setItem('supabaseSession', JSON.stringify(session)); // Save session to localStorage
+        localStorage.setItem('user_id', authData.user.id); // Save user ID to localStorage
+        console.log("Session Data :" , localStorage.getItem('supabaseSession'));
+        
       }
     } catch (err) {
       console.error('Authentication error:', err);

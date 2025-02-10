@@ -152,11 +152,14 @@ const Attendance: React.FC = () => {
           .from('attendance_logs')
           .select('*')
           .eq('user_id', user.id)
-          .gte('check_in', `${startDate}T00:00:00Z`)
-          .lt('check_in', `${endDate}T23:59:59Z`)
+          .gte('check_in', `${startDate}T00:00:00Z`) // Corrected here
+          .lt('check_in', `${endDate}T23:59:59Z`)  // Corrected here
           .order('check_in', { ascending: false })
       );
+<<<<<<< HEAD
     
+=======
+>>>>>>> 58ca2323a7e70f1987deffc0cfdc21d1d26cca27
   
       if (recordsError) throw recordsError;
   
@@ -167,7 +170,11 @@ const Attendance: React.FC = () => {
         const latestRecord = records[0];
   
         // Load break records only for the latest attendance record
+<<<<<<< HEAD
         const { data: breaks, error: breaksError }: { data: BreakRecord[], error: any } = await withRetry(() =>
+=======
+        const { data: breaks, error: breaksError } = await withRetry(() =>
+>>>>>>> 58ca2323a7e70f1987deffc0cfdc21d1d26cca27
           supabase
             .from('breaks')
             .select('*')
@@ -240,7 +247,11 @@ const Attendance: React.FC = () => {
     console.log(position.coords.latitude);
     console.log(position.coords.longitude);
     
+<<<<<<< HEAD
   }).catch(()=>{
+=======
+  }).catch((error)=>{
+>>>>>>> 58ca2323a7e70f1987deffc0cfdc21d1d26cca27
     console.log("User Location Undefined");
     
   })
