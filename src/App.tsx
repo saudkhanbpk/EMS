@@ -10,6 +10,7 @@ import Tasks from './pages/Tasks';
 import AdminPage from './pages/AdminPage'; // Corrected import
 import SoftwareComplaintSection from './components/SoftwareComplaintSection';
 import OfficeComplaintSection from './components/OfficeComplaintSection'; 
+import { AuthProvider } from './lib/AuthProvider';
 
 // PrivateRoute component for protected routes
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
@@ -22,6 +23,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }>
 
 function App() {
   return (
+    <AuthProvider>
     <Router>
       <Routes>
         {/* Public Route: Login */}
@@ -58,6 +60,7 @@ function App() {
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>
+    </AuthProvider>
   );
 }
 

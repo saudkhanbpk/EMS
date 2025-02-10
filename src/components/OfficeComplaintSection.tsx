@@ -40,7 +40,9 @@ const OfficeComplaintSection: React.FC = () => {
     // Insert the complaint into the "office_complaints" table.
     const { error } = await supabase
       .from('office_complaints')
-      .insert([{ complaint_text: complaint }]);
+      .insert([{ complaint_text: complaint ,
+        user_id: localStorage.getItem("user_id")
+      }]);
 
     if (error) {
       console.error('Error submitting office complaint:', error.message);
