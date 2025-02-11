@@ -106,7 +106,7 @@ const Dashboard: React.FC = () => {
         const monthEnd = endOfMonth(today);
 
         // Calculate expected working days (excluding weekends)
-        const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: today });
+        const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
 
         const { data: monthlyAttendance, error: monthlyError } = await supabase
