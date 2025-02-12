@@ -40,8 +40,10 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 const Attendance: React.FC = () => {
-  const user = useAuthStore((state) => state.user.user);
-  const initializeUser = useAuthStore((state) => state.initializeUser);
+  const user = useAuthStore((state) => state.user);
+  const initializeUser = useAuthStore((state) => state.initializeUser); 
+  // console.log("User  id 1:" , user.user.id);
+  // console.log("User id 2 :" , user.id);
 
   useEffect(() => {
     initializeUser();
@@ -84,7 +86,7 @@ const Attendance: React.FC = () => {
           supabase
             .from('attendance_logs')
             .select('id, check_in, check_out')
-            .eq('user_id', user.id)
+            .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
             .is('check_out', null)
@@ -131,6 +133,8 @@ const Attendance: React.FC = () => {
 
 
 
+
+
   const loadAttendanceRecords = async () => {
     if (!user) return;
   
@@ -156,7 +160,7 @@ const Attendance: React.FC = () => {
         supabase
           .from('attendance_logs')
           .select('*')
-          .eq('user_id', user.id)
+          .eq('user_id', localStorage.getItem('user_id'))
           .gte('check_in', `${startDate}T00:00:00Z`) // Corrected here
           .lt('check_in', `${endDate}T23:59:59Z`)  // Corrected here
           .order('check_in', { ascending: false })
@@ -251,8 +255,8 @@ const Attendance: React.FC = () => {
   })
 
 
-
   const handleCheckIn = async () => {
+    
     if (!user) {
       setError('User not authenticated');
       return;
@@ -284,7 +288,7 @@ const Attendance: React.FC = () => {
           .from('attendance_logs')
           .insert([
             {
-              user_id: user.user.id,
+              user_id: localStorage.getItem('user_id'),
               check_in: now.toISOString(),
               work_mode: mode,
               latitude,
