@@ -37,7 +37,11 @@ interface MonthlyStats {
 }
 
 const Dashboard: React.FC = () => {
-  const user = useAuthStore((state) => state.user);
+  // const user = useAuthStore((state) => state.user);
+  const sessionData = localStorage.getItem('supabaseSession');
+  const session = sessionData ? JSON.parse(sessionData) : null;
+  const user = session?.user;
+
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   const [todayBreak, setTodayBreak] = useState<BreakRecord[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -46,12 +50,13 @@ const Dashboard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+
     const loadTodayData = async () => {
+
       if (!user) {
         setLoading(false);
         return;
       }
-
       try {
         // Load user profile with retry mechanism
         const { data: profileData, error: profileError } = await withRetry(() =>
@@ -62,6 +67,7 @@ const Dashboard: React.FC = () => {
             .single()
         );
 
+
         if (profileError) throw profileError;
         if (profileData) setUserProfile(profileData);
 
@@ -69,7 +75,7 @@ const Dashboard: React.FC = () => {
         const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-        
+
         // Get today's attendance
         const { data: attendanceData, error: attendanceError } = await withRetry(() =>
           supabase
@@ -165,7 +171,7 @@ const Dashboard: React.FC = () => {
     loadTodayData();
     const interval = setInterval(loadTodayData, 60000);
     return () => clearInterval(interval);
-  }, [user]);
+  }, []);
 
   const calculateDuration = (start: string, end: string | null) => {
     if (!end) {
@@ -227,7 +233,7 @@ const Dashboard: React.FC = () => {
           <p className="text-gray-500 text-sm">{format(new Date(), 'h:mm a')}</p>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Status Card */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
@@ -237,11 +243,10 @@ const Dashboard: React.FC = () => {
               <h2 className="text-xl font-semibold">Today's Status</h2>
             </div>
             {todayAttendance && (
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                todayAttendance.status === 'present'
+              <span className={`px-3 py-1 rounded-full text-sm font-medium ${todayAttendance.status === 'present'
                   ? 'bg-green-100 text-green-800'
                   : 'bg-yellow-100 text-yellow-800'
-              }`}>
+                }`}>
                 {todayAttendance.status}
               </span>
             )}
@@ -270,11 +275,10 @@ const Dashboard: React.FC = () => {
                     )}
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Work Mode:</span>
-                      <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${
-                        todayAttendance.work_mode === 'on_site'
+                      <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${todayAttendance.work_mode === 'on_site'
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-purple-100 text-purple-800'
-                      }`}>
+                        }`}>
                         {todayAttendance.work_mode}
                       </span>
                     </div>
@@ -305,11 +309,10 @@ const Dashboard: React.FC = () => {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Status:</span>
-                      <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${
-                        !todayAttendance.check_out
+                      <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${!todayAttendance.check_out
                           ? 'bg-blue-100 text-blue-800'
                           : 'bg-green-100 text-green-800'
-                      }`}>
+                        }`}>
                         {!todayAttendance.check_out ? 'Working' : 'Completed'}
                       </span>
                     </div>
@@ -335,11 +338,10 @@ const Dashboard: React.FC = () => {
                           </span>
                         </div>
                         {breakRecord.status && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                            breakRecord.status === 'on_time'
+                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${breakRecord.status === 'on_time'
                               ? 'bg-green-100 text-green-800'
                               : 'bg-yellow-100 text-yellow-800'
-                          }`}>
+                            }`}>
                             {breakRecord.status}
                           </span>
                         )}
@@ -368,7 +370,7 @@ const Dashboard: React.FC = () => {
             <Calendar className="w-6 h-6 text-blue-600 mr-2" />
             <h2 className="text-xl font-semibold">Quick Stats</h2>
           </div>
-          
+
           <div className="space-y-6">
             <div className="bg-gray-50 rounded-lg p-4">
               <h3 className="text-sm font-medium text-gray-500 mb-3">Today's Timeline</h3>
@@ -399,13 +401,12 @@ const Dashboard: React.FC = () => {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Work Mode:</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${
-                    todayAttendance?.work_mode === 'on_site'
+                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${todayAttendance?.work_mode === 'on_site'
                       ? 'bg-blue-100 text-blue-800'
                       : todayAttendance?.work_mode === 'remote'
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-gray-100 text-gray-800'
-                  }`}>
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-gray-100 text-gray-800'
+                    }`}>
                     {todayAttendance?.work_mode || 'Not Set'}
                   </span>
                 </div>

@@ -20,6 +20,7 @@ const SoftwareComplaintSection: React.FC = () => {
     const { data, error } = await supabase
       .from('software_complaints')
       .select('*')
+      .eq("user_id", localStorage.getItem('user_id'))
       .order('created_at', { ascending: false });
       
     console.log('Fetched Data:', data, 'Error:', error);

@@ -3,7 +3,8 @@ import { format, parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, s
 import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
-import { log } from 'node:console';
+
+
 
 const OFFICE_LATITUDE = 34.1299;
 const OFFICE_LONGITUDE = 72.4656;
@@ -39,7 +40,13 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
 };
 
 const Attendance: React.FC = () => {
-  const user = useAuthStore((state) => state.user);
+  const user = useAuthStore((state) => state.user.user);
+  const initializeUser = useAuthStore((state) => state.initializeUser);
+
+  useEffect(() => {
+    initializeUser();
+  }, [initializeUser]);
+
   const { 
     isCheckedIn, 
     checkInTime, 
@@ -101,11 +108,9 @@ const Attendance: React.FC = () => {
             setIsCheckedIn(true);
             setAttendanceId(data.id);
             setCheckIn(data.check_in)
-            console.log('User is still checked in');
           } else {
             // User has checked out
             setIsCheckedIn(false);
-            console.log('User has checked out');
           }
         } else {
           // No record found means user is not checked in
@@ -237,8 +242,8 @@ const Attendance: React.FC = () => {
 
   getCurrentLocation()
   .then((position)=>{
-    console.log(position.coords.latitude);
-    console.log(position.coords.longitude);
+    // console.log(position.coords.latitude);
+    // console.log(position.coords.longitude);
     
   }).catch(()=>{
     console.log("User Location Undefined");
@@ -259,7 +264,6 @@ const Attendance: React.FC = () => {
       
 
       const position = await getCurrentLocation();
-      console.log("User is HEre");
       const { latitude, longitude } = position.coords;
     
       setCurrentLocation({ lat: latitude, lng: longitude });
@@ -280,7 +284,7 @@ const Attendance: React.FC = () => {
           .from('attendance_logs')
           .insert([
             {
-              user_id: user.id,
+              user_id: user.user.id,
               check_in: now.toISOString(),
               work_mode: mode,
               latitude,
@@ -291,6 +295,8 @@ const Attendance: React.FC = () => {
           .select()
           .single()
       );
+      
+      
 
       if (dbError) throw dbError;
 
@@ -299,9 +305,7 @@ const Attendance: React.FC = () => {
       setWorkMode(mode);
       setAttendanceId(data.id);
       await loadAttendanceRecords();
-    } catch (err) {
-      console.log("User Is In catch");
-      
+    } catch (err) {      
       setError(handleSupabaseError(err));
     } finally {
       setLoading(false);
