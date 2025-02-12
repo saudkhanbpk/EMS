@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
+import { useAuthStore } from '../lib/store';
+import { User} from 'lucide-react';
 
 interface Complaint {
   id: number | string;
@@ -14,12 +16,15 @@ const OfficeComplaintSection: React.FC = () => {
   const [complaintsList, setComplaintsList] = useState<Complaint[]>([]);
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editingText, setEditingText] = useState('');
+    const setUser = useAuthStore((state) => state.setUser);
+  
 
   // Fetch all office complaints from the database.
   const fetchComplaints = async () => {
     const { data, error } = await supabase
       .from('office_complaints')
       .select('*')
+      .eq("user_id", localStorage.getItem('user_id'))
       .order('created_at', { ascending: false });
       
     if (error) {
@@ -41,7 +46,8 @@ const OfficeComplaintSection: React.FC = () => {
     const { error } = await supabase
       .from('office_complaints')
       .insert([{ complaint_text: complaint ,
-        user_id: localStorage.getItem("user_id")
+        // user_id: localStorage.getItem("user_id")
+        user_id : user.user.id
       }]);
 
     if (error) {
@@ -60,7 +66,7 @@ const OfficeComplaintSection: React.FC = () => {
     const { error } = await supabase
       .from('office_complaints')
       .delete()
-      .eq('id', id);
+      .eq('id', user.user.id);
 
     if (error) {
       console.error('Error deleting complaint:', error.message);

@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Menu } from "lucide-react"; // Icons from Lucide React (or use any icon library)
 
 
 import {
@@ -65,7 +66,30 @@ const AdminPage: React.FC = () => {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isOpen, setIsOpen] = useState(false);
   const navigate = useNavigate();
+  const [isSmallScreen, setIsSmallScreen] = useState(false);
+  const [showEmployeeList, setShowEmployeeList] = useState(false);
+  // const [selectedTab, setSelectedTab] = useState("");
+
+
+
+
+  useEffect(() => {
+    const checkScreenSize = () => {
+      setIsSmallScreen(window.innerWidth < 795);
+    };
+
+    // Initial check
+    checkScreenSize();
+
+    // Add event listener
+    window.addEventListener('resize', checkScreenSize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkScreenSize);
+  }, []);
+
   
 
   //Fetching Software Complaints From Database
@@ -162,6 +186,7 @@ const AdminPage: React.FC = () => {
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
+    localStorage.clear();
     navigate('/login');
   };
 
@@ -328,51 +353,108 @@ const AdminPage: React.FC = () => {
   // if (loading) return <div>Loading complaints...</div>;
   if (error) return <div>Error: {error}</div>;
   return (
+    <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
     <div className="min-h-screen bg-gray-100 flex">
-      {/* Sidebar */}
-      <div className="bg-white w-64 p-4">
+      {/* Sidebar Space Filler */}
+      <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div>
+
+      {/* Menu Button (For Small Screens) */}
+      <button
+        className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white shadow-md rounded-md"
+        onClick={() => setIsOpen((prev) => !prev)}
+        >
+        <Menu size={24} />
+      </button>
+
+      {/* Overlay (Only for Small Screens when Sidebar is Open) */}
+      {isOpen && (
+        <div
+          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
+          onClick={() => setIsOpen(false)}
+        ></div>
+      )}
+
+      {/* Sidebar (Fixed) */}
+      <div
+        className={`bg-white w-64 p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out 
+        ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+      >
+
+        {/* Logo */}
         <div className="mb-4 flex justify-center">
           <ShieldCheck className="w-16 h-16 text-blue-600" />
         </div>
+
+        {/* Sidebar Buttons */}
         <div className="space-y-4">
           <button
-            onClick={() => setSelectedTab('Employees')}
+            onClick={() => {setSelectedTab("Employees")
+              setShowEmployeeList(!showEmployeeList); // Toggle employee list visibility
+            }}
             className={`w-full text-left p-2 rounded ${
-              selectedTab === 'Employees'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-200'
+              selectedTab === "Employees"
+                ? "bg-blue-100 text-blue-600"
+                : "text-gray-700 hover:bg-gray-200"
             }`}
           >
             Employees
           </button>
+          {/* Employee List (Mobile) */}
+          {isSmallScreen && showEmployeeList && (
+          <div className="mt-2 bg-white rounded-lg shadow-md max-h-[300px] overflow-y-auto custom-scrollbar">
+            <ul className="space-y-2 p-2">
+              {employees.map((employee) => (
+                <li
+                  key={employee.id}
+                  onClick={() => handleEmployeeClick(employee.id)}
+                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                    selectedEmployee?.id === employee.id
+                      ? "bg-blue-100 text-blue-600"
+                      : "hover:bg-gray-100"
+                  }`}
+                >
+                  {employee.full_name}
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
 
           <button
-            onClick={() => {setSelectedTab('OfficeComplaints');
+            onClick={() => {
+              setSelectedTab("OfficeComplaints");
               handleOfficeComplaintsClick();
+              setIsOpen(false);
             }}
             className={`w-full text-left p-2 rounded ${
-              selectedTab === 'OfficeComplaints'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-200'
+              selectedTab === "OfficeComplaints"
+                ? "bg-blue-100 text-blue-600"
+                : "text-gray-700 hover:bg-gray-200"
             }`}
           >
             Office Complaints
           </button>
 
           <button
-            onClick={() => {setSelectedTab('SoftwareComplaints');
+            onClick={() => {
+              setSelectedTab("SoftwareComplaints");
               handleSoftwareComplaintsClick();
+              setIsOpen(false);
             }}
             className={`w-full text-left p-2 rounded ${
-              selectedTab === 'SoftwareComplaints'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-200'
+              selectedTab === "SoftwareComplaints"
+                ? "bg-blue-100 text-blue-600"
+                : "text-gray-700 hover:bg-gray-200"
             }`}
           >
             Software Complaints
           </button>
+
           <button
-            onClick={handleSignOut}
+            onClick={() => {
+              handleSignOut();
+              setIsOpen(false);
+            }}
             className="flex items-center w-full px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50"
           >
             <LogOut className="w-5 h-5 mr-3" />
@@ -380,7 +462,7 @@ const AdminPage: React.FC = () => {
           </button>
         </div>
       </div>
-
+    </div>
 
       
       {/* Main Content */}
@@ -391,18 +473,19 @@ const AdminPage: React.FC = () => {
         </h1>
 
         <div className="grid grid-cols-4 gap-6">
-          {/* Employee List */}
-          <div className="col-span-1">
+          {/* Employee List Disktop*/}
+          {!isSmallScreen && (
+          <div className="col-span-1 ">
             <h2 className="text-xl font-semibold mb-4">Employee List</h2>
-            <ul className="space-y-2">
+            <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
               {employees.map((employee) => (
                 <li
                   key={employee.id}
                   onClick={() => handleEmployeeClick(employee.id)}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedEmployee?.id === employee.id
-                      ? 'bg-blue-100 text-blue-600'
-                      : 'hover:bg-gray-100'
+                      ? "bg-blue-100 text-blue-600"
+                      : "hover:bg-gray-100"
                   }`}
                 >
                   {employee.full_name}
@@ -410,11 +493,12 @@ const AdminPage: React.FC = () => {
               ))}
             </ul>
           </div>
+        )}
 
           {/* Employee Dashboard */}
           {selectedEmployee && (
-            <div className="col-span-3">
-              <div className="bg-white rounded-lg shadow-md p-6">
+            <div className=" col-span-12 sm:col-span-4 md:col-span-3 lg:col-span-3">
+              <div className="bg-gray-100 rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-6">
                   <h2 className="text-2xl font-bold">
                     {selectedEmployee.full_name}'s Dashboard
@@ -431,7 +515,7 @@ const AdminPage: React.FC = () => {
                 ) : (
                   <>
                     {/* Today's Status */}
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
                       <div className="bg-gray-50 rounded-lg p-4">
                         <h3 className="text-lg font-semibold mb-3">Today's Status</h3>
                         {attendanceLogs[0] ? (
