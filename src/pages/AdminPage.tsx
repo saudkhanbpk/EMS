@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Menu } from "lucide-react"; // Icons from Lucide React (or use any icon library)
+import { useAuthStore } from '../lib/store';
 
 
 import {
@@ -70,11 +71,25 @@ const AdminPage: React.FC = () => {
   const navigate = useNavigate();
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [showEmployeeList, setShowEmployeeList] = useState(false);
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
+  
   // const [selectedTab, setSelectedTab] = useState("");
+//Checking For Session Expiry 
+  useEffect(() => {
+    const checksession = () => {
+      const sessionsExpiry = localStorage.getItem('sessionExpiresAt');
+      if (sessionsExpiry && Date.now() >= Number(sessionsExpiry)) {
+        handleSignOut();
+      }
+    }
+    checksession();
+    const interval = setInterval(checksession, 4 * 60 * 1000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [navigate]);
 
 
-
-
+ //Checking Resposive Screen Size
   useEffect(() => {
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth < 795);
@@ -185,6 +200,7 @@ const AdminPage: React.FC = () => {
   }, [selectedTab]);
 
   const handleSignOut = async () => {
+    setUser(null)
     await supabase.auth.signOut();
     localStorage.clear();
     navigate('/login');
@@ -409,7 +425,7 @@ const AdminPage: React.FC = () => {
                   onClick={() => handleEmployeeClick(employee.id)}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedEmployee?.id === employee.id
-                      ? "bg-blue-100 text-blue-600"
+                      ? "bg-blue-100 text-blue-600 "
                       : "hover:bg-gray-100"
                   }`}
                 >
@@ -484,7 +500,7 @@ const AdminPage: React.FC = () => {
                   onClick={() => handleEmployeeClick(employee.id)}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedEmployee?.id === employee.id
-                      ? "bg-blue-100 text-blue-600"
+                      ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
                       : "hover:bg-gray-100"
                   }`}
                 >

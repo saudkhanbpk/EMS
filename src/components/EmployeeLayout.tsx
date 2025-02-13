@@ -13,6 +13,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
+import { toDate } from 'date-fns';
 
 const EmployeeLayout: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,22 @@ const EmployeeLayout: React.FC = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+//Checking For Session Expiry 
+  useEffect(() => {
+    const checksession = () => {
+      const sessionsExpiry = localStorage.getItem('sessionExpiresAt');
+      if (sessionsExpiry && Date.now() >= Number(sessionsExpiry)) {
+        handleSignOut();
+      }
+    }
+    checksession();
+    const interval = setInterval(checksession, 4 * 60 * 1000); // Check every 30 seconds
+    return () => clearInterval(interval);
+  }, [navigate]);
+  
+
+
 
   // Check screen size on mount and resize
   useEffect(() => {
@@ -38,6 +55,7 @@ const EmployeeLayout: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
+  
   // Close sidebar on small screens when route changes
   useEffect(() => {
     if (isSmallScreen) {
@@ -151,7 +169,7 @@ const EmployeeLayout: React.FC = () => {
        <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
              `}>
           <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "p-8"}`}>
-            <Outlet />
+            <Outlet isSmallScreen={isSmallScreen } isSidebarOpen={isSidebarOpen} />
           </div>
         </div>
       </div>
