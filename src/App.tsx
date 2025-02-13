@@ -61,6 +61,7 @@ function App() {
             </PrivateRoute>
           }
         >
+          <Route path="*" element={<Navigate to="/" />} />
           <Route index element={<Dashboard />} />
           <Route path="attendance" element={<Attendance />} />
           <Route path="leave" element={<Leave />} />
