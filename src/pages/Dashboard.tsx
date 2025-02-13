@@ -1,8 +1,10 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState  } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
+
 
 
 interface AttendanceRecord {
@@ -36,7 +38,7 @@ interface MonthlyStats {
   expectedWorkingDays: number;
 }
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   // const user = useAuthStore((state) => state.user);
   const sessionData = localStorage.getItem('supabaseSession');
   const session = sessionData ? JSON.parse(sessionData) : null;
@@ -48,6 +50,34 @@ const Dashboard: React.FC = () => {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
+    // const [isSmallScreen, setIsSmallScreen] = useState(false);
+    // const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+ // Check screen size on mount and resize
+  // useEffect(() => {
+  //   const checkScreenSize = () => {
+  //     setIsSmallScreen(window.innerWidth < 795);
+  //   };
+
+  //   // Initial check
+  //   checkScreenSize();
+
+  //   // Add event listener
+  //   window.addEventListener('resize', checkScreenSize);
+
+  //   // Cleanup
+  //   return () => window.removeEventListener('resize', checkScreenSize);
+  // }, []);
+
+  
+  // // Close sidebar on small screens when route changes
+  // useEffect(() => {
+  //   if (isSmallScreen) {
+  //     setIsSidebarOpen(false);
+  //   }
+  // }, [location.pathname, isSmallScreen]);
+
 
   useEffect(() => {
 
@@ -209,8 +239,8 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="max-w-7xl mx-auto px-4 py-6">
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+<div className='max-w-7xl mx-auto  px-4 py-8'>
+<div className="bg-red-50 text-red-600 p-4 rounded-lg">
           <p>Error loading dashboard: {error}</p>
         </div>
       </div>
@@ -218,8 +248,14 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-6">
-      <div className="flex items-center justify-between mb-8">
+    /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+//////////////////////////////////////////////////////////////////////////////////////////////
+
+<div className='max-w-7xl mx-auto  px-4 py-8'>
+<div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome, {userProfile?.full_name || 'Employee'}
