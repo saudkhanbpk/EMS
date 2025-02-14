@@ -1,3 +1,4 @@
+
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './lib/store';
@@ -10,17 +11,21 @@ import Tasks from './pages/Tasks';
 import AdminPage from './pages/AdminPage';
 import SoftwareComplaintSection from './components/SoftwareComplaintSection';
 import OfficeComplaintSection from './components/OfficeComplaintSection';
+import { useNavigate } from 'react-router-dom';
+
+
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
 
   if (!user) return <Navigate to="/login" replace />;
-
   return <>{children}</>;
 };
 
+
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession);
+  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -61,12 +66,9 @@ function App() {
           <Route path="tasks" element={<Tasks />} />
           <Route path="software-complaint" element={<SoftwareComplaintSection />} />
           <Route path="office-complaint" element={<OfficeComplaintSection />} />
-          
-          {/* Catch-all for unknown subroutes under EmployeeLayout */}
-          <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
 
-        {/* Redirect all other unknown routes to login */}
+        {/* Redirect unknown routes to login */}
         <Route path="*" element={<Navigate to="/login" replace />} />
       </Routes>
     </Router>

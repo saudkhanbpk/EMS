@@ -4,6 +4,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayO
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
+import AbsenteeData from './AbsenteesData';
 
 
 
@@ -38,6 +39,7 @@ interface MonthlyStats {
   expectedWorkingDays: number;
 }
 
+
 const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   // const user = useAuthStore((state) => state.user);
   const sessionData = localStorage.getItem('supabaseSession');
@@ -51,32 +53,6 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
-    // const [isSmallScreen, setIsSmallScreen] = useState(false);
-    // const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
- // Check screen size on mount and resize
-  // useEffect(() => {
-  //   const checkScreenSize = () => {
-  //     setIsSmallScreen(window.innerWidth < 795);
-  //   };
-
-  //   // Initial check
-  //   checkScreenSize();
-
-  //   // Add event listener
-  //   window.addEventListener('resize', checkScreenSize);
-
-  //   // Cleanup
-  //   return () => window.removeEventListener('resize', checkScreenSize);
-  // }, []);
-
-  
-  // // Close sidebar on small screens when route changes
-  // useEffect(() => {
-  //   if (isSmallScreen) {
-  //     setIsSidebarOpen(false);
-  //   }
-  // }, [location.pathname, isSmallScreen]);
 
 
   useEffect(() => {
@@ -130,12 +106,19 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
               .from('breaks')
               .select('*')
               .eq('attendance_id', attendanceData.id)
-              .order('start_time', { ascending: true })
+              // .order('date', { ascending: true })
+
           );
 
           if (breakError) throw breakError;
           if (breakData) setTodayBreak(breakData);
         }
+
+
+
+
+
+
 
         // Load monthly statistics
         const monthStart = startOfMonth(today);
@@ -248,11 +231,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   }
 
   return (
-    /////////////////////////////////////////////////////////////////////////////////////////////////
 
-
-
-//////////////////////////////////////////////////////////////////////////////////////////////
 
 <div className='max-w-7xl mx-auto  px-4 py-8'>
 <div className="flex items-center justify-between mb-8">
@@ -548,6 +527,22 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             </div>
           )}
         </div>
+
+        {/* Absentees Details */}
+        <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+          <div className="flex items-center mb-6">
+            <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+            <h2 className="text-xl font-semibold">Absentees Details- {format(new Date(), 'MMMM yyyy')}</h2>
+          </div>
+
+           <div>
+          {/* Absentee Data Div */}
+           <AbsenteeData />
+          </div> 
+
+
+        </div>
+
       </div>
     </div>
   );
