@@ -4,7 +4,7 @@ import { format, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayO
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
-import AbsenteeData from './AbsenteesData';
+import AbsenteeComponent from './AbsenteesData';
 
 
 
@@ -537,7 +537,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
 
            <div>
           {/* Absentee Data Div */}
-           <AbsenteeData />
+           <AbsenteeComponent />
           </div> 
 
 
