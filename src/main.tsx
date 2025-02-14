@@ -5,9 +5,8 @@ import './index.css';
 import { AuthProvider } from './lib/AuthProvider.tsx';
 
 createRoot(document.getElementById('root')!).render(
-  <StrictMode>
     <AuthProvider>
       <App />
     </AuthProvider>
-  </StrictMode>
+
 );
