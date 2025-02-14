@@ -103,7 +103,6 @@ const Attendance: React.FC = () => {
         }
   
         if (data) {
-          console.log("Fetched attendance record:", data);
   
           if (data.check_out === null) {
             // User has an active session (not checked out)
@@ -300,6 +299,22 @@ const Attendance: React.FC = () => {
           .single()
       );
       
+             // If check-in is late, mark as "Half Day" in absentees table
+      //  const checkInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
+      //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
+      //  console.log("Check In Time: ", checkInTime);
+      //  console.log("Cutoff Time: ", cutoffTime);
+      //  if (checkInTime > cutoffTime) {
+         await withRetry(() =>
+                  supabase.from('absentees')
+               .insert([{
+               user_id: localStorage.getItem('user_id'),
+               absentee_type: 'Absent',
+               absentee_timing: 'Half Day',
+             }
+           ])
+         );
+      //  }
       
 
       if (dbError) throw dbError;
