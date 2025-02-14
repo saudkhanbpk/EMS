@@ -2,7 +2,7 @@ name: Run FetchUsers Daily at 9 PM Pakistan Time (Mon-Fri)
 
 on:
   schedule:
-    - cron: '0 16 * * 1-5'  # Runs at 9:00 PM Pakistan Time (Mon-Fri)
+    - cron: '0 16 * * 1-5'  # Runs at 9:00 PM Pakistan Time (16:00 UTC) on Monday to Friday
 
   workflow_dispatch:  # Allows manual triggering
 
@@ -22,10 +22,10 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Run FetchUsers
-        run: |
-          node fetchUsers.js
+      - name: Run FetchUsers Script
+        run: node fetchUsers.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+
 
