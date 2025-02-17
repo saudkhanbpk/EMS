@@ -11,6 +11,7 @@ import Tasks from './pages/Tasks';
 import AdminPage from './pages/AdminPage';
 import SoftwareComplaintSection from './components/SoftwareComplaintSection';
 import OfficeComplaintSection from './components/OfficeComplaintSection';
+import LeaveRequestsAdmin from './pages/LeaveRequestsAdmin';
 import { useNavigate } from 'react-router-dom';
 
 
@@ -66,6 +67,7 @@ function App() {
           <Route path="tasks" element={<Tasks />} />
           <Route path="software-complaint" element={<SoftwareComplaintSection />} />
           <Route path="office-complaint" element={<OfficeComplaintSection />} />
+          <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
         </Route>
 
         {/* Redirect unknown routes to login */}

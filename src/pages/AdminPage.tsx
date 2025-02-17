@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Menu } from "lucide-react"; // Icons from Lucide React (or use any icon library)
 import { useAuthStore } from '../lib/store';
+import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 
 
 import {
@@ -72,6 +73,7 @@ const AdminPage: React.FC = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [showEmployeeList, setShowEmployeeList] = useState(false);
   const user = useAuthStore((state) => state.user);
+  const [leaveRequests , setleaveRequests] = useState(false)
   const setUser = useAuthStore((state) => state.setUser);
   
   // const [selectedTab, setSelectedTab] = useState("");
@@ -133,7 +135,7 @@ const AdminPage: React.FC = () => {
 
       } catch (err) {
         console.error('Error fetching complaints:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
+        // setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
       } finally {
         setLoading(false);
       }
@@ -166,11 +168,11 @@ const AdminPage: React.FC = () => {
           
           
         }
-        console.log("softwareComplaints : ", softwareComplaints);
+        // console.log("softwareComplaints : ", softwareComplaints);
 
       } catch (err) {
         console.error('Error fetching complaints:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
+        // setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
       } finally {
         setLoading(false);
       }
@@ -464,6 +466,20 @@ const AdminPage: React.FC = () => {
             }`}
           >
             Software Complaints
+          </button>
+
+          <button
+            onClick={() => {
+              setSelectedTab("leaveRequests");
+              setIsOpen(false);
+            }}
+            className={`w-full text-left p-2 rounded ${
+              selectedTab === "leaveRequests"
+                ? "bg-blue-100 text-blue-600"
+                : "text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            Leave Requests
           </button>
 
           <button
@@ -892,7 +908,7 @@ const AdminPage: React.FC = () => {
    )}
 
      
-{selectedTab === 'OfficeComplaints' && (
+      {selectedTab === 'OfficeComplaints' && (
       <div className="flex-1 p-8">
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
         Admin Dashboard
@@ -930,6 +946,17 @@ const AdminPage: React.FC = () => {
             ))}
           </div>
         )}
+      </div>
+    </div>
+   )}
+      {selectedTab === 'leaveRequests' && (
+      <div className="flex-1 p-8">
+      <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
+        Admin Dashboard
+      </h1>
+
+      <div className="bg-white shadow-lg rounded-2xl p-6">
+        <LeaveRequestsAdmin/>
       </div>
     </div>
    )}
