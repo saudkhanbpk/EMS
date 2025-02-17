@@ -133,7 +133,7 @@ const LeaveRequestsAdmin = () => {
 
 
 
-  const handleActionAccept = async (id, newStatus, userId) => {
+  const handleActionAccept = async (id, newStatus, userId, leavetype) => {
     // Step 1: Get the leave_date from the leave_requests table
     const { data: leaveData, error: leaveError } = await supabase
       .from("leave_requests")
@@ -154,7 +154,7 @@ const LeaveRequestsAdmin = () => {
       .from("absentees")
       .select("*")
       .eq("user_id", userId)
-      .eq("leave_date", leaveDate)  // Use leaveDate to compare
+      .eq("absentee_date", leaveDate)  // Use leaveDate to compare
       // .lte("created_at", leaveDate + "T23:59:59");  // Use leaveDate to compare
   
     if (selectError) {
@@ -166,9 +166,9 @@ const LeaveRequestsAdmin = () => {
     if (data.length > 0) {
       let { error: updateAbsenteesError } = await supabase
         .from("absentees")
-        .update({ "absentee_type": "leave" , "absentee_date" : leaveDate})
+        .update({ "absentee_type": "leave" , "absentee_date" : leaveDate, "absentee_Timing" : leavetype})
         .eq("user_id", userId)
-        .eq("leave_date", leaveDate)  // Use leaveDate to compare
+        .eq("absentee_date", leaveDate)  // Use leaveDate to compare
 
         // .gte("created_at", leaveDate + "T00:00:00")
         // .lte("created_at", leaveDate + "T23:59:59");
@@ -181,7 +181,7 @@ const LeaveRequestsAdmin = () => {
       // Step 5: If no absentee record exists for that day, insert a new one
       let { error: insertError } = await supabase
         .from("absentees")
-        .insert({ user_id: userId, absentee_type: "leave", created_at: leaveDate + "T00:00:00" , "leave_date" : leaveDate
+        .insert({ user_id: userId, absentee_type: "leave", "absentee_Timing" : leavetype , "absentee_date" : leaveDate
         });
   
       if (insertError) {
@@ -212,7 +212,7 @@ const LeaveRequestsAdmin = () => {
 
 
 
-const handleActionReject = async (id, newStatus, userId) => {
+const handleActionReject = async (id, newStatus, userId , leavetype) => {
   // Step 1: Get the leave_date from the leave_requests table
   const { data: leaveData, error: leaveError } = await supabase
     .from("leave_requests")
@@ -233,7 +233,7 @@ const handleActionReject = async (id, newStatus, userId) => {
     .from("absentees")
     .select("*")
     .eq("user_id", userId)
-    .eq("leave_date", leaveDate)  // Use leaveDate to compare
+    .eq("absentee_date", leaveDate)  // Use leaveDate to compare
     // .lte("created_at", leaveDate + "T23:59:59");  // Use leaveDate to compare
 
   if (selectError) {
@@ -245,9 +245,9 @@ const handleActionReject = async (id, newStatus, userId) => {
   if (data.length > 0) {
     let { error: updateAbsenteesError } = await supabase
       .from("absentees")
-      .update({ "absentee_type": "Absent" , "absentee_date" : leaveDate})
+      .update({ "absentee_type": "Absent" , "absentee_date" : leaveDate , "absentee_Timing" : leavetype})
       .eq("user_id", userId)
-      .eq("leave_date", leaveDate)  // Use leaveDate to compare
+      .eq("absentee_date", leaveDate)  // Use leaveDate to compare
 
       // .gte("created_at", leaveDate + "T00:00:00")
       // .lte("created_at", leaveDate + "T23:59:59");
@@ -260,7 +260,7 @@ const handleActionReject = async (id, newStatus, userId) => {
     // Step 5: If no absentee record exists for that day, insert a new one
     let { error: insertError } = await supabase
       .from("absentees")
-      .insert({ user_id: userId, absentee_type: "Absent", created_at: leaveDate + "T00:00:00" , "leave_date" : leaveDate
+      .insert({ user_id: userId, absentee_type: "Absent", "absentee_Timing" : leavetype, "absentee_date" : leaveDate
       });
 
     if (insertError) {
@@ -328,7 +328,7 @@ const handleActionReject = async (id, newStatus, userId) => {
             {selectedTab === "Pending" && (
               <div className="mt-3 flex gap-4">
                 <button
-                  onClick={() => handleActionAccept(request.id, "approved" ,request.users.id)}
+                  onClick={() => handleActionAccept(request.id, "approved" ,request.users.id , request.leave_type)}
                   className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
                 >
                   Approve
