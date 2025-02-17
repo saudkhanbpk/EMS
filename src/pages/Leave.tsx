@@ -10,18 +10,17 @@ const Leave: React.FC = () => {
   };
 
   return (
-    <div className="relative max-w-5xl mx-auto p-6 bg-gray-100 rounded-lg shadow-md">
+    <div className="relative max-w-5xl mx-auto  bg-gray-100 rounded-lg shadow-md">
       {/* Conditionally render LeaveRequest to cover the full page */}
       {showLeaveRequest ? (
         <LeaveRequest />
       ) : (
         <>
-          <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
+          <h1 className="text-3xl  font-bold text-gray-800 mb-6 text-center">
             Leave Management
           </h1>
 
-          <div className="bg-white p-6 rounded-lg shadow-sm">
-            <h2 className="text-xl font-semibold text-gray-700 mb-4">
+          <div className="bg-white p-6 rounded-lg shadow-sm h-[70vh] overflow-y-auto custom-scrollbar">            <h2 className="text-xl font-semibold text-gray-700 mb-4">
               TechCreator Leave Policy
             </h2>
 
