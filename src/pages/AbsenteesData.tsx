@@ -52,7 +52,7 @@ const AbsenteeComponent = () => {
               {absenteeData.map((absentee: any, index: number) => (
                 <div key={index}>
                   <p className="text-gray-700">
-                    {new Date(absentee.created_at).toLocaleString('en-us', {
+                    {new Date(absentee.absentee_date).toLocaleString('en-us', {
                       month: 'short',
                       year: 'numeric',
                       day: 'numeric',

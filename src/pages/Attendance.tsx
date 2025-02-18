@@ -70,7 +70,9 @@ const Attendance: React.FC = () => {
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [breakRecords, setBreakRecords] = useState<Record<string, BreakRecord[]>>({});
+  const [isDisabled, setIsDisabled] = useState(false);
 
+// Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
   useEffect(() => {
     
     const loadCurrentAttendance = async () => {
@@ -129,6 +131,32 @@ const Attendance: React.FC = () => {
 
 
 
+// Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
+  const checkAbsenteeStatus = async () => {
+    // Get today's date in YYYY-MM-DD format
+    const today = new Date().toISOString().split("T")[0];      
+
+    const { data, error } = await supabase
+      .from("absentees")
+      .select("absentee_type, absentee_date")
+      .eq("user_id", localStorage.getItem('user_id'))
+      .eq("absentee_type", "leave")
+      .eq("absentee_date", today);
+
+    if (error) {
+      console.error("Error fetching absentee data:", error);
+      return;
+    }
+    console.log("Data from absentees" , data);
+    
+
+    // If there's at least one record, disable the button
+    if (data.length > 0) {
+      setIsDisabled(true);
+    }
+  };
+
+  checkAbsenteeStatus();
 
 
 
@@ -623,6 +651,10 @@ const Attendance: React.FC = () => {
             </div>
           )}
 
+
+          {isDisabled && <span className="text-red-600 p-2 ">You are on Leave Today</span>}
+
+
           {isCheckedIn ? (
             <div className="space-y-4">
               <p className="text-gray-600">
@@ -640,7 +672,7 @@ const Attendance: React.FC = () => {
           ) : (
             <button
               onClick={handleCheckIn}
-              disabled={loading}
+              disabled={loading || isDisabled} // Button is disabled if loading or if the condition is met
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? 'Checking in...' : 'Check In'}
