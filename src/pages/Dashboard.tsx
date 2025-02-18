@@ -52,7 +52,55 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [absentees , setabsentees] = useState('');
+  const [leaves , setleaves] = useState('');
   const navigate = useNavigate();
+
+ 
+ const userID = localStorage.getItem('user_id')
+  useEffect(() => {
+      const fetchleaves = async () => {
+      const {count , error} = await supabase
+      .from("absentees")
+      .select("*", {count: "exact", head:true})
+      .eq('user_id', userID)
+      .eq('absentee_type', "leave")
+      if(error){
+        console.error("Error Fetching Absentees Count", error);
+      }else{
+        console.log("absentees Count :" , count);
+        if(count > 0){
+          setleaves(count)
+        }else{
+          setleaves(0)
+        }
+      }
+      }
+      fetchleaves();
+    },[userID])
+  
+  
+    useEffect(() => {
+      const fetchabsentees = async () => {
+      const {count , error} = await supabase
+      .from("absentees")
+      .select("*", {count: "exact", head:true})
+      .eq('user_id', userID)
+      .eq('absentee_type', "Absent")
+      if(error){
+        console.error("Error Fetching Absentees Count", error);
+      }else{
+        console.log("absentees Count :" , count);
+        if(count > 0 ){
+        setabsentees(count)
+        }else{
+         setabsentees(0)
+        }
+      }
+      }
+      fetchabsentees();
+    },[userID])
+  
 
 
   useEffect(() => {
@@ -473,6 +521,14 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Late Days:</span>
                     <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Absentees:</span>
+                    <span className="font-medium text-red-600">{absentees}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Leaves:</span>
+                    <span className="font-medium text-green-600">{leaves}</span>
                   </div>
                 </div>
               </div>

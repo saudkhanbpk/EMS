@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase"; // Import supabase instance
 
-const LeaveRequestsAdmin = () => {
+const LeaveRequestsAdmin = ({fetchPendingCount}) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [approvedRequests, setApprovedRequests] = useState([]);
   const [rejectedRequests, setRejectedRequests] = useState([]);
@@ -49,87 +49,6 @@ const LeaveRequestsAdmin = () => {
     if (!error) setRejectedRequests(data);
     setLoading(false);
   };
-
-
-
-
-
-  // const handleAction = async (id, newStatus, userId) => {
-  //   // Step 1: Get the created_at date from the leave_requests table
-  //   const { data: leaveData, error: leaveError } = await supabase
-  //     .from("leave_requests")
-  //     .select("created_at")
-  //     .eq("id", id)
-  //     .single();  // Assuming there's only one leave request with this id
-  
-  //   if (leaveError) {
-  //     console.error("Error fetching leave request data:", leaveError);
-  //     return;
-  //   }
-  
-  //   // Step 2: Extract the date part from the created_at field (YYYY-MM-DD)
-  //   //at this we are comparing with created at time but we need to compare with leave_date like the second method
-  //   // const createdDate = leaveData.created_at.split("T")[0];  // Split to get just the date part
-  //   const createdDate = leaveData.leave_date; // leave_date is in 'YYYY-MM-DD' format
-
-  
-  //   // Step 3: Now check if an absentee record exists for the same user on that date
-  //   let { data, error: selectError } = await supabase
-  //     .from("absentees")
-  //     .select("*")
-  //     .eq("user_id", userId)
-  //     .gte("created_at", createdDate + "T00:00:00")
-  //     .lte("created_at", createdDate + "T23:59:59");
-  
-  //   if (selectError) {
-  //     console.error("Error fetching absentee data:", selectError);
-  //     return;
-  //   }
-  
-  //   // Step 4: If an absentee record exists, update it
-  //   if (data.length > 0) {
-  //     let { error: updateAbsenteesError } = await supabase
-  //       .from("absentees")
-  //       .update({ "absentee_type": "leave" })
-  //       .eq("user_id", userId)
-  //       .gte("created_at", createdDate + "T00:00:00")
-  //       .lte("created_at", createdDate + "T23:59:59");
-  
-  //     if (updateAbsenteesError) {
-  //       console.error("Error updating absentee:", updateAbsenteesError);
-  //       return;
-  //     }
-  //   } else {
-  //     // Step 5: If no absentee record exists for that day, insert a new one
-  //     let { error: insertError } = await supabase
-  //       .from("absentees")
-  //       .insert({ user_id: userId, absentee_type: "leave", created_at: createdDate + "T00:00:00" });
-  
-  //     if (insertError) {
-  //       console.error("Error inserting into absentees:", insertError);
-  //       return;
-  //     }
-  //   }
-  
-  //   // Step 6: Update the leave request status
-  //   const { error: updateError } = await supabase
-  //     .from("leave_requests")
-  //     .update({ status: newStatus })
-  //     .eq("id", id);
-  
-  //   if (updateError) {
-  //     console.error("Error updating leave request status:", updateError);
-  //     return;
-  //   }
-  
-  //   // Step 7: Refresh the lists based on the selected tab
-  //   if (selectedTab === "Pending") handlePendingRequests();
-  //   else if (selectedTab === "Approved") handleApprovedRequests();
-  //   else handleRejectedRequests();
-  // };
-
-
-
 
 
 
@@ -205,6 +124,7 @@ const LeaveRequestsAdmin = () => {
     if (selectedTab === "Pending") handlePendingRequests() ;
     else if (selectedTab === "Approved") handleApprovedRequests();
     else handleRejectedRequests();
+    fetchPendingCount();
 };
 
 
@@ -283,7 +203,9 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
   // Step 7: Refresh the lists based on the selected tab
   if (selectedTab === "Pending") handlePendingRequests();
   else if (selectedTab === "Approved") handleApprovedRequests();
-  else handleRejectedRequests();
+  else if (selectedTab === "Rejected") handleRejectedRequests();
+  fetchPendingCount();
+
 };
 
 
@@ -325,22 +247,25 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
                   {request.status}
                 </span>
             
-            {selectedTab === "Pending" && (
-              <div className="mt-3 flex gap-4">
-                <button
+              <div className="mt-3 flex justify-end gap-4">
+                {(selectedTab === "Rejected" || selectedTab === "Pending") && (               
+                   <button
                   onClick={() => handleActionAccept(request.id, "approved" ,request.users.id , request.leave_type)}
                   className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
                 >
                   Approve
                 </button>
+                )}
+                 {(selectedTab === "Approved" || selectedTab === "Pending") && (        
                 <button
                   onClick={() => handleActionReject(request.id, "rejected", request.users.id , request.leave_type)}
                   className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
                 >
                   Reject
                 </button>
+                 )}
               </div>
-            )}
+            
           </div>
         ))
       )}
