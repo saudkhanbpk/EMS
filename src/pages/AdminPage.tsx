@@ -80,6 +80,8 @@ const AdminPage: React.FC = () => {
   const [leaveRequests , setleaveRequests] = useState(false)
   const [PendingLeaveRequests , setPendingLeaveRequests] = useState<any[]>([]);
   const setUser = useAuthStore((state) => state.setUser);
+  const[absentees , setabsentees] = useState('')
+  const[leaves , setleaves] = useState('')
   const [userID , setUserID] = useState<string>('');
   
   
@@ -118,7 +120,8 @@ const AdminPage: React.FC = () => {
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
 
-  useEffect(() => {
+
+  // Fetching the pending Leave Requests Count
     const fetchPendingCount = async () => {
       const { count, error } = await supabase
         .from("leave_requests")
@@ -133,8 +136,47 @@ const AdminPage: React.FC = () => {
       }
     };
 
+
+    useEffect(() => {
     fetchPendingCount();
   }, []); // Empty dependency array ensures it runs once on mount
+
+
+  useEffect(() => {
+    const fetchleaves = async () => {
+    const {count , error} = await supabase
+    .from("absentees")
+    .select("*", {count: "exact", head:true})
+    .eq('user_id', userID)
+    .eq('absentee_type', "leave")
+    if(error){
+      console.error("Error Fetching Absentees Count", error);
+    }else{
+      console.log("absentees Count :" , count);
+      setleaves(count || 0)
+    }
+    }
+    fetchleaves();
+  },[userID])
+
+
+  useEffect(() => {
+    const fetchabsentees = async () => {
+    const {count , error} = await supabase
+    .from("absentees")
+    .select("*", {count: "exact", head:true})
+    .eq('user_id', userID)
+    .eq('absentee_type', "Absent")
+    if(error){
+      console.error("Error Fetching Absentees Count", error);
+    }else{
+      console.log("absentees Count :" , count);
+      setabsentees(count || 0)
+    }
+    }
+    fetchabsentees();
+  },[userID])
+
 
 
   
@@ -367,7 +409,6 @@ const AdminPage: React.FC = () => {
       
       
 
-
         let totalHours = 0;
         uniqueAttendance.forEach(attendance => {
           const start = new Date(attendance.check_in);
@@ -423,115 +464,121 @@ const AdminPage: React.FC = () => {
         ></div>
       )}
 
-      {/* Sidebar (Fixed) */}
-      <div
-        className={`bg-white w-64 p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out 
-        ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0`}
+     {/* Sidebar (Fixed) */}
+<div
+  className={`bg-white w-64 p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
+  ${isOpen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 h-screen flex flex-col`}
+>
+
+  {/* Logo */}
+  <div className="mb-4 flex justify-center">
+    <ShieldCheck className="w-16 h-16 text-blue-600" />
+  </div>
+
+  {/* Sidebar Buttons Container (Ensures Space Between) */}
+  <div className="flex flex-col flex-grow justify-between">
+    <div className="space-y-4">
+      <button
+        onClick={() => {
+          setSelectedTab("Employees");
+          setShowEmployeeList(!showEmployeeList);
+        }}
+        className={`w-full text-left p-2 rounded ${
+          selectedTab === "Employees"
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-700 hover:bg-gray-200"
+        }`}
       >
+        Employees
+      </button>
 
-        {/* Logo */}
-        <div className="mb-4 flex justify-center">
-          <ShieldCheck className="w-16 h-16 text-blue-600" />
+      {/* Employee List (Mobile) */}
+      {isSmallScreen && showEmployeeList && (
+        <div className="mt-2 bg-white rounded-lg shadow-md max-h-[300px] overflow-y-auto custom-scrollbar">
+          <ul className="space-y-2 p-2">
+            {employees.map((employee) => (
+              <li
+                key={employee.id}
+                onClick={() => handleEmployeeClick(employee.id)}
+                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  selectedEmployee?.id === employee.id
+                    ? "bg-blue-100 text-blue-600"
+                    : "hover:bg-gray-100"
+                }`}
+              >
+                {employee.full_name}
+              </li>
+            ))}
+          </ul>
         </div>
+      )}
 
-        {/* Sidebar Buttons */}
-        <div className="space-y-4">
-          <button
-            onClick={() => {setSelectedTab("Employees")
-              setShowEmployeeList(!showEmployeeList); // Toggle employee list visibility
-            }}
-            className={`w-full text-left p-2 rounded ${
-              selectedTab === "Employees"
-                ? "bg-blue-100 text-blue-600"
-                : "text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            Employees
-          </button>
-          {/* Employee List (Mobile) */}
-          {isSmallScreen && showEmployeeList && (
-          <div className="mt-2 bg-white rounded-lg shadow-md max-h-[300px] overflow-y-auto custom-scrollbar">
-            <ul className="space-y-2 p-2">
-              {employees.map((employee) => (
-                <li
-                  key={employee.id}
-                  onClick={() => {handleEmployeeClick(employee.id)
+      <button
+        onClick={() => {
+          setSelectedTab("OfficeComplaints");
+          handleOfficeComplaintsClick();
+          setIsOpen(false);
+        }}
+        className={`w-full text-left p-2 rounded ${
+          selectedTab === "OfficeComplaints"
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-700 hover:bg-gray-200"
+        }`}
+      >
+        Office Complaints
+      </button>
 
-                  }}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedEmployee?.id === employee.id
-                      ? "bg-blue-100 text-blue-600 "
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {employee.full_name}
-                </li>
-              ))}
-            </ul>
-          </div>
+      <button
+        onClick={() => {
+          setSelectedTab("SoftwareComplaints");
+          handleSoftwareComplaintsClick();
+          setIsOpen(false);
+        }}
+        className={`w-full text-left p-2 rounded ${
+          selectedTab === "SoftwareComplaints"
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-700 hover:bg-gray-200"
+        }`}
+      >
+        Software Complaints
+      </button>
+
+      <button
+        onClick={() => {
+          setSelectedTab("leaveRequests");
+          setIsOpen(false);
+        }}
+        className={`w-full text-left p-2 rounded ${
+          selectedTab === "leaveRequests"
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-700 hover:bg-gray-200"
+        }`}
+      >
+        Leave Requests
+        {PendingLeaveRequests > 0 && (
+          <span className="bg-blue-500 text-white rounded-full px-3 pb-[2px] ml-4 text-md">
+            {PendingLeaveRequests}
+          </span>
         )}
+      </button>
+    </div>
 
-          <button
-            onClick={() => {
-              setSelectedTab("OfficeComplaints");
-              handleOfficeComplaintsClick();
-              setIsOpen(false);
-            }}
-            className={`w-full text-left p-2 rounded ${
-              selectedTab === "OfficeComplaints"
-                ? "bg-blue-100 text-blue-600"
-                : "text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            Office Complaints
-          </button>
+    {/* Sign Out Button (Placed at the Bottom) */}
+    <div>
+      <button
+        onClick={() => {
+          handleSignOut();
+          setIsOpen(false);
+        }}
+        className="flex items-center w-full px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50"
+      >
+        <LogOut className="w-5 h-5 mr-3" />
+        Sign Out
+      </button>
+    </div>
+  </div>
+</div>
 
-          <button
-            onClick={() => {
-              setSelectedTab("SoftwareComplaints");
-              handleSoftwareComplaintsClick();
-              setIsOpen(false);
-            }}
-            className={`w-full text-left p-2 rounded ${
-              selectedTab === "SoftwareComplaints"
-                ? "bg-blue-100 text-blue-600"
-                : "text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            Software Complaints
-          </button>
-
-          <button
-            onClick={() => {
-              setSelectedTab("leaveRequests");
-              setIsOpen(false);
-            }}
-            className={`w-full text-left p-2 rounded ${
-              selectedTab === "leaveRequests"
-                ? "bg-blue-100 text-blue-600"
-                : "text-gray-700 hover:bg-gray-200"
-            }`}
-          >
-            Leave Requests
-            {PendingLeaveRequests > 0 && (
-              <span className="bg-blue-500 text-white rounded-full px-3 pb-[2px] ml-4 text-md">
-                {PendingLeaveRequests}
-              </span>
-            )}
-          </button>
-
-          <button
-            onClick={() => {
-              handleSignOut();
-              setIsOpen(false);
-            }}
-            className="flex items-center w-full px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50"
-          >
-            <LogOut className="w-5 h-5 mr-3" />
-            Sign Out
-          </button>
-        </div>
-      </div>
     </div>
 
       
@@ -652,63 +699,6 @@ const AdminPage: React.FC = () => {
               </div>
                     </div>
 
-                    {/* Monthly Overview */}
-                    {monthlyStats && (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h3 className="text-lg font-semibold mb-3">Monthly Overview</h3>
-                        <div className="grid grid-cols-3 gap-4">
-                          <div>
-                            <h4 className="font-medium mb-2">Attendance</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Expected Days:</span>
-                                <span>{monthlyStats.expectedWorkingDays}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Days Attended:</span>
-                                <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Present Days:</span>
-                                <span className="text-green-600">{monthlyStats.presentDays}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Late Days:</span>
-                                <span className="text-yellow-600">{monthlyStats.lateDays}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="font-medium mb-2">Work Mode</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>On-site:</span>
-                                <span>{monthlyStats.onSiteDays}</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Remote:</span>
-                                <span>{monthlyStats.remoteDays}</span>
-                              </div>
-                            </div>
-                          </div>
-                          <div>
-                            <h4 className="font-medium mb-2">Work Hours</h4>
-                            <div className="space-y-2">
-                              <div className="flex justify-between">
-                                <span>Average Daily:</span>
-                                <span>{monthlyStats.averageWorkHours.toFixed(1)}h</span>
-                              </div>
-                              <div className="flex justify-between">
-                                <span>Total Hours:</span>
-                                <span>
-                                  {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
-                                </span>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    )}
 
                     {/* Optional: Additional Tasks or Overview */}
                     <div className="mt-6">
@@ -739,6 +729,14 @@ const AdminPage: React.FC = () => {
                                   <span className="text-gray-600">Late Days:</span>
                                   <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
                                 </div>
+                                <div className="flex justify-between text-gray-600">
+                                <span>Absentees:</span>
+                                <span className="text-red-600">{absentees}</span>
+                              </div>
+                              <div className="flex justify-between text-gray-600">
+                                <span>Leaves:</span>
+                                <span className="text-green-600">{leaves}</span>
+                              </div>
                               </div>
                             </div>
 
@@ -997,7 +995,7 @@ const AdminPage: React.FC = () => {
       </h1>
 
       <div className="bg-white shadow-lg rounded-2xl p-6">
-        <LeaveRequestsAdmin/>
+        <LeaveRequestsAdmin fetchPendingCount = {fetchPendingCount} />
       </div>
     </div>
    )}

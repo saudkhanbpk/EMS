@@ -9,8 +9,8 @@ const Leave: React.FC = () => {
   return (
     <div className="relative max-w-5xl mx-auto bg-gray-100 rounded-lg shadow-md">
       {/* Conditionally Render Components */}
-      {activeComponent === "request" && <LeaveRequest />}
-      {activeComponent === "history" && <LeaveHistory />}
+      {activeComponent === "request" && <LeaveRequest setActiveComponent = {setActiveComponent}/>}
+      {activeComponent === "history" && <LeaveHistory setActiveComponent = {setActiveComponent}/>}
       {activeComponent === "default" && (
         <>
           <h1 className="text-3xl font-bold text-gray-800 mb-6 text-center">
