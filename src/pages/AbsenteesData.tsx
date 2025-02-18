@@ -3,25 +3,18 @@ import { supabase } from '../lib/supabase';
 
 const AbsenteeComponent = () => {
   const [absenteeData, setAbsenteeData] = useState<any[]>([]);
+  const [loading , setloading] = useState(false);
 
   const now = new Date();
   const todayDate = now.toISOString().split('T')[0];
   const startOfDay = `${todayDate}T00:00:00.000Z`;
   const endOfDay = `${todayDate}T23:59:59.999Z`;
 
-  const isWorkingDay = (date: Date) => {
-    const day = date.getDay();
-    return day !== 0 && day !== 6; // Skip weekends (Sunday & Saturday)
-  };
 
   const FetchAbsenteeData = async () => {
     try {
-      if (!isWorkingDay(now)) {
-        console.log("Today is not a working day. Skipping...");
-        return;
-      }
-
       // Fetch absentee records for today for all users at once
+      setloading(true)
       const { data: absenteeRecords, error: absenteeError } = await supabase
         .from('absentees')
         .select('*')
@@ -30,6 +23,7 @@ const AbsenteeComponent = () => {
         .lt('created_at', endOfDay);
 
       if (absenteeError) throw absenteeError;
+      setloading(false)
 
       // Set the fetched absentee records into state
       setAbsenteeData(absenteeRecords || []);
@@ -44,6 +38,11 @@ const AbsenteeComponent = () => {
 
   return (
     <div>
+      {loading ? (
+        <p className="text-center text-gray-500"> Loading ....</p>
+      ) : absenteeData.length === 0 ? (
+        <p className="text-center text-gray-500">No Absentee Record Found</p>
+      ) : 
       <div className="flex flex-col items-center justify-between">
         <div className="grid grid-cols-3 gap-14 bg-gray-50 rounded-lg p-4 w-full">
           <div>
@@ -84,6 +83,7 @@ const AbsenteeComponent = () => {
           </div>
         </div>
       </div>
+}
     </div>
   );
 };

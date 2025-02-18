@@ -120,12 +120,14 @@ const LeaveRequest: React.FC = () => {
         </div>
 
         {/* Submit Button */}
+        <div className="flex justify-end gap-6 mt-6 mr-4 ">
         <button
           type="submit"
           className="bg-gray-800 text-white px-6 py-2 rounded-lg shadow hover:bg-gray-900 transition"
         >
           Submit Request
         </button>
+        </div>
       </form>
     </div>
   );
