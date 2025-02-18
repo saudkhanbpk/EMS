@@ -26,6 +26,7 @@ const LeaveRequest: React.FC = () => {
             'description': description,
             'start_date': new Date().toISOString(),
             'leave_date': selectedDate,
+            'full_name' : fullname
                   },
         ]);
 
@@ -102,7 +103,7 @@ const LeaveRequest: React.FC = () => {
         />
       </div>
        
-
+     
         {/* Description Input */}
         <div className="mb-4">
           <label htmlFor="description" className="block text-sm font-medium text-gray-600">
