@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Menu } from "lucide-react"; // Icons from Lucide React (or use any icon library)
 import { useAuthStore } from '../lib/store';
 import LeaveRequestsAdmin from './LeaveRequestsAdmin';
+import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
+
 
 
 import {
@@ -19,6 +21,8 @@ import {
   isWeekend,
   eachDayOfInterval
 } from 'date-fns';
+import AbsenteeComponent from './AbsenteesData';
+import { id } from 'date-fns/locale/id';
 
 interface AttendanceRecord {
   id: string;
@@ -74,7 +78,14 @@ const AdminPage: React.FC = () => {
   const [showEmployeeList, setShowEmployeeList] = useState(false);
   const user = useAuthStore((state) => state.user);
   const [leaveRequests , setleaveRequests] = useState(false)
+  const [PendingLeaveRequests , setPendingLeaveRequests] = useState<any[]>([]);
   const setUser = useAuthStore((state) => state.setUser);
+  const [userID , setUserID] = useState<string>('');
+  
+  
+
+
+  
   
   // const [selectedTab, setSelectedTab] = useState("");
 //Checking For Session Expiry 
@@ -106,6 +117,25 @@ const AdminPage: React.FC = () => {
     // Cleanup
     return () => window.removeEventListener('resize', checkScreenSize);
   }, []);
+
+  useEffect(() => {
+    const fetchPendingCount = async () => {
+      const { count, error } = await supabase
+        .from("leave_requests")
+        .select("*", { count: "exact", head: true }) // Fetch count only
+        .eq("status", "pending");
+
+      if (error) {
+        console.error("Error fetching count:", error);
+      } else {
+        setPendingLeaveRequests(count || 0); // Ensure count is not null     
+           
+      }
+    };
+
+    fetchPendingCount();
+  }, []); // Empty dependency array ensures it runs once on mount
+
 
   
 
@@ -230,7 +260,7 @@ const AdminPage: React.FC = () => {
     const minutes = totalMinutes % 60;
     return totalMinutes > 0 ? `${hours}h ${minutes}m` : '0h 0m';
   };
-
+  
   const handleEmployeeClick = async (id: string) => {
     setLoading(true);
     try {
@@ -242,6 +272,7 @@ const AdminPage: React.FC = () => {
         .single();
       if (userError) throw userError;
       setSelectedEmployee(userData);
+      setUserID(id);
 
       // Define today's date range.
       const today = new Date();
@@ -424,7 +455,9 @@ const AdminPage: React.FC = () => {
               {employees.map((employee) => (
                 <li
                   key={employee.id}
-                  onClick={() => handleEmployeeClick(employee.id)}
+                  onClick={() => {handleEmployeeClick(employee.id)
+
+                  }}
                   className={`p-3 rounded-lg cursor-pointer transition-colors ${
                     selectedEmployee?.id === employee.id
                       ? "bg-blue-100 text-blue-600 "
@@ -480,6 +513,11 @@ const AdminPage: React.FC = () => {
             }`}
           >
             Leave Requests
+            {PendingLeaveRequests > 0 && (
+              <span className="bg-blue-500 text-white rounded-full px-3 pb-[2px] ml-4 text-md">
+                {PendingLeaveRequests}
+              </span>
+            )}
           </button>
 
           <button
@@ -754,6 +792,9 @@ const AdminPage: React.FC = () => {
                           </div>
                         )}
                       </div>
+                    </div>
+                    <div className='mt-5'>
+                      <AbsenteeComponentAdmin userID={userID} />
                     </div>
                   </>
                 )}

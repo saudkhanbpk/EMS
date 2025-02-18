@@ -202,7 +202,7 @@ const LeaveRequestsAdmin = () => {
     }
   
     // Step 7: Refresh the lists based on the selected tab
-    if (selectedTab === "Pending") handlePendingRequests();
+    if (selectedTab === "Pending") handlePendingRequests() ;
     else if (selectedTab === "Approved") handleApprovedRequests();
     else handleRejectedRequests();
 };
@@ -297,7 +297,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
         <p className="text-center text-gray-500">No requests available.</p>
       ) : (
         requests.map((request) => (
-          <div key={request.id} className="p-4 mb-4  text-sm text-gray=400 bg-gray-100 rounded-lg shadow">
+          <div key={request.id} className="p-4 mb-4  text-sm text-gray=400 bg-gray-100 break-words rounded-lg shadow">
             <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500">{request.leave_date} {"-"} {request.leave_type}</span></p>
             <p> {request.description}</p>
             <p className="text-gray-700"> {request.full_name}</p>
@@ -334,7 +334,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
                   Approve
                 </button>
                 <button
-                  onClick={() => handleActionReject(request.id, "rejected", request.users.id)}
+                  onClick={() => handleActionReject(request.id, "rejected", request.users.id , request.leave_type)}
                   className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
                 >
                   Reject

@@ -27,29 +27,38 @@ const LeaveHistory = () => {
 
 
    return(
-    <div className="bg-white p-6 rounded-lg shadow-sm h-full overflow-y-auto custom-scrollbar">
-      <div className="space-y-4 text-gray-700 w-full flex justify-center" >
-        <h1 className="">Leaves History </h1>
-      </div>  
-
+    <div className="bg-white p-6 mt-5 rounded-lg shadow-sm h-full overflow-y-auto custom-scrollbar">
+        <div className="space-y-4 text-gray-700 w-full px-3">
+          <h1 className="text-2xl font-bold mb-7">Leaves History</h1>
+        </div>
       <div className="width-full grid grid-cols-1 mt-6 md:grid-cols-2 gap-4">
         {LeaveRequests.map((request:any) => (
           <div className="bg-gray-100 p-4 rounded-lg shadow-md">
-            <h2 className="text-xl font-semibold text-gray-800 mb-4">
+            <h2 className="text-lg font-semibold text-gray-800 mb-2">
               {request.leave_type}
             </h2>
-            <p className="text-gray-600">
-              <strong>Leave Date:</strong> {new Date(request.leave_date).toDateString()}
+            <p className="text-gray-600 text-sm">
+             <span className="text-gray-800">Request For : </span> 
+             {new Date(request.leave_date).toDateString().split(' ').slice(1).join(' ')}
             </p>
-            <p className="text-gray-600">
-              <strong>Requested On:</strong> {new Date(request.start_date).toDateString()}
+            <p className="text-gray-900">
+             {request.description}
             </p>
-            <p className="text-gray-600">
-              <strong>Status:</strong> {request.status}
+            <p className="text-gray-600 text-sm mt-1 mb-0">
+              {new Date(request.start_date).toDateString().split(' ').slice(1).join(' ')}
             </p>
-            <p className="text-gray-600">
-              <strong>Description:</strong> {request.description}
+            <p> 
+              <span 
+                 className={`${
+                   request.status === "pending" ? "text-yellow-600 mt-0" : 
+                   request.status === "approved" ? "text-green-600 mt-0" : 
+                   "text-red-600 mt-0"
+                }`}
+              >
+                {request.status}
+               </span>
             </p>
+           
           </div>
         ))}
       </div>
