@@ -10,28 +10,6 @@ const AbsenteeComponent = () => {
 
 
 
-
-
-  
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   const FetchAbsenteeData = async () => {
     try {
       // Fetch absentee records for today for all users at once
@@ -56,6 +34,11 @@ const AbsenteeComponent = () => {
   useEffect(() => {
     FetchAbsenteeData();
   }, []);
+  
+
+
+
+
 
   return (
     <div>
