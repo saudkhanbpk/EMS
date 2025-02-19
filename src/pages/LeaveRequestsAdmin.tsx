@@ -250,7 +250,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
               <div className="mt-3 flex justify-end gap-4">
                 {(selectedTab === "Rejected" || selectedTab === "Pending") && (               
                    <button
-                  onClick={() => handleActionAccept(request.id, "approved" ,request.users.id , request.leave_type)}
+                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type)}
                   className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
                 >
                   Approve
@@ -258,7 +258,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
                 )}
                  {(selectedTab === "Approved" || selectedTab === "Pending") && (        
                 <button
-                  onClick={() => handleActionReject(request.id, "rejected", request.users.id , request.leave_type)}
+                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type)}
                   className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
                 >
                   Reject
