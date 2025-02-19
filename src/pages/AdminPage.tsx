@@ -83,6 +83,7 @@ const AdminPage: React.FC = () => {
   const[absentees , setabsentees] = useState('')
   const[leaves , setleaves] = useState('')
   const [userID , setUserID] = useState<string>('');
+  const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
   
   
 
@@ -256,23 +257,90 @@ const AdminPage: React.FC = () => {
 
 
 
-  // Fetch employees when the "Employees" tab is active.
-  useEffect(() => {
-    if (selectedTab === 'Employees') {
+   useEffect(() => {
+    if (selectedTab === "Employees") {
       const fetchEmployees = async () => {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, full_name');
-        if (error) {
-          console.error('Error fetching employees:', error.message);
-        } else {
-          setEmployees(data || []);
+        try {
+          // Fetch employees
+          const { data: employees, error: employeesError } = await supabase
+            .from("users")
+            .select("id, full_name");
+  
+          if (employeesError) throw employeesError;
+          if (!employees || employees.length === 0) {
+            console.warn("No employees found.");
+            return;
+          }
+  
+          setEmployees(employees);
+  
+          // Fetch working hours for all employees
+          const employeeHours: Record<string, number> = {};
+  
+          for (const employee of employees) {
+            if (!employee.id) continue;
+  
+            try {
+              const today = new Date();
+              const monthStart = startOfMonth(today);
+              const monthEnd = endOfMonth(today);
+  
+              const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+              const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+  
+              // Fetch attendance logs for the employee
+              const { data: monthlyAttendance, error: monthlyError } = await supabase
+                .from("attendance_logs")
+                .select("*")
+                .eq("user_id", employee.id) // Fix: Use `employee.id`
+                .gte("check_in", monthStart.toISOString())
+                .lte("check_in", monthEnd.toISOString())
+                .order("check_in", { ascending: true });
+  
+              if (monthlyError) throw monthlyError;
+  
+              if (monthlyAttendance) {
+                // Group attendance by day (earliest record per day)
+                const attendanceByDate = monthlyAttendance.reduce((acc, curr) => {
+                  const date = format(new Date(curr.check_in), "yyyy-MM-dd");
+                  if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+                    acc[date] = curr;
+                  }
+                  return acc;
+                }, {} as Record<string, AttendanceRecord>);
+  
+                const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
+  
+                let totalHours = 0;
+                uniqueAttendance.forEach((attendance) => {
+                  const start = new Date(attendance.check_in);
+                  const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
+                  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                  totalHours += Math.min(hours, 24);
+                });
+  
+                // Store average hours per employee
+                employeeHours[employee.id] = uniqueAttendance.length ? totalHours / uniqueAttendance.length : 0;
+              }
+            } catch (err) {
+              console.error(`Error fetching stats for ${employee.full_name}:`, err);
+            }
+          }
+  
+          // Update state after looping all employees
+          setEmployeeStats(employeeHours);
+          console.log("Employee Hours " , employeeHours);
+          
+        } catch (error) {
+          console.error("Error fetching employees and stats:", error);
         }
       };
+  
       fetchEmployees();
     }
   }, [selectedTab]);
-
+  
+  
   const handleSignOut = async () => {
     setUser(null)
     await supabase.auth.signOut();
@@ -303,6 +371,7 @@ const AdminPage: React.FC = () => {
     return totalMinutes > 0 ? `${hours}h ${minutes}m` : '0h 0m';
   };
   
+
   const handleEmployeeClick = async (id: string) => {
     setLoading(true);
     try {
@@ -497,17 +566,17 @@ const AdminPage: React.FC = () => {
         <div className="mt-2 bg-white rounded-lg shadow-md max-h-[300px] overflow-y-auto custom-scrollbar">
           <ul className="space-y-2 p-2">
             {employees.map((employee) => (
-              <li
-                key={employee.id}
-                onClick={() => handleEmployeeClick(employee.id)}
-                className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  selectedEmployee?.id === employee.id
-                    ? "bg-blue-100 text-blue-600"
-                    : "hover:bg-gray-100"
-                }`}
-              >
-                {employee.full_name}
-              </li>
+             <li
+             key={employee.id}
+             onClick={() => handleEmployeeClick(employee.id)}
+             className={`p-3 rounded-lg cursor-pointer transition-colors ${
+               selectedEmployee?.id === employee.id
+                 ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                 : "hover:bg-gray-100"
+             } ${employeeStats[employee.id] < 7 ? "text-red-600" : ""}`} // Apply red color if hours < 7
+           >
+             {employee.full_name}
+           </li>
             ))}
           </ul>
         </div>
@@ -597,16 +666,16 @@ const AdminPage: React.FC = () => {
             <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
               {employees.map((employee) => (
                 <li
-                  key={employee.id}
-                  onClick={() => handleEmployeeClick(employee.id)}
-                  className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                    selectedEmployee?.id === employee.id
-                      ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {employee.full_name}
-                </li>
+                key={employee.id}
+                onClick={() => handleEmployeeClick(employee.id)}
+                className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                  selectedEmployee?.id === employee.id
+                    ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                    : "hover:bg-gray-100"
+                } ${employeeStats[employee.id] < 7 ? "text-red-600" : ""}`} // Apply red color if hours < 7
+              >
+                {employee.full_name}
+              </li>
               ))}
             </ul>
           </div>
