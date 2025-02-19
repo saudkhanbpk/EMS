@@ -7,8 +7,8 @@ const AbsenteeComponent = () => {
 
   const now = new Date();
   const todayDate = now.toISOString().split('T')[0];
-  const startOfDay = `${todayDate}T00:00:00.000Z`;
-  const endOfDay = `${todayDate}T23:59:59.999Z`;
+  // const startOfDay = `${todayDate}T00:00:00.000Z`;
+  // const endOfDay = `${todayDate}T23:59:59.999Z`;
 
 
   const FetchAbsenteeData = async () => {
@@ -19,8 +19,8 @@ const AbsenteeComponent = () => {
         .from('absentees')
         .select('*')
         .eq('user_id', localStorage.getItem('user_id'))
-        .gte('created_at', startOfDay)
-        .lt('created_at', endOfDay);
+        // .gte('created_at', startOfDay)
+        // .lt('created_at', endOfDay);
 
       if (absenteeError) throw absenteeError;
       setloading(false)
