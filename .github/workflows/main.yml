@@ -2,7 +2,7 @@ name: Run FetchUsers Daily at 11:55 AM Pakistan Time (Mon-Fri)
 
 on:
   schedule:
-    - cron: '59 6 * * 1-5'  # Runs at 11:55 AM Pakistan Time (06:55 UTC) on Monday to Friday
+    - cron: '19 7 * * 1-5'  # Runs at 12:15 PM Pakistan Time (07:15 UTC) on Monday to Friday
 
   workflow_dispatch:  # Allows manual triggering
 
