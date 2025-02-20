@@ -1,4 +1,4 @@
-name: Run FetchUsers Daily at 11:55 AM Pakistan Time (Mon-Fri)
+name: Run FetchUsers Daily at 9:00 PM Pakistan Time (Mon-Fri)
 
 on:
   schedule:
@@ -22,8 +22,13 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
+      - name: Load Environment Variables from .env
+        run: |
+          echo "SUPABASE_URL=$(grep 'VITE_SUPABASE_URL' .env | cut -d '=' -f2)" >> $GITHUB_ENV
+          echo "SUPABASE_ANON_KEY=$(grep 'VITE_SUPABASE_ANON_KEY' .env | cut -d '=' -f2)" >> $GITHUB_ENV
+
       - name: Run FetchUsers Script
         run: node fetchUsers.js
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_URL: ${{ env.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
