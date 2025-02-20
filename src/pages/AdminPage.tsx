@@ -481,9 +481,12 @@ const AdminPage: React.FC = () => {
         let totalHours = 0;
         uniqueAttendance.forEach(attendance => {
           const start = new Date(attendance.check_in);
-          const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
+          // if an employee has No CheckOut , then Put 4 Working Hours
+          const end = attendance.check_out 
+             ? new Date(attendance.check_out) 
+             : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
           const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 24);
+          totalHours += Math.min(hours, 12);
         });
         
 

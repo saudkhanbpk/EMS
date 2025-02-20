@@ -13,6 +13,7 @@ import SoftwareComplaintSection from './components/SoftwareComplaintSection';
 import OfficeComplaintSection from './components/OfficeComplaintSection';
 import LeaveRequestsAdmin from './pages/LeaveRequestsAdmin';
 import { useNavigate } from 'react-router-dom';
+import ExtraHours from './pages/ExtraHours2';
 
 
 
@@ -68,6 +69,7 @@ function App() {
           <Route path="software-complaint" element={<SoftwareComplaintSection />} />
           <Route path="office-complaint" element={<OfficeComplaintSection />} />
           <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
+          <Route path="overtime" element={<ExtraHours />} />
         </Route>
 
         {/* Redirect unknown routes to login */}

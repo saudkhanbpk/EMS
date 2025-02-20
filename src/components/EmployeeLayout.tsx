@@ -73,6 +73,7 @@ const EmployeeLayout: React.FC = () => {
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Attendance', href: '/attendance', icon: Clock },
+    { name: 'Over Time', href: '/overtime', icon: Clock },
     { name: 'Leave', href: '/leave', icon: Calendar },
     { name: 'Tasks', href: '/tasks', icon: ListTodo },
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
