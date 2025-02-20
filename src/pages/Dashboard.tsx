@@ -212,9 +212,11 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
           let totalHours = 0;
           uniqueAttendance.forEach(attendance => {
             const start = new Date(attendance.check_in);
-            const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
+            const end = attendance.check_out 
+             ? new Date(attendance.check_out) 
+             : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
             const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-            totalHours += Math.min(hours, 24); // Cap at 24 hours to avoid outliers
+            totalHours += Math.min(hours, 12); // Cap at 24 hours to avoid outliers
           });
           stats.averageWorkHours = totalHours / uniqueAttendance.length;
 

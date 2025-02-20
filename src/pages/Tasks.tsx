@@ -421,6 +421,19 @@ const Tasks: React.FC = () => {
                           </option>
                         ))}
                       </select>
+{/* <select
+  required
+  value={newTask.status_id}
+  onChange={(e) => setNewTask({ ...newTask, status_id: e.target.value })}
+  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+>
+  <option value="">Select Status</option> 
+  <option value="1">Pending</option>
+  <option value="2">In Progress</option>
+  <option value="3">Completed</option>
+  <option value="4">Cancelled</option>
+</select> */}
+
                     </div>
 
                     <div>
@@ -440,6 +453,19 @@ const Tasks: React.FC = () => {
                           </option>
                         ))}
                       </select>
+
+{/* <select
+  required
+  value={newTask.status_id}
+  onChange={(e) => setNewTask({ ...newTask, status_id: e.target.value })}
+  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50"
+>
+  <option value="">Select Status</option> 
+  <option value="1">Pending</option>
+  <option value="2">In Progress</option>
+  <option value="3">Completed</option>
+  <option value="4">Cancelled</option>
+</select> */}
                     </div>
 
                     <div>
