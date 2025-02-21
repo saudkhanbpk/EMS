@@ -479,6 +479,7 @@ const AdminPage: React.FC = () => {
       
 
         let totalHours = 0;
+        
         uniqueAttendance.forEach(attendance => {
           const start = new Date(attendance.check_in);
           // if an employee has No CheckOut , then Put 4 Working Hours

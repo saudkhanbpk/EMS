@@ -53,79 +53,102 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
 
 
   const handleActionAccept = async (id, newStatus, userId, leavetype) => {
-    // Step 1: Get the leave_date from the leave_requests table
-    const { data: leaveData, error: leaveError } = await supabase
-      .from("leave_requests")
-      .select("leave_date") // Fetching leave_date instead of created_at
-      .eq("id", id)
-      .single();  // Assuming there's only one leave request with this id
+    try {
+      // Step 1: Get the leave_date from the leave_requests table
+      const { data: leaveData, error: leaveError } = await supabase
+        .from("leave_requests")
+        .select("leave_date") 
+        .eq("id", id)
+        .single();
   
-    if (leaveError) {
-      console.error("Error fetching leave request data:", leaveError);
-      return;
-    }
+      if (leaveError) throw new Error("Error fetching leave request data: " + leaveError.message);
   
-    // Step 2: Use the leave_date directly (it's already in 'YYYY-MM-DD' format)
-    const leaveDate = leaveData.leave_date;  // leave_date is in 'YYYY-MM-DD' format
-
-    // Step 3: Now check if an absentee record exists for the same user on that date
-    let { data, error: selectError } = await supabase
-      .from("absentees")
-      .select("*")
-      .eq("user_id", userId)
-      .eq("absentee_date", leaveDate)  // Use leaveDate to compare
-      // .lte("created_at", leaveDate + "T23:59:59");  // Use leaveDate to compare
+      const leaveDate = leaveData?.leave_date; // Ensure leaveDate is not undefined
   
-    if (selectError) {
-      console.error("Error fetching absentee data:", selectError);
-      return;
-    }
-  
-    // Step 4: If an absentee record exists, update it
-    if (data.length > 0) {
-      let { error: updateAbsenteesError } = await supabase
+      // Step 2: Check if an absentee record exists for the same user on that date
+      const { data: absenteeData, error: selectError } = await supabase
         .from("absentees")
-        .update({ "absentee_type": "leave" , "absentee_date" : leaveDate, "absentee_Timing" : leavetype})
+        .select("*")
         .eq("user_id", userId)
-        .eq("absentee_date", leaveDate)  // Use leaveDate to compare
-
-        // .gte("created_at", leaveDate + "T00:00:00")
-        // .lte("created_at", leaveDate + "T23:59:59");
+        .eq("absentee_date", leaveDate);
   
-      if (updateAbsenteesError) {
-        console.error("Error updating absentee:", updateAbsenteesError);
-        return;
+      if (selectError) throw new Error("Error fetching absentee data: " + selectError.message);
+  
+      // Step 3: Update existing absentee record or insert a new one
+      if (absenteeData && absenteeData.length > 0) {
+        const { error: updateAbsenteesError } = await supabase
+          .from("absentees")
+          .update({
+            absentee_type: "leave",
+            absentee_date: leaveDate,
+            absentee_Timing: leavetype,
+          })
+          .eq("user_id", userId)
+          .eq("absentee_date", leaveDate);
+  
+        if (updateAbsenteesError) throw new Error("Error updating absentee: " + updateAbsenteesError.message);
+      } else {
+        // Insert a new absentee record
+        const { error: insertError } = await supabase
+          .from("absentees")
+          .insert([
+            {
+              user_id: userId,
+              absentee_type: "leave",
+              absentee_Timing: leavetype,
+              absentee_date: leaveDate,
+            },
+          ]);
+  
+        if (insertError) throw new Error("Error inserting into absentees: " + insertError.message);
       }
-    } else {
-      // Step 5: If no absentee record exists for that day, insert a new one
-      let { error: insertError } = await supabase
-        .from("absentees")
-        .insert({ user_id: userId, absentee_type: "leave", "absentee_Timing" : leavetype , "absentee_date" : leaveDate
-        });
   
-      if (insertError) {
-        console.error("Error inserting into absentees:", insertError);
-        return;
+      // Step 4: Update the leave request status
+      const { error: updateError } = await supabase
+        .from("leave_requests")
+        .update({ status: newStatus })
+        .eq("id", id);
+  
+      if (updateError) throw new Error("Error updating leave request status: " + updateError.message);
+  
+      // Step 5: Send Slack notification
+      const sendNotification = async (message) => {
+        try {
+          const response = await fetch(
+            "https://ems-one-mauve.vercel.app/api/sendSlack",
+            {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ message }),
+            }
+          );
+  
+          const responseData = await response.json();
+          console.log(responseData);
+        } catch (err) {
+          console.error("Error sending notification:", err);
+        }
+      };
+  
+      sendNotification("Leave Request accepted");
+  
+      // Step 6: Refresh UI based on selectedTab
+      if (typeof selectedTab !== "undefined") {
+        if (selectedTab === "Pending") handlePendingRequests();
+        else if (selectedTab === "Approved") handleApprovedRequests();
+        else handleRejectedRequests();
+      } else {
+        console.warn("selectedTab is undefined.");
       }
+  
+      if (typeof fetchPendingCount === "function") await fetchPendingCount();
+  
+      console.log("Leave request successfully updated.");
+    } catch (error) {
+      console.error(error.message);
     }
+  };
   
-    // Step 6: Update the leave request status
-    const { error: updateError } = await supabase
-      .from("leave_requests")
-      .update({ status: newStatus })
-      .eq("id", id);
-  
-    if (updateError) {
-      console.error("Error updating leave request status:", updateError);
-      return;
-    }
-  
-    // Step 7: Refresh the lists based on the selected tab
-    if (selectedTab === "Pending") handlePendingRequests() ;
-    else if (selectedTab === "Approved") handleApprovedRequests();
-    else handleRejectedRequests();
-    fetchPendingCount();
-};
 
 
 
