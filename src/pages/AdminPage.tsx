@@ -1,15 +1,16 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Menu } from "lucide-react"; // Icons from Lucide React (or use any icon library)
 import { useAuthStore } from '../lib/store';
 import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
-
+import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer,   BarChart,  Bar, XAxis, YAxis } from 'recharts';
+import EmployeeAttendanceTable from './ListViewOfEmployees';
 
 
 import {
   ShieldCheck,
   LogOut,
-  BarChart,
+
   Coffee
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -23,6 +24,7 @@ import {
 } from 'date-fns';
 import AbsenteeComponent from './AbsenteesData';
 import { id } from 'date-fns/locale/id';
+import { error } from 'console';
 
 interface AttendanceRecord {
   id: string;
@@ -66,6 +68,7 @@ const AdminPage: React.FC = () => {
   // const [officePendingComplaints, setsofficePedingComplaints] = useState<any[]>([]);
   // const [officeResolvedComplaints, setofficeResolvedComplaints] = useState<any[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
+  const [selectedEmployeeid, setSelectedEmployeeid] = useState<any>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>([]);
   const [employeeTasks, setEmployeeTasks] = useState<any[]>([]);
   const [todayBreak, setTodayBreak] = useState<BreakRecord[]>([]);
@@ -84,6 +87,8 @@ const AdminPage: React.FC = () => {
   const[leaves , setleaves] = useState('')
   const [userID , setUserID] = useState<string>('');
   const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
+  const [graphicview , setgraphicview] = useState(false);
+  const [tableData , setTableData] = useState ('');
   
   
 
@@ -383,6 +388,7 @@ const AdminPage: React.FC = () => {
         .single();
       if (userError) throw userError;
       setSelectedEmployee(userData);
+      setSelectedEmployeeid(id)
       setUserID(id);
 
       // Define today's date range.
@@ -420,6 +426,31 @@ const AdminPage: React.FC = () => {
         setAttendanceLogs([]);
         setTodayBreak([]);
       }
+
+      
+
+     
+  const employeeid = selectedEmployeeid
+  const fetchtableData = async () => {
+    const { data, error } = await supabase
+      .from("attendance_logs")
+      .select("*")
+      .eq("user_id", employeeid)
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString())
+      .order('check_in', { ascending: true });;
+  
+    if (error) {
+      console.error("Error fetching data:", error);
+      return;
+    }
+  
+    setTableData(data); // Assuming setTableData is a state setter
+    console.log("data of graphs", data);
+    
+  };
+  
+  fetchtableData();
 
       
       // Calculate monthly statistics.
@@ -510,12 +541,165 @@ const AdminPage: React.FC = () => {
       setLoading(false);
     }
   };
+  
+
+  
 
 
 
   // if (loading) return <div>Loading complaints...</div>;
   if (error) return <div>Error: {error}</div>;
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  const GraphicViewComponent = ({ selectedEmployee, tableData, attendanceLogs, monthlyStats }) => {
+    if (!selectedEmployee) return null;
+  
+    // const employeeid = selectedEmployee.id
+    
+    // const fetchtableData = async () => {
+    //   const { data, error } = await supabase
+    //     .from("attendance_logs")
+    //     .select("*")
+    //     .eq("user_id", employeeid);
+    
+    //   if (error) {
+    //     console.error("Error fetching data:", error);
+    //     return;
+    //   }
+    
+    //   setTableData(data); // Assuming setTableData is a state setter
+    //   console.log(data);
+      
+    // };
+    
+    // const fetchData = useCallback(() => {
+    //   fetchtableData();
+    // }, [employeeid]); // 
+    
+    // useEffect(() => {
+    //   fetchData();
+    // }, []); // 
+    
+    // fetchtableData();
+    
+
+    // Data for Graphs
+    const chartData = [
+      { name: "On-site", value: monthlyStats?.onSiteDays || 0 },
+      { name: "Remote", value: monthlyStats?.remoteDays || 0 },
+    ];
+  
+    const colors = ["#4A90E2", "#9B59B6"];
+  
+    return (
+      <div className="w-full max-w-full  bg-white rounded-lg shadow-lg p-6 mt-6">
+        <h2 className="text-2xl font-bold mb-4">{selectedEmployee.full_name}'s Dashboard</h2>
+  
+        {/* Graphical View */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+          {/* Pie Chart */}
+          <div className="w-full bg-gray-100 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Work Mode Distribution</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <PieChart>
+                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                  {chartData.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={colors[index]} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+  
+          {/* Bar Chart */}
+          <div className="w-full bg-gray-100 p-4 rounded-lg">
+            <h3 className="text-lg font-semibold mb-2">Attendance Overview</h3>
+            <ResponsiveContainer width="100%" height={250}>
+              <BarChart data={chartData}>
+                <XAxis dataKey="name" />
+                <YAxis />
+                <Tooltip />
+                <Bar dataKey="value" fill="#4A90E2" />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+  
+        {/* Table View */}
+        <div className="w-full bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+          <h3 className="text-lg font-semibold mb-3">Attendance Records</h3>
+          <table className="w-full border-collapse border border-gray-300">
+            <thead>
+              <tr className="bg-gray-200">
+                {['Date', 'Check-in', 'Check-out', 'Work Mode'].map((header, idx) => (
+                  <th key={idx} className="border p-2">{header}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+               {tableData.length > 0 ? (
+                 tableData.map(({ id, check_in, check_out, work_mode }) => {
+                   return (
+                     <tr key={id} className="text-center border-b">
+                       {/* Format Date */}
+                       <td className="border p-2">{new Date(check_in).toLocaleDateString()}</td>
+                       {/* Format Time */}
+                       <td className="border p-2">{new Date(check_in).toLocaleTimeString()}</td>
+                       <td className="border p-2">{check_out ? new Date(check_out).toLocaleTimeString() : "N/A"}</td>
+                       <td className="border p-2">{work_mode}</td>
+                     </tr>
+                   );
+                 })
+               ) : (
+                 <tr>
+                   <td colSpan="5" className="p-4 text-center text-gray-500">
+                     No attendance records available.
+                   </td>
+                 </tr>
+               )}
+             </tbody>
+
+          </table>
+        </div>             
+      </div>
+    );
+  };
+  
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
   return (
+    <>
     <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
     <div className="min-h-screen bg-gray-100 flex">
       {/* Sidebar Space Filler */}
@@ -551,6 +735,23 @@ const AdminPage: React.FC = () => {
   {/* Sidebar Buttons Container (Ensures Space Between) */}
   <div className="flex flex-col flex-grow justify-between">
     <div className="space-y-4">
+     
+    <button
+        onClick={() => {
+          setSelectedTab("ListView");
+          setIsOpen(false);
+
+          // setListView(!ListView);
+        }}
+        className={`w-full text-left p-2 rounded ${
+          selectedTab === "ListView"
+            ? "bg-blue-100 text-blue-600"
+            : "text-gray-700 hover:bg-gray-200"
+        }`}
+      >
+       Today's List View
+      </button>
+
       <button
         onClick={() => {
           setSelectedTab("Employees");
@@ -656,11 +857,23 @@ const AdminPage: React.FC = () => {
 
       
       {/* Main Content */}
+      {selectedTab === "ListView" && (
+        <div className='flex-1 p-8'>
+      <EmployeeAttendanceTable /></div>)}
       {selectedTab === 'Employees' && (
       <div className="flex-1 p-8">
-        <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-          Admin Dashboard
-        </h1>
+        <div className='flex flex-row justify-between px-10'>
+          <div></div>
+          <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
+            Admin Dashboard
+          </h1>
+          <div className='flex gap-1'>
+          <button className='bg-white rounded-lg px-3 py-2 hover:bg-gray-200'
+          onClick={() => {setgraphicview(true)}}>Graphic View</button>
+          <button className='bg-white rounded-lg px-3 py-2 hover:bg-gray-200'
+          onClick={() => {setgraphicview(false)}}>General View</button>
+          </div>
+        </div>
 
         <div className="grid grid-cols-4 gap-6">
           {/* Employee List Disktop*/}
@@ -684,9 +897,18 @@ const AdminPage: React.FC = () => {
             </ul>
           </div>
         )}
-
+         {selectedEmployee && graphicview && (
+          <div className='col-span-12 sm:col-span-4 md:col-span-3 lg:col-span-3'>
+            <GraphicViewComponent
+            selectedEmployee={selectedEmployee}
+            attendanceLogs={attendanceLogs}
+            monthlyStats={monthlyStats}
+            tableData={tableData}
+          />
+          </div>
+         )}
           {/* Employee Dashboard */}
-          {selectedEmployee && (
+          {selectedEmployee && !graphicview && (
             <div className=" col-span-12 sm:col-span-4 md:col-span-3 lg:col-span-3">
               <div className="bg-gray-100 rounded-lg shadow-md p-6">
                 <div className="flex items-center justify-between mb-6">
@@ -876,106 +1098,6 @@ const AdminPage: React.FC = () => {
       </div>
       )}
 
- {/* These two components Shows a Bar For Pending Complaints And Resolved Complaints */}
-{/* {selectedTab === 'OfficeComplaints' && (
-
-  <div className="flex-1 p-8">
-    <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-        Admin Dashboard
-      </h1>
-
-      <div className="grid grid-cols-4 gap-5">
-        <div className="col-span-1">
-          <h2 className="text-xl font-semibold mb-6">Office Complaints</h2>
-          <div className="space-y-4">
-            <div>
-            
-              <h3 onClick={() => setSelectedTab('officePendingComplaints')}
-              className={`w-full text-left p-2 rounded ${
-              selectedTab === 'officePendingComplaints'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-200'
-                 }`}>Pending Complaints</h3>
-            </div>
-           <div >
-              <h3  onClick={() => setSelectedTab('officeResolvedComplaints')} 
-              className={`w-full text-left p-2 rounded ${
-              selectedTab === 'officeResolvedComplaints'
-                ? 'bg-blue-100 text-blue-600'
-                : 'text-gray-700 hover:bg-gray-200'
-                 }`}>Resolved Complaints</h3>
-            </div>
-          </div>
-        </div>
-        </div>
-      </div>
-      )}
-      */}
-
-
-{/* Test Complaints Showing
-     {selectedTab === "officePendingComplaints" && (
-        <div className="bg-white rounded-2xl shadow-md p-6 mx-auto max-w-3xl">
-          <h1 className="text-2xl font-bold text-gray-900 text-center mb-6">
-            Office Pending Complaints
-          </h1>
-
-          <div className="space-y-4">
-            {complaints.map((complaint) => (
-              <div key={complaint.id} className="bg-gray-100 p-4 rounded-lg">
-                <p className="text-lg font-semibold text-gray-800">
-                  Complaint By: {complaint.complainant}
-                </p>
-                <p className="text-sm text-gray-600">{complaint.timestamp}</p>
-                <p className="text-gray-700 mt-2">{complaint.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      )} */}
-
-{/* 
-{selectedTab === 'SoftwareComplaints' && (
-  <div className="flex-1 p-8">
-    <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-      Admin Dashboard
-    </h1>
-
-    <div className="grid grid-cols-4 gap-5">
-      <div className="col-span-1">
-        <div >
-          <h2 className="text-xl font-semibold mb-6">Software Complaints</h2>
-          <div className="space-y-4">
-            <div>
-              <h3
-                onClick={() => setSelectedTab('softwarePendingComplaints')}
-                className={`w-full text-left p-2 rounded ${
-                  selectedTab === 'softwarePendingComplaints'
-                    ? 'bg-blue-100 text-blue-600'
-                    : 'text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Pending Complaints
-              </h3>
-            </div>
-            <div>
-              <h3
-                onClick={() => setSelectedTab('softwareResolvedComplaints')}
-                className={`w-full text-left p-2 rounded ${
-                  selectedTab === 'softwareResolvedComplaints'
-                    ? 'bg-blue-100 text-blue-600'
-                    : 'text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Resolved Complaints
-              </h3>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-)} */}
 
    {selectedTab === 'SoftwareComplaints' && (
       <div className="flex-1 p-8">
@@ -1075,6 +1197,7 @@ const AdminPage: React.FC = () => {
 
 
     </div>
+    </>
   );
 };
 

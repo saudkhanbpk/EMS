@@ -3,6 +3,8 @@ import { supabase } from "../lib/supabase";
 import { ArrowBigLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
+import { useAuthStore , useAttendanceStore } from "../lib/store";
+
 
 interface LeaveRequestProps {
   setActiveComponent: React.Dispatch<React.SetStateAction<string>>;
@@ -10,6 +12,8 @@ interface LeaveRequestProps {
 
 const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
   // State for storing form data
+
+
   const [leaveType, setLeaveType] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [fullname, setFullname] = useState<string>("");
@@ -20,6 +24,38 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    const sendEmail = async () => {
+      
+      try {
+          const response = await fetch("http://localhost:4000/send-email", {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                  senderEmail: localStorage.getItem('user_email'), // User's email
+                  recipientEmail: "contact@techcreator.co", // Admin's email
+                  subject: `New Leave Request Submitted by ${localStorage.getItem('user_email')}`,
+                  employeeName: fullname,
+                  leaveType: leaveType,
+                  startDate: selectedDate,
+                  endDate: selectedDate,
+                  reason: description,
+              }),  
+          });
+  
+          const data = await response.json();
+          if (response.ok) {
+              alert("Email sent successfully!");
+          } else {
+              alert("Failed to send email: " + data.error);
+          }
+      } catch (error) {
+          console.error("Error sending email:", error);
+      }
+  };
+
+
 
     // Form validation
     if (!fullname || !leaveType || !description || !selectedDate) {
@@ -39,7 +75,8 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
             description: description,
             start_date: new Date().toISOString(),
             leave_date: selectedDate,
-            full_name: fullname
+            full_name: fullname,
+            user_email : localStorage.getItem('user_email')
           },
         ]);
 
@@ -48,6 +85,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
         alert("An error occurred while submitting your request. Please try again.");
       } else {
         console.log("Leave request submitted:", data);
+        sendEmail();
         // Optionally reset form after submission
         setLeaveType("");
         setDescription("");
@@ -58,6 +96,9 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
     } catch (error) {
       console.error("An error occurred:", error);
     }
+
+   
+
   };
 
   return (
