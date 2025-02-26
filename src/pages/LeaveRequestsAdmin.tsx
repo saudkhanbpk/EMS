@@ -7,6 +7,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
   const [rejectedRequests, setRejectedRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("Pending");
+  const [userEmail , setuserEmail]= useState("");
 
   useEffect(() => {
     handlePendingRequests();
@@ -21,7 +22,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     .eq("status", "pending");
     if (!error) setPendingRequests(data) ;
     setLoading(false);
-    console.log("data", data , error);
+    console.log(" Pending data", data);
 
   };
 
@@ -32,10 +33,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     .from("leave_requests") 
     .select("*, users:users!leave_requests_user_id_fkey(email, full_name)")
     .eq("status", "approved");
-    if (!error){
-      setApprovedRequests(data);
-       console.log(data);}
-    
+    if (!error) setApprovedRequests(data);
     setLoading(false);
   };
 
@@ -46,13 +44,18 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     .from("leave_requests")
     .select("*, users:users!leave_requests_user_id_fkey(email, full_name)")
     .eq("status", "rejected");
-    if (!error) setRejectedRequests(data);
-    setLoading(false);
+    if (!error) {
+      setRejectedRequests(data);
+    }
+     setLoading(false);
   };
 
 
 
-  const handleActionAccept = async (id, newStatus, userId, leavetype) => {
+  const handleActionAccept = async (id, newStatus, userId, leavetype , useremail , leavedate , fullname) => {
+    setuserEmail(useremail)
+    console.log("userEmail" , useremail);
+    
     try {
       // Step 1: Get the leave_date from the leave_requests table
       const { data: leaveData, error: leaveError } = await supabase
@@ -111,26 +114,62 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
   
       if (updateError) throw new Error("Error updating leave request status: " + updateError.message);
   
-      // Step 5: Send Slack notification
-      const sendNotification = async (message) => {
+
+      const sendSlackNotification = async (message: string) => {
         try {
-          const response = await fetch(
-            "https://ems-one-mauve.vercel.app/api/sendSlack",
-            {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ message }),
-            }
-          );
-  
-          const responseData = await response.json();
-          console.log(responseData);
-        } catch (err) {
-          console.error("Error sending notification:", err);
+            const response = await fetch("http://localhost:4000/send-slack", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message }),
+            });
+    
+            const data = await response.json();
+            console.log("Slack Response:", data);
+        } catch (error) {
+            console.error("Error sending Slack notification:", error);
         }
-      };
+    };
+    
+    // Example usage
+    sendSlackNotification("Hello from EMS , This is a Test Message.!");
+    
+     
+     //Replying To the user
+     const sendAdminResponse = async () => {
+      console.log("userEmail", userEmail);
+
+      try {
+          const response = await fetch("http://localhost:4000/send-response", {
+              method: "POST",
+              headers: {
+                  "Content-Type": "application/json",
+              },
+              body: JSON.stringify({
+                employeeName : fullname,
+                userEmail: useremail,
+                leaveType: leavetype, // Replace with actual value
+                startDate: leavedate, // Replace with actual value
+                  
+              }),
+          });
+
   
-      sendNotification("Leave Request accepted");
+          const data = await response.json();
+          if (response.ok) {
+              alert("Response sent to user successfully!");
+          } else {
+              alert("Failed to send response: " + data.error);
+          }
+      } catch (error) {
+          console.error("Error sending response:", error);
+      }
+  };
+
+
+  sendAdminResponse();
+
+
+      
   
       // Step 6: Refresh UI based on selectedTab
       if (typeof selectedTab !== "undefined") {
@@ -155,7 +194,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
 
 
 
-const handleActionReject = async (id, newStatus, userId , leavetype) => {
+const handleActionReject = async (id, newStatus, userId , leavetype , useremail , leavedate , fullname) => {
   // Step 1: Get the leave_date from the leave_requests table
   const { data: leaveData, error: leaveError } = await supabase
     .from("leave_requests")
@@ -212,6 +251,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
     }
   }
 
+
   // Step 6: Update the leave request status
   const { error: updateError } = await supabase
     .from("leave_requests")
@@ -228,6 +268,40 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
   else if (selectedTab === "Approved") handleApprovedRequests();
   else if (selectedTab === "Rejected") handleRejectedRequests();
   fetchPendingCount();
+
+  const sendAdminResponsereject = async () => {
+    console.log("userEmail", userEmail);
+
+    try {
+        const response = await fetch("http://localhost:4000/send-rejectresponse", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              employeeName : fullname,
+              userEmail: useremail, 
+              leaveType: leavetype, 
+              startDate: leavedate, 
+                
+            }),
+        });
+
+
+        const data = await response.json();
+        if (response.ok) {
+            alert("Response sent to user successfully!");
+        } else {
+            alert("Failed to send response: " + data.error);
+        }
+    } catch (error) {
+        console.error("Error sending response:", error);
+    }
+};
+
+
+sendAdminResponsereject();
+
 
 };
 
@@ -273,7 +347,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
               <div className="mt-3 flex justify-end gap-4">
                 {(selectedTab === "Rejected" || selectedTab === "Pending") && (               
                    <button
-                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type)}
+                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type , request.user_email , request.leave_date , request.full_name)}
                   className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
                 >
                   Approve
@@ -281,7 +355,7 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
                 )}
                  {(selectedTab === "Approved" || selectedTab === "Pending") && (        
                 <button
-                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type)}
+                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type ,   request.user_email , request.leave_date, request.full_name)}
                   className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
                 >
                   Reject
@@ -294,6 +368,8 @@ const handleActionReject = async (id, newStatus, userId , leavetype) => {
       )}
     </div>
   );
+
+  
   
   return (
     <div className="max-w-full mx-auto px-4">

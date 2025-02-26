@@ -54,6 +54,8 @@ const Login: React.FC = () => {
         const session = authData.session;
         localStorage.setItem('supabaseSession', JSON.stringify(session));
         localStorage.setItem('user_id', authData.user.id);
+        localStorage.setItem('user_email', authData.user.email);
+        
         console.log('Session:', session);
         
 
