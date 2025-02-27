@@ -208,20 +208,63 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             averageWorkHours: 0
           };
 
-          // Calculate average work hours
-          let totalHours = 0;
-          uniqueAttendance.forEach(attendance => {
-            const start = new Date(attendance.check_in);
-            const end = attendance.check_out 
-             ? new Date(attendance.check_out) 
-             : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
-            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-            totalHours += Math.min(hours, 12); // Cap at 24 hours to avoid outliers
-          });
+          // // Calculate average work hours
+          // let totalHours = 0;
+          // uniqueAttendance.forEach(attendance => {
+          //   const start = new Date(attendance.check_in);
+          //   const end = attendance.check_out 
+          //    ? new Date(attendance.check_out) 
+          //    : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+          //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          //   totalHours += Math.min(hours, 12); // Cap at 24 hours to avoid outliers
+          // });
+
+                let totalHours = 0;
+          
+                uniqueAttendance.forEach(attendance => {
+                  const start = new Date(attendance.check_in);
+                  // If an employee has no CheckOut, assign 4 working hours
+                  const end = attendance.check_out 
+                    ? new Date(attendance.check_out) 
+                    : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+                
+                  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+                  totalHours += Math.min(hours, 12);
+                });
+                
+                // Fetch all breaks related to this attendance
+                const { data: breaks, error: breaksError } = await supabase
+                  .from("breaks")
+                  .select("start_time, end_time")
+                  .in("attendance_id", uniqueAttendance.map(a => a.id));
+                
+                if (breaksError) throw breaksError;
+                
+                let totalBreakHours = 0;
+                
+                breaks.forEach(breakEntry => {
+                  const breakStart = new Date(breakEntry.start_time);
+                  const breakEnd = breakEntry.end_time 
+                    ? new Date(breakEntry.end_time) 
+                    : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+                
+                  const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+                  totalBreakHours += Math.min(breakHours, 12);
+                });
+                
+                // Subtract break hours from total work hours
+                totalHours -= totalBreakHours;
+
+
+
+
           stats.averageWorkHours = totalHours / uniqueAttendance.length;
 
           setMonthlyStats(stats);
         }
+
+
+        
 
       } catch (err) {
         console.error('Error in loadTodayData:', err);
@@ -573,7 +616,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Expected Hours:</span>
                     <span className="font-medium">
-                      {(8 * monthlyStats.expectedWorkingDays)}h
+                      {(7 * monthlyStats.expectedWorkingDays)}h
                     </span>
                   </div>
                 </div>

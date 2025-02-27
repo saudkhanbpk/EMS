@@ -5,6 +5,7 @@ import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer,   BarChart,  Bar, XAxis, YAxis } from 'recharts';
 import EmployeeAttendanceTable from './ListViewOfEmployees';
+import ListViewMonthly from './ListViewMonthly';
 
 
 import {
@@ -89,6 +90,7 @@ const AdminPage: React.FC = () => {
   const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
   const [graphicview , setgraphicview] = useState(false);
   const [tableData , setTableData] = useState ('');
+  const [breaks , setbreak] = useState('');
   
   
 
@@ -316,6 +318,7 @@ const AdminPage: React.FC = () => {
   
                 const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
   
+
                 let totalHours = 0;
                 uniqueAttendance.forEach((attendance) => {
                   const start = new Date(attendance.check_in);
@@ -323,6 +326,46 @@ const AdminPage: React.FC = () => {
                   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                   totalHours += Math.min(hours, 24);
                 });
+
+
+
+                 
+      // let totalHours = 0;
+
+      // uniqueAttendance.forEach(attendance => {
+      //   const start = new Date(attendance.check_in);
+      //   // If an employee has no CheckOut, assign 4 working hours
+      //   const end = attendance.check_out 
+      //     ? new Date(attendance.check_out) 
+      //     : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+      
+      //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+      //   totalHours += Math.min(hours, 12);
+      // });
+      
+      // // Fetch all breaks related to this attendance
+      // const { data: breaks, error: breaksError } = await supabase
+      //   .from("breaks")
+      //   .select("start_time, end_time")
+      //   .in("attendance_id", uniqueAttendance.map(a => a.id));
+      
+      // if (breaksError) throw breaksError;
+      
+      // let totalBreakHours = 0;
+      
+      // breaks.forEach(breakEntry => {
+      //   const breakStart = new Date(breakEntry.start_time);
+      //   const breakEnd = breakEntry.end_time 
+      //     ? new Date(breakEntry.end_time) 
+      //     : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+      
+      //   const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+      //   totalBreakHours += Math.min(breakHours, 12);
+      // });
+      
+      // // Subtract break hours from total work hours
+      // totalHours -= totalBreakHours;
+      
   
                 // Store average hours per employee
                 employeeHours[employee.id] = uniqueAttendance.length ? totalHours / uniqueAttendance.length : 0;
@@ -343,7 +386,7 @@ const AdminPage: React.FC = () => {
   
       fetchEmployees();
     }
-  }, [selectedTab]);
+  }, []);
   
   
   const handleSignOut = async () => {
@@ -427,10 +470,11 @@ const AdminPage: React.FC = () => {
         setTodayBreak([]);
       }
 
-      
+      const monthStart = startOfMonth(today);
+      const monthEnd = endOfMonth(today);
 
      
-  const employeeid = selectedEmployeeid
+  const employeeid = id
   const fetchtableData = async () => {
     const { data, error } = await supabase
       .from("attendance_logs")
@@ -454,8 +498,7 @@ const AdminPage: React.FC = () => {
 
       
       // Calculate monthly statistics.
-      const monthStart = startOfMonth(today);
-      const monthEnd = endOfMonth(today);
+      
 
       const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
       const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
@@ -509,17 +552,63 @@ const AdminPage: React.FC = () => {
       
       
 
-        let totalHours = 0;
+      
+      let totalHours = 0;
+
+      uniqueAttendance.forEach(attendance => {
+        const start = new Date(attendance.check_in);
+        // If an employee has no CheckOut, assign 4 working hours
+        const end = attendance.check_out 
+          ? new Date(attendance.check_out) 
+          : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+      
+        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        totalHours += Math.min(hours, 12);
+      });
+      
+      // Fetch all breaks related to this attendance
+      const { data: breaks, error: breaksError } = await supabase
+        .from("breaks")
+        .select("start_time, end_time")
+        .in("attendance_id", uniqueAttendance.map(a => a.id));
+      
+      if (breaksError) throw breaksError;
+      
+      let totalBreakHours = 0;
+      
+      breaks.forEach(breakEntry => {
+        const breakStart = new Date(breakEntry.start_time);
+        const breakEnd = breakEntry.end_time 
+          ? new Date(breakEntry.end_time) 
+          : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+      
+        const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+        totalBreakHours += Math.min(breakHours, 12);
+      });
+      
+      // Subtract break hours from total work hours
+      totalHours -= totalBreakHours;
+      
+
+
+        // let totalHours = 0;
         
-        uniqueAttendance.forEach(attendance => {
-          const start = new Date(attendance.check_in);
-          // if an employee has No CheckOut , then Put 4 Working Hours
-          const end = attendance.check_out 
-             ? new Date(attendance.check_out) 
-             : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
-          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 12);
-        });
+        // uniqueAttendance.forEach(attendance => {
+        //   const start = new Date(attendance.check_in);
+        //   // if an employee has No CheckOut , then Put 4 Working Hours
+        //   const end = attendance.check_out 
+        //      ? new Date(attendance.check_out) 
+        //      : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+        //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        //   totalHours += Math.min(hours, 12);
+
+        
+        // });
+
+
+
+        
+      
         
 
         setMonthlyStats({
@@ -859,7 +948,10 @@ const AdminPage: React.FC = () => {
       {/* Main Content */}
       {selectedTab === "ListView" && (
         <div className='flex-1 p-8'>
-      <EmployeeAttendanceTable /></div>)}
+      {/* <ListViewMonthly /> */}
+      <EmployeeAttendanceTable />
+      </div>
+      )}
       {selectedTab === 'Employees' && (
       <div className="flex-1 p-8">
         <div className='flex flex-row justify-between px-10'>
@@ -1073,7 +1165,7 @@ const AdminPage: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <span className="text-gray-600">Expected Hours:</span>
                                   <span className="font-medium">
-                                    {(8 * monthlyStats.expectedWorkingDays)}h
+                                    {(7 * monthlyStats.expectedWorkingDays)}h
                                   </span>
                                 </div>
                               </div>
