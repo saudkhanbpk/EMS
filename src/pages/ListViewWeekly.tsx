@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isWeekend, addWeeks } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react'; // Assuming you're using Lucide icons
+import { AttendanceContext } from './AttendanceContext';
+import { DownloadIcon } from 'lucide-react';
 
 interface User {
   id: string;
@@ -26,11 +28,55 @@ interface EmployeeStats {
   workingHoursPercentage: number;
 }
 
-const EmployeeWeeklyAttendanceTable: React.FC = ({selectedDateW}) => {
-  const [attendanceData, setAttendanceData] = useState<EmployeeStats[]>([]);
+const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW  }) => {
+  const [attendanceDataWeekly, setattendanceDataWeekly] = useState<EmployeeStats[]>([]);
+  const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]); // Filtered data for display
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-//   const [selectedDateW, setSelectedDateW] = useState(new Date()); // Default to current date
+  const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "poor", "good", "excellent"
+  const { setAttendanceDataWeekly } = useContext(AttendanceContext);
+
+
+    // const downloadPDFWeekly = async () => {    
+    //   try {
+    //     const response = await fetch('http://localhost:4000/generate-pdfWeekly', {
+    //       method: 'POST',
+    //       headers: {
+    //         'Content-Type': 'application/json',
+    //       },
+    //       body: JSON.stringify({ data: attendanceDataWeekly }),
+    //     });
+    
+    //     if (!response.ok) {
+    //       throw new Error('Failed to generate PDF');
+    //     }
+    
+    //     const blob = await response.blob();
+    
+    //     if (blob.type !== "application/pdf") {
+    //       throw new Error("Received incorrect file format");
+    //     }
+    
+    //     const url = window.URL.createObjectURL(blob);
+    //     const currentDate = new Date().toISOString().split('T')[0];
+    //     const fileName = `attendance_${currentDate}.pdf`;
+    
+    //     // Create and trigger download
+    //     const a = document.createElement('a');
+    //     a.href = url;
+    //     a.download = fileName;
+    //     document.body.appendChild(a);
+    //     a.click();
+    //     a.remove();
+    
+    //     // Open PDF manually
+    //     window.open(url, '_blank');
+    //   } catch (error) {
+    //     console.error('Error downloading PDF:', error);
+    //   }
+    // };
+      
+
 
   // Fetch data for the selected week
   const fetchAllEmployeesStats = async (date: Date) => {
@@ -39,7 +85,9 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({selectedDateW}) => {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('*');
+        .select('*')
+        .not('full_name', 'in', '("Admin")')
+        .not('full_name', 'in', '("saud")'); 
 
       if (usersError) throw usersError;
 
@@ -144,7 +192,9 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({selectedDateW}) => {
         };
       }));
 
-      setAttendanceData(stats);
+      setattendanceDataWeekly(stats);
+      setFilteredData(stats); // Initialize filtered data with all data
+      setAttendanceDataWeekly(stats);      
     } catch (error) {
       console.error('Error fetching employee data:', error);
       setError('Error fetching employee data');
@@ -158,42 +208,105 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({selectedDateW}) => {
     fetchAllEmployeesStats(selectedDateW);
   }, [selectedDateW]);
 
-//   // Handle week change (previous/next)
-//   const handleWeekChange = (direction: 'prev' | 'next') => {
-//     setSelectedDate((prevDate) =>
-//       direction === 'prev' ? addWeeks(prevDate, -1) : addWeeks(prevDate, 1)
-//     );
-//   };
+  // function handleClick() {
+    // sendDataToParent(attendanceDataWeekly);
+  // }
+  // handleClick();
+
+
+
+
+
+
+  useContext
+
+  // Handle filter change
+  const handleFilterChange = (filter) => {
+    setCurrentFilter(filter);
+    switch (filter) {
+      case 'all':
+        setFilteredData(attendanceDataWeekly);
+        break;
+      case 'poor':
+        setFilteredData(attendanceDataWeekly.filter((entry) => entry.workingHoursPercentage < 70));
+        break;
+      case 'good':
+        setFilteredData(attendanceDataWeekly.filter((entry) => entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80));
+        break;
+      case 'excellent':
+        setFilteredData(attendanceDataWeekly.filter((entry) => entry.workingHoursPercentage >= 80));
+        break;
+      default:
+        setFilteredData(attendanceDataWeekly);
+    }
+  };
+
+  // Calculate counts for each category
+  const totalEmployees = attendanceDataWeekly.length;
+  const poorCount = attendanceDataWeekly.filter((entry) => entry.workingHoursPercentage < 70).length;
+  const goodCount = attendanceDataWeekly.filter((entry) => entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80).length;
+  const excellentCount = attendanceDataWeekly.filter((entry) => entry.workingHoursPercentage >= 80).length;
 
   return (
     <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 p-0">
-      {/* Heading */}
-
-      {/* Week Navigation */}
-      {/* <div className="flex items-center justify-center my-4">
-        <button
-          onClick={() => handleWeekChange('prev')}
-          className="p-2 hover:bg-gray-200 rounded-full transition-all"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <span className="mx-4 text-xl font-semibold">
-          {format(selectedDate, 'MMMM yyyy')} (Week of {format(startOfWeek(selectedDate, { weekStartsOn: 1 }), 'MMM d')})
-        </span>
-        <button
-          onClick={() => handleWeekChange('next')}
-          className="p-2 hover:bg-gray-200 rounded-full transition-all"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div> */}
-
       {/* Loading Animation */}
       {loading && (
         <div className="w-full max-w-5xl space-y-6">
           {[...Array(5)].map((_, index) => (
             <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
           ))}
+        </div>
+      )}
+
+      {/* Filter Div */}
+      {!loading && (
+        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
+          <div className="flex justify-between items-center text-lg font-medium">
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'all' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
+              <h2 className="text-gray-600">
+                Total: <span className="font-bold">{totalEmployees}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('poor')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'poor' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-red-500 rounded-full"></span>
+              <h2 className="text-red-600">
+                Bad : <span className="font-bold">{poorCount}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('good')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'good' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-yellow-500 rounded-full"></span>
+              <h2 className="text-yellow-600">
+                Fair: <span className="font-bold">{goodCount}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('excellent')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'excellent' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-green-500 rounded-full"></span>
+              <h2 className="text-green-600">
+                Good: <span className="font-bold">{excellentCount}</span>
+              </h2>
+            </button>
+          </div>
         </div>
       )}
 
@@ -213,7 +326,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({selectedDateW}) => {
                 </tr>
               </thead>
               <tbody className="text-md font-normal">
-                {attendanceData.map((entry, index) => {
+                {filteredData.map((entry, index) => {
                   const percentageColor =
                     entry.workingHoursPercentage < 70
                       ? 'bg-red-500 text-white'
@@ -238,11 +351,14 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({selectedDateW}) => {
                         >
                           {entry.workingHoursPercentage.toFixed(2)}%
                         </span>
+
                       </td>
+                      <button className='w-full h-full'> <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500'/></button>
+
                     </tr>
                   );
                 })}
-                {attendanceData.length === 0 && (
+                {filteredData.length === 0 && (
                   <tr>
                     <td colSpan="5" className="text-center py-4 text-gray-500">
                       No attendance records found for this week.
