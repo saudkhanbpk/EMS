@@ -14,8 +14,7 @@ import OfficeComplaintSection from './components/OfficeComplaintSection';
 import LeaveRequestsAdmin from './pages/LeaveRequestsAdmin';
 import { useNavigate } from 'react-router-dom';
 import ExtraHours from './pages/ExtraHours2';
-
-
+import { AttendanceProvider } from './pages/AttendanceContext';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
@@ -48,7 +47,9 @@ function App() {
           path="/admin"
           element={
             <PrivateRoute adminOnly>
+              <AttendanceProvider>
               <AdminPage />
+              </AttendanceProvider>
             </PrivateRoute>
           }
         />

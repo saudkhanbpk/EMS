@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { eachDayOfInterval, isWeekend, format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react'; // Assuming you're using Lucide icons
-// import { Skeleton } from './ui/skeleton'; // Example: A modern skeleton loading component
+import { AttendanceContext } from './AttendanceContext';
+import { DownloadIcon } from 'lucide-react';
 
 interface User {
   id: string;
@@ -27,11 +28,14 @@ interface EmployeeStats {
   workingHoursPercentage: number;
 }
 
-const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
+const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
   const [attendanceData, setAttendanceData] = useState<EmployeeStats[]>([]);
+  const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]); // Filtered data for display
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-//   const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
+  const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "bad", "better", "best"
+    const { setAttendanceDataMonthly } = useContext(AttendanceContext);
+  
 
   // Fetch data for the selected month
   const fetchAllEmployeesStats = async (date: Date) => {
@@ -40,7 +44,9 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('*');
+        .select('*')
+        .not('full_name', 'in', '("Admin")')
+        .not('full_name', 'in', '("saud")'); 
 
       if (usersError) throw usersError;
 
@@ -146,6 +152,8 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
       }));
 
       setAttendanceData(stats);
+      setFilteredData(stats); // Initialize filtered data with all data
+      setAttendanceDataMonthly(stats)
     } catch (error) {
       console.error('Error fetching employee data:', error);
       setError('Error fetching employee data');
@@ -159,46 +167,93 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
     fetchAllEmployeesStats(selectedDateM);
   }, [selectedDateM]);
 
-  // Handle month change (previous/next)
-//   const handleMonthChange = (direction: 'prev' | 'next') => {
-//     setSelectedDate((prevDate) =>
-//       direction === 'prev' ? addMonths(prevDate, -1) : addMonths(prevDate, 1)
-//     );
-//   };
+  // Handle filter change
+  const handleFilterChange = (filter) => {
+    setCurrentFilter(filter);
+    switch (filter) {
+      case 'all':
+        setFilteredData(attendanceData);
+        break;
+      case 'bad':
+        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage < 50));
+        break;
+      case 'better':
+        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80));
+        break;
+      case 'best':
+        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 80));
+        break;
+      default:
+        setFilteredData(attendanceData);
+    }
+  };
+
+  // Calculate counts for each category
+  const totalEmployees = attendanceData.length;
+  const badCount = attendanceData.filter((entry) => entry.workingHoursPercentage < 50).length;
+  const betterCount = attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80).length;
+  const bestCount = attendanceData.filter((entry) => entry.workingHoursPercentage >= 80).length;
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 ">
-      {/* Heading */}
-
-      {/* Month Navigation */}
-      {/* <div className="flex items-center justify-center my-4">
-        <button
-          onClick={() => handleMonthChange('prev')}
-          className="p-2 hover:bg-gray-200 rounded-full transition-all"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <span className="mx-4 text-xl font-semibold">
-          {format(selectedDate, 'MMMM yyyy')}
-        </span>
-        <button
-          onClick={() => handleMonthChange('next')}
-          className="p-2 hover:bg-gray-200 rounded-full transition-all"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div> */}
-
-
-
-
+    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100">
       {/* Loading Animation */}
       {loading && (
         <div className="w-full max-w-5xl space-y-6">
           {[...Array(5)].map((_, index) => (
             <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
-
           ))}
+        </div>
+      )}
+
+      {/* Filter Div */}
+      {!loading && (
+        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
+          <div className="flex justify-between items-center text-lg font-medium">
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'all' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
+              <h2 className="text-gray-600">
+                Total: <span className="font-bold">{totalEmployees}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('bad')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'bad' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-red-500 rounded-full"></span>
+              <h2 className="text-red-600">
+                Bad: <span className="font-bold">{badCount}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('better')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'better' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-yellow-500 rounded-full"></span>
+              <h2 className="text-yellow-600">
+                Fair: <span className="font-bold">{betterCount}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('best')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'best' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-green-500 rounded-full"></span>
+              <h2 className="text-green-600">
+                Good: <span className="font-bold">{bestCount}</span>
+              </h2>
+            </button>
+          </div>
         </div>
       )}
 
@@ -218,10 +273,10 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
                 </tr>
               </thead>
               <tbody className="text-md font-normal">
-                {attendanceData.map((entry, index) => (
+                {filteredData.map((entry, index) => (
                   <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
                     <td className="py-4 px-6">
-                    <span
+                      <span
                         className={` ${
                           entry.workingHoursPercentage >= 80
                             ? ' text-green-500'
@@ -236,7 +291,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
                     <td className="py-4 px-6">{entry.presentDays}</td>
                     <td className="py-4 px-6">{entry.absentDays}</td>
                     <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 pl-6 min-w-fit">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-semibold ${
                           entry.workingHoursPercentage >= 80
@@ -249,9 +304,10 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
                         {entry.workingHoursPercentage.toFixed(2)}%
                       </span>
                     </td>
+                    <button className='w-full h-full'> <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 rounded-2xl text-gray-500'/></button>
                   </tr>
                 ))}
-                {attendanceData.length === 0 && (
+                {filteredData.length === 0 && (
                   <tr>
                     <td colSpan="5" className="text-center py-4 text-gray-500">
                       No attendance records found for this month.
