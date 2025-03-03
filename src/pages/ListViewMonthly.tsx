@@ -291,7 +291,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
                     <td className="py-4 px-6">{entry.presentDays}</td>
                     <td className="py-4 px-6">{entry.absentDays}</td>
                     <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
-                    <td className="py-4 pl-6 min-w-fit">
+                    <td className="py-4 pl-6 max-w-fit">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-semibold ${
                           entry.workingHoursPercentage >= 80
@@ -304,7 +304,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
                         {entry.workingHoursPercentage.toFixed(2)}%
                       </span>
                     </td>
-                    <button className='w-full h-full'> <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 rounded-2xl text-gray-500'/></button>
+                    <button className='w-full h-full'> <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500'/></button>
                   </tr>
                 ))}
                 {filteredData.length === 0 && (
