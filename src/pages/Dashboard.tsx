@@ -58,6 +58,10 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
 
  
  const userID = localStorage.getItem('user_id')
+ const today = new Date();
+
+ const monthStart = startOfMonth(today);
+ const monthEnd = endOfMonth(today);
   useEffect(() => {
       const fetchleaves = async () => {
       const {count , error} = await supabase
@@ -65,6 +69,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       .select("*", {count: "exact", head:true})
       .eq('user_id', userID)
       .eq('absentee_type', "leave")
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString());
       if(error){
         console.error("Error Fetching Absentees Count", error);
       }else{
@@ -87,6 +93,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       .select("*", {count: "exact", head:true})
       .eq('user_id', userID)
       .eq('absentee_type', "Absent")
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString());
       if(error){
         console.error("Error Fetching Absentees Count", error);
       }else{
@@ -126,7 +134,6 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
         if (profileData) setUserProfile(profileData);
 
         // Get today's date in the correct format
-        const today = new Date();
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
@@ -169,8 +176,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
 
 
         // Load monthly statistics
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
+
 
         // Calculate expected working days (excluding weekends)
         const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -569,11 +575,11 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Absentees:</span>
-                    <span className="font-medium text-red-600">{absentees}</span>
+                    <span className="font-medium text-red-600">{absentees || 0}</span>
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Leaves:</span>
-                    <span className="font-medium text-green-600">{leaves}</span>
+                    <span className="font-medium text-green-600">{leaves || 0}</span>
                   </div>
                 </div>
               </div>

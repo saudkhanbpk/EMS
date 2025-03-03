@@ -2,6 +2,8 @@ import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabase';
 import { format } from 'date-fns';
 import { BarChart } from 'lucide-react';
+import { startOfMonth, endOfMonth } from "date-fns";
+
 
 interface AbsenteeComponentAdminProps {
   userID: string;
@@ -10,13 +12,19 @@ interface AbsenteeComponentAdminProps {
 const AbsenteeComponentAdmin: React.FC<AbsenteeComponentAdminProps> = ({ userID }) => {
   const [absenteeData, setAbsenteeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const today = new Date();
+        
+  const monthStart = startOfMonth(today);
+  const monthEnd = endOfMonth(today);
 
   const FetchAbsenteeData = async () => {
     try {
       const { data: absenteeRecords, error } = await supabase
         .from('absentees')
         .select('*')
-        .eq('user_id', userID);
+        .eq('user_id', userID)
+
+
 
       if (error) throw error;
 
