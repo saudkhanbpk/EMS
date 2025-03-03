@@ -91,10 +91,8 @@ useEffect(() => {
           .eq('user_id', localStorage.getItem('user_id'))
           .gte('check_in', startOfDay.toISOString())
           .lte('check_in', endOfDay.toISOString())
-          .is('check_out', null)
+          // .is('check_out', null)
           .order('check_in', { ascending: false })
-          .limit(1)
-          .single()
       );
 
       if (error) {
@@ -146,10 +144,10 @@ useEffect(() => {
             .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
-            .is('check_out', null)
+            // .is('check_out', null)
             .order('check_in', { ascending: false })
-            .limit(1)
-            .single()
+            // .limit(1)
+            // .single()
         );
 
         if (error) {
