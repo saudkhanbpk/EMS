@@ -144,6 +144,9 @@ const AdminPage: React.FC = () => {
       }
     };
 
+     const today = new Date();
+      const monthStart = startOfMonth(today);
+      const monthEnd = endOfMonth(today);
 
     useEffect(() => {
     fetchPendingCount();
@@ -157,6 +160,9 @@ const AdminPage: React.FC = () => {
     .select("*", {count: "exact", head:true})
     .eq('user_id', userID)
     .eq('absentee_type', "leave")
+    .gte('check_in', monthStart.toISOString())
+    .lte('check_in', monthEnd.toISOString());
+
     if(error){
       console.error("Error Fetching Absentees Count", error);
     }else{
@@ -175,6 +181,8 @@ const AdminPage: React.FC = () => {
     .select("*", {count: "exact", head:true})
     .eq('user_id', userID)
     .eq('absentee_type', "Absent")
+    .gte('check_in', monthStart.toISOString())
+    .lte('check_in', monthEnd.toISOString());
     if(error){
       console.error("Error Fetching Absentees Count", error);
     }else{
@@ -271,7 +279,9 @@ const AdminPage: React.FC = () => {
           // Fetch employees
           const { data: employees, error: employeesError } = await supabase
             .from("users")
-            .select("id, full_name");
+            .select("id, full_name")
+            .not('full_name', 'in', '("Admin")')
+            .not('full_name', 'in', '("saud")');
   
           if (employeesError) throw employeesError;
           if (!employees || employees.length === 0) {
@@ -1118,11 +1128,11 @@ const AdminPage: React.FC = () => {
                                 </div>
                                 <div className="flex justify-between text-gray-600">
                                 <span>Absentees:</span>
-                                <span className="text-red-600">{absentees}</span>
+                                <span className="text-red-600">{absentees || 0}</span>
                               </div>
                               <div className="flex justify-between text-gray-600">
                                 <span>Leaves:</span>
-                                <span className="text-green-600">{leaves}</span>
+                                <span className="text-green-600">{leaves || 0}</span>
                               </div>
                               </div>
                             </div>
