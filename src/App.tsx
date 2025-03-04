@@ -14,6 +14,7 @@ import OfficeComplaintSection from './components/OfficeComplaintSection';
 import LeaveRequestsAdmin from './pages/LeaveRequestsAdmin';
 import { useNavigate } from 'react-router-dom';
 import ExtraHours from './pages/ExtraHours2';
+import SalaryBreakdown from './components/SalaryBreakdown';
 
 
 
@@ -42,7 +43,7 @@ function App() {
       <Routes>
         {/* Public Route: Login */}
         <Route path="/login" element={<Login />} />
-        
+
         {/* Admin Route (Protected) */}
         <Route
           path="/admin"
@@ -70,6 +71,7 @@ function App() {
           <Route path="office-complaint" element={<OfficeComplaintSection />} />
           <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
           <Route path="overtime" element={<ExtraHours />} />
+          <Route path="salary-breakdown" element={<SalaryBreakdown />} />
         </Route>
 
         {/* Redirect unknown routes to login */}

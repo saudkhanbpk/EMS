@@ -1,10 +1,13 @@
-import React, { useEffect, useState  } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { format, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
 import AbsenteeComponent from './AbsenteesData';
+import DashboardCards from '../components/DashboardCards';
+import DailyStatusTable from '../components/DailyStatusTable';
+import BreakRecordsTable from '../components/BreakRecordTable';
 
 
 
@@ -40,7 +43,7 @@ interface MonthlyStats {
 }
 
 
-const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
+const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   // const user = useAuthStore((state) => state.user);
   const sessionData = localStorage.getItem('supabaseSession');
   const session = sessionData ? JSON.parse(sessionData) : null;
@@ -52,55 +55,55 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   const [monthlyStats, setMonthlyStats] = useState<MonthlyStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [absentees , setabsentees] = useState('');
-  const [leaves , setleaves] = useState('');
+  const [absentees, setabsentees] = useState('');
+  const [leaves, setleaves] = useState('');
   const navigate = useNavigate();
 
- 
- const userID = localStorage.getItem('user_id')
+
+  const userID = localStorage.getItem('user_id')
   useEffect(() => {
-      const fetchleaves = async () => {
-      const {count , error} = await supabase
-      .from("absentees")
-      .select("*", {count: "exact", head:true})
-      .eq('user_id', userID)
-      .eq('absentee_type', "leave")
-      if(error){
+    const fetchleaves = async () => {
+      const { count, error } = await supabase
+        .from("absentees")
+        .select("*", { count: "exact", head: true })
+        .eq('user_id', userID)
+        .eq('absentee_type', "leave")
+      if (error) {
         console.error("Error Fetching Absentees Count", error);
-      }else{
-        console.log("absentees Count :" , count);
-        if(count > 0){
+      } else {
+        console.log("absentees Count :", count);
+        if (count > 0) {
           setleaves(count)
-        }else{
+        } else {
           setleaves(0)
         }
       }
-      }
-      fetchleaves();
-    },[userID])
-  
-  
-    useEffect(() => {
-      const fetchabsentees = async () => {
-      const {count , error} = await supabase
-      .from("absentees")
-      .select("*", {count: "exact", head:true})
-      .eq('user_id', userID)
-      .eq('absentee_type', "Absent")
-      if(error){
+    }
+    fetchleaves();
+  }, [userID])
+
+
+  useEffect(() => {
+    const fetchabsentees = async () => {
+      const { count, error } = await supabase
+        .from("absentees")
+        .select("*", { count: "exact", head: true })
+        .eq('user_id', userID)
+        .eq('absentee_type', "Absent")
+      if (error) {
         console.error("Error Fetching Absentees Count", error);
-      }else{
-        console.log("absentees Count :" , count);
-        if(count > 0 ){
-        setabsentees(count)
-        }else{
-         setabsentees(0)
+      } else {
+        console.log("absentees Count :", count);
+        if (count > 0) {
+          setabsentees(count)
+        } else {
+          setabsentees(0)
         }
       }
-      }
-      fetchabsentees();
-    },[userID])
-  
+    }
+    fetchabsentees();
+  }, [userID])
+
 
 
   useEffect(() => {
@@ -154,7 +157,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
               .from('breaks')
               .select('*')
               .eq('attendance_id', attendanceData.id)
-              // .order('date', { ascending: true })
+            // .order('date', { ascending: true })
 
           );
 
@@ -212,48 +215,48 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
           // let totalHours = 0;
           // uniqueAttendance.forEach(attendance => {
           //   const start = new Date(attendance.check_in);
-          //   const end = attendance.check_out 
-          //    ? new Date(attendance.check_out) 
+          //   const end = attendance.check_out
+          //    ? new Date(attendance.check_out)
           //    : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
           //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
           //   totalHours += Math.min(hours, 12); // Cap at 24 hours to avoid outliers
           // });
 
-                let totalHours = 0;
-          
-                uniqueAttendance.forEach(attendance => {
-                  const start = new Date(attendance.check_in);
-                  // If an employee has no CheckOut, assign 4 working hours
-                  const end = attendance.check_out 
-                    ? new Date(attendance.check_out) 
-                    : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
-                
-                  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                  totalHours += Math.min(hours, 12);
-                });
-                
-                // Fetch all breaks related to this attendance
-                const { data: breaks, error: breaksError } = await supabase
-                  .from("breaks")
-                  .select("start_time, end_time")
-                  .in("attendance_id", uniqueAttendance.map(a => a.id));
-                
-                if (breaksError) throw breaksError;
-                
-                let totalBreakHours = 0;
-                
-                breaks.forEach(breakEntry => {
-                  const breakStart = new Date(breakEntry.start_time);
-                  const breakEnd = breakEntry.end_time 
-                    ? new Date(breakEntry.end_time) 
-                    : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
-                
-                  const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-                  totalBreakHours += Math.min(breakHours, 12);
-                });
-                
-                // Subtract break hours from total work hours
-                totalHours -= totalBreakHours;
+          let totalHours = 0;
+
+          uniqueAttendance.forEach(attendance => {
+            const start = new Date(attendance.check_in);
+            // If an employee has no CheckOut, assign 4 working hours
+            const end = attendance.check_out
+              ? new Date(attendance.check_out)
+              : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+
+            const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+            totalHours += Math.min(hours, 12);
+          });
+
+          // Fetch all breaks related to this attendance
+          const { data: breaks, error: breaksError } = await supabase
+            .from("breaks")
+            .select("start_time, end_time")
+            .in("attendance_id", uniqueAttendance.map(a => a.id));
+
+          if (breaksError) throw breaksError;
+
+          let totalBreakHours = 0;
+
+          breaks.forEach(breakEntry => {
+            const breakStart = new Date(breakEntry.start_time);
+            const breakEnd = breakEntry.end_time
+              ? new Date(breakEntry.end_time)
+              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+
+            const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+            totalBreakHours += Math.min(breakHours, 12);
+          });
+
+          // Subtract break hours from total work hours
+          totalHours -= totalBreakHours;
 
 
 
@@ -264,7 +267,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
         }
 
 
-        
+
 
       } catch (err) {
         console.error('Error in loadTodayData:', err);
@@ -315,8 +318,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
 
   if (error) {
     return (
-<div className='max-w-7xl mx-auto  px-4 py-8'>
-<div className="bg-red-50 text-red-600 p-4 rounded-lg">
+      <div className='max-w-7xl mx-auto  px-4 py-8'>
+        <div className="bg-red-50 text-red-600 p-4 rounded-lg">
           <p>Error loading dashboard: {error}</p>
         </div>
       </div>
@@ -326,8 +329,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   return (
 
 
-<div className='max-w-7xl mx-auto  px-4 py-8'>
-<div className="flex items-center justify-between mb-8">
+    <div className='max-w-7xl mx-auto  px-4 py-8'>
+      <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
             Welcome, {userProfile?.full_name || 'Employee'}
@@ -336,12 +339,27 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             <p className="text-gray-600 mt-1">Department: {userProfile.department}</p>
           )}
         </div>
-        <div className="text-right">
-          <p className="text-gray-600">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
-          <p className="text-gray-500 text-sm">{format(new Date(), 'h:mm a')}</p>
+        <div className='text-right'>
+          <select name="view" id="view" className='w-[134px] h-[40px] rounded-[8px] border py-1 px-2  border-[#D0D5DD]'>
+            <option value="Table view">Table View</option>
+            <option value="graph view">Graph View</option>
+          </select>
         </div>
-      </div>
 
+      </div>
+      <div className="flex justify-end">
+        <p className="font-inter font-medium text-base text-[#000000] leading-7 ">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p> &nbsp; &nbsp;
+        <p className="font-inter font-medium text-base text-[#000000] leading-7  ">{format(new Date(), 'h:mm a')}</p>
+      </div>
+      <DashboardCards
+      />
+      <div className='mb-6'>
+        <DailyStatusTable />
+
+      </div>
+      <div className='mb-4'>
+        <BreakRecordsTable />
+      </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Status Card */}
         <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
@@ -352,8 +370,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             </div>
             {todayAttendance && (
               <span className={`px-3 py-1 rounded-full text-sm font-medium ${todayAttendance.status === 'present'
-                  ? 'bg-green-100 text-green-800'
-                  : 'bg-yellow-100 text-yellow-800'
+                ? 'bg-green-100 text-green-800'
+                : 'bg-yellow-100 text-yellow-800'
                 }`}>
                 {todayAttendance.status}
               </span>
@@ -384,8 +402,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Work Mode:</span>
                       <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${todayAttendance.work_mode === 'on_site'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
                         }`}>
                         {todayAttendance.work_mode}
                       </span>
@@ -418,8 +436,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Status:</span>
                       <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${!todayAttendance.check_out
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-green-100 text-green-800'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-green-100 text-green-800'
                         }`}>
                         {!todayAttendance.check_out ? 'Working' : 'Completed'}
                       </span>
@@ -447,8 +465,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                         </div>
                         {breakRecord.status && (
                           <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${breakRecord.status === 'on_time'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
                             }`}>
                             {breakRecord.status}
                           </span>
@@ -510,10 +528,10 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                 <div className="flex items-center justify-between">
                   <span className="text-gray-600">Work Mode:</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${todayAttendance?.work_mode === 'on_site'
-                      ? 'bg-blue-100 text-blue-800'
-                      : todayAttendance?.work_mode === 'remote'
-                        ? 'bg-purple-100 text-purple-800'
-                        : 'bg-gray-100 text-gray-800'
+                    ? 'bg-blue-100 text-blue-800'
+                    : todayAttendance?.work_mode === 'remote'
+                      ? 'bg-purple-100 text-purple-800'
+                      : 'bg-gray-100 text-gray-800'
                     }`}>
                     {todayAttendance?.work_mode || 'Not Set'}
                   </span>
@@ -636,10 +654,10 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             <h2 className="text-xl font-semibold">Absentees Details- {format(new Date(), 'MMMM yyyy')}</h2>
           </div>
 
-           <div>
-          {/* Absentee Data Div */}
-           <AbsenteeComponent />
-          </div> 
+          <div>
+            {/* Absentee Data Div */}
+            <AbsenteeComponent />
+          </div>
 
 
         </div>
