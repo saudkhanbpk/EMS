@@ -447,6 +447,113 @@ app.post('/generate-pdfMonthly', (req, res) => {
 
 
 
+//Path To Download Weekly Attendance Data PDF
+app.post('/generate-pdfWeeklyOfEmployee', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Weekly Attendance Report of ${req.body.data[0].fullname}</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Work Mode</th>
+
+                    
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td>${item.status}</td>
+                        <td>${item.Check_in}</td>
+                        <td>${item.Check_out}</td>
+                        <td>${item.workmode}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
+
+//Path To Download Monthly Attendance Data PDF
+app.post('/generate-pdfMonthlyOfEmployee', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Monthly Attendance Report of ${req.body.data[0].fullname} </h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Work Mode</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td>${item.status}</td>
+                        <td>${item.Check_in}</td>
+                        <td>${item.Check_out}</td>
+                        <td>${item.workmode}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
+
+
 // Start the Server
 app.listen(PORT, () => {
     console.log(` Server running on http://localhost:${PORT}`);

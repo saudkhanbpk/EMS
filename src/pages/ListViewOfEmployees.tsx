@@ -203,7 +203,7 @@ const EmployeeAttendanceTable = () => {
       // Fetch attendance logs for the selected date
       const { data: attendanceLogs, error: attendanceError } = await supabase
         .from("attendance_logs")
-        .select("user_id, check_in, check_out, work_mode, status")
+        .select("user_id, check_in, check_out, work_mode, status , autocheckout")
         .gte("check_in", `${formattedDate}T00:00:00`)
         .lte("check_in", `${formattedDate}T23:59:59`);
 
@@ -231,6 +231,7 @@ const EmployeeAttendanceTable = () => {
             full_name: user.full_name,
             check_in: "N/A",
             check_out: "N/A",
+            autocheckout : "",
             work_mode: "N/A",
             status: "Absent",
             textColor: "text-red-500",
@@ -241,6 +242,7 @@ const EmployeeAttendanceTable = () => {
           full_name: user.full_name,
           check_in: log.check_in ? formatTime(log.check_in) : "N/A",
           check_out: log.check_out ? formatTime(log.check_out) : "N/A",
+          autocheckout : log.autocheckout || "",
           work_mode: log.work_mode || "N/A",
           status: log.status || "Absent",
           textColor:
@@ -519,7 +521,8 @@ const EmployeeAttendanceTable = () => {
                         </span>
                       </td>
                       <td className="py-4 px-6">{entry.check_in}</td>
-                      <td className="py-4 px-6">{entry.check_out}</td>
+                      <td className="py-4 px-6"> {`${entry.check_out} 
+                      ${entry.autocheckout ? "auto" : ""}`}</td>
                       <td className="py-4 px-6">
                         <span
                           className={`px-3 py-1 rounded-full text-sm font-semibold ${

@@ -23,6 +23,8 @@ const AbsenteeComponentAdmin: React.FC<AbsenteeComponentAdminProps> = ({ userID 
         .from('absentees')
         .select('*')
         .eq('user_id', userID)
+        .gte('check_in', monthStart.toISOString())
+        .lte('check_in', monthEnd.toISOString());
 
 
 

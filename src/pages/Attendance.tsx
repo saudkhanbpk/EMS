@@ -1,8 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { format, parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
+import {parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { toZonedTime, format } from 'date-fns-tz';
 
 
 
@@ -101,8 +102,10 @@ const Attendance: React.FC = () => {
             .limit(1)
             .single()
         );
-
+           
         if (error) {
+          setisButtonLoading(false)
+
           if (error.code !== 'PGRST116') { // If no record exists, it's okay
             console.error('Error loading current attendance:', error);
           }
@@ -110,11 +113,12 @@ const Attendance: React.FC = () => {
         }
   
         if (data) {
+          setisButtonLoading(false)
+
           if (data.check_in) {setalreadycheckedin(true)}
   
           if (data.check_out === null) {
             // User has an active session (not checked out)
-            setisButtonLoading(false);
             setIsCheckedIn(true);
             setAttendanceId(data.id);
             setCheckIn(data.check_in)
@@ -345,13 +349,29 @@ useEffect(() => {
     
   })
 
-
+  //Handle Check in 
   const handleCheckIn = async () => {
     
     if (!user) {
       setError('User not authenticated');
       return;
     }
+    const now = new Date();
+
+  // Convert the current time to Pakistan Time (PKT)
+  const timeZone = 'Asia/Karachi'; // Pakistan Time Zone
+  const pktTime = toZonedTime(now, timeZone); // Convert to Pakistan Time
+  const formattedTime = format(pktTime, 'yyyy-MM-dd HH:mm:ss', { timeZone });
+  console.log('Current Pakistan Time:', formattedTime);
+
+  const hours = pktTime.getHours();
+  const minutes = pktTime.getMinutes();
+  const totalMinutes = hours * 60 + minutes;
+  const startOfWorkDay = 8 * 60 + 0; // 8:00 AM in minutes
+  const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
+  if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
+    return ; 
+  } else {
 
     try {
       setLoading(true);
@@ -422,6 +442,8 @@ useEffect(() => {
       setLoading(false);
     }
   };
+}
+
 
   const handleCheckOut = async () => {
     if (!user || !attendanceId) {
@@ -840,7 +862,7 @@ try {
           ) : (
             <button
               onClick={handleCheckIn}
-              disabled={loading || isDisabled || alreadycheckedin} // Button is disabled if loading or if the condition is met
+              disabled={loading || isDisabled || alreadycheckedin || isButtonLoading} // Button is disabled if loading or if the condition is met
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? 'Checking in...' : 'Check In'}

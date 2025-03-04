@@ -187,6 +187,242 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
         setFilteredData(attendanceData);
     }
   };
+  
+//    //Downloading Monthly Attendance of specific Employee
+//  const handleDownload = async (userId: string, fullName: string) => {
+//   try {
+//     const monthStart = startOfMonth(selectedDateM);
+//     const monthEnd = endOfMonth(selectedDateM);
+
+//     // Fetch attendance records for the user in the current month
+//     const { data: monthlyAttendance, error: attendanceError } = await supabase
+//       .from('attendance_logs')
+//       .select('*')
+//       .eq('user_id', userId)
+//       .gte('check_in', monthStart.toISOString())
+//       .lte('check_in', monthEnd.toISOString())
+//       .order('check_in', { ascending: true });
+
+//     if (attendanceError) throw attendanceError;
+
+//     // Fetch absentees for the user in the current month
+//     const { data: absentees, error: absenteesError } = await supabase
+//       .from('absentees')
+//       .select('*')
+//       .eq('user_id', userId)
+//       .gte('created_at', monthStart.toISOString())
+//       .lte('created_at', monthEnd.toISOString());
+
+//     if (absenteesError) throw absenteesError;
+
+//     // Create an array of daily attendance
+//     const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+//     const dailyAttendance: DailyAttendance[] = allDaysInMonth.map(date => {
+//       const dateStr = format(date, 'yyyy-MM-dd');
+//       const attendance = monthlyAttendance.find(a => format(new Date(a.check_in), 'yyyy-MM-dd') === dateStr);
+//       const absent = absentees.some(a => format(new Date(a.created_at), 'yyyy-MM-dd') === dateStr);
+
+//       if (attendance) {
+//         const start = new Date(attendance.check_in);
+//         const end = attendance.check_out ? new Date(attendance.check_out) : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
+//         const workingHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+//         return {
+//           date: dateStr,
+//           status: 'present',
+//           Check_in:attendance.check_in,
+//           Check_out:attendance.check_out,
+//           workingHours: Math.min(workingHours, 12), // Cap at 12 hours
+//         };
+//       } else if (absent) {
+//         return {
+//           date: dateStr,
+//           status: 'absent',
+//           Check_in:null,
+//           Check_out:null,
+//           workingHours: 0,
+//         };
+//       } else {
+//         return {
+//           date: dateStr,
+//           status: 'absent',
+//           Check_in:null,
+//           Check_out:null,
+//           workingHours: 0,
+//         };
+//       }
+//     });
+
+//     console.log(`Weekly Attendance for ${fullName}:`, dailyAttendance);
+//     const filteredDailyAttendance = dailyAttendance.filter(entry => entry);
+
+//     downloadPDF(filteredDailyAttendance, fullName); // Assuming you have a function to download the data as PDF
+//   } catch (error) {
+//     console.error('Error fetching monthly data:', error);
+//     alert('Error fetching monthly data');
+//   }
+// };
+
+//    //Downloading Monthly Attendance of specific Employee
+const handleDownload = async (userId: string, fullName: string) => {
+  try {
+    const monthStart = startOfMonth(selectedDateM); // Start of the month
+    const monthEnd = endOfMonth(selectedDateM); // End of the month
+
+    // Fetch attendance records for the user in the current month
+    const { data: monthlyAttendance, error: attendanceError } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString())
+      .order('check_in', { ascending: true });
+
+    if (attendanceError) throw attendanceError;
+
+    // Fetch absentees for the user in the current month
+    const { data: absentees, error: absenteesError } = await supabase
+      .from('absentees')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
+
+    if (absenteesError) throw absenteesError;
+
+    // Create an array of all days in the month
+    const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    // Function to format date as [25 Jul 2025 9:00 AM]
+    const formatDate = (date: Date) => {
+      return new Intl.DateTimeFormat('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(date);
+    };
+
+    // Process each day in the month
+    const dailyAttendance = allDaysInMonth.map((date) => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+
+      // Find attendance record for the day
+      const attendance = monthlyAttendance.find(
+        (a) => format(new Date(a.check_in), 'yyyy-MM-dd') === dateStr
+      );
+
+      // Find absentee record for the day
+      const absentee = absentees.find(
+        (a) => format(new Date(a.created_at), 'yyyy-MM-dd') === dateStr
+      );
+
+      let status = 'Null'; // Default status
+      let workmode = 'Null'; // Default work mode
+      let checkIn = null;
+      let checkOut = null;
+
+      // If attendance record exists
+      if (attendance) {
+        status = 'Present'; // Set status to Present
+        workmode = attendance.work_mode; // Set work mode from attendance
+        checkIn = formatDate(new Date(attendance.check_in)); // Format check-in time
+        checkOut = formatDate(new Date(attendance.check_out || new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000))); // Default 4 hours if no check-out
+      }
+
+      // If absentee record exists
+      if (absentee) {
+        if (absentee.absentee_Timing === 'Full Day' && absentee.absentee_type === 'Absent') {
+          status = 'Absent'; // Override status to Absent
+        } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'Absent') {
+          status = 'Half Day Absent'; // Override status to Half Day Absent
+        } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'leave') {
+          status = 'Half Day Leave'; // Override status to Half Day Leave
+        } else if (absentee.absentee_type === 'Sick Leave') {
+          status = 'Sick Leave'; // Override status to Sick Leave
+        }
+
+        // If the employee is absent, set workmode to null
+        if (status !== 'Present') {
+          workmode = 'null';
+        }
+      }
+
+      return {
+        date: dateStr,
+        status: status,
+        Check_in: checkIn,
+        Check_out: checkOut,
+        workmode: workmode,
+        fullname: fullName,
+      };
+    });
+
+    console.log(`Monthly Attendance for ${fullName}:`, dailyAttendance);
+
+    // Filter out undefined values
+    const filteredDailyAttendance = dailyAttendance.filter((entry) => entry);
+
+    // Generate and download PDF
+    downloadPDF(filteredDailyAttendance, fullName);
+
+  } catch (error) {
+    console.error('Error fetching monthly data:', error);
+    alert('Error fetching monthly data');
+  }
+};
+    
+
+//ROutr To server To download PDF
+const downloadPDF = async (filteredDailyAttendance , fullName) => {    
+  try {
+    const response = await fetch('http://localhost:4000/generate-pdfMonthlyOfEmployee', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ data: filteredDailyAttendance }),
+    });
+
+    if (!response.ok) {
+      throw new Error('Failed to generate PDF');
+    }
+
+    const blob = await response.blob();
+
+    if (blob.type !== "application/pdf") {
+      throw new Error("Received incorrect file format");
+    }
+
+    const url = window.URL.createObjectURL(blob);
+    const currentDate = new Date().toISOString().split('T')[0];
+    const fileName = `Monthly attendance_${currentDate} of ${fullName}.pdf`;
+
+    // Create and trigger download
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = fileName;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+
+    // Open PDF manually
+    window.open(url, '_blank');
+  } catch (error) {
+    console.error('Error downloading PDF:', error);
+  }
+};
+
+
+
+
+
+
+
+
+
+
 
   // Calculate counts for each category
   const totalEmployees = attendanceData.length;
@@ -304,7 +540,9 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
                         {entry.workingHoursPercentage.toFixed(2)}%
                       </span>
                     </td>
-                    <button className='w-full h-full'> <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500'/></button>
+                    <button className='w-full h-full' onClick={() => handleDownload(entry.user.id, entry.user.full_name) }> 
+                      <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 transition-all rounded-2xl
+                       text-gray-500'/></button>
                   </tr>
                 ))}
                 {filteredData.length === 0 && (
