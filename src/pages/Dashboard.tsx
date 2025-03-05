@@ -8,6 +8,7 @@ import AbsenteeComponent from './AbsenteesData';
 import DashboardCards from '../components/DashboardCards';
 import DailyStatusTable from '../components/DailyStatusTable';
 import BreakRecordsTable from '../components/BreakRecordTable';
+import MonthlyRecord from '../components/MonthlyRecords';
 
 
 
@@ -353,12 +354,15 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
       </div>
       <DashboardCards
       />
-      <div className='mb-6'>
+      <div className='mb-16'>
         <DailyStatusTable />
 
       </div>
-      <div className='mb-4'>
+      <div className='mb-16'>
         <BreakRecordsTable />
+      </div>
+      <div className='mb-10'>
+        <MonthlyRecord />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Status Card */}

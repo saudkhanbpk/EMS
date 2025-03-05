@@ -4,7 +4,8 @@ export default function BreakRecordsTable() {
     <>
       <div className="flex items-center  gap-8 mb-4">
         <div className="flex items-center">
-          <img src={tea} alt="tea" />
+          <img src={tea} alt="tea" className='w-[30px] h-[30px]
+        object-contain' />
           <h2 className="text-[#000000] font-bold text-[23px] leading-8">Break Records</h2>
         </div>
         <select className="bg-[#FFFFFF] text-gray-700 text-sm px-3 py-1 rounded-md border border-gray-300 focus:outline-none">

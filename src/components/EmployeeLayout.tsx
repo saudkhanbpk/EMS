@@ -130,7 +130,7 @@ const EmployeeLayout: React.FC = () => {
         >
           <div className="flex flex-col h-full ">
             <div className="flex items-center justify-center">
-              <h1 className="text-2xl font-poppins font-bold text-[white]">TalentSync</h1>
+              <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
             </div>
 
             <nav className="flex-1 px-4 py-16 space-y-1">
