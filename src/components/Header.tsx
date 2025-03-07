@@ -1,5 +1,6 @@
 import { ChevronDown, LogOut, Menu, Search, User } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
+import { useAuthStore } from '../lib/store';
 
 function Header(
   { setIsSidebarOpen, handleSignOut }: {
@@ -10,6 +11,8 @@ function Header(
       handleSignOut: () => { }
     }
 ) {
+  const user = useAuthStore((state) => state.user);
+
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -62,7 +65,9 @@ function Header(
                 <div className="w-8 h-8 rounded-full bg-gray-600 flex items-center justify-center mr-2">
                   <User className="w-5 h-5" />
                 </div>
-                <span className="hidden sm:inline">John Doe</span>
+                <span className="hidden sm:inline">
+                  {user?.email || "John Doe"}
+                </span>
                 <ChevronDown className="w-[18px] h-[18px]   ml-1" />
               </button>
 
@@ -70,10 +75,12 @@ function Header(
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                   <div className="px-4 py-3 text-sm text-gray-900 border-b">
                     <div className="font-medium">John Doe</div>
-                    <div className="text-gray-500">john.doe@example.com</div>
+                    <div className="text-gray-500">
+                      {user?.email || "unknown@gmail.com"}
+                    </div>
                   </div>
                   <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a>
+                  {/* <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a> */}
                   <button
                     onClick={handleSignOut}
                     className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"

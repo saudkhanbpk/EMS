@@ -61,7 +61,7 @@ const Leave: React.FC = () => {
   const [activeComponent, setActiveComponent] = useState("default"); // "default", "request", "history"
 
   return (
-    <div className="relative max-w-5xl">
+    <div className="relative max-w-5xl ">
       {activeComponent === "request" && <LeaveRequest setActiveComponent={setActiveComponent} />}
       {activeComponent === "history" && <LeaveHistory setActiveComponent={setActiveComponent} />}
       {activeComponent === "default" && (

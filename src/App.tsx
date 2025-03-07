@@ -15,6 +15,7 @@ import LeaveRequestsAdmin from './pages/LeaveRequestsAdmin';
 import { useNavigate } from 'react-router-dom';
 import ExtraHours from './pages/ExtraHours2';
 import SalaryBreakdown from './components/SalaryBreakdown';
+import TaskBoard from './components/TaskBoard';
 
 
 
@@ -72,6 +73,7 @@ function App() {
           <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
           <Route path="overtime" element={<ExtraHours />} />
           <Route path="salary-breakdown" element={<SalaryBreakdown />} />
+          <Route path="board/:id" element={<TaskBoard />} />
         </Route>
 
         {/* Redirect unknown routes to login */}

@@ -85,6 +85,11 @@ const EmployeeLayout: React.FC = () => {
     }
   ];
 
+  const handleScrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }
+
+
   return (
     <div className="min-h-screen bg-gray-100">
       <Header
@@ -140,6 +145,7 @@ const EmployeeLayout: React.FC = () => {
                   <Link
                     key={item.name}
                     to={item.href}
+                    onClick={handleScrollToTop}
                     className={`
                       flex items-center px-4 py-4 text-sm rounded-lg
                       ${location.pathname === item.href

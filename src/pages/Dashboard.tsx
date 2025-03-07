@@ -353,6 +353,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         <p className="font-inter font-medium text-base text-[#000000] leading-7  ">{format(new Date(), 'h:mm a')}</p>
       </div>
       <DashboardCards
+
       />
       <div className='mb-16'>
         <DailyStatusTable />
@@ -362,7 +363,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         <BreakRecordsTable />
       </div>
       <div className='mb-10'>
-        <MonthlyRecord />
+        <MonthlyRecord
+        />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Today's Status Card */}

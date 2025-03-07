@@ -17,6 +17,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
   const [leaveType, setLeaveType] = useState<string>("");
   const [description, setDescription] = useState<string>("");
   const [fullname, setFullname] = useState<string>("");
+  const [email, setEmail] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const navigate = useNavigate();  // Fix: Add parentheses to properly call useNavigate
 
@@ -137,7 +138,8 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
               <label htmlFor="email" className="block text-sm font-normal text-[#565656]">
                 Email
               </label>
-              <input type="email" value={localStorage.getItem('user_email')} disabled
+              <input type="email" id="email" value={email} onChange={(e) => setEmail(e.target.value)}
+                placeholder="Enter your personal email"
                 className="mt-1 block text-[#565656] w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               />
             </div>

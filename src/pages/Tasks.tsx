@@ -590,288 +590,480 @@
 
 
 
-import React, { useState } from 'react';
-import { PlusCircle, User, X } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+// import React, { useState } from 'react';
+// import { PlusCircle, User, X } from 'lucide-react';
+// import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 
-interface Task {
+// interface Task {
+//   id: string;
+//   title: string;
+//   createdAt: string;
+//   status: 'todo' | 'inProgress' | 'review' | 'done';
+// }
+
+// const COLUMN_IDS = {
+//   todo: 'todo',
+//   inProgress: 'inProgress',
+//   review: 'review',
+//   done: 'done'
+// };
+
+// function Task() {
+//   const [tasks, setTasks] = useState<Task[]>([
+//     // {
+//     //   id: '1',
+//     //   title: 'Make the card functional in the end of the page.',
+//     //   createdAt: '6 month ago',
+//     //   status: 'todo'
+//     // },
+//     // {
+//     //   id: '2',
+//     //   title: 'Implement drag and drop functionality.',
+//     //   createdAt: '6 month ago',
+//     //   status: 'inProgress'
+//     // },
+//     // {
+//     //   id: '3',
+//     //   title: 'Review the new design system.',
+//     //   createdAt: '6 month ago',
+//     //   status: 'review'
+//     // },
+//     // {
+//     //   id: '4',
+//     //   title: 'Complete the landing page.',
+//     //   createdAt: '6 month ago',
+//     //   status: 'done'
+//     // }
+//   ]);
+
+//   const [isAddingTask, setIsAddingTask] = useState(false);
+//   const [newTaskTitle, setNewTaskTitle] = useState('');
+
+//   const getTasksByStatus = (status: Task['status']) =>
+//     tasks.filter(task => task.status === status);
+
+//   const getStatusCount = (status: Task['status']) =>
+//     tasks.filter(task => task.status === status).length;
+
+//   const totalTasks = tasks.length;
+//   const completedTasks = getTasksByStatus('done').length;
+//   const pendingTasks = totalTasks - completedTasks;
+
+//   const handleDragEnd = (result: DropResult) => {
+//     const { destination, source, draggableId } = result;
+
+//     if (!destination) return;
+
+//     if (
+//       destination.droppableId === source.droppableId &&
+//       destination.index === source.index
+//     ) {
+//       return;
+//     }
+
+//     // Create a new array of tasks
+//     const newTasks = Array.from(tasks);
+
+//     // Find the task being dragged
+//     const draggedTask = newTasks.find(task => task.id === draggableId);
+//     if (!draggedTask) return;
+
+//     // Remove the task from its original position
+//     newTasks.splice(newTasks.indexOf(draggedTask), 1);
+
+//     // Find the insertion index based on the destination status
+//     const tasksInDestination = newTasks.filter(task => task.status === destination.droppableId);
+//     const insertIndex = newTasks.findIndex(task => task.status === destination.droppableId) + destination.index;
+
+//     // Update the task's status and insert it at the correct position
+//     draggedTask.status = destination.droppableId as Task['status'];
+//     newTasks.splice(insertIndex, 0, draggedTask);
+
+//     setTasks(newTasks);
+//   };
+
+//   const handleAddTask = (e: React.FormEvent) => {
+//     e.preventDefault();
+//     if (!newTaskTitle.trim()) return;
+
+//     const newTask: Task = {
+//       id: String(Date.now()),
+//       title: newTaskTitle,
+//       createdAt: 'Just now',
+//       status: 'todo'
+//     };
+
+//     setTasks([...tasks, newTask]);
+//     setNewTaskTitle('');
+//     setIsAddingTask(false);
+//   };
+
+//   return (
+//     <div className="min-h-screen bg-gray-50 p-8">
+//       <div className="max-w-7xl mx-auto">
+//         <div className="flex justify-between items-center mb-8">
+//           <h1 className="text-[28px] leading-[38px] text-[#000000] font-bold">Work Planner</h1>
+//           <div className="text-sm text-gray-600">
+//             <span className='font-semibold text-[15px] leading-7 text-[#404142]'>Total Tasks: {totalTasks}</span>
+//             <span className="mx-3 className='font-semibold text-[15px] leading-7 text-[#404142]'">Completed Tasks: {completedTasks}</span>
+//             <span className='font-semibold text-[15px] leading-7 text-[#404142]'>Pending Tasks: {String(pendingTasks).padStart(2, '0')}</span>
+//           </div>
+//         </div>
+
+//         <DragDropContext onDragEnd={handleDragEnd}>
+//           <div className="grid grid-cols-4 gap-6">
+//             {/* Todo Column */}
+//             <div className="bg-white rounded-lg p-4 shadow-sm">
+//               <div className="flex justify-between items-center mb-6">
+//                 <h2 className="font-semibold text-violet-600">To do</h2>
+//                 <button
+//                   onClick={() => setIsAddingTask(true)}
+//                   className="bg-violet-600 text-white p-1 rounded-lg flex items-center text-sm"
+//                 >
+//                   <PlusCircle size={16} className="mr-1" /> New Task
+//                 </button>
+//               </div>
+//               {isAddingTask && (
+//                 <form onSubmit={handleAddTask} className="mb-4">
+//                   <div className="bg-gray-50 rounded-lg p-4 space-y-3">
+//                     <div className="flex justify-between items-start">
+//                       <input
+//                         type="text"
+//                         value={newTaskTitle}
+//                         onChange={(e) => setNewTaskTitle(e.target.value)}
+//                         placeholder="Enter task title..."
+//                         className="w-full bg-transparent text-sm focus:outline-none"
+//                         autoFocus
+//                       />
+//                       <button
+//                         type="button"
+//                         onClick={() => setIsAddingTask(false)}
+//                         className="text-gray-400 hover:text-gray-600"
+//                       >
+//                         <X size={16} />
+//                       </button>
+//                     </div>
+//                     <div className="flex justify-end space-x-2">
+//                       <button
+//                         type="button"
+//                         onClick={() => setIsAddingTask(false)}
+//                         className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+//                       >
+//                         Cancel
+//                       </button>
+//                       <button
+//                         type="submit"
+//                         className="px-3 py-1 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700"
+//                       >
+//                         Add Task
+//                       </button>
+//                     </div>
+//                   </div>
+//                 </form>
+//               )}
+//               <Droppable droppableId={COLUMN_IDS.todo}>
+//                 {(provided) => (
+//                   <div
+//                     ref={provided.innerRef}
+//                     {...provided.droppableProps}
+//                     className="space-y-4"
+//                   >
+//                     {getTasksByStatus('todo').map((task, index) => (
+//                       <TaskCard key={task.id} task={task} index={index} />
+//                     ))}
+//                     {provided.placeholder}
+//                   </div>
+//                 )}
+//               </Droppable>
+//             </div>
+
+//             {/* In Progress Column */}
+//             <div className="bg-white rounded-lg p-4 shadow-sm">
+//               <div className="flex justify-between items-center mb-6">
+//                 <h2 className="font-semibold text-orange-600">In Progress</h2>
+//                 <span className="text-gray-600">{getStatusCount('inProgress')}</span>
+//               </div>
+//               <Droppable droppableId={COLUMN_IDS.inProgress}>
+//                 {(provided) => (
+//                   <div
+//                     ref={provided.innerRef}
+//                     {...provided.droppableProps}
+//                     className="space-y-4"
+//                   >
+//                     {getTasksByStatus('inProgress').map((task, index) => (
+//                       <TaskCard key={task.id} task={task} index={index} />
+//                     ))}
+//                     {provided.placeholder}
+//                   </div>
+//                 )}
+//               </Droppable>
+//             </div>
+
+//             {/* Review Column */}
+//             <div className="bg-white rounded-lg p-4 shadow-sm">
+//               <div className="flex justify-between items-center mb-6">
+//                 <h2 className="font-semibold text-yellow-600">Review</h2>
+//                 <span className="text-gray-600">{String(getStatusCount('review')).padStart(2, '0')}</span>
+//               </div>
+//               <Droppable droppableId={COLUMN_IDS.review}>
+//                 {(provided) => (
+//                   <div
+//                     ref={provided.innerRef}
+//                     {...provided.droppableProps}
+//                     className="space-y-4"
+//                   >
+//                     {getTasksByStatus('review').map((task, index) => (
+//                       <TaskCard key={task.id} task={task} index={index} />
+//                     ))}
+//                     {provided.placeholder}
+//                   </div>
+//                 )}
+//               </Droppable>
+//             </div>
+
+//             {/* Done Column */}
+//             <div className="bg-white rounded-lg p-4 shadow-sm">
+//               <div className="flex justify-between items-center mb-6">
+//                 <h2 className="font-semibold text-green-600">Done</h2>
+//                 <span className="text-gray-600">{getStatusCount('done')}</span>
+//               </div>
+//               <Droppable droppableId={COLUMN_IDS.done}>
+//                 {(provided) => (
+//                   <div
+//                     ref={provided.innerRef}
+//                     {...provided.droppableProps}
+//                     className="space-y-4"
+//                   >
+//                     {getTasksByStatus('done').map((task, index) => (
+//                       <TaskCard key={task.id} task={task} index={index} />
+//                     ))}
+//                     {provided.placeholder}
+//                   </div>
+//                 )}
+//               </Droppable>
+//             </div>
+//           </div>
+//         </DragDropContext>
+//       </div>
+//     </div>
+//   );
+// }
+
+// function TaskCard({ task, index }: { task: Task; index: number }) {
+//   return (
+//     <Draggable draggableId={task.id} index={index}>
+//       {(provided) => (
+//         <div
+//           ref={provided.innerRef}
+//           {...provided.draggableProps}
+//           {...provided.dragHandleProps}
+//           className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-3"
+//         >
+//           <p className="text-[#C4C7CF] font-medium text-xs leading-7">{task.createdAt}</p>
+//           <p className="text-[13px] font-medium leading-5 text-[#404142]">{task.title}</p>
+//           <div className="flex justify-between items-center">
+//             <div className="flex items-center space-x-2">
+//               <span className="text-xs text-gray-500">15</span>
+//             </div>
+//             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
+//               <User size={14} className="text-gray-600" />
+//             </div>
+//           </div>
+//         </div>
+//       )}
+//     </Draggable>
+//   );
+// }
+
+// export default Task;
+
+
+
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { PlusCircle, User, Pencil, Trash2, X } from 'lucide-react';
+
+interface Project {
   id: string;
   title: string;
+  type: 'Front-End Developer' | 'Back End Developer';
+  owner: string;
   createdAt: string;
-  status: 'todo' | 'inProgress' | 'review' | 'done';
 }
-
-const COLUMN_IDS = {
-  todo: 'todo',
-  inProgress: 'inProgress',
-  review: 'review',
-  done: 'done'
-};
 
 function Task() {
-  const [tasks, setTasks] = useState<Task[]>([
-    // {
-    //   id: '1',
-    //   title: 'Make the card functional in the end of the page.',
-    //   createdAt: '6 month ago',
-    //   status: 'todo'
-    // },
-    // {
-    //   id: '2',
-    //   title: 'Implement drag and drop functionality.',
-    //   createdAt: '6 month ago',
-    //   status: 'inProgress'
-    // },
-    // {
-    //   id: '3',
-    //   title: 'Review the new design system.',
-    //   createdAt: '6 month ago',
-    //   status: 'review'
-    // },
-    // {
-    //   id: '4',
-    //   title: 'Complete the landing page.',
-    //   createdAt: '6 month ago',
-    //   status: 'done'
-    // }
+  const navigate = useNavigate();
+  const [isAddingProject, setIsAddingProject] = useState(false);
+  const [newProject, setNewProject] = useState({
+    title: '',
+    type: 'Front-End Developer' as const
+  });
+
+  const [projects, setProjects] = useState<Project[]>([
+    {
+      id: '1',
+      title: 'Services Mobile App',
+      type: 'Front-End Developer',
+      owner: 'Robert Wilson',
+      createdAt: '6 month ago'
+    },
+    {
+      id: '2',
+      title: 'VentoPay',
+      type: 'Back End Developer',
+      owner: 'Robert Wilson',
+      createdAt: '6 month ago'
+    },
+    {
+      id: '3',
+      title: 'Move Muse',
+      type: 'Front-End Developer',
+      owner: 'Robert Wilson',
+      createdAt: '6 month ago'
+    }
   ]);
 
-  const [isAddingTask, setIsAddingTask] = useState(false);
-  const [newTaskTitle, setNewTaskTitle] = useState('');
-
-  const getTasksByStatus = (status: Task['status']) =>
-    tasks.filter(task => task.status === status);
-
-  const getStatusCount = (status: Task['status']) =>
-    tasks.filter(task => task.status === status).length;
-
-  const totalTasks = tasks.length;
-  const completedTasks = getTasksByStatus('done').length;
-  const pendingTasks = totalTasks - completedTasks;
-
-  const handleDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) return;
-
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    // Create a new array of tasks
-    const newTasks = Array.from(tasks);
-
-    // Find the task being dragged
-    const draggedTask = newTasks.find(task => task.id === draggableId);
-    if (!draggedTask) return;
-
-    // Remove the task from its original position
-    newTasks.splice(newTasks.indexOf(draggedTask), 1);
-
-    // Find the insertion index based on the destination status
-    const tasksInDestination = newTasks.filter(task => task.status === destination.droppableId);
-    const insertIndex = newTasks.findIndex(task => task.status === destination.droppableId) + destination.index;
-
-    // Update the task's status and insert it at the correct position
-    draggedTask.status = destination.droppableId as Task['status'];
-    newTasks.splice(insertIndex, 0, draggedTask);
-
-    setTasks(newTasks);
-  };
-
-  const handleAddTask = (e: React.FormEvent) => {
+  const handleAddProject = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newTaskTitle.trim()) return;
+    if (!newProject.title.trim()) return;
 
-    const newTask: Task = {
+    const project: Project = {
       id: String(Date.now()),
-      title: newTaskTitle,
-      createdAt: 'Just now',
-      status: 'todo'
+      title: newProject.title,
+      type: newProject.type,
+      owner: 'Robert Wilson',
+      createdAt: 'Just now'
     };
 
-    setTasks([...tasks, newTask]);
-    setNewTaskTitle('');
-    setIsAddingTask(false);
+    setProjects([...projects, project]);
+    setNewProject({ title: '', type: 'Front-End Developer' });
+    setIsAddingProject(false);
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 p-8">
+    <div className="min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-[28px] leading-[38px] text-[#000000] font-bold">Work Planner</h1>
-          <div className="text-sm text-gray-600">
-            <span className='font-semibold text-[15px] leading-7 text-[#404142]'>Total Tasks: {totalTasks}</span>
-            <span className="mx-3 className='font-semibold text-[15px] leading-7 text-[#404142]'">Completed Tasks: {completedTasks}</span>
-            <span className='font-semibold text-[15px] leading-7 text-[#404142]'>Pending Tasks: {String(pendingTasks).padStart(2, '0')}</span>
-          </div>
+          <h1 className="text-[26px] font-bold">Your Projects</h1>
+          <button
+            onClick={() => setIsAddingProject(true)}
+            className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center"
+          >
+            <PlusCircle size={20} className="mr-2" /> New Project
+          </button>
         </div>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-4 gap-6">
-            {/* Todo Column */}
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="font-semibold text-violet-600">To do</h2>
+        {isAddingProject && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 w-full max-w-md">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-xl font-semibold">Create New Project</h2>
                 <button
-                  onClick={() => setIsAddingTask(true)}
-                  className="bg-violet-600 text-white p-1 rounded-lg flex items-center text-sm"
+                  onClick={() => setIsAddingProject(false)}
+                  className="text-gray-400 hover:text-gray-600"
                 >
-                  <PlusCircle size={16} className="mr-1" /> New Task
+                  <X size={24} />
                 </button>
               </div>
-              {isAddingTask && (
-                <form onSubmit={handleAddTask} className="mb-4">
-                  <div className="bg-gray-50 rounded-lg p-4 space-y-3">
-                    <div className="flex justify-between items-start">
-                      <input
-                        type="text"
-                        value={newTaskTitle}
-                        onChange={(e) => setNewTaskTitle(e.target.value)}
-                        placeholder="Enter task title..."
-                        className="w-full bg-transparent text-sm focus:outline-none"
-                        autoFocus
-                      />
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingTask(false)}
-                        className="text-gray-400 hover:text-gray-600"
-                      >
-                        <X size={16} />
-                      </button>
-                    </div>
-                    <div className="flex justify-end space-x-2">
-                      <button
-                        type="button"
-                        onClick={() => setIsAddingTask(false)}
-                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-3 py-1 text-sm bg-violet-600 text-white rounded-md hover:bg-violet-700"
-                      >
-                        Add Task
-                      </button>
-                    </div>
+              <form onSubmit={handleAddProject}>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Title
+                    </label>
+                    <input
+                      type="text"
+                      value={newProject.title}
+                      onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
+                      placeholder="Enter project title"
+                    />
                   </div>
-                </form>
-              )}
-              <Droppable droppableId={COLUMN_IDS.todo}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-4"
-                  >
-                    {getTasksByStatus('todo').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
-                    {provided.placeholder}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Project Type
+                    </label>
+                    <select
+                      value={newProject.type}
+                      onChange={(e) => setNewProject({ ...newProject, type: e.target.value as 'Front-End Developer' | 'Back End Developer' })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
+                    >
+                      <option value="Front-End Developer">Front-End Developer</option>
+                      <option value="Back End Developer">Back End Developer</option>
+                    </select>
                   </div>
-                )}
-              </Droppable>
-            </div>
-
-            {/* In Progress Column */}
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="font-semibold text-orange-600">In Progress</h2>
-                <span className="text-gray-600">{getStatusCount('inProgress')}</span>
-              </div>
-              <Droppable droppableId={COLUMN_IDS.inProgress}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-4"
-                  >
-                    {getTasksByStatus('inProgress').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
-                    {provided.placeholder}
+                  <div className="flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      onClick={() => setIsAddingProject(false)}
+                      className="px-4 py-2 text-gray-600 hover:text-gray-800"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-4 py-2 bg-[#9A00FF] text-white rounded-md hover:bg-violet-700"
+                    >
+                      Create Project
+                    </button>
                   </div>
-                )}
-              </Droppable>
-            </div>
-
-            {/* Review Column */}
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="font-semibold text-yellow-600">Review</h2>
-                <span className="text-gray-600">{String(getStatusCount('review')).padStart(2, '0')}</span>
-              </div>
-              <Droppable droppableId={COLUMN_IDS.review}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-4"
-                  >
-                    {getTasksByStatus('review').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-
-            {/* Done Column */}
-            <div className="bg-white rounded-lg p-4 shadow-sm">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="font-semibold text-green-600">Done</h2>
-                <span className="text-gray-600">{getStatusCount('done')}</span>
-              </div>
-              <Droppable droppableId={COLUMN_IDS.done}>
-                {(provided) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className="space-y-4"
-                  >
-                    {getTasksByStatus('done').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
+                </div>
+              </form>
             </div>
           </div>
-        </DragDropContext>
+        )}
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {projects.map((project) => (
+            <div
+              key={project.id}
+              className="bg-white rounded-[20px] w-[316px] h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => navigate(`/board/${project.id}`)}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className="flex items-center px-4 py-1  bg-[#F4F6FC] rounded-full ">
+                  <span className={`w-2 h-2 rounded-full bg-[#9A00FF]
+                    }`}></span>&nbsp;&nbsp;
+                  <span className="text-sm font-semibold text-[#9A00FF]">{project.type}</span>
+                </div>
+                <div className="flex space-x-2">
+                  <button
+                    className="text-gray-400 hover:text-gray-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Add edit functionality
+                    }}
+                  >
+                    <Pencil size={16} color='#667085' />
+                  </button>
+                  <button
+                    className="text-gray-400 hover:text-red-600"
+                    onClick={(e) => {
+                      e.stopPropagation();
+
+                      // Add delete functionality
+                    }}
+                  >
+                    <Trash2 size={16} color='#667085' />
+                  </button>
+                </div>
+              </div>
+              <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
+              <div className="flex gap-10 flex-col items-start justify-between">
+                <div className="flex items-center space-x-2">
+                  {/* <User size={16} /> */}
+                  <span className='font-medium text-base leading-7 text-[#85878B]'>{project.owner}</span>
+                </div>
+                <div>
+                  <span className='font-medium text-base leading-7 text-[#C4C7CF]'>{project.createdAt}</span>
+
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </div>
     </div>
-  );
-}
-
-function TaskCard({ task, index }: { task: Task; index: number }) {
-  return (
-    <Draggable draggableId={task.id} index={index}>
-      {(provided) => (
-        <div
-          ref={provided.innerRef}
-          {...provided.draggableProps}
-          {...provided.dragHandleProps}
-          className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-3"
-        >
-          <p className="text-[#C4C7CF] font-medium text-xs leading-7">{task.createdAt}</p>
-          <p className="text-[13px] font-medium leading-5 text-[#404142]">{task.title}</p>
-          <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <span className="text-xs text-gray-500">15</span>
-            </div>
-            <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
-              <User size={14} className="text-gray-600" />
-            </div>
-          </div>
-        </div>
-      )}
-    </Draggable>
   );
 }
 
