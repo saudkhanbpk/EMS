@@ -1,5 +1,37 @@
+import { format } from 'date-fns';
 import clockImage from './../assets/Time.png'
-export default function DailyStatusTable() {
+
+
+interface DailyStatusTableProps {
+  todayAttendance:
+  {
+    check_in: string;
+    check_out: string;
+    work_mode: string;
+    latitude: number;
+    longitude: number;
+    totalTime: string;
+    breakTime: string;
+    status: string;
+    checkInStatus: string;
+    totalBreaks: number;
+    breakHours: string;
+  };
+  todayBreak: {
+    break_in: string;
+    break_out: string;
+  }[];
+  calculateDuration: (checkIn: string, checkOut: string) => string;
+  getTotalBreakDuration: () => string;
+}
+
+export default function DailyStatusTable(props: DailyStatusTableProps) {
+  const {
+    todayAttendance,
+    todayBreak,
+    calculateDuration,
+    getTotalBreakDuration
+  } = props;
   return (
     <div>
       <div className="flex items-center mb-4">
@@ -30,30 +62,42 @@ export default function DailyStatusTable() {
               </tr>
             </thead>
 
-            {/* Table Body */}
             <tbody>
               <tr className="text-gray-600 text-sm">
-                <td className=" border p-4">9:15 AM</td>
                 <td className=" border p-4">
-                  <span className="bg-[#C5D7FF] text-[#5055D5] px-3 py-1 rounded-full text-xs">
-                    On site
-                  </span>
-                </td>
-                <td className=" border p-4">34.1298, 72.4656</td>
-                <td className=" border p-4">2h 27m</td>
-                <td className=" border p-4">9:15 AM</td>
-                <td className=" border p-4">
-                  <span className="bg-[#C5D7FF] text-[#5055D5] px-3 py-1 rounded-full text-xs">
-                    Working
-                  </span>
+                  {format(new Date(todayAttendance.check_in), 'h:mm a')}
                 </td>
                 <td className=" border p-4">
-                  <span className="bg-yellow-100 text-yellow-600 px-3 py-1 rounded-full text-xs">
-                    Late
+                  <span className={`bg-[#C5D7FF] text-[#5055D5] px-3 py-1 rounded-full text-xs ${todayAttendance.work_mode === 'on_site'
+                    ? 'bg-[#C5D7FF] text-blue-800'
+                    : 'bg-[#C5D7FF] text-purple-800'
+                    }`}>
+                    {todayAttendance.work_mode}
                   </span>
                 </td>
-                <td className=" border p-4 text-center">01</td>
-                <td className=" border p-4">0h 0m</td>
+                <td className=" border p-4">   {todayAttendance.latitude.toFixed(4)}, {todayAttendance.longitude.toFixed(4)}</td>
+                <td className=" border p-4">  {calculateDuration(todayAttendance.check_in, todayAttendance.check_out)}</td>
+                <td className=" border p-4">
+                  {getTotalBreakDuration() || '0h 0m'}
+                </td>
+                <td className=" border p-4">
+                  <span className={`bg-[#C5D7FF] text-[#5055D5] px-3 py-1 rounded-full text-xs ${!todayAttendance.check_out
+                    ? 'bg-[#C5D7FF] text-blue-800'
+                    : 'bg-[#C5D7FF] text-green-800'
+                    }`}>
+                    {!todayAttendance.check_out ? 'Working' : 'Completed'}
+
+                  </span>
+                </td>
+                <td className=" border p-4">
+                  <span className={` px-3 py-1 rounded-full text-xs  ${todayAttendance.checkInStatus === 'late'
+                    ? 'bg-yellow-100 text-yellow-600' : 'bg-green-100 text-green-600'}`}>
+                    {todayAttendance.status}
+                  </span>
+                </td>
+                <td className=" border p-4 text-center">{todayBreak.length}</td>
+                <td className=" border p-4">                    {getTotalBreakDuration() || '0h 0m'}
+                </td>
               </tr>
             </tbody>
           </table>

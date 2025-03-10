@@ -1,6 +1,7 @@
 import { ChevronDown, LogOut, Menu, Search, User } from 'lucide-react'
 import React, { useEffect, useRef, useState } from 'react'
 import { useAuthStore } from '../lib/store';
+import { Link } from 'react-router-dom';
 
 function Header(
   { setIsSidebarOpen, handleSignOut }: {
@@ -12,6 +13,7 @@ function Header(
     }
 ) {
   const user = useAuthStore((state) => state.user);
+  console.log("🚀 ~ user:", user)
 
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
@@ -29,6 +31,10 @@ function Header(
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+
+  console.log("sdss:", user?.email ? user?.email.slice(0, user?.email.indexOf('@')) : "Techcreator"
+  );
+
 
   return (
     <>
@@ -66,20 +72,24 @@ function Header(
                   <User className="w-5 h-5" />
                 </div>
                 <span className="hidden sm:inline">
-                  {user?.email || "John Doe"}
-                </span>
+                  {
+                    user?.email ? user?.email.slice(0, user?.email.indexOf('@')) : "Techcreator"
+
+                  }                </span>
                 <ChevronDown className="w-[18px] h-[18px]   ml-1" />
               </button>
 
               {isProfileOpen && (
                 <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50">
                   <div className="px-4 py-3 text-sm text-gray-900 border-b">
-                    <div className="font-medium">John Doe</div>
+                    <div className="font-medium">{
+                      user?.email ? user?.email.slice(0, user?.email.indexOf('@')) : "Techcreator"
+                    }</div>
                     <div className="text-gray-500">
                       {user?.email || "unknown@gmail.com"}
                     </div>
                   </div>
-                  <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</a>
+                  <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Your Profile</Link>
                   {/* <a href="#" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Settings</a> */}
                   <button
                     onClick={handleSignOut}

@@ -16,6 +16,7 @@ import { useNavigate } from 'react-router-dom';
 import ExtraHours from './pages/ExtraHours2';
 import SalaryBreakdown from './components/SalaryBreakdown';
 import TaskBoard from './components/TaskBoard';
+import ProfileCard from './components/Profile';
 
 
 
@@ -74,6 +75,7 @@ function App() {
           <Route path="overtime" element={<ExtraHours />} />
           <Route path="salary-breakdown" element={<SalaryBreakdown />} />
           <Route path="board/:id" element={<TaskBoard />} />
+          <Route path="profile" element={<ProfileCard />} />
         </Route>
 
         {/* Redirect unknown routes to login */}

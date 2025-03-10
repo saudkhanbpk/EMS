@@ -1,5 +1,26 @@
 import calendar from './../assets/calendar.png'
-const MonthlyRecord = () => {
+
+
+interface MonthlyRecordProps {
+  monthlyStats: {
+    expectedWorkingDays: number;
+    daysAttended: number;
+    presentDays: number;
+    lateDays: number;
+    absentees: number;
+    leaves: number;
+    totalWorkingDays: number;
+    averageDailyHours: string;
+    expectedHours: string;
+    expectedWorkHours: number;
+    averageWorkHours: number;
+  };
+  leaves: number;
+  absentees: number;
+}
+
+const MonthlyRecord = (props: MonthlyRecordProps) => {
+  const { monthlyStats, leaves, absentees } = props;
   return (
     <>
       <div className="flex items-center gap-6  mb-4">
@@ -26,11 +47,17 @@ const MonthlyRecord = () => {
             </thead>
             <tbody>
               <tr className="text-gray-600">
-                {['20', '02', '03', '02', '02', '02', '08 hours', '01 hours', '20 hours'].map((data, index) => (
-                  <td key={index} className="border border-gray-200 p-8 text-sm">
-                    {data}
-                  </td>
-                ))}
+                <td className="border border-gray-200 p-4">{monthlyStats?.expectedWorkingDays}</td>
+                <td className="border border-gray-200 p-4">{monthlyStats.totalWorkingDays}</td>
+                <td className="border border-gray-200 p-4">{monthlyStats.presentDays}</td>
+                <td className="border border-gray-200 p-4">{monthlyStats?.lateDays}</td>
+                <td className="border border-gray-200 p-4">{absentees}</td>
+                <td className="border border-gray-200 p-4">{leaves}</td>
+                <td className="border border-gray-200 p-4">                      {monthlyStats.averageWorkHours.toFixed(1)}h
+                </td>
+                <td className="border border-gray-200 p-4">   {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h</td>
+                <td className="border border-gray-200 p-4">                      {(7 * monthlyStats.expectedWorkingDays)}h
+                </td>
               </tr>
             </tbody>
           </table>

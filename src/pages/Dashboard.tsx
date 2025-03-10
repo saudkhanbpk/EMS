@@ -354,16 +354,28 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
       </div>
       <DashboardCards
 
+
       />
       <div className='mb-16'>
-        <DailyStatusTable />
+        <DailyStatusTable
+          todayAttendance={todayAttendance}
+          todayBreak={todayBreak}
+          calculateDuration={calculateDuration}
+          getTotalBreakDuration={getTotalBreakDuration}
+        />
 
       </div>
       <div className='mb-16'>
-        <BreakRecordsTable />
+        <BreakRecordsTable
+          todayBreak={todayBreak}
+        />
       </div>
       <div className='mb-10'>
         <MonthlyRecord
+          monthlyStats={monthlyStats}
+          absentees={absentees}
+          leaves={leaves}
+
         />
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
