@@ -36,6 +36,14 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
   const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "bad", "better", "best"
     const { setAttendanceDataMonthly } = useContext(AttendanceContext);
   
+// Fetch data for the selected month
+// const fetchAllEmployeesStats = async (date) => {
+//   setLoading(true);
+//   try {
+//     // Fetch all users
+//     const { data: users, error: usersError } = await supabase
+//       .from('users')
+//       .select('*');
 
   // Fetch data for the selected month
   const fetchAllEmployeesStats = async (date: Date) => {
@@ -46,221 +54,145 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
         .from('users')
         .select('*');
 
-      if (usersError) throw usersError;
+    const monthStart = startOfMonth(date);
+    const monthEnd = endOfMonth(date);
 
-      const monthStart = startOfMonth(date);
-      const monthEnd = endOfMonth(date);
+    // Fetch all attendance records for the selected month in one go
+    const { data: monthlyAttendance, error: monthlyError } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString())
+      .order('check_in', { ascending: true });
 
-      // Fetch all attendance records for the selected month in one go
-      const { data: monthlyAttendance, error: monthlyError } = await supabase
-        .from('attendance_logs')
-        .select('*')
-        .gte('check_in', monthStart.toISOString())
-        .lte('check_in', monthEnd.toISOString())
-        .order('check_in', { ascending: true });
+    if (monthlyError) throw monthlyError;
 
-      if (monthlyError) throw monthlyError;
+    // Fetch all breaks in one go
+    const { data: breaks, error: breaksError } = await supabase
+      .from('breaks')
+      .select('*')
+      .gte('start_time', monthStart.toISOString())
+      .lte('start_time', monthEnd.toISOString());
 
-      // Fetch all breaks in one go
-      const { data: breaks, error: breaksError } = await supabase
-        .from('breaks')
-        .select('*')
-        .gte('start_time', monthStart.toISOString())
-        .lte('start_time', monthEnd.toISOString());
+    if (breaksError) throw breaksError;
 
-      if (breaksError) throw breaksError;
+    // Fetch all absentees in one go
+    const { data: absentees, error: absenteesError } = await supabase
+      .from('absentees')
+      .select('*')
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
 
-      // Fetch all absentees in one go
-      const { data: absentees, error: absenteesError } = await supabase
-        .from('absentees')
-        .select('*')
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString());
-      
-      if (absenteesError) throw absenteesError;
+    if (absenteesError) throw absenteesError;
 
-      // Calculate expected working days
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+    // Calculate expected working days
+    const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
 
-      const stats: EmployeeStats[] = await Promise.all(users.map(async (user) => {
-        const { id, full_name } = user;
+    const stats: EmployeeStats[] = await Promise.all(users.map(async (user) => {
+      const { id, full_name } = user;
 
-        // Filter attendance records for the current user
-        const userAttendance = monthlyAttendance.filter(record => record.user_id === id);
+      // Filter attendance records for the current user
+      const userAttendance = monthlyAttendance.filter(record => record.user_id === id);
 
-        // Calculate unique attendance days
-        const attendanceByDate = userAttendance.reduce((acc, curr) => {
-          const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
-          if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
-            acc[date] = curr;
-          }
-          return acc;
-        }, {} as Record<string, AttendanceRecord>);
+      // Calculate unique attendance days
+      const attendanceByDate = userAttendance.reduce((acc, curr) => {
+        const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
+        if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+          acc[date] = curr;
+        }
+        return acc;
+      }, {} as Record<string, AttendanceRecord>);
 
-        const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
+      const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
 
-        // Calculate total working hours
-        let totalHours = 0;
+      // Calculate total working hours
+      let totalHours = 0;
 
-        uniqueAttendance.forEach(attendance => {
-          const start = new Date(attendance.check_in);
-          const end = attendance.check_out 
-            ? new Date(attendance.check_out) 
-            : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
+      uniqueAttendance.forEach(attendance => {
+        const start = new Date(attendance.check_in);
+        const end = attendance.check_out
+          ? new Date(attendance.check_out)
+          : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
 
-          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 12); // Cap at 12 hours per day
-        });
+        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        totalHours += Math.min(hours, 12); // Cap at 12 hours per day
+      });
 
-        // Calculate total break hours for the user
-        const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
-        let totalBreakHours = 0;
+      // Calculate total break hours for the user
+      const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
+      let totalBreakHours = 0;
 
-        userBreaks.forEach(breakEntry => {
-          const breakStart = new Date(breakEntry.start_time);
-          const breakEnd = breakEntry.end_time 
-            ? new Date(breakEntry.end_time) 
-            : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+      userBreaks.forEach(breakEntry => {
+        const breakStart = new Date(breakEntry.start_time);
+        const breakEnd = breakEntry.end_time
+          ? new Date(breakEntry.end_time)
+          : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
 
-          const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-          totalBreakHours += Math.min(breakHours, 12); // Cap at 12 hours per break
-        });
+        const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+        totalBreakHours += Math.min(breakHours, 12); // Cap at 12 hours per break
+      });
 
-        totalHours -= totalBreakHours;
+      totalHours -= totalBreakHours;
 
-        // Calculate absent days
-        const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
-        const leavesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'leave').length;
-        const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
+      // Calculate absent days
+      const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
+      const leavesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'leave').length;
+      const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
 
-        const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
-        const absentDays = leavesCount + absenteesCount;
+      const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
+      const absentDays = leavesCount + absenteesCount;
 
-        // Calculate working hours percentage
-        const workingHoursPercentage = (totalHours / (workingDaysInMonth * 8)) * 100; // Assuming 8 hours per day
+      // Calculate working hours percentage
+      const workingHoursPercentage = (totalHours / (workingDaysInMonth * 8)) * 100; // Assuming 8 hours per day
 
-        return {
-          user: { id, full_name },
-          presentDays,
-          absentDays,
-          totalHoursWorked: totalHours,
-          workingHoursPercentage,
-        };
-      }));
+      return {
+        user: { id, full_name },
+        presentDays,
+        absentDays,
+        totalHoursWorked: totalHours,
+        workingHoursPercentage,
+      };
+    }));
 
-      setAttendanceData(stats);
-      setFilteredData(stats); // Initialize filtered data with all data
-      setAttendanceDataMonthly(stats)
-    } catch (error) {
-      console.error('Error fetching employee data:', error);
-      setError('Error fetching employee data');
-    } finally {
-      setLoading(false);
-    }
-  };
+    setAttendanceData(stats);
+    setFilteredData(stats); // Initialize filtered data with all data
+    setAttendanceDataMonthly(stats);
+  } catch (error) {
+    console.error('Error fetching employee data:', error);
+    setError('Error fetching employee data');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  // Fetch data when the selected date changes
-  useEffect(() => {
-    fetchAllEmployeesStats(selectedDateM);
-  }, [selectedDateM]);
+// Fetch data when the selected date changes
+useEffect(() => {
+  fetchAllEmployeesStats(selectedDateM);
+}, [selectedDateM]);
 
-  // Handle filter change
-  const handleFilterChange = (filter) => {
-    setCurrentFilter(filter);
-    switch (filter) {
-      case 'all':
-        setFilteredData(attendanceData);
-        break;
-      case 'bad':
-        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage < 50));
-        break;
-      case 'better':
-        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80));
-        break;
-      case 'best':
-        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 80));
-        break;
-      default:
-        setFilteredData(attendanceData);
-    }
-  };
-  
-//    //Downloading Monthly Attendance of specific Employee
-//  const handleDownload = async (userId: string, fullName: string) => {
-//   try {
-//     const monthStart = startOfMonth(selectedDateM);
-//     const monthEnd = endOfMonth(selectedDateM);
+// Handle filter change
+const handleFilterChange = (filter) => {
+  setCurrentFilter(filter);
+  switch (filter) {
+    case 'all':
+      setFilteredData(attendanceData);
+      break;
+    case 'bad':
+      setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage < 50));
+      break;
+    case 'better':
+      setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80));
+      break;
+    case 'best':
+      setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 80));
+      break;
+    default:
+      setFilteredData(attendanceData);
+  }
+};
 
-//     // Fetch attendance records for the user in the current month
-//     const { data: monthlyAttendance, error: attendanceError } = await supabase
-//       .from('attendance_logs')
-//       .select('*')
-//       .eq('user_id', userId)
-//       .gte('check_in', monthStart.toISOString())
-//       .lte('check_in', monthEnd.toISOString())
-//       .order('check_in', { ascending: true });
-
-//     if (attendanceError) throw attendanceError;
-
-//     // Fetch absentees for the user in the current month
-//     const { data: absentees, error: absenteesError } = await supabase
-//       .from('absentees')
-//       .select('*')
-//       .eq('user_id', userId)
-//       .gte('created_at', monthStart.toISOString())
-//       .lte('created_at', monthEnd.toISOString());
-
-//     if (absenteesError) throw absenteesError;
-
-//     // Create an array of daily attendance
-//     const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-//     const dailyAttendance: DailyAttendance[] = allDaysInMonth.map(date => {
-//       const dateStr = format(date, 'yyyy-MM-dd');
-//       const attendance = monthlyAttendance.find(a => format(new Date(a.check_in), 'yyyy-MM-dd') === dateStr);
-//       const absent = absentees.some(a => format(new Date(a.created_at), 'yyyy-MM-dd') === dateStr);
-
-//       if (attendance) {
-//         const start = new Date(attendance.check_in);
-//         const end = attendance.check_out ? new Date(attendance.check_out) : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
-//         const workingHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-//         return {
-//           date: dateStr,
-//           status: 'present',
-//           Check_in:attendance.check_in,
-//           Check_out:attendance.check_out,
-//           workingHours: Math.min(workingHours, 12), // Cap at 12 hours
-//         };
-//       } else if (absent) {
-//         return {
-//           date: dateStr,
-//           status: 'absent',
-//           Check_in:null,
-//           Check_out:null,
-//           workingHours: 0,
-//         };
-//       } else {
-//         return {
-//           date: dateStr,
-//           status: 'absent',
-//           Check_in:null,
-//           Check_out:null,
-//           workingHours: 0,
-//         };
-//       }
-//     });
-
-//     console.log(`Weekly Attendance for ${fullName}:`, dailyAttendance);
-//     const filteredDailyAttendance = dailyAttendance.filter(entry => entry);
-
-//     downloadPDF(filteredDailyAttendance, fullName); // Assuming you have a function to download the data as PDF
-//   } catch (error) {
-//     console.error('Error fetching monthly data:', error);
-//     alert('Error fetching monthly data');
-//   }
-// };
-
-//    //Downloading Monthly Attendance of specific Employee
+// Downloading Monthly Attendance of specific Employee
 const handleDownload = async (userId: string, fullName: string) => {
   try {
     const monthStart = startOfMonth(selectedDateM); // Start of the month
@@ -321,16 +253,15 @@ const handleDownload = async (userId: string, fullName: string) => {
       let checkIn = null;
       let checkOut = null;
 
-      // If attendance record exists
+      // If attendance record exists, prioritize it over absentee record
       if (attendance) {
         status = 'Present'; // Set status to Present
         workmode = attendance.work_mode; // Set work mode from attendance
         checkIn = formatDate(new Date(attendance.check_in)); // Format check-in time
         checkOut = formatDate(new Date(attendance.check_out || new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000))); // Default 4 hours if no check-out
       }
-
-      // If absentee record exists
-      if (absentee) {
+      // If no attendance record exists, check for absentee record
+      else if (absentee) {
         if (absentee.absentee_Timing === 'Full Day' && absentee.absentee_type === 'Absent') {
           status = 'Absent'; // Override status to Absent
         } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'Absent') {
@@ -370,48 +301,6 @@ const handleDownload = async (userId: string, fullName: string) => {
     alert('Error fetching monthly data');
   }
 };
-    
-
-//ROutr To server To download PDF
-const downloadPDF = async (filteredDailyAttendance , fullName) => {    
-  try {
-    const response = await fetch('http://localhost:4000/generate-pdfMonthlyOfEmployee', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({ data: filteredDailyAttendance }),
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to generate PDF');
-    }
-
-    const blob = await response.blob();
-
-    if (blob.type !== "application/pdf") {
-      throw new Error("Received incorrect file format");
-    }
-
-    const url = window.URL.createObjectURL(blob);
-    const currentDate = new Date().toISOString().split('T')[0];
-    const fileName = `Monthly attendance_${currentDate} of ${fullName}.pdf`;
-
-    // Create and trigger download
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    document.body.appendChild(a);
-    a.click();
-    a.remove();
-
-    // Open PDF manually
-    window.open(url, '_blank');
-  } catch (error) {
-    console.error('Error downloading PDF:', error);
-  }
-};
-
 
 
 

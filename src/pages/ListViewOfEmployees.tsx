@@ -394,11 +394,6 @@ const handleCloseModal = () => {
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
-        .not('full_name', 'in', '("Admin")')
-        .not('full_name', 'in', '("saud")')
-        .not('full_name', 'in', '("Ali Hassan")')
-        .not('full_name', 'in', '("m.dawood")')
-        .not('full_name', 'in', '("Abbas khan")')
       if (usersError) throw usersError;
 
       // Fetch attendance logs for the selected date
@@ -705,7 +700,7 @@ const handleCloseModal = () => {
                     <th className="py-3 px-6 text-left">Check-out</th>
                     <th className="py-3 px-6 text-left">Work Mode</th>
                     <th className="py-3 px-6 text-left">Status</th>
-                  </tr>
+                  </tr> 
                 </thead>
                 <tbody className="text-md font-normal">
                   {filteredData.map((entry, index) => (
