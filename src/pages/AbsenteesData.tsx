@@ -2,11 +2,11 @@ import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabase';
 import { startOfMonth, endOfMonth } from "date-fns";
 
-const AbsenteeComponent = () => {
+const AbsenteeComponent = ({selectedDate}) => {
   const [absenteeData, setAbsenteeData] = useState<any[]>([]);
   const [loading , setloading] = useState(false);
 
-  const today = new Date();
+  const today =  selectedDate;
   const monthStart = startOfMonth(today);
   const monthEnd = endOfMonth(today);
 
