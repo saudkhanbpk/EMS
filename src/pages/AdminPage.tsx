@@ -9,6 +9,7 @@ import ListViewMonthly from './ListViewMonthly';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { LucideDelete } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
+import { motion } from "framer-motion";
 import "./style.css"
 import {
   ShieldCheck,
@@ -94,7 +95,24 @@ const AdminPage: React.FC = () => {
   const [tableData , setTableData] = useState ('');
   const [breaks , setbreak] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
-  
+  const [sideopen , setsideopen] = useState(false);
+
+
+  useEffect(() => {
+    // Show sidebar when mouse moves to the left edge
+    const handleMouseMove = (e) => {
+      if (e.clientX < 50) {
+        setsideopen(true);
+      }
+    };
+
+    document.addEventListener("mousemove", handleMouseMove);
+    return () => document.removeEventListener("mousemove", handleMouseMove);
+  }, []);
+
+  const handleClose = () => {
+    setsideopen(false);
+  };
   
   
 
@@ -674,10 +692,13 @@ const AdminPage: React.FC = () => {
 
       uniqueAttendance.forEach(attendance => {
         const start = new Date(attendance.check_in);
-        // If an employee has no CheckOut, assign 4 working hours
         const end = attendance.check_out 
-          ? new Date(attendance.check_out) 
-          : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+        ? new Date(attendance.check_out) 
+        : new Date(start.getTime()); // Adds 4 hours
+        // If an employee has no CheckOut, assign 4 working hours
+        // const end = attendance.check_out 
+        //   ? new Date(attendance.check_out) 
+        //   : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
       
         const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
         totalHours += Math.min(hours, 12);
@@ -858,8 +879,16 @@ const AdminPage: React.FC = () => {
     <>
     <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
     <div className="min-h-screen bg-gray-100 flex">
+    <motion.div
+  className="fixed top-0 left-0 h-full w-64 bg-white text-white shadow-lg p-4 z-20"
+  initial={{ x: "-100%" }}
+  animate={{ x: sideopen ? "0%" : "-100%" }}
+  transition={{ duration: 0.4, ease: "easeInOut" }} // Smooth transition
+  onMouseLeave={handleClose} // Close when mouse leaves
+>
+
       {/* Sidebar Space Filler */}
-      <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div>
+      {/* <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div> */}
 
       {/* Menu Button (For Small Screens) */}
       <button
@@ -872,8 +901,8 @@ const AdminPage: React.FC = () => {
       {/* Overlay (Only for Small Screens when Sidebar is Open) */}
       {isOpen && (
         <div
-          className="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
-          onClick={() => setIsOpen(false)}
+          // className="fixed inset-0 bg-black bg-opacity-50 lg:hidden"
+          // onClick={() => setIsOpen(false)}
         ></div>
       )}
 
@@ -896,7 +925,7 @@ const AdminPage: React.FC = () => {
         onClick={() => {
           setSelectedTab("ListView");
           setIsOpen(false);
-
+          handleClose()
           // setListView(!ListView);
         }}
         className={`w-full text-left p-2 rounded ${
@@ -912,6 +941,7 @@ const AdminPage: React.FC = () => {
         onClick={() => {
           setSelectedTab("Employees");
           setShowEmployeeList(!showEmployeeList);
+          handleClose()
         }}
         className={`w-full text-left p-2 rounded ${
           selectedTab === "Employees"
@@ -946,6 +976,7 @@ const AdminPage: React.FC = () => {
 
       <button
         onClick={() => {
+          handleClose()
           setSelectedTab("OfficeComplaints");
           handleOfficeComplaintsClick();
           setIsOpen(false);
@@ -961,6 +992,7 @@ const AdminPage: React.FC = () => {
 
       <button
         onClick={() => {
+          handleClose()
           setSelectedTab("SoftwareComplaints");
           handleSoftwareComplaintsClick();
           setIsOpen(false);
@@ -976,6 +1008,7 @@ const AdminPage: React.FC = () => {
 
       <button
         onClick={() => {
+          handleClose();
           setSelectedTab("leaveRequests");
           setIsOpen(false);
         }}
@@ -1009,6 +1042,8 @@ const AdminPage: React.FC = () => {
     </div>
   </div>
 </div>
+</motion.div>
+
 
     </div>
 
@@ -1021,7 +1056,7 @@ const AdminPage: React.FC = () => {
       </div>
       )}
       {selectedTab === 'Employees' && (
-      <div className="flex-1 p-8">
+      <div className="flex-1 px-20 py-8">
         <div className='flex flex-row justify-between px-10'>
           <div></div>
           <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
@@ -1270,7 +1305,7 @@ const AdminPage: React.FC = () => {
 
 
    {selectedTab === 'SoftwareComplaints' && (
-      <div className="flex-1 p-8">
+      <div className="flex-1 px-20 py-8">
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
         Admin Dashboard
       </h1>
@@ -1313,7 +1348,7 @@ const AdminPage: React.FC = () => {
 
      
       {selectedTab === 'OfficeComplaints' && (
-      <div className="flex-1 p-8">
+      <div className="flex-1 px-20 py-8">
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
         Admin Dashboard
       </h1>
@@ -1354,7 +1389,7 @@ const AdminPage: React.FC = () => {
     </div>
    )}
       {selectedTab === 'leaveRequests' && (
-      <div className="flex-1 p-8">
+      <div className="flex-1 px-20 py-8">
       <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
         Admin Dashboard
       </h1>

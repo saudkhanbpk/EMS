@@ -185,10 +185,10 @@ const Attendance: React.FC = () => {
             .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
-            // .is('check_out', null)
+            .is('check_out', null)
             .order('check_in', { ascending: false })
-            .limit(1)
-            .single()
+            // .limit(1)
+            // .single()
         );
   
         if (error) {
@@ -394,6 +394,18 @@ useEffect(() => {
       const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
       const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
 
+       // If outside office location, prompt for remote check-in confirmation
+        if (mode === 'remote') {
+          const confirmRemote = window.confirm(
+           "Your check-in will be counted as Remote because you are currently outside the office zone. If you don’t have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
+          );
+    
+          if (!confirmRemote) {
+            console.log("Remote check-in aborted by user.");
+            return;
+          }
+        }
+   
       const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
         supabase
           .from('attendance_logs')

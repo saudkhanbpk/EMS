@@ -504,7 +504,7 @@ const handleCloseModal = () => {
   };
 
   return (
-    <div className="flex flex-col justify-center items-left min-h-full min-w-full bg-gray-100 px-6">
+    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 px-6">
       {/* Heading */}
       <h1 className="text-3xl font-semibold text-gray-800 mb-6">Employee Attendance</h1>
       {/* Buttons and Date Navigation */}

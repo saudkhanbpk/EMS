@@ -18,7 +18,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     setLoading(true);
     const { data, error } = await supabase
     .from("leave_requests")
-    .select("*, users:users!leave_requests_user_id_fkey(email, full_name, id)")
+    .select("*, users:users!leave_requests_user_id_fkey(email, full_name, id , slack_id)")
     .eq("status", "pending");
     if (!error) setPendingRequests(data) ;
     setLoading(false);
@@ -31,7 +31,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     setLoading(true);
     const { data, error } = await supabase
     .from("leave_requests") 
-    .select("*, users:users!leave_requests_user_id_fkey(email, full_name)")
+    .select("*, users:users!leave_requests_user_id_fkey(email, full_name , slack_id)")
     .eq("status", "approved");
     if (!error) setApprovedRequests(data);
     setLoading(false);
@@ -42,19 +42,24 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     setLoading(true);
     const { data, error } = await supabase
     .from("leave_requests")
-    .select("*, users:users!leave_requests_user_id_fkey(email, full_name)")
+    .select("*, users:users!leave_requests_user_id_fkey(email, full_name , slack_id)")
     .eq("status", "rejected");
     if (!error) {
       setRejectedRequests(data);
     }
      setLoading(false);
+     console.log("Rejected Data" , data);
+     
+     
   };
 
 
 
-  const handleActionAccept = async (id, newStatus, userId, leavetype , useremail , leavedate , fullname) => {
+  const handleActionAccept = async (id, newStatus, userId, leavetype , useremail , leavedate , fullname , slackid) => {
     setuserEmail(useremail)
-    console.log("userEmail" , useremail);
+    console.log("slack Id" , slackid);
+    console.log("full Name" , fullname);
+    
     
     try {
       // Step 1: Get the leave_date from the leave_requests table
@@ -115,12 +120,13 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
       if (updateError) throw new Error("Error updating leave request status: " + updateError.message);
   
 
-      const sendSlackNotification = async (message: string) => {
+      const sendSlackNotification = async () => {
         try {
             const response = await fetch("http://localhost:4000/send-slack", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ message }),
+                body: JSON.stringify({ USERID : slackid ,
+                   message : "Your Leave Request has been Accepted. "  }),
             });
     
             const data = await response.json();
@@ -131,8 +137,9 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     };
     
     // Example usage
-    sendSlackNotification("Hello from EMS , This is a Test Message.!");
+    sendSlackNotification();
     
+
      
      //Replying To the user
      const sendAdminResponse = async () => {
@@ -194,7 +201,9 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
 
 
 
-const handleActionReject = async (id, newStatus, userId , leavetype , useremail , leavedate , fullname) => {
+const handleActionReject = async (id, newStatus, userId , leavetype , useremail , leavedate , fullname , slackid) => {
+  
+  console.log("slack ID" , slackid);
   // Step 1: Get the leave_date from the leave_requests table
   const { data: leaveData, error: leaveError } = await supabase
     .from("leave_requests")
@@ -268,6 +277,32 @@ const handleActionReject = async (id, newStatus, userId , leavetype , useremail 
   else if (selectedTab === "Approved") handleApprovedRequests();
   else if (selectedTab === "Rejected") handleRejectedRequests();
   fetchPendingCount();
+
+
+  //Sending Slack Notification On Reject Request
+  const sendSlackNotification = async () => {
+    try {
+        const response = await fetch("http://localhost:4000/send-slackreject", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ USERID : slackid ,
+               message : "Your Leave Request has been Rejected, For More Details Please Contact HR. "  }),
+        });
+
+        const data = await response.json();
+        console.log("Slack Response:", data);
+    } catch (error) {
+        console.error("Error sending Slack notification:", error);
+    }
+};
+
+// Example usage
+sendSlackNotification();
+
+
+
+
+
 
   const sendAdminResponsereject = async () => {
     console.log("userEmail", userEmail);
@@ -347,7 +382,7 @@ sendAdminResponsereject();
               <div className="mt-3 flex justify-end gap-4">
                 {(selectedTab === "Rejected" || selectedTab === "Pending") && (               
                    <button
-                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type , request.user_email , request.leave_date , request.full_name)}
+                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type , request.user_email , request.leave_date , request.full_name , request.users.slack_id)}
                   className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
                 >
                   Approve
@@ -355,7 +390,7 @@ sendAdminResponsereject();
                 )}
                  {(selectedTab === "Approved" || selectedTab === "Pending") && (        
                 <button
-                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type ,   request.user_email , request.leave_date, request.full_name)}
+                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type ,   request.user_email , request.leave_date, request.full_name, request.users.slack_id)}
                   className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
                 >
                   Reject
