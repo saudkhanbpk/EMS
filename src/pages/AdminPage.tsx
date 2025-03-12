@@ -6,8 +6,10 @@ import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer,   BarChart,  Bar, XAxis, YAxis } from 'recharts';
 import EmployeeAttendanceTable from './ListViewOfEmployees';
 import ListViewMonthly from './ListViewMonthly';
-
-
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { LucideDelete } from 'lucide-react';
+import { Trash2 } from 'lucide-react';
+import "./style.css"
 import {
   ShieldCheck,
   LogOut,
@@ -60,7 +62,7 @@ interface SoftwareComplaint {
 }
 
 const AdminPage: React.FC = () => {
-  const [selectedTab, setSelectedTab] = useState<string>('Employees');
+  const [selectedTab, setSelectedTab] = useState<string>('ListView');
   const [employees, setEmployees] = useState<any[]>([]);
   const [officeComplaints, setofficeComplaints] = useState<any[]>([]);
   const [softwareComplaints, setsoftwareComplaints] = useState<SoftwareComplaint[]>([]);
@@ -91,6 +93,8 @@ const AdminPage: React.FC = () => {
   const [graphicview , setgraphicview] = useState(false);
   const [tableData , setTableData] = useState ('');
   const [breaks , setbreak] = useState('');
+  const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
+  
   
   
 
@@ -150,39 +154,42 @@ const AdminPage: React.FC = () => {
 
     useEffect(() => {
     fetchPendingCount();
-  }, []); // Empty dependency array ensures it runs once on mount
+  }, [userID]); // Empty dependency array ensures it runs once on mount
 
 
   useEffect(() => {
+    if (selectedTab === "Employees"){
     const fetchleaves = async () => {
     const {count , error} = await supabase
     .from("absentees")
     .select("*", {count: "exact", head:true})
     .eq('user_id', userID)
     .eq('absentee_type', "leave")
-    .gte('check_in', monthStart.toISOString())
-    .lte('check_in', monthEnd.toISOString());
+    .gte('created_at', monthStart.toISOString())
+    .lte('created_at', monthEnd.toISOString());
 
     if(error){
-      console.error("Error Fetching Absentees Count", error);
+      console.log("Error Fetching Absentees Count", error);
     }else{
       console.log("absentees Count :" , count);
       setleaves(count || 0)
     }
     }
     fetchleaves();
+  }
   },[userID])
 
 
   useEffect(() => {
+    if (selectedTab === "Employees"){
     const fetchabsentees = async () => {
     const {count , error} = await supabase
     .from("absentees")
     .select("*", {count: "exact", head:true})
     .eq('user_id', userID)
     .eq('absentee_type', "Absent")
-    .gte('check_in', monthStart.toISOString())
-    .lte('check_in', monthEnd.toISOString());
+    .gte('created_at', monthStart.toISOString())
+    .lte('created_at', monthEnd.toISOString());
     if(error){
       console.error("Error Fetching Absentees Count", error);
     }else{
@@ -191,6 +198,7 @@ const AdminPage: React.FC = () => {
     }
     }
     fetchabsentees();
+  }
   },[userID])
 
 
@@ -271,17 +279,58 @@ const AdminPage: React.FC = () => {
 
 
 
+   useEffect(() => {
+     const fetching = async () => {
+       try {
+         // Fetch employees from the database
+         const { data: employees, error: employeesError } = await supabase
+           .from("users")
+           .select("id, full_name")
+          //  .not('full_name', 'in', '("Admin")')
+          //  .not('full_name', 'in', '("saud")');
+   
+         if (employeesError) throw employeesError;
+         if (!employees || employees.length === 0) {
+           console.warn("No employees found.");
+           return;
+         }
+   
+         // Update state with the fetched employees
+         setEmployees(employees);
+       } catch (error) {
+         console.error("Error fetching employees:", error);
+       }
+     };
+   
+     fetching(); // Call the async function
+   
+   }, [selectedTab]); // Empty dependency array to run only on mount
+   
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
    useEffect(() => {
     if (selectedTab === "Employees") {
       const fetchEmployees = async () => {
         try {
-          // Fetch employees
+          // Fetch all employees except excluded ones
           const { data: employees, error: employeesError } = await supabase
             .from("users")
             .select("id, full_name")
-            .not('full_name', 'in', '("Admin")')
-            .not('full_name', 'in', '("saud")');
   
           if (employeesError) throw employeesError;
           if (!employees || employees.length === 0) {
@@ -291,104 +340,57 @@ const AdminPage: React.FC = () => {
   
           setEmployees(employees);
   
-          // Fetch working hours for all employees
-          const employeeHours: Record<string, number> = {};
+          const today = new Date();
+          const monthStart = startOfMonth(today);
+          const monthEnd = endOfMonth(today);
   
-          for (const employee of employees) {
-            if (!employee.id) continue;
+          const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+          const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
   
-            try {
-              const today = new Date();
-              const monthStart = startOfMonth(today);
-              const monthEnd = endOfMonth(today);
+          // Fetch all attendance logs for all employees in one query
+          const { data: attendanceLogs, error: attendanceError } = await supabase
+            .from("attendance_logs")
+            .select("id, user_id, check_in, check_out")
+            .gte("check_in", monthStart.toISOString())
+            .lte("check_in", monthEnd.toISOString())
+            .order("check_in", { ascending: true });
   
-              const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-              const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+          if (attendanceError) throw attendanceError;
   
-              // Fetch attendance logs for the employee
-              const { data: monthlyAttendance, error: monthlyError } = await supabase
-                .from("attendance_logs")
-                .select("*")
-                .eq("user_id", employee.id) // Fix: Use `employee.id`
-                .gte("check_in", monthStart.toISOString())
-                .lte("check_in", monthEnd.toISOString())
-                .order("check_in", { ascending: true });
-  
-              if (monthlyError) throw monthlyError;
-  
-              if (monthlyAttendance) {
-                // Group attendance by day (earliest record per day)
-                const attendanceByDate = monthlyAttendance.reduce((acc, curr) => {
-                  const date = format(new Date(curr.check_in), "yyyy-MM-dd");
-                  if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
-                    acc[date] = curr;
-                  }
-                  return acc;
-                }, {} as Record<string, AttendanceRecord>);
-  
-                const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
-  
-
-                let totalHours = 0;
-                uniqueAttendance.forEach((attendance) => {
-                  const start = new Date(attendance.check_in);
-                  const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
-                  const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-                  totalHours += Math.min(hours, 24);
-                });
-
-
-
-                 
-      // let totalHours = 0;
-
-      // uniqueAttendance.forEach(attendance => {
-      //   const start = new Date(attendance.check_in);
-      //   // If an employee has no CheckOut, assign 4 working hours
-      //   const end = attendance.check_out 
-      //     ? new Date(attendance.check_out) 
-      //     : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
-      
-      //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-      //   totalHours += Math.min(hours, 12);
-      // });
-      
-      // // Fetch all breaks related to this attendance
-      // const { data: breaks, error: breaksError } = await supabase
-      //   .from("breaks")
-      //   .select("start_time, end_time")
-      //   .in("attendance_id", uniqueAttendance.map(a => a.id));
-      
-      // if (breaksError) throw breaksError;
-      
-      // let totalBreakHours = 0;
-      
-      // breaks.forEach(breakEntry => {
-      //   const breakStart = new Date(breakEntry.start_time);
-      //   const breakEnd = breakEntry.end_time 
-      //     ? new Date(breakEntry.end_time) 
-      //     : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
-      
-      //   const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-      //   totalBreakHours += Math.min(breakHours, 12);
-      // });
-      
-      // // Subtract break hours from total work hours
-      // totalHours -= totalBreakHours;
-      
-  
-                // Store average hours per employee
-                employeeHours[employee.id] = uniqueAttendance.length ? totalHours / uniqueAttendance.length : 0;
-              }
-            } catch (err) {
-              console.error(`Error fetching stats for ${employee.full_name}:`, err);
-            }
-          }
-  
-          // Update state after looping all employees
-          setEmployeeStats(employeeHours);
-          console.log("Employee Hours " , employeeHours);
+          // Process data to compute stats for each employee
+          const employeeStats = {};
           
+          employees.forEach(employee => {
+            const employeeLogs = attendanceLogs.filter(log => log.user_id === employee.id);
+  
+            // Group attendance by date (earliest record per day)
+            const attendanceByDate = employeeLogs.reduce((acc, curr) => {
+              const date = format(new Date(curr.check_in), "yyyy-MM-dd");
+              if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+                acc[date] = curr;
+              }
+              return acc;
+            }, {});
+  
+            const uniqueAttendance = Object.values(attendanceByDate);
+            
+            let totalHours = 0;
+            uniqueAttendance.forEach(attendance => {
+              const start = new Date(attendance.check_in);
+              const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
+              const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+              totalHours += Math.min(hours, 12);
+            });
+  
+            // Store stats for each employee
+            employeeStats[employee.id] = uniqueAttendance.length
+              ? totalHours / uniqueAttendance.length
+              : 0;
+          });
+  
+          setEmployeeStats(employeeStats);
+          console.log("Employee Stats:", employeeStats);
+  
         } catch (error) {
           console.error("Error fetching employees and stats:", error);
         }
@@ -396,7 +398,138 @@ const AdminPage: React.FC = () => {
   
       fetchEmployees();
     }
-  }, []);
+  }, [userID , selectedTab]);
+  
+
+  //  useEffect(() => {
+  //   if (selectedTab === "Employees") {
+  //     const fetchEmployees = async () => {
+  //       try {
+  //         // Fetch employees
+  //         const { data: employees, error: employeesError } = await supabase
+  //           .from("users")
+  //           .select("id, full_name")
+  //           .not('full_name', 'in', '("Admin")')
+  //           .not('full_name', 'in', '("saud")')
+  //           .not('full_name', 'in', '("Ali Hassan")')
+  //           .not('full_name', 'in', '("m.dawood")')
+  //           .not('full_name', 'in', '("Abbas khan")'); 
+  
+  //         if (employeesError) throw employeesError;
+  //         if (!employees || employees.length === 0) {
+  //           console.warn("No employees found.");
+  //           return;
+  //         }
+  
+  //         setEmployees(employees);
+  
+  //         // Fetch working hours for all employees
+  //         const employeeHours: Record<string, number> = {};
+  
+  //         for (const employee of employees) {
+  //           if (!employee.id) continue;
+  
+  //           try {
+  //             const today = new Date();
+  //             const monthStart = startOfMonth(today);
+  //             const monthEnd = endOfMonth(today);
+  
+  //             const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+  //             const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+  
+  //             // Fetch attendance logs for the employee
+  //             const { data: monthlyAttendance, error: monthlyError } = await supabase
+  //               .from("attendance_logs")
+  //               .select("*")
+  //               .eq("user_id", employee.id) // Fix: Use `employee.id`
+  //               .gte("check_in", monthStart.toISOString())
+  //               .lte("check_in", monthEnd.toISOString())
+  //               .order("check_in", { ascending: true });
+  
+  //             if (monthlyError) throw monthlyError;
+  
+  //             if (monthlyAttendance) {
+  //               // Group attendance by day (earliest record per day)
+  //               const attendanceByDate = monthlyAttendance.reduce((acc, curr) => {
+  //                 const date = format(new Date(curr.check_in), "yyyy-MM-dd");
+  //                 if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+  //                   acc[date] = curr;
+  //                 }
+  //                 return acc;
+  //               }, {} as Record<string, AttendanceRecord>);
+  
+  //               const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
+  
+
+  //               let totalHours = 0;
+  //               uniqueAttendance.forEach((attendance) => {
+  //                 const start = new Date(attendance.check_in);
+  //                 const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
+  //                 const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  //                 totalHours += Math.min(hours, 24);
+  //               });
+
+
+
+                 
+  //     // let totalHours = 0;
+
+  //     // uniqueAttendance.forEach(attendance => {
+  //     //   const start = new Date(attendance.check_in);
+  //     //   // If an employee has no CheckOut, assign 4 working hours
+  //     //   const end = attendance.check_out 
+  //     //     ? new Date(attendance.check_out) 
+  //     //     : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+      
+  //     //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+  //     //   totalHours += Math.min(hours, 12);
+  //     // });
+      
+  //     // // Fetch all breaks related to this attendance
+  //     // const { data: breaks, error: breaksError } = await supabase
+  //     //   .from("breaks")
+  //     //   .select("start_time, end_time")
+  //     //   .in("attendance_id", uniqueAttendance.map(a => a.id));
+  //     s
+  //     // if (breaksError) throw breaksError;
+      
+  //     // let totalBreakHours = 0;
+      
+  //     // breaks.forEach(breakEntry => {
+  //     //   const breakStart = new Date(breakEntry.start_time);
+  //     //   const breakEnd = breakEntry.end_time 
+  //     //     ? new Date(breakEntry.end_time) 
+  //     //     : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+      
+  //     //   const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+  //     //   totalBreakHours += Math.min(breakHours, 12);
+  //     // });
+      
+  //     // // Subtract break hours from total work hours
+  //     // totalHours -= totalBreakHours;
+      
+  //     //D:\tech creator\EMS\release-builds\EMS-win32-ia32
+  
+  //               // Store average hours per employee
+  //               employeeHours[employee.id] = uniqueAttendance.length ? totalHours / uniqueAttendance.length : 0;
+  //             }
+  //           } catch (err) {
+  //             console.error(`Error fetching stats for ${employee.full_name}:`, err);
+  //           }
+  //         }
+  
+  //         // Update state after looping all employees
+  //         setEmployeeStats(employeeHours);
+  //         console.log("Employee Hours " , employeeHours);
+          
+  //       } catch (error) {
+  //         console.error("Error fetching employees and stats:", error);
+  //       }
+  //     };
+  
+  //     fetchEmployees();
+  //   }
+  // }, [userID]);
   
   
   const handleSignOut = async () => {
@@ -536,32 +669,6 @@ const AdminPage: React.FC = () => {
 
         const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
       
-
-     
-      //Below commented Code is the test Code for the purpose of counting Duplicate Checkin Entries
-
-
-      // if (monthlyAttendance) {
-      //   // Group attendance by day, allowing duplicates (all records for the same date will be stored).
-      //   const attendanceByDate = monthlyAttendance.reduce((acc, curr) => {
-      //     const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
-          
-      //     // If the date is already present, add the current record to the array
-      //     if (acc[date]) {
-      //       acc[date].push(curr);
-      //     } else {
-      //       // If the date is not present, initialize it with an array containing the current record
-      //       acc[date] = [curr];
-      //     }
-          
-      //     return acc;
-      //   }, {} as Record<string, AttendanceRecord[]>);
-      
-      //   // Convert the accumulator object into an array of attendance records
-      //   const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate).flat();
-      
-      
-
       
       let totalHours = 0;
 
@@ -598,28 +705,6 @@ const AdminPage: React.FC = () => {
       
       // Subtract break hours from total work hours
       totalHours -= totalBreakHours;
-      
-
-
-        // let totalHours = 0;
-        
-        // uniqueAttendance.forEach(attendance => {
-        //   const start = new Date(attendance.check_in);
-        //   // if an employee has No CheckOut , then Put 4 Working Hours
-        //   const end = attendance.check_out 
-        //      ? new Date(attendance.check_out) 
-        //      : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
-        //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        //   totalHours += Math.min(hours, 12);
-
-        
-        // });
-
-
-
-        
-      
-        
 
         setMonthlyStats({
           expectedWorkingDays: workingDaysInMonth,
@@ -640,58 +725,11 @@ const AdminPage: React.FC = () => {
       setLoading(false);
     }
   };
-  
-
-  
-
-
-
   // if (loading) return <div>Loading complaints...</div>;
   if (error) return <div>Error: {error}</div>;
 
-
-
-
-
-
-
-
-
-
-
-
-
-
   const GraphicViewComponent = ({ selectedEmployee, tableData, attendanceLogs, monthlyStats }) => {
     if (!selectedEmployee) return null;
-  
-    // const employeeid = selectedEmployee.id
-    
-    // const fetchtableData = async () => {
-    //   const { data, error } = await supabase
-    //     .from("attendance_logs")
-    //     .select("*")
-    //     .eq("user_id", employeeid);
-    
-    //   if (error) {
-    //     console.error("Error fetching data:", error);
-    //     return;
-    //   }
-    
-    //   setTableData(data); // Assuming setTableData is a state setter
-    //   console.log(data);
-      
-    // };
-    
-    // const fetchData = useCallback(() => {
-    //   fetchtableData();
-    // }, [employeeid]); // 
-    
-    // useEffect(() => {
-    //   fetchData();
-    // }, []); // 
-    
-    // fetchtableData();
     
 
     // Data for Graphs
@@ -699,9 +737,10 @@ const AdminPage: React.FC = () => {
       { name: "On-site", value: monthlyStats?.onSiteDays || 0 },
       { name: "Remote", value: monthlyStats?.remoteDays || 0 },
     ];
-  
     const colors = ["#4A90E2", "#9B59B6"];
   
+
+
     return (
       <div className="w-full max-w-full  bg-white rounded-lg shadow-lg p-6 mt-6">
         <h2 className="text-2xl font-bold mb-4">{selectedEmployee.full_name}'s Dashboard</h2>
@@ -779,6 +818,24 @@ const AdminPage: React.FC = () => {
   
 
 
+ 
+
+  const handleEmployeeDelete = async (userID) => {
+    const isConfirmed = window.confirm("Are you sure you want to delete this user?");
+    
+    if (!isConfirmed) return; // If user cancels, do nothing
+  
+    const { error } = await supabase.from("users").delete().eq("id", userID);
+  
+    if (error) {
+      console.error("Error deleting user:", error.message);
+      alert("Failed to delete user!"); // Simple error alert
+    } else {
+      console.log("User deleted successfully!");
+      alert("User deleted successfully!");
+    }
+  };
+  
 
 
 
@@ -877,9 +934,10 @@ const AdminPage: React.FC = () => {
                selectedEmployee?.id === employee.id
                  ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
                  : "hover:bg-gray-100"
-             } ${employeeStats[employee.id] < 7 ? "text-red-600" : ""}`} // Apply red color if hours < 7
+             } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`} // Apply red color if hours < 7
            >
              {employee.full_name}
+
            </li>
             ))}
           </ul>
@@ -991,9 +1049,16 @@ const AdminPage: React.FC = () => {
                   selectedEmployee?.id === employee.id
                     ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
                     : "hover:bg-gray-100"
-                } ${employeeStats[employee.id] < 7 ? "text-red-600" : ""}`} // Apply red color if hours < 7
+                } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`} // Apply red color if hours < 7
               >
+                <div className='flex justify-between'>
                 {employee.full_name}
+                <button className='hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl' onClick={(e) => {
+                  e.stopPropagation();
+                  handleEmployeeDelete(employee.id)}}>
+                <Trash2/>
+                </button>
+                </div>
               </li>
               ))}
             </ul>
@@ -1017,9 +1082,12 @@ const AdminPage: React.FC = () => {
                   <h2 className="text-2xl font-bold">
                     {selectedEmployee.full_name}'s Dashboard
                   </h2>
-                  <p className="text-gray-600">
-                    {format(new Date(), 'EEEE, MMMM d, yyyy')}
-                  </p>
+                  <div > 
+                       <p className="text-gray-600">
+                        {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
+                       </p>
+  
+                  </div>
                 </div>
 
                 {loading ? (
@@ -1175,7 +1243,7 @@ const AdminPage: React.FC = () => {
                                 <div className="flex items-center justify-between">
                                   <span className="text-gray-600">Expected Hours:</span>
                                   <span className="font-medium">
-                                    {(7 * monthlyStats.expectedWorkingDays)}h
+                                    {(6 * monthlyStats.expectedWorkingDays)}h
                                   </span>
                                 </div>
                               </div>

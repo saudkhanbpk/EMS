@@ -44,9 +44,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('*')
-        .not('full_name', 'in', '("Admin")')
-        .not('full_name', 'in', '("saud")'); 
+        .select('*');
 
       if (usersError) throw usersError;
 
@@ -78,7 +76,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
         .select('*')
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString());
-
+      
       if (absenteesError) throw absenteesError;
 
       // Calculate expected working days

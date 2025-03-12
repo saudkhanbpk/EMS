@@ -6,6 +6,10 @@ import { ChevronLeft, ChevronRight } from "lucide-react"; // Assuming you're usi
 import { format, addMonths, addWeeks } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
+import ReactTooltip from 'react-tooltip';
+import TimePicker from 'react-time-picker';
+import "./style.css"
+import { AttendanceProvider } from "./AttendanceContext";
 
 const EmployeeAttendanceTable = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -23,9 +27,204 @@ const EmployeeAttendanceTable = () => {
   const [selectedDateW, setselectedDateW] = useState(new Date());
   const [currentFilter, setCurrentFilter] = useState("all"); // Filter state: "all", "present", "absent", "late", "remote"
   const [dataFromWeeklyChild, setDataFromWeeklyChild] = useState("");
-  const { attendanceDataWeekly } = useContext(AttendanceContext);
-  const { attendanceDataMonthly } = useContext(AttendanceContext);
+  const [selectedEntry, setSelectedEntry] = useState(null);
+  // const [newCheckOutTime, setNewCheckOutTime] = useState('00 : 00');
+  const [hour, setHour] = useState(12);  // Default hour
+  const [minute, setMinute] = useState(0);  // Default minute
+  const [isAM, setIsAM] = useState(true);  // AM/PM toggle
+  const [updatedCheckOutTime, setupdatedCheckOutTime] = useState('')
+  const [isCheckinModalOpen, setisCheckinModalOpen] = useState(false);
+  // const [newCheckInTime, setNewCheckInTime] = useState('00 : 00');
+  const [hourin, setHourin] = useState(12);  // Default hour
+  const [minutein, setMinutein] = useState(0);  // Default minute
+  const [isinAM, setIsinAM] = useState(true);  // AM/PM toggle
+  const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
+  const [isModalOpen , setIsModalOpen] = useState(false);
+
+  const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
+
+  const handleHourChange = (e) => {
+    setHour(e.target.value);
+  };
+
+  const handleMinuteChange = (e) => {
+    setMinute(e.target.value);
+  };
+
+  const toggleAMPM = () => {
+    setIsAM(!isAM);
+  };
+
+  const handleCheckInHourChange = (e) => {
+    setHourin(e.target.value);
+  };
+
+  const handleCheckInMinuteChange = (e) => {
+    setMinutein(e.target.value);
+  };
+  const togglecheckinAMPM = () => {
+    setIsinAM(!isinAM);
+  };
   
+
+  //Extracting Hours and Minuates From the previously saved Checkout Time
+  const parseCheckOutTime = (checkOutTime) => {
+    const regex = /(\d{2}):(\d{2})\s(AM|PM)/;
+    const match = checkOutTime.match(regex);
+    if (match) {
+      const extractedHour = parseInt(match[1], 10);
+      const extractedMinute = parseInt(match[2], 10);
+      const extractedAMPM = match[3];
+
+      setHour(extractedHour);
+      setMinute(extractedMinute);
+      setIsAM(extractedAMPM === 'AM');
+    }
+  };
+  //Extracting Hours and Minuates From the previously saved Checkout Time
+  const parseCheckInTime = (checkInTime) => {
+    const regex = /(\d{2}):(\d{2})\s(AM|PM)/;
+    const match = checkInTime.match(regex);
+    if (match) {
+      const extractedHourin = parseInt(match[1], 10);
+      const extractedMinutein = parseInt(match[2], 10);
+      const extractedAMPMin = match[3];
+
+      setHourin(extractedHourin);
+      setMinutein(extractedMinutein);
+      setIsinAM(extractedAMPMin === 'AM');
+    }
+  };
+   // Open modal and set the selected entry and default time
+   const handleCheckinOpenModal = (entry) => {
+    setSelectedEntry(entry);
+    parseCheckInTime(entry.check_in)
+    // setNewCheckInTime(entry.check_in || ''); // Set default time
+    setisCheckinModalOpen(true);
+    
+  };
+
+  // Open modal and set the selected entry and default time
+  const handleOpenModal = (entry) => {
+    console.log("entry" , entry);  
+    setSelectedEntry(entry);
+    parseCheckOutTime(entry.check_out)
+    // setNewCheckOutTime(entry.check_out || ''); // Set default time
+    setIsModalOpen(true);
+    
+  };
+
+  
+  const handleUpdateCheckInTime = async () => {
+    // Format hour and minute to ensure two digits
+    const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
+    const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+  
+    // Combine hour, minute, and AM/PM into a string
+    const timeString = `${formattedHourin}:${formattedMinutein} ${isinAM ? 'AM' : 'PM'}`;
+  
+    // Get today's date to preserve it (year, month, day)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();  // Month is zero-indexed
+    const day = today.getDate();
+  
+    // Adjust for AM/PM (convert to 24-hour format if PM)
+    let adjustedHourin = isinAM ? parseInt(formattedHourin, 10) : (parseInt(formattedHourin, 10) + 12) % 24;
+  
+    // Create a new Date object with the updated time but keeping today's date
+    const formattedDate2 = new Date(year, month, day, adjustedHourin, formattedMinutein, 0, 0);
+  
+    // Convert the Date object to the required format [2025-02-25 12:15:05.862+00]
+    const timestamp = formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00';   
+    // Assign the formatted time string to a variable to update the state
+    setupdatedCheckInTime(timeString);
+  
+    // Now we want to update the `check_out` field in the database
+    const { data, error } = await supabase
+      .from("attendance_logs")
+      .update({ check_in: timestamp })  // Updating the check_out with the new timestamp
+      .eq("user_id", selectedEntry.id)  // Ensure you're updating the correct entry by user_id
+      .eq("check_in", selectedEntry.check_in2); // Compare only the date part of check_in
+  
+    if (data) {
+      console.log("Updated data:", data);  // Log data to check if update was successful
+    }
+  
+    // Handle the error or success
+    if (!error) {
+      alert("Check-in time updated successfully.");
+    } else {
+      console.error("Error updating check-in time:", error);
+    }
+  
+    // Close the modal after the update
+    setisCheckinModalOpen(false);
+  };
+
+  const handleCheckInCloseModal = () => {
+    setisCheckinModalOpen(false);
+  }
+  
+
+
+  
+//Updating Check Out Time
+  const handleUpdateCheckOutTime = async () => {
+    // Format hour and minute to ensure two digits
+    const formattedHour = hour < 10 ? `0${hour}` : hour;
+    const formattedMinute = minute < 10 ? `0${minute}` : minute;
+  
+    // Combine hour, minute, and AM/PM into a string
+    const timeString = `${formattedHour}:${formattedMinute} ${isAM ? 'AM' : 'PM'}`;
+  
+    // Get today's date to preserve it (year, month, day)
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = today.getMonth();  // Month is zero-indexed
+    const day = today.getDate();
+  
+    // Adjust for AM/PM (convert to 24-hour format if PM)
+    let adjustedHour = isAM ? parseInt(formattedHour, 10) : (parseInt(formattedHour, 10) + 12) % 24;
+  
+    // Create a new Date object with the updated time but keeping today's date
+    const formattedDate = new Date(year, month, day, adjustedHour, formattedMinute, 0, 0);
+  
+    // Convert the Date object to the required format [2025-02-25 12:15:05.862+00]
+    const timestamp = formattedDate.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
+
+   console.log("selected time" , selectedEntry.check_in2);
+   
+    // Assign the formatted time string to a variable to update the state
+    setupdatedCheckOutTime(timeString);
+  
+    // Now we want to update the `check_out` field in the database
+    const { data, error } = await supabase
+      .from("attendance_logs")
+      .update({ check_out: timestamp })  // Updating the check_out with the new timestamp
+      .eq("user_id", selectedEntry.id)  // Ensure you're updating the correct entry by user_id
+      .eq("check_in", selectedEntry.check_in2); // Compare only the date part of check_in
+  
+    if (data) {
+      console.log("Updated data:", data);  // Log data to check if update was successful
+    }
+  
+    // Handle the error or success
+    if (!error) {
+      alert("Check-out time updated successfully.");
+    } else {
+      console.error("Error updating check-out time:", error);
+    }
+  
+    // Close the modal after the update
+    setIsModalOpen(false);
+  };
+  
+
+
+const handleCloseModal = () => {
+  setIsModalOpen(false);
+}
 
  
   // function handleDataFromChild(attendanceDataWeekly) {
@@ -196,8 +395,10 @@ const EmployeeAttendanceTable = () => {
         .from("users")
         .select("id, full_name")
         .not('full_name', 'in', '("Admin")')
-        .not('full_name', 'in', '("saud")'); 
-
+        .not('full_name', 'in', '("saud")')
+        .not('full_name', 'in', '("Ali Hassan")')
+        .not('full_name', 'in', '("m.dawood")')
+        .not('full_name', 'in', '("Abbas khan")')
       if (usersError) throw usersError;
 
       // Fetch attendance logs for the selected date
@@ -239,7 +440,9 @@ const EmployeeAttendanceTable = () => {
         }
 
         return {
+          id : user.id,
           full_name: user.full_name,
+          check_in2: log.check_in ? log.check_in : "N/A",
           check_in: log.check_in ? formatTime(log.check_in) : "N/A",
           check_out: log.check_out ? formatTime(log.check_out) : "N/A",
           autocheckout : log.autocheckout || "",
@@ -520,9 +723,40 @@ const EmployeeAttendanceTable = () => {
                           {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
                         </span>
                       </td>
-                      <td className="py-4 px-6">{entry.check_in}</td>
-                      <td className="py-4 px-6"> {`${entry.check_out} 
-                      ${entry.autocheckout ? "auto" : ""}`}</td>
+                      <td className="py-4 px-6 hover:cursor-pointer hover:bg-gray-100"
+                      onClick={() => {handleCheckinOpenModal(entry)
+                        // setNewCheckinTime(entry.check_in)
+                      }                     
+                      }
+                      >{entry.check_in}</td>
+                      <td className="py-4 px-6 hover:cursor-pointer hover:bg-gray-100" 
+                      onClick={() => {handleOpenModal(entry)
+                        // setNewCheckOutTime(entry.check_out)
+                      }                     
+                      }                    
+                      > {`${entry.check_out}`}
+                      {entry.autocheckout ? (
+                  <div className="relative inline-block">
+                    <span
+                      className="text-yellow-600 bg-yellow-100 px-2 py-1 font-semibold rounded-xl ml-2 cursor-pointer"
+                      // onMouseEnter={(e) => {
+                      //   const tooltip = e.target.nextSibling;
+                      //   tooltip.classList.remove('hidden');
+                      // }}
+                      // onMouseLeave={(e) => {
+                      //   const tooltip = e.target.nextSibling;
+                      //   tooltip.classList.add('hidden');
+                      // }}
+                    >
+                      Auto
+                    </span>
+                    {/* Tooltip */}
+                    <div className="hidden absolute bg-gray-400 text-white text-sm px-2 py-1 w-max rounded mt-1 -ml-2">
+                      Change CheckOut Time
+                    </div>
+                  </div>
+                ) : null}
+                      </td>
                       <td className="py-4 px-6">
                         <span
                           className={`px-3 py-1 rounded-full text-sm font-semibold ${
@@ -555,7 +789,267 @@ const EmployeeAttendanceTable = () => {
               </table>
             </div>
           </div>
-        </>
+           
+          {isModalOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+      <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Change CheckOut Time</h2>
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2 text-gray-700">New CheckOut Time</label>
+
+        {/* Time Picker Container */}
+        <div className="time-picker-container">
+          <div className="clock bg-gray-100 p-4 rounded-lg shadow-md">
+            <div className="time-display text-4xl font-bold text-center text-gray-800 mb-4">
+            <span>{hour.toString().padStart(2, '0').slice(0, 2)}:</span>
+           <span>{minute.toString().padStart(2, '0').slice(0, 2)}</span>
+
+            </div>
+
+            {/* AM/PM Toggle */}
+            <div className="am-pm-toggle flex justify-center space-x-4">
+              <button
+                onClick={toggleAMPM}
+                className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+              >
+                AM
+              </button>
+              <button
+                onClick={toggleAMPM}
+                className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+              >
+                PM
+              </button>
+            </div>
+          </div>
+
+          {/* Input Section for Hour and Minute */}
+          <div className="input-section grid grid-cols-2 gap-4 mt-6">
+            <div className="input-group">
+              <label className="text-sm font-medium text-gray-700">Hour</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={hour}
+                  onChange={handleHourChange}
+                  min="1"
+                  max="12"
+                  onInput={(e) => {
+                    // Ensure the input is only a 2-digit number
+                    const value = e.target.value;
+                    if (value.length > 2) {
+                      e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                    }
+                  }}
+                  className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                />
+                <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
+                  <button
+                    onClick={() => handleHourChange({ target: { value: Math.min(12, hour + 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8593;
+                  </button>
+                  <button
+                    onClick={() => handleHourChange({ target: { value: Math.max(1, hour - 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8595;
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label className="text-sm font-medium text-gray-700">Minute</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={minute}
+                  onChange={handleMinuteChange}
+                  min="0"
+                  max="59"
+                  onInput={(e) => {
+                    // Ensure the input is only a 2-digit number
+                    const value = e.target.value;
+                    if (value.length > 2) {
+                      e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                    }
+                  }}
+                  className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                />
+                <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
+                  <button
+                    onClick={() => handleMinuteChange({ target: { value: Math.min(59, minute + 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8593;
+                  </button>
+                  <button
+                    onClick={() => handleMinuteChange({ target: { value: Math.max(0, minute - 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8595;
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex justify-end mt-6">
+        <button
+          onClick={handleCloseModal}
+          className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleUpdateCheckOutTime}
+          className="bg-blue-500 text-white px-6 py-2 rounded-lg ml-4 hover:bg-blue-600 transition"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+ {/* Checkin Time Changing Model */}
+{isCheckinModalOpen && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-96">
+      <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Change CheckIn Time</h2>
+      <div className="mb-6">
+        <label className="block text-sm font-medium mb-2 text-gray-700">New CheckIn Time</label>
+
+        {/* Time Picker Container */}
+        <div className="time-picker-container">
+          <div className="clock bg-gray-100 p-4 rounded-lg shadow-md">
+            <div className="time-display text-4xl font-bold text-center text-gray-800 mb-4">
+            <span>{hourin.toString().padStart(2, '0').slice(0, 2)}:</span>
+           <span>{minutein.toString().padStart(2, '0').slice(0, 2)}</span>
+            </div>
+
+            {/* AM/PM Toggle */}
+            <div className="am-pm-toggle flex justify-center space-x-4">
+              <button
+                onClick={togglecheckinAMPM}
+                className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+              >
+                AM
+              </button>
+              <button
+                onClick={togglecheckinAMPM}
+                className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+              >
+                PM
+              </button>
+            </div>
+          </div>
+
+          {/* Input Section for Hour and Minute */}
+          <div className="input-section grid grid-cols-2 gap-4 mt-6">
+            <div className="input-group">
+              <label className="text-sm font-medium text-gray-700">Hour</label>
+              <div className="relative">
+                <input className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                  type="number"
+                  value={hourin}
+                  onChange={handleCheckInHourChange}
+                  max="12"
+                  min="01"
+                  onInput={(e) => {
+                    // Ensure the input is only a 2-digit number
+                    const value = e.target.value;
+                    if (value.length > 2) {
+                      e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                    }
+                  }}
+                  // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                />
+                <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
+                  <button
+                    onClick={() => handleCheckInHourChange({ target: { value: Math.min(12, hourin + 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8593;
+                  </button>
+                  <button
+                    onClick={() => handleCheckInHourChange({ target: { value: Math.max(1, hourin - 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8595;
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div className="input-group">
+              <label className="text-sm font-medium text-gray-700">Minute</label>
+              <div className="relative">
+                <input
+                  type="number"
+                  value={minutein}
+                  onChange={handleCheckInMinuteChange}
+                  min="0"
+                  max="59"
+                  onInput={(e) => {
+                    // Ensure the input is only a 2-digit number
+                    const value = e.target.value;
+                    if (value.length > 2) {
+                      e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                    }
+                  }}
+                  className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                />
+                <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
+                  <button
+                    onClick={() => handleCheckInMinuteChange({ target: { value: Math.min(59, minutein + 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8593;
+                  </button>
+                  <button
+                    onClick={() => handleCheckInMinuteChange({ target: { value: Math.max(0, minutein - 1) } })}
+                    className="text-xl text-gray-600 w-4 hover:text-blue-500"
+                  >
+                    &#8595;
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Buttons */}
+      <div className="flex justify-end mt-6">
+        <button
+          onClick={handleCheckInCloseModal}
+          className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
+        >
+          Cancel
+        </button>
+        <button
+          onClick={handleUpdateCheckInTime}
+          className="bg-blue-500 text-white px-6 py-2 rounded-lg ml-4 hover:bg-blue-600 transition"
+        >
+          Save
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+
+
+
+
+    </>
       )}
 
       {/* Monthly View */}

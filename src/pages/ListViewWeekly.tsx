@@ -50,8 +50,10 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
         .from('users')
         .select('*')
         .not('full_name', 'in', '("Admin")')
-        .not('full_name', 'in', '("saud")');
-
+        .not('full_name', 'in', '("saud")')
+        .not('full_name', 'in', '("Ali Hassan")')
+        .not('full_name', 'in', '("m.dawood")')
+        .not('full_name', 'in', '("Abbas khan")'); 
       if (usersError) throw usersError;
 
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -65,6 +67,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
         .lte('check_in', weekEnd.toISOString())
         .order('check_in', { ascending: true });
 
+
       if (weeklyError) throw weeklyError;
 
       // Fetch all breaks
@@ -76,12 +79,30 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
 
       if (breaksError) throw breaksError;
 
+
+
+      let year = weekStart.getFullYear();
+      let month = String(weekStart.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+      let day = String(weekStart.getDate()).padStart(2, '0');
+      let weekEndformate = `[${year}-${month}-${day}]`;
+
+      let year1 = weekEnd.getFullYear();
+      let month1 = String(weekEnd.getMonth() + 1).padStart(2, '0'); // Months are zero-based
+      let day1 = String(weekEnd.getDate()).padStart(2, '0');
+      let weekStartformate = `[${year1}-${month1}-${day1}]`;
+
+
+
+
+      
       // Fetch all absentees
       const { data: absentees, error: absenteesError } = await supabase
         .from('absentees')
         .select('*')
-        .gte('created_at', weekStart.toISOString())
-        .lte('created_at', weekEnd.toISOString());
+        .gte('absentee_date', weekEndformate)
+        .lte('absentee_date', weekStartformate)
+        // .eq("absentee_Timing" , "Full Day");        
+        
 
       if (absenteesError) throw absenteesError;
 
@@ -134,6 +155,66 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
         });
 
         totalHours -= totalBreakHours;
+
+
+
+
+
+
+  //Deleting Duplicates
+// const data = absentees
+
+//         // Helper function to extract the date from the `created_at` field
+// const extractDate = (created_at) => created_at.split('T')[0];
+
+// // Track occurrences of each user_id and date combination
+// const occurrenceMap = new Map();
+
+// // Check for duplicates
+// const duplicates = [];
+
+// data.forEach((record) => {
+//   const date = extractDate(record.created_at);
+//   const key = `${record.user_id}-${date}`;
+
+//   if (occurrenceMap.has(key)) {
+//     // If the key already exists, it's a duplicate
+//     duplicates.push({ ...record, duplicateOf: occurrenceMap.get(key) });
+//   } else {
+//     // Otherwise, store the key with the record's ID
+//     occurrenceMap.set(key, record.id);
+//   }
+// });
+
+// // Output duplicates
+// if (duplicates.length > 0) {
+//   console.log('Duplicate records found:', duplicates);
+// } else {
+//   console.log('No duplicate records found.');
+// }
+
+// const DuplicateIDS = duplicates.map((record) => record.id )
+// const {error: DeleteError} = await supabase
+// .from ("absentees")
+// .delete()
+// .in("id" , DuplicateIDS)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
         // Calculate absent days
         const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
