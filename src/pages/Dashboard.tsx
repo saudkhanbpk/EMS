@@ -213,10 +213,13 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
           
                 uniqueAttendance.forEach(attendance => {
                   const start = new Date(attendance.check_in);
-                  // If an employee has no CheckOut, assign 4 working hours
                   const end = attendance.check_out 
-                    ? new Date(attendance.check_out) 
-                    : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+                  ? new Date(attendance.check_out) 
+                  : new Date(start.getTime()); // Adds 4 hours
+                  // If an employee has no CheckOut, assign 4 working hours
+                  // const end = attendance.check_out 
+                  //   ? new Date(attendance.check_out) 
+                  //   : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
                 
                   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
                   totalHours += Math.min(hours, 12);

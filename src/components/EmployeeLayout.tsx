@@ -104,7 +104,7 @@ const EmployeeLayout: React.FC = () => {
         {/* Overlay (Only for Small Screens when Sidebar is Open) */}
         {isSmallScreen && isSidebarOpen && (
           <div
-            className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
+            className="fixed inset-0 bg-white bg-opacity-50 lg:hidden z-40"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}

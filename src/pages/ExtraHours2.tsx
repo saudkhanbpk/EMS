@@ -71,11 +71,13 @@ const ExtraHours: React.FC = () => {
   const [RemoteattendanceRecords, setRemoteAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [RemotebreakRecords, setRemoteBreakRecords] = useState<Record<string, BreakRecord[]>>({});
   const [isRemoteDisabled, setIsRemoteDisabled] = useState(false);
+  const [isDisabled , setIsDisabled] = useState(false);
 
 
 
 useEffect(() => {
   const fetchAttendanceStatus = async () => {
+    setIsDisabled(true)
     if (!user) return;
 
     try {
@@ -91,7 +93,7 @@ useEffect(() => {
           .eq('user_id', localStorage.getItem('user_id'))
           .gte('check_in', startOfDay.toISOString())
           .lte('check_in', endOfDay.toISOString())
-          // .is('check_out', null)
+          .is('check_out', null)
           .order('check_in', { ascending: false })
       );
 
@@ -103,11 +105,16 @@ useEffect(() => {
       }
 
       // If user has checked in today but not checked out, disable remote check-in
-      if (data && data.check_in && data.check_out===null) {
-        setIsRemoteDisabled(true);
-      } else {
-        setIsRemoteDisabled(false);
-        // loadCurrentAttendance();
+      // if (data && data.check_in && data.check_out===null) {
+      //   setIsRemoteDisabled(true);
+      // } else {
+      //   setIsRemoteDisabled(false);
+      //   // loadCurrentAttendance();
+      // }
+      if (data.length > 0){
+        setIsRemoteDisabled(true)
+      }else{
+        setIsRemoteDisabled(false)
       }
 
     } catch (err) {
@@ -144,7 +151,7 @@ useEffect(() => {
             .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
-            // .is('check_out', null)
+            .is('check_out', null)
             .order('check_in', { ascending: false })
             // .limit(1)
             // .single()
@@ -160,18 +167,20 @@ useEffect(() => {
   
         if (data) {
   
-          if (data.check_out === null) {
+          if (data.length > 0) {
             // User has an active session (not checked out)
             setIsRemoteCheckedIn(true);
             setRemoteAttendanceId(data.id);
             setRemoteCheckIn(data.check_in)
           } else {
             // User has checked out
+            setIsDisabled(false)
             setIsRemoteCheckedIn(false);
           }
         } else {
           // No record found means user is not checked in
           setIsRemoteCheckedIn(false);
+          setIsDisabled(false)
           console.log('No attendance record found');
         }
       } catch (err) {
@@ -730,7 +739,7 @@ useEffect(() => {
           ) : (
             <button
               onClick={handleCheckIn}
-              disabled={loading || isRemoteDisabled} // Button is disabled if loading or if the condition is met
+              disabled={loading || isRemoteDisabled || isDisabled} // Button is disabled if loading or if the condition is met
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? 'Checking in...' : 'Check In'}

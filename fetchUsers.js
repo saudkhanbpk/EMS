@@ -211,7 +211,7 @@ const fetchUsers = async () => {
         console.log("User Attendance:", userAttendance);
 
         // Set the checkout time to 4:30 PM PKT (11:30 AM UTC)
-        const checkoutTime = `${todayDate}T11:30:00.000Z`;
+        const checkoutTime = `${todayDate}T10:30:00.000Z`;
 
         // Add to attendanceUpdates array
         attendanceUpdates.push({

@@ -23,29 +23,96 @@ app.use(express.json());
 app.use(bodyParser.json());
 
 
-// API Route to Send Slack Notification On Approval Or Rejection Of Leave Request.
-app.post("/send-slack", async (req, res) => {
-    const { message } = req.body;
-    const SLACK_WEBHOOK_URL = process.env.VITE_SLACK_WEBHOOK_URL;
+// // API Route to Send Slack Notification On Approval Or Rejection Of Leave Request.
+// app.post("/send-slack", async (req, res) => {
+//     const { message } = req.body;
+//     const SLACK_WEBHOOK_URL = process.env.VITE_SLACK_WEBHOOK_URL;
 
-    if (!SLACK_WEBHOOK_URL) {
-        return res.status(500).json({ error: "Slack Webhook URL is missing!" });
+//     if (!SLACK_WEBHOOK_URL) {
+//         return res.status(500).json({ error: "Slack Webhook URL is missing!" });
+//     }
+
+//     try {
+//         const response = await fetch(SLACK_WEBHOOK_URL, {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({ text: message }),
+//         });
+
+//         if (!response.ok) throw new Error("Failed to send Slack notification");
+
+//         return res.status(200).json({ success: true, message: "Notification sent successfully!" });
+//     } catch (error) {
+//         return res.status(500).json({ error: error.message });
+//     }
+// });
+
+//Sending Slack Notification To specific User On Rejection Of Leave Request. 
+
+app.post("/send-slack", async (req, res) => {
+    const { USERID, message } = req.body;
+    const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
+
+    if (!SLACK_BOT_TOKEN) {
+        return res.status(500).json({ error: "Slack Bot Token is missing!" });
     }
 
     try {
-        const response = await fetch(SLACK_WEBHOOK_URL, {
+        const response = await fetch("https://slack.com/api/chat.postMessage", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: message }),
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+                channel: USERID, // Use the Slack User ID
+                text: message,
+            }),
         });
 
-        if (!response.ok) throw new Error("Failed to send Slack notification");
+        const data = await response.json();
+
+        if (!data.ok) throw new Error(data.error);
 
         return res.status(200).json({ success: true, message: "Notification sent successfully!" });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 });
+
+
+//Sending Slack Notification On Request Reject
+app.post("/send-slackreject", async (req, res) => {
+    const { USERID, message } = req.body;
+    const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
+
+    if (!SLACK_BOT_TOKEN) {
+        return res.status(500).json({ error: "Slack Bot Token is missing!" });
+    }
+
+    try {
+        const response = await fetch("https://slack.com/api/chat.postMessage", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+                channel: USERID, // Use the Slack User ID
+                text: message,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) throw new Error(data.error);
+
+        return res.status(200).json({ success: true, message: "Notification sent successfully!" });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+});
+
 
 
 
