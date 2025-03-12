@@ -31,7 +31,7 @@ const ProfileCard: React.FC = () => {
             />
             <h2 className="mt-4 text-xl font-semibold">
               {
-                user?.user.email ? user?.user.email.slice(0, user?.user.email.indexOf('@')) : "Techcreator"
+                user?.user?.email ? user?.user.email.slice(0, user?.user?.email.indexOf('@')) : "Techcreator"
               }
             </h2>
             <p className="text-gray-600">Front End Developer</p>
@@ -41,11 +41,11 @@ const ProfileCard: React.FC = () => {
           <div className="flex justify-between items-end mt-16 text-gray-700 text-sm flex-wrap">
             <div className="flex items-center space-x-2">
               <Mail className="text-[#9A00FF]" size={20} />
-              <span>{user?.user.email}</span>
+              <span>{user?.user?.email}</span>
             </div>
             <div className="flex items-center space-x-2">
               <Phone className="text-[#9A00FF]" size={20} />
-              <span>{user?.user.phone ? user?.user?.phone : "xxxxxxxx"}</span>
+              <span>{user?.user?.phone ? user?.user?.phone : "xxxxxxxx"}</span>
             </div>
             <div className="flex items-center space-x-2">
               <MapPin className="text-[#9A00FF]" size={20} />

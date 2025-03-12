@@ -9,6 +9,16 @@ import DashboardCards from '../components/DashboardCards';
 import DailyStatusTable from '../components/DailyStatusTable';
 import BreakRecordsTable from '../components/BreakRecordTable';
 import MonthlyRecord from '../components/MonthlyRecords';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
+import { SalesChart } from '../components/GraphComponent';
 
 
 
@@ -57,9 +67,12 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [absentees, setabsentees] = useState('');
+  const [view, setView] = useState('default');
   const [leaves, setleaves] = useState('');
+  const [weeklyData, setWeeklyData] = useState<null>(null);
   const navigate = useNavigate();
-
+  const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'weekly' | 'monthly'
+  const [chartData, setChartData] = useState([]);
 
   const userID = localStorage.getItem('user_id')
   useEffect(() => {
@@ -309,6 +322,83 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     return totalMinutes > 0 ? `${hours}h ${minutes}m` : null;
   };
 
+  useEffect(() => {
+    const fetchData = async () => {
+      let startDate, endDate;
+
+      const today = new Date();
+
+      if (viewMode === 'daily') {
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        endDate = new Date(startDate);
+        endDate.setHours(23, 59, 59);
+      } else if (viewMode === 'weekly') {
+        startDate = new Date(today);
+        startDate.setDate(today.getDate() - today.getDay()); // Start of the week (Sunday)
+        endDate = new Date(startDate);
+        endDate.setDate(startDate.getDate() + 6); // End of the week (Saturday)
+      } else if (viewMode === 'monthly') {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+        endDate = new Date(today.getFullYear(), today.getMonth() + 1, 0);
+      }
+
+      const { data, error } = await supabase
+        .from('attendance_logs')
+        .select('*')
+        .eq('user_id', user.id)
+        .gte('check_in', startDate.toISOString())
+        .lte('check_in', endDate.toISOString());
+
+      if (error) {
+        console.error('Error fetching attendance data:', error);
+        return;
+      }
+
+      // Process data into a format for the SalesChart
+      const formattedData = processAttendanceData(data, viewMode);
+      setChartData(formattedData);
+    };
+
+    fetchData();
+  }, [viewMode, user.id]);
+
+  // Function to format data
+  const processAttendanceData = (data, mode) => {
+    if (mode === 'daily') {
+      return data.map(entry => ({
+        name: format(new Date(entry.check_in), 'HH:mm'), // Time for daily view
+        value: 1, // Count each check-in as 1
+      }));
+    }
+
+    if (mode === 'weekly') {
+      const grouped = {};
+      data.forEach(entry => {
+        const day = format(new Date(entry.check_in), 'EEE'); // Short weekday name (e.g., Mon, Tue)
+        grouped[day] = (grouped[day] || 0) + 1;
+      });
+
+      return Object.keys(grouped).map(day => ({
+        name: day,
+        value: grouped[day],
+      }));
+    }
+
+    if (mode === 'monthly') {
+      const grouped = {};
+      data.forEach(entry => {
+        const day = format(new Date(entry.check_in), 'dd'); // Day of the month
+        grouped[day] = (grouped[day] || 0) + 1;
+      });
+
+      return Object.keys(grouped).map(day => ({
+        name: day,
+        value: grouped[day],
+      }));
+    }
+  };
+
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
@@ -327,6 +417,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     );
   }
 
+
   return (
 
 
@@ -341,9 +432,12 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           )}
         </div>
         <div className='text-right'>
-          <select name="view" id="view" className='w-[134px] h-[40px] rounded-[8px] border py-1 px-2  border-[#D0D5DD]'>
-            <option value="Table view">Table View</option>
-            <option value="graph view">Graph View</option>
+          <select name="view" id="view" className='w-[134px] h-[40px] rounded-[8px] border py-1 px-2  border-[#D0D5DD]'
+            onChange={(e) => setView(e.target.value)}
+          >
+            <option value="default">Default View</option>
+            <option value="table">Table View</option>
+            <option value="graph">Graph View</option>
           </select>
         </div>
 
@@ -353,334 +447,365 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         <p className="font-inter font-medium text-base text-[#000000] leading-7  ">{format(new Date(), 'h:mm a')}</p>
       </div>
       <DashboardCards
-
-
       />
-      <div className='mb-16'>
-        <DailyStatusTable
-          todayAttendance={todayAttendance}
-          todayBreak={todayBreak}
-          calculateDuration={calculateDuration}
-          getTotalBreakDuration={getTotalBreakDuration}
-        />
+      {
+        view === 'table' && (
+          <>
+            <div className='mb-16'>
+              <DailyStatusTable
+                todayAttendance={todayAttendance}
+                todayBreak={todayBreak}
+                calculateDuration={calculateDuration}
+                getTotalBreakDuration={getTotalBreakDuration}
+              />
 
-      </div>
-      <div className='mb-16'>
-        <BreakRecordsTable
-          todayBreak={todayBreak}
-        />
-      </div>
-      <div className='mb-10'>
-        <MonthlyRecord
-          monthlyStats={monthlyStats}
-          absentees={absentees}
-          leaves={leaves}
-
-        />
-      </div>
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Today's Status Card */}
-        <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center justify-between mb-6">
-            <div className="flex items-center">
-              <Clock className="w-6 h-6 text-blue-600 mr-2" />
-              <h2 className="text-xl font-semibold">Today's Status</h2>
             </div>
-            {todayAttendance && (
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${todayAttendance.status === 'present'
-                ? 'bg-green-100 text-green-800'
-                : 'bg-yellow-100 text-yellow-800'
-                }`}>
-                {todayAttendance.status}
-              </span>
-            )}
-          </div>
+            <div className='mb-16'>
+              <BreakRecordsTable
+                todayBreak={todayBreak}
+              />
+            </div>
+            <div className='mb-10'>
+              <MonthlyRecord
+                monthlyStats={monthlyStats}
+                absentees={absentees}
+                leaves={leaves}
 
-          {todayAttendance ? (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Check-in/out Details */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Details</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Check-in:</span>
-                      <span className="font-medium">
-                        {format(new Date(todayAttendance.check_in), 'h:mm a')}
-                      </span>
+              />
+            </div>
+          </>
+        )
+      }
+
+      {
+        view === 'default' && (
+          <>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Today's Status Card */}
+              <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center">
+                    <Clock className="w-6 h-6 text-blue-600 mr-2" />
+                    <h2 className="text-xl font-semibold">Today's Status</h2>
+                  </div>
+                  {todayAttendance && (
+                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${todayAttendance.status === 'present'
+                      ? 'bg-green-100 text-green-800'
+                      : 'bg-yellow-100 text-yellow-800'
+                      }`}>
+                      {todayAttendance.status}
+                    </span>
+                  )}
+                </div>
+
+                {todayAttendance ? (
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      {/* Check-in/out Details */}
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Details</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Check-in:</span>
+                            <span className="font-medium">
+                              {format(new Date(todayAttendance.check_in), 'h:mm a')}
+                            </span>
+                          </div>
+                          {todayAttendance.check_out && (
+                            <div className="flex items-center justify-between">
+                              <span className="text-gray-600">Check-out:</span>
+                              <span className="font-medium">
+                                {format(new Date(todayAttendance.check_out), 'h:mm a')}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Work Mode:</span>
+                            <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${todayAttendance.work_mode === 'on_site'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                              }`}>
+                              {todayAttendance.work_mode}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Location:</span>
+                            <span className="font-medium text-sm">
+                              {todayAttendance.latitude.toFixed(4)}, {todayAttendance.longitude.toFixed(4)}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Work Duration */}
+                      <div className="bg-gray-50 rounded-lg p-4">
+                        <h3 className="text-sm font-medium text-gray-500 mb-3">Work Duration</h3>
+                        <div className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Total Time:</span>
+                            <span className="font-medium">
+                              {calculateDuration(todayAttendance.check_in, todayAttendance.check_out)}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Break Time:</span>
+                            <span className="font-medium">
+                              {getTotalBreakDuration() || '0h 0m'}
+                            </span>
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <span className="text-gray-600">Status:</span>
+                            <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${!todayAttendance.check_out
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-green-100 text-green-800'
+                              }`}>
+                              {!todayAttendance.check_out ? 'Working' : 'Completed'}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
                     </div>
-                    {todayAttendance.check_out && (
+
+                    {/* Break Records */}
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-medium text-gray-500 mb-3">Break Records</h3>
+                      {todayBreak.length > 0 ? (
+                        <div className="space-y-3">
+                          {todayBreak.map((breakRecord, index) => (
+                            <div key={index} className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <Coffee className="w-4 h-4 text-gray-400 mr-2" />
+                                <span className="text-gray-600">Break {index + 1}:</span>
+                                <span className="ml-2">
+                                  {format(new Date(breakRecord.start_time), 'h:mm a')}
+                                  {breakRecord.end_time && (
+                                    <> - {format(new Date(breakRecord.end_time), 'h:mm a')}</>
+                                  )}
+                                </span>
+                              </div>
+                              {breakRecord.status && (
+                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${breakRecord.status === 'on_time'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                                  }`}>
+                                  {breakRecord.status}
+                                </span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-500">No breaks taken today</p>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg">
+                    <div className="text-center">
+                      <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                      <p className="text-gray-600">Not checked in yet</p>
+                      <p className="text-sm text-gray-500 mt-1">Check in from the Attendance page to start your day</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Quick Stats Card */}
+              <div className="bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center mb-6">
+                  <Calendar className="w-6 h-6 text-blue-600 mr-2" />
+                  <h2 className="text-xl font-semibold">Quick Stats</h2>
+                </div>
+
+                <div className="space-y-6">
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Today's Timeline</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Check-in:</span>
+                        <span className="font-medium">
+                          {todayAttendance
+                            ? format(new Date(todayAttendance.check_in), 'h:mm a')
+                            : '-'}
+                        </span>
+                      </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Check-out:</span>
                         <span className="font-medium">
-                          {format(new Date(todayAttendance.check_out), 'h:mm a')}
+                          {todayAttendance?.check_out
+                            ? format(new Date(todayAttendance.check_out), 'h:mm a')
+                            : '-'}
                         </span>
                       </div>
-                    )}
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Work Mode:</span>
-                      <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${todayAttendance.work_mode === 'on_site'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-purple-100 text-purple-800'
-                        }`}>
-                        {todayAttendance.work_mode}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Location:</span>
-                      <span className="font-medium text-sm">
-                        {todayAttendance.latitude.toFixed(4)}, {todayAttendance.longitude.toFixed(4)}
-                      </span>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Latest Break:</span>
+                        <span className="font-medium">
+                          {todayBreak.length > 0
+                            ? format(new Date(todayBreak[todayBreak.length - 1].start_time), 'h:mm a')
+                            : '-'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Work Mode:</span>
+                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${todayAttendance?.work_mode === 'on_site'
+                          ? 'bg-blue-100 text-blue-800'
+                          : todayAttendance?.work_mode === 'remote'
+                            ? 'bg-purple-100 text-purple-800'
+                            : 'bg-gray-100 text-gray-800'
+                          }`}>
+                          {todayAttendance?.work_mode || 'Not Set'}
+                        </span>
+                      </div>
                     </div>
                   </div>
-                </div>
 
-                {/* Work Duration */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-sm font-medium text-gray-500 mb-3">Work Duration</h3>
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Total Time:</span>
-                      <span className="font-medium">
-                        {calculateDuration(todayAttendance.check_in, todayAttendance.check_out)}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Break Time:</span>
-                      <span className="font-medium">
-                        {getTotalBreakDuration() || '0h 0m'}
-                      </span>
-                    </div>
-                    <div className="flex items-center justify-between">
-                      <span className="text-gray-600">Status:</span>
-                      <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${!todayAttendance.check_out
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-green-100 text-green-800'
-                        }`}>
-                        {!todayAttendance.check_out ? 'Working' : 'Completed'}
-                      </span>
+                  <div className="bg-gray-50 rounded-lg p-4">
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Break Summary</h3>
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Total Breaks:</span>
+                        <span className="font-medium">{todayBreak.length}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Break Duration:</span>
+                        <span className="font-medium">
+                          {getTotalBreakDuration() || '0h 0m'}
+                        </span>
+                      </div>
                     </div>
                   </div>
                 </div>
               </div>
 
-              {/* Break Records */}
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Break Records</h3>
-                {todayBreak.length > 0 ? (
-                  <div className="space-y-3">
-                    {todayBreak.map((breakRecord, index) => (
-                      <div key={index} className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <Coffee className="w-4 h-4 text-gray-400 mr-2" />
-                          <span className="text-gray-600">Break {index + 1}:</span>
-                          <span className="ml-2">
-                            {format(new Date(breakRecord.start_time), 'h:mm a')}
-                            {breakRecord.end_time && (
-                              <> - {format(new Date(breakRecord.end_time), 'h:mm a')}</>
-                            )}
+              {/* Monthly Overview Card */}
+              <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center mb-6">
+                  <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+                  <h2 className="text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
+                </div>
+
+                {monthlyStats ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Expected Working Days:</span>
+                          <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Days Attended:</span>
+                          <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Present Days:</span>
+                          <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Late Days:</span>
+                          <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Absentees:</span>
+                          <span className="font-medium text-red-600">{absentees}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Leaves:</span>
+                          <span className="font-medium text-green-600">{leaves}</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">On-site Days:</span>
+                          <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Remote Days:</span>
+                          <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Attendance Rate:</span>
+                          <span className="font-medium">
+                            {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
                           </span>
                         </div>
-                        {breakRecord.status && (
-                          <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${breakRecord.status === 'on_time'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-yellow-100 text-yellow-800'
-                            }`}>
-                            {breakRecord.status}
-                          </span>
-                        )}
                       </div>
-                    ))}
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-4">
+                      <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Average Daily Hours:</span>
+                          <span className="font-medium">
+                            {monthlyStats.averageWorkHours.toFixed(1)}h
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Total Hours:</span>
+                          <span className="font-medium">
+                            {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                          </span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Expected Hours:</span>
+                          <span className="font-medium">
+                            {(7 * monthlyStats.expectedWorkingDays)}h
+                          </span>
+                        </div>
+                      </div>
+                    </div>
                   </div>
                 ) : (
-                  <p className="text-gray-500">No breaks taken today</p>
+                  <div className="text-center py-8 text-gray-500">
+                    No attendance records found for this month
+                  </div>
                 )}
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg">
-              <div className="text-center">
-                <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                <p className="text-gray-600">Not checked in yet</p>
-                <p className="text-sm text-gray-500 mt-1">Check in from the Attendance page to start your day</p>
-              </div>
-            </div>
-          )}
-        </div>
 
-        {/* Quick Stats Card */}
-        <div className="bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-6">
-            <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-            <h2 className="text-xl font-semibold">Quick Stats</h2>
-          </div>
+              {/* Absentees Details */}
+              <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+                <div className="flex items-center mb-6">
+                  <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+                  <h2 className="text-xl font-semibold">Absentees Details- {format(new Date(), 'MMMM yyyy')}</h2>
+                </div>
 
-          <div className="space-y-6">
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-3">Today's Timeline</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Check-in:</span>
-                  <span className="font-medium">
-                    {todayAttendance
-                      ? format(new Date(todayAttendance.check_in), 'h:mm a')
-                      : '-'}
-                  </span>
+                <div>
+                  {/* Absentee Data Div */}
+                  <AbsenteeComponent />
                 </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Check-out:</span>
-                  <span className="font-medium">
-                    {todayAttendance?.check_out
-                      ? format(new Date(todayAttendance.check_out), 'h:mm a')
-                      : '-'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Latest Break:</span>
-                  <span className="font-medium">
-                    {todayBreak.length > 0
-                      ? format(new Date(todayBreak[todayBreak.length - 1].start_time), 'h:mm a')
-                      : '-'}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Work Mode:</span>
-                  <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${todayAttendance?.work_mode === 'on_site'
-                    ? 'bg-blue-100 text-blue-800'
-                    : todayAttendance?.work_mode === 'remote'
-                      ? 'bg-purple-100 text-purple-800'
-                      : 'bg-gray-100 text-gray-800'
-                    }`}>
-                    {todayAttendance?.work_mode || 'Not Set'}
-                  </span>
-                </div>
-              </div>
-            </div>
 
-            <div className="bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-500 mb-3">Break Summary</h3>
-              <div className="space-y-3">
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Total Breaks:</span>
-                  <span className="font-medium">{todayBreak.length}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-gray-600">Break Duration:</span>
-                  <span className="font-medium">
-                    {getTotalBreakDuration() || '0h 0m'}
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
 
-        {/* Monthly Overview Card */}
-        <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-6">
-            <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-            <h2 className="text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
-          </div>
-
-          {monthlyStats ? (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Expected Working Days:</span>
-                    <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Days Attended:</span>
-                    <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Present Days:</span>
-                    <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Late Days:</span>
-                    <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Absentees:</span>
-                    <span className="font-medium text-red-600">{absentees}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Leaves:</span>
-                    <span className="font-medium text-green-600">{leaves}</span>
-                  </div>
-                </div>
               </div>
 
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">On-site Days:</span>
-                    <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Remote Days:</span>
-                    <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Attendance Rate:</span>
-                    <span className="font-medium">
-                      {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="bg-gray-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
-                <div className="space-y-3">
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Average Daily Hours:</span>
-                    <span className="font-medium">
-                      {monthlyStats.averageWorkHours.toFixed(1)}h
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Total Hours:</span>
-                    <span className="font-medium">
-                      {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <span className="text-gray-600">Expected Hours:</span>
-                    <span className="font-medium">
-                      {(7 * monthlyStats.expectedWorkingDays)}h
-                    </span>
-                  </div>
-                </div>
-              </div>
             </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              No attendance records found for this month
+          </>
+        )
+      }
+
+      {
+        view === 'graph' && (
+          <>
+            <div className="flex space-x-4 mb-4">
+              <button onClick={() => setViewMode('daily')} className={viewMode === 'daily' ? 'bg-blue-500 text-white' : ''}>Daily</button>
+              <button onClick={() => setViewMode('weekly')} className={viewMode === 'weekly' ? 'bg-blue-500 text-white' : ''}>Weekly</button>
+              <button onClick={() => setViewMode('monthly')} className={viewMode === 'monthly' ? 'bg-blue-500 text-white' : ''}>Monthly</button>
             </div>
-          )}
-        </div>
+            <div className='mb-16'>
+              <SalesChart
+                activeTab={viewMode}
+                data={chartData}
+              />
+            </div>
 
-        {/* Absentees Details */}
-        <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-          <div className="flex items-center mb-6">
-            <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-            <h2 className="text-xl font-semibold">Absentees Details- {format(new Date(), 'MMMM yyyy')}</h2>
-          </div>
+          </>
+        )
+      }
 
-          <div>
-            {/* Absentee Data Div */}
-            <AbsenteeComponent />
-          </div>
-
-
-        </div>
-
-      </div>
     </div>
   );
 };
