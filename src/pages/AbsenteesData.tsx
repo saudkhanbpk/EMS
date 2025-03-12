@@ -20,10 +20,13 @@ const AbsenteeComponent = () => {
         .from('absentees')
         .select('*')
         .eq('user_id', localStorage.getItem('user_id'))
-        .gte('check_in', monthStart.toISOString())
-        .lte('check_in', monthEnd.toISOString());
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEnd.toISOString())
+
         // .gte('created_at', startOfDay)
         // .lt('created_at', endOfDay);
+        console.log("absenteeRecords" , absenteeRecords);
+        
 
       if (absenteeError) throw absenteeError;
       setloading(false)
@@ -40,10 +43,6 @@ const AbsenteeComponent = () => {
     FetchAbsenteeData();
   }, []);
   
-
-
-
-
 
   return (
     <div>

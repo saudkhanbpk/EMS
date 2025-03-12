@@ -548,7 +548,7 @@ try {
   console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 
   // If attendance duration is sufficient, skip further actions
-  if (attendanceDuration >= 7) {
+  if (attendanceDuration >= 4) {
     console.log("Attendance is sufficient. No further action needed.");
     return;
   }

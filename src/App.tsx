@@ -34,7 +34,14 @@ function App() {
     setTimeout(() => setLoading(false), 1000); // Simulate async loading
   }, []);
 
-  if (loading) return <div>Loading...</div>; // Prevents flickering on refresh
+  
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>

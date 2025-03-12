@@ -207,10 +207,8 @@ const fetchUsers = async () => {
       if (userAttendance.check_in && !userAttendance.check_out) {
         console.log(`User ${user.id} has checked in but no check-out.`);
 
-        if (existingAbsentee) {
-          console.log(`User ${user.id} is already marked for absenteeism. Skipping...`);
-          continue;
-        }
+        // Debug: Log userAttendance
+        console.log("User Attendance:", userAttendance);
 
         // Set the checkout time to 4:30 PM PKT (11:30 AM UTC)
         const checkoutTime = `${todayDate}T11:30:00.000Z`;
@@ -218,7 +216,8 @@ const fetchUsers = async () => {
         // Add to attendanceUpdates array
         attendanceUpdates.push({
           id: userAttendance.id, // Unique ID of the attendance record
-          check_out: checkoutTime // New checkout time
+          check_out: checkoutTime, // New checkout time
+          autocheckout: "yes" // Mark as auto-checkout
         });
 
         console.log(`User ${user.id} checkout time will be updated to 4:30 PM PKT.`);
@@ -250,22 +249,27 @@ const fetchUsers = async () => {
     // Log final absent users
     console.log("Final Absent Users Data:", finalAbsentees);
 
-    // Perform batch updates
+    // Perform batch updates for attendance logs
     if (attendanceUpdates.length > 0) {
       console.log("Updating attendance logs with checkout times...");
       for (const update of attendanceUpdates) {
         const { error: updateError } = await supabase
           .from('attendance_logs')
-          .update({ check_out: update.check_out , autocheckout : "yes"})
+          .update({ check_out: update.check_out, autocheckout: "yes" })
           .eq('id', update.id);
 
-        if (updateError) throw updateError;
+        if (updateError) {
+          console.error("Error updating attendance log:", updateError);
+        } else {
+          console.log(`Updated attendance log for user ${update.id}.`);
+        }
       }
       console.log("Attendance logs updated successfully.");
     } else {
       console.log("No attendance logs to update.");
     }
 
+    // Insert absentee records into the database
     if (finalAbsentees.length > 0) {
       console.log("Inserting absentee records into the database...");
       const { error: insertError } = await supabase.from('absentees').insert(finalAbsentees);

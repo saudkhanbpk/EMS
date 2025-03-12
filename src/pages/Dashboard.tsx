@@ -5,6 +5,7 @@ import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
 import AbsenteeComponent from './AbsenteesData';
+import { ChevronLeft , ChevronRight } from 'lucide-react';
 
 
 
@@ -55,6 +56,10 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   const [absentees , setabsentees] = useState('');
   const [leaves , setleaves] = useState('');
   const navigate = useNavigate();
+  const [selectedDate , setSelectedDate] = useState(new(Date));
+  // const [Today , setToday] = useState(true);
+  // const [startOfDay , setStartOfDay] = useState(null);
+  // const [endOfDay , setEndOfDay] = useState(null);
 
  
  const userID = localStorage.getItem('user_id')
@@ -69,8 +74,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       .select("*", {count: "exact", head:true})
       .eq('user_id', userID)
       .eq('absentee_type', "leave")
-      .gte('check_in', monthStart.toISOString())
-      .lte('check_in', monthEnd.toISOString());
+      .gte('created_at', monthStart.toISOString())
+      .gte('created_at', monthStart.toISOString())
       if(error){
         console.error("Error Fetching Absentees Count", error);
       }else{
@@ -93,8 +98,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       .select("*", {count: "exact", head:true})
       .eq('user_id', userID)
       .eq('absentee_type', "Absent")
-      .gte('check_in', monthStart.toISOString())
-      .lte('check_in', monthEnd.toISOString());
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
       if(error){
         console.error("Error Fetching Absentees Count", error);
       }else{
@@ -109,6 +114,36 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       fetchabsentees();
     },[userID])
   
+
+    // useEffect(() => {
+    //   const updateDateRange = async () => {
+    //     if (Today === true) {
+    //       const todayDate = new Date();
+    
+    //       const start = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
+    //       const end = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59);
+    
+    //       setStartOfDay(start);
+    //       setEndOfDay(end);
+    //     } else {
+    //       const convertToDatabaseFormat = (dateString) => {
+    //         const date = new Date(dateString);
+    
+    //         // Start and End of selected date
+    //         const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    //         const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+    
+    //         setStartOfDay(start);
+    //         setEndOfDay(end);
+    //       };
+    
+    //       convertToDatabaseFormat(selectedDate);
+    //     }
+    //   };
+    
+    //   updateDateRange();
+     
+    // }, [Today, selectedDate]); // Runs when `Today` or `selectedDate` changes
 
 
   useEffect(() => {
@@ -132,10 +167,33 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
 
         if (profileError) throw profileError;
         if (profileData) setUserProfile(profileData);
+                  const todayDate = new Date();
+        const startOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
+        const endOfDay  = new Date(todayDate.getFullYear() , todayDate.getMonth() , todayDate.getDate() , 23 , 59 , 59)
 
-        // Get today's date in the correct format
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        // if (Today === true ) {
+        //   const todayDate = new Date();
+        //   setStartOfDay(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate()));
+        //   setEndOfDay(new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59));
+        // } else {
+        //   const convertToDatabaseFormat = (dateString) => {
+        //     const date = new Date(dateString);
+        
+        //     // Start of selected date
+        //     const start = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+        
+        //     // End of selected date (23:59:59)
+        //     const end = new Date(date.getFullYear(), date.getMonth(), date.getDate(), 23, 59, 59);
+        
+        //     // Format date as YYYY-MM-DD HH:mm:ss+00
+        //     const formatDate = (d) => d.toISOString().replace("T", " ").replace("Z", "+00");
+        
+        //     setStartOfDay(formatDate(start));
+        //     setEndOfDay(formatDate(end));
+        //   };
+        
+        //   convertToDatabaseFormat(selectedDate);
+        // }
 
         // Get today's attendance
         const { data: attendanceData, error: attendanceError } = await withRetry(() =>
@@ -283,7 +341,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
     loadTodayData();
     const interval = setInterval(loadTodayData, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedDate , userID]);
 
   const calculateDuration = (start: string, end: string | null) => {
     if (!end) {
@@ -319,9 +377,34 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
     );
   }
 
+
+
+ //Handling Days
+  // Handle day change (previous/next)
+  const handleDaynext = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() - 1);
+    setSelectedDate(newDate);
+    // setToday(false)
+  };
+
+  const handleDayprev = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + 1);
+    setSelectedDate(newDate);
+    // setToday(false)
+  };
+
+
+
+
+
+
+
+
   if (error) {
     return (
-<div className='max-w-7xl mx-auto  px-4 py-8'>
+<div className='max-w-7xl mx-auto  px-4 '>
 <div className="bg-red-50 text-red-600 p-4 rounded-lg">
           <p>Error loading dashboard: {error}</p>
         </div>
@@ -332,7 +415,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   return (
 
 
-<div className='max-w-7xl mx-auto  px-4 py-8'>
+<div className='max-w-7xl mx-auto  px-4 '>
+
 <div className="flex items-center justify-between mb-8">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">
@@ -342,9 +426,27 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             <p className="text-gray-600 mt-1">Department: {userProfile.department}</p>
           )}
         </div>
-        <div className="text-right">
+        {/* <div className="text-right">
           <p className="text-gray-600">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p>
           <p className="text-gray-500 text-sm">{format(new Date(), 'h:mm a')}</p>
+        </div> */}
+        <div > 
+           <div className='flex gap-3 mt-3 mb-2'>
+             <button className='px-3 py-1 rounded-2xl hover:bg-gray-300'>Daily</button>
+             <button className='px-3 py-1 rounded-2xl hover:bg-gray-300'>Weekly</button>
+             <button className='px-3 py-1 rounded-2xl hover:bg-gray-300'>Monthly</button>
+           </div>
+           <div className='flex flex-row gap-3'>
+             <button onClick={handleDaynext}>
+             <ChevronLeft/>
+             </button>
+              <p className="text-gray-600">
+               {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
+              </p>
+              <button onClick={handleDayprev}>
+              <ChevronRight/>
+              </button>
+           </div>   
         </div>
       </div>
 
@@ -622,7 +724,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                   <div className="flex items-center justify-between">
                     <span className="text-gray-600">Expected Hours:</span>
                     <span className="font-medium">
-                      {(7 * monthlyStats.expectedWorkingDays)}h
+                      {(6 * monthlyStats.expectedWorkingDays)}h
                     </span>
                   </div>
                 </div>

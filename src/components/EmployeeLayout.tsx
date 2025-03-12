@@ -81,8 +81,16 @@ const EmployeeLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      <div className="flex h-screen">
+    <div >
+      <div className="min-h-screen bg-gray-100 overflow-hidden">
+      <div className='w-full overflow-hidden bg-[#a36fd4] py-2 flex items-center'>
+  <p className='text-lg font-[400] text-white animate-marquee whitespace-nowrap'>
+  📢 Alert! Office Timing Update ⏰ Please note that our official office hours are from 9:00 AM to 4:00 PM.
+  Break time is scheduled from 1:00 PM to 1:30 PM.
+  </p>
+</div>
+      <div className="flex ">
+        
         {/* Sidebar Toggle Button (Only for Small Screens) */}
         {isSmallScreen && (
           <button
@@ -173,6 +181,7 @@ const EmployeeLayout: React.FC = () => {
             <Outlet isSmallScreen={isSmallScreen } isSidebarOpen={isSidebarOpen} />
           </div>
         </div>
+      </div>
       </div>
     </div>
   );
