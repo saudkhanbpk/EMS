@@ -116,91 +116,6 @@ const EmployeeAttendanceTable = () => {
   };
 
   
-
-//   const handleUpdateCheckInTime = async () => {
-//     console.log("selectedEntry:", selectedEntry);
-    
-
-//     // Format hour and minute to ensure two digits
-//     const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
-//     const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
-
-//     // Extract the date from selectedEntry.created_at
-//     let originalDate;
-//     if (selectedEntry.created_at === null || !selectedEntry.created_at || selectedEntry.created_at === "N/A") {
-//         originalDate = new Date();
-//     } else {
-//         originalDate = new Date(selectedEntry.created_at);
-//     }
-
-         
-
-//     // Ensure originalDate is valid
-//     if (isNaN(originalDate.getTime())) {
-//         console.error("Error: selectedEntry.created_at is not a valid date.");
-//         alert("Error: Invalid check-out date format.");
-//         return;
-//     }
-
-//     const year = originalDate.getFullYear();
-//     const month = originalDate.getMonth(); // Month is zero-indexed
-//     const day = originalDate.getDate();
-
-//     const year2 = new Date().getFullYear();
-//     const month2 = new Date().getMonth();
-//     const day2 = new Date().getDate();
-
-//     // Adjust for AM/PM (convert to 24-hour format if PM)
-//     let adjustedHourin = isinAM ? parseInt(formattedHourin, 10) : (parseInt(formattedHourin, 10) + 12) % 24;
-
-//     // Create a new Date object with the updated time but keeping the original date
-//     let formattedDate2;
-//     if (selectedEntry.created_at === null || selectedDate.created_at === "N/A") {
-//         formattedDate2 = new Date(year2, month2, day2, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
-//     } else {
-//         formattedDate2 = new Date(year, month, day, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
-//     }
-
-//     // Convert the Date object to the required format [YYYY-MM-DD HH:MM:SS.000+00]
-//     const timestamp = formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
-
-//     const now = new Date(timestamp);
-//     const checkInTimeLimit = parse('09:30', 'HH:mm', now);
-
-//     let attendanceStatus = 'present';
-//     if (isAfter(now, checkInTimeLimit)) {
-//       attendanceStatus = 'late';
-//     }
-
-//     // Assign the formatted time string to update state
-//     setupdatedCheckInTime(timestamp);
-//     console.log("checkinTimelimit", checkInTimeLimit);
-//     console.log("attendanceStatus", attendanceStatus);
-    
-
-//     // Update the `check_in` field in the database
-//     const { data, error } = await supabase
-//         .from("attendance_logs")
-//         .update({ check_in: timestamp ,
-//            status: attendanceStatus }
-//         ) // Updating check_in with the new timestamp
-//         .eq("user_id", selectedEntry.id) // Ensure correct entry by user_id
-//         .eq("created_at", selectedEntry.created_at); // Match check_in for that specific date
-
-//     if (data) {
-//         console.log("Updated data:", data); // Log success
-//     }
-
-//     if (!error) {
-//         alert("Check-in time updated successfully.");
-//     } else {
-//         console.error("Error updating check-in time:", error);
-//     }
-
-//     // Close modal after update
-//     setisCheckinModalOpen(false);
-// };
-
 const handleUpdateCheckInTime = async () => {
   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
 
@@ -621,11 +536,19 @@ const handleCloseModal = () => {
     }
   };
 
+  const now = new Date();
+
+  // Pakistan is in UTC+5, so add 5 hours to the UTC time
+  const offset = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
+  const pakistanTime = new Date(now.getTime() + offset);
   // Handle day change (previous/next)
   const handleDayChange = (direction) => {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + (direction === "prev" ? -1 : 1));
     setSelectedDate(newDate);
+    console.log("passing time : " , newDate);
+    console.log("pakistan time time : " , pakistanTime);
+    
   };
 
   // Handle filter change
@@ -670,7 +593,7 @@ const handleCloseModal = () => {
       <div className="w-full max-w-5xl flex justify-between items-center mb-6">
         {/* Buttons Row */}
         <div className="w-[40%] flex space-x-4">
-        <button
+        {/* <button
             onClick={() => handlenotification()}
             className={`px-4 py-2 rounded-lg transition-all ${
               selectedTab === "Daily"
@@ -679,7 +602,7 @@ const handleCloseModal = () => {
             }`}
           >
             notify
-          </button>
+          </button> */}
           <button
             onClick={() =>  setSelectedTab("Daily")}
             className={`px-4 py-2 rounded-lg transition-all ${
