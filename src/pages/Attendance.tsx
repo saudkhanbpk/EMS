@@ -559,47 +559,47 @@ try {
 
   console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 
-  // // If attendance duration is sufficient, skip further actions
-  // if (attendanceDuration >= 4) {
-  //   console.log("Attendance is sufficient. No further action needed.");
-  //   return;
-  // }
+  // If attendance duration is sufficient, skip further actions
+  if (attendanceDuration >= 4) {
+    console.log("Attendance is sufficient. No further action needed.");
+    return;
+  }
 
-  // // 3️⃣ Check if the user has a leave record for today
-  // const { data: absenteeData, error: absenteeError } = await supabase
-  //   .from('absentees')
-  //   .select('id')
-  //   .eq('user_id', localStorage.getItem('user_id'))
-  //   .eq('absentee_date', todayDate);
+  // 3️⃣ Check if the user has a leave record for today
+  const { data: absenteeData, error: absenteeError } = await supabase
+    .from('absentees')
+    .select('id')
+    .eq('user_id', localStorage.getItem('user_id'))
+    .eq('absentee_date', todayDate);
 
-  // if (absenteeError) {
-  //   console.error("Error checking absentee records:", absenteeError);
-  //   return;
-  // }
+  if (absenteeError) {
+    console.error("Error checking absentee records:", absenteeError);
+    return;
+  }
 
-  // // If a leave record exists, skip further actions
-  // if (absenteeData.length > 0) {
-  //   console.log("User is on leave today. No action needed.");
-  //   return;
-  // }
+  // If a leave record exists, skip further actions
+  if (absenteeData.length > 0) {
+    console.log("User is on leave today. No action needed.");
+    return;
+  }
 
-  // // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
-  // const { error: insertError } = await supabase
-  //   .from('absentees')
-  //   .insert([
-  //     {
-  //       user_id: localStorage.getItem('user_id'),
-  //       absentee_date: todayDate,
-  //       absentee_type: 'Absent',
-  //       absentee_Timing: 'Half Day',
-  //     },
-  //   ]);
+  // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
+  const { error: insertError } = await supabase
+    .from('absentees')
+    .insert([
+      {
+        user_id: localStorage.getItem('user_id'),
+        absentee_date: todayDate,
+        absentee_type: 'Absent',
+        absentee_Timing: 'Half Day',
+      },
+    ]);
 
-  // if (insertError) {
-  //   console.error("Error inserting half-day absent record:", insertError);
-  // } else {
-  //   console.log("Half-day absent record added successfully.");
-  // }
+  if (insertError) {
+    console.error("Error inserting half-day absent record:", insertError);
+  } else {
+    console.log("Half-day absent record added successfully.");
+  }
 } catch (error) {
   console.error("Unexpected error in attendance check:", error);
 }
