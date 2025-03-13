@@ -40,10 +40,7 @@ const EmployeeAttendanceTable = () => {
   const [isinAM, setIsinAM] = useState(true);  // AM/PM toggle
   const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
   const [isModalOpen , setIsModalOpen] = useState(false);
-<<<<<<< HEAD
   // const [formattedDate2, setformattedDate2] = useState('');
-=======
->>>>>>> 4d63070a8d568aec1ca5d7de4b7f4426e8e4901b
 
   const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
 

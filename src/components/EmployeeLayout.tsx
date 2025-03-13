@@ -70,11 +70,8 @@ const EmployeeLayout: React.FC = () => {
     navigate('/login');
   };
 
-<<<<<<< HEAD
 
 
-=======
->>>>>>> 4d63070a8d568aec1ca5d7de4b7f4426e8e4901b
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Attendance', href: '/attendance', icon: Clock },
