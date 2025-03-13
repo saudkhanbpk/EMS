@@ -3,7 +3,7 @@ import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import EmployeeWeeklyAttendanceTable from "./ListViewWeekly";
 import { ChevronLeft, ChevronRight } from "lucide-react"; // Assuming you're using Lucide icons
-import { format, addMonths, addWeeks } from "date-fns"; // Import the format function
+import { format, parse, isAfter, addMonths, addWeeks } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
 import ReactTooltip from 'react-tooltip';
@@ -40,6 +40,7 @@ const EmployeeAttendanceTable = () => {
   const [isinAM, setIsinAM] = useState(true);  // AM/PM toggle
   const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
   const [isModalOpen , setIsModalOpen] = useState(false);
+  // const [formattedDate2, setformattedDate2] = useState('');
 
   const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
 
@@ -115,52 +116,173 @@ const EmployeeAttendanceTable = () => {
   };
 
   
-  const handleUpdateCheckInTime = async () => {
-    // Format hour and minute to ensure two digits
-    const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
-    const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+
+//   const handleUpdateCheckInTime = async () => {
+//     console.log("selectedEntry:", selectedEntry);
+    
+
+//     // Format hour and minute to ensure two digits
+//     const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
+//     const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+
+//     // Extract the date from selectedEntry.created_at
+//     let originalDate;
+//     if (selectedEntry.created_at === null || !selectedEntry.created_at || selectedEntry.created_at === "N/A") {
+//         originalDate = new Date();
+//     } else {
+//         originalDate = new Date(selectedEntry.created_at);
+//     }
+
+         
+
+//     // Ensure originalDate is valid
+//     if (isNaN(originalDate.getTime())) {
+//         console.error("Error: selectedEntry.created_at is not a valid date.");
+//         alert("Error: Invalid check-out date format.");
+//         return;
+//     }
+
+//     const year = originalDate.getFullYear();
+//     const month = originalDate.getMonth(); // Month is zero-indexed
+//     const day = originalDate.getDate();
+
+//     const year2 = new Date().getFullYear();
+//     const month2 = new Date().getMonth();
+//     const day2 = new Date().getDate();
+
+//     // Adjust for AM/PM (convert to 24-hour format if PM)
+//     let adjustedHourin = isinAM ? parseInt(formattedHourin, 10) : (parseInt(formattedHourin, 10) + 12) % 24;
+
+//     // Create a new Date object with the updated time but keeping the original date
+//     let formattedDate2;
+//     if (selectedEntry.created_at === null || selectedDate.created_at === "N/A") {
+//         formattedDate2 = new Date(year2, month2, day2, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
+//     } else {
+//         formattedDate2 = new Date(year, month, day, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
+//     }
+
+//     // Convert the Date object to the required format [YYYY-MM-DD HH:MM:SS.000+00]
+//     const timestamp = formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
+
+//     const now = new Date(timestamp);
+//     const checkInTimeLimit = parse('09:30', 'HH:mm', now);
+
+//     let attendanceStatus = 'present';
+//     if (isAfter(now, checkInTimeLimit)) {
+//       attendanceStatus = 'late';
+//     }
+
+//     // Assign the formatted time string to update state
+//     setupdatedCheckInTime(timestamp);
+//     console.log("checkinTimelimit", checkInTimeLimit);
+//     console.log("attendanceStatus", attendanceStatus);
+    
+
+//     // Update the `check_in` field in the database
+//     const { data, error } = await supabase
+//         .from("attendance_logs")
+//         .update({ check_in: timestamp ,
+//            status: attendanceStatus }
+//         ) // Updating check_in with the new timestamp
+//         .eq("user_id", selectedEntry.id) // Ensure correct entry by user_id
+//         .eq("created_at", selectedEntry.created_at); // Match check_in for that specific date
+
+//     if (data) {
+//         console.log("Updated data:", data); // Log success
+//     }
+
+//     if (!error) {
+//         alert("Check-in time updated successfully.");
+//     } else {
+//         console.error("Error updating check-in time:", error);
+//     }
+
+//     // Close modal after update
+//     setisCheckinModalOpen(false);
+// };
+
+const handleUpdateCheckInTime = async () => {
+  console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
+
+  // Format hour and minute to ensure two digits
+  const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
+  const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+
+  // Extract the date from selectedEntry.check_out2
+  let originalDate;
+  if (selectedEntry.check_out2 === null || !selectedEntry.check_out2 || selectedEntry.check_out2 === "N/A") {
+      originalDate = new Date();
+  } else {
+      originalDate = new Date(selectedEntry.check_out2);
+  }
+
+       
+
+  // Ensure originalDate is valid
+  if (isNaN(originalDate.getTime())) {
+      console.error("Error: selectedEntry.check_out2 is not a valid date.");
+      alert("Error: Invalid check-out date format.");
+      return;
+  }
+
+  const year = originalDate.getFullYear();
+  const month = originalDate.getMonth(); // Month is zero-indexed
+  const day = originalDate.getDate();
+
+  const year2 = new Date().getFullYear();
+  const month2 = new Date().getMonth();
+  const day2 = new Date().getDate();
+
+  // Adjust for AM/PM (convert to 24-hour format if PM)
+  let adjustedHourin = isinAM ? parseInt(formattedHourin, 10) : (parseInt(formattedHourin, 10) + 12) % 24;
+
+  // Create a new Date object with the updated time but keeping the original date
+  let formattedDate2;
+  if (selectedEntry.check_out2 === null || selectedDate.check_out2 === "N/A") {
+      formattedDate2 = new Date(year2, month2, day2, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
+  } else {
+      formattedDate2 = new Date(year, month, day, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
+  }
+
+  // Convert the Date object to the required format [YYYY-MM-DD HH:MM:SS.000+00]
+  const timestamp = formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
+
+  const now = new Date(timestamp);
+  const checkInTimeLimit = parse('09:30', 'HH:mm', now);
+
+  let attendanceStatus = 'present';
+  if (isAfter(now, checkInTimeLimit)) {
+    attendanceStatus = 'late';
+  }
+
+  // Assign the formatted time string to update state
+  setupdatedCheckInTime(timestamp);
+  console.log("checkinTimelimit", checkInTimeLimit);
+  console.log("attendanceStatus", attendanceStatus);
   
-    // Combine hour, minute, and AM/PM into a string
-    const timeString = `${formattedHourin}:${formattedMinutein} ${isinAM ? 'AM' : 'PM'}`;
-  
-    // Get today's date to preserve it (year, month, day)
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();  // Month is zero-indexed
-    const day = today.getDate();
-  
-    // Adjust for AM/PM (convert to 24-hour format if PM)
-    let adjustedHourin = isinAM ? parseInt(formattedHourin, 10) : (parseInt(formattedHourin, 10) + 12) % 24;
-  
-    // Create a new Date object with the updated time but keeping today's date
-    const formattedDate2 = new Date(year, month, day, adjustedHourin, formattedMinutein, 0, 0);
-  
-    // Convert the Date object to the required format [2025-02-25 12:15:05.862+00]
-    const timestamp = formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00';   
-    // Assign the formatted time string to a variable to update the state
-    setupdatedCheckInTime(timeString);
-  
-    // Now we want to update the `check_out` field in the database
-    const { data, error } = await supabase
+
+  // Update the `check_in` field in the database
+  const { data, error } = await supabase
       .from("attendance_logs")
-      .update({ check_in: timestamp })  // Updating the check_out with the new timestamp
-      .eq("user_id", selectedEntry.id)  // Ensure you're updating the correct entry by user_id
-      .eq("check_in", selectedEntry.check_in2); // Compare only the date part of check_in
-  
-    if (data) {
-      console.log("Updated data:", data);  // Log data to check if update was successful
-    }
-  
-    // Handle the error or success
-    if (!error) {
+      .update({ check_in: timestamp ,
+         status: attendanceStatus }
+      ) // Updating check_in with the new timestamp
+      .eq("user_id", selectedEntry.id) // Ensure correct entry by user_id
+      .eq("check_out", selectedEntry.check_out2); // Match check_in for that specific date
+
+  if (data) {
+      console.log("Updated data:", data); // Log success
+  }
+
+  if (!error) {
       alert("Check-in time updated successfully.");
-    } else {
+  } else {
       console.error("Error updating check-in time:", error);
-    }
-  
-    // Close the modal after the update
-    setisCheckinModalOpen(false);
-  };
+  }
+
+  // Close modal after update
+  setisCheckinModalOpen(false);
+};
 
   const handleCheckInCloseModal = () => {
     setisCheckinModalOpen(false);
@@ -169,56 +291,76 @@ const EmployeeAttendanceTable = () => {
 
 
   
-//Updating Check Out Time
   const handleUpdateCheckOutTime = async () => {
+    console.log("selectedEntry.check_in2:", selectedEntry.check_in2);
+
     // Format hour and minute to ensure two digits
     const formattedHour = hour < 10 ? `0${hour}` : hour;
     const formattedMinute = minute < 10 ? `0${minute}` : minute;
-  
-    // Combine hour, minute, and AM/PM into a string
-    const timeString = `${formattedHour}:${formattedMinute} ${isAM ? 'AM' : 'PM'}`;
-  
-    // Get today's date to preserve it (year, month, day)
-    const today = new Date();
-    const year = today.getFullYear();
-    const month = today.getMonth();  // Month is zero-indexed
-    const day = today.getDate();
-  
+
+    // Extract the date from selectedEntry.check_in2
+    let originalDate;
+    if (selectedEntry.check_in2 === null || !selectedEntry.check_in2 || selectedEntry.check_in2 === "N/A") {
+        originalDate = new Date();
+    } else {
+        originalDate = new Date(selectedEntry.check_in2);
+    }
+
+    // Ensure originalDate is valid
+    if (isNaN(originalDate.getTime())) {
+        console.error("Error: selectedEntry.check_in2 is not a valid date.");
+        alert("Error: Invalid check-in date format.");
+        return;
+    }
+
+    const year = originalDate.getFullYear();
+    const month = originalDate.getMonth(); // Month is zero-indexed
+    const day = originalDate.getDate();
+
+    const year2 = new Date().getFullYear();
+    const month2 = new Date().getMonth();
+    const day2 = new Date().getDate();
+
     // Adjust for AM/PM (convert to 24-hour format if PM)
     let adjustedHour = isAM ? parseInt(formattedHour, 10) : (parseInt(formattedHour, 10) + 12) % 24;
-  
-    // Create a new Date object with the updated time but keeping today's date
-    const formattedDate = new Date(year, month, day, adjustedHour, formattedMinute, 0, 0);
-  
-    // Convert the Date object to the required format [2025-02-25 12:15:05.862+00]
+
+    // Create a new Date object with the updated time but keeping the original date
+    let formattedDate;
+    if (selectedEntry.check_in2 === null) {
+        formattedDate = new Date(year2, month2, day2, adjustedHour, parseInt(formattedMinute, 10), 0, 0);
+    } else {
+        formattedDate = new Date(year, month, day, adjustedHour, parseInt(formattedMinute, 10), 0, 0);
+    }
+
+    // Convert the Date object to the required format [YYYY-MM-DD HH:MM:SS.000+00]
     const timestamp = formattedDate.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
 
-   console.log("selected time" , selectedEntry.check_in2);
-   
-    // Assign the formatted time string to a variable to update the state
-    setupdatedCheckOutTime(timeString);
-  
-    // Now we want to update the `check_out` field in the database
+    console.log("Selected time:", timestamp);
+
+    // Assign the formatted time string to update state
+    setupdatedCheckOutTime(timestamp);
+
+    // Update the `check_out` field in the database
     const { data, error } = await supabase
-      .from("attendance_logs")
-      .update({ check_out: timestamp })  // Updating the check_out with the new timestamp
-      .eq("user_id", selectedEntry.id)  // Ensure you're updating the correct entry by user_id
-      .eq("check_in", selectedEntry.check_in2); // Compare only the date part of check_in
-  
+        .from("attendance_logs")
+        .update({ check_out: timestamp })  // Updating check_out with the new timestamp
+        .eq("user_id", selectedEntry.id)  // Ensure correct entry by user_id
+        .eq("check_in", selectedEntry.check_in2); // Match check_in for that specific date
+
     if (data) {
-      console.log("Updated data:", data);  // Log data to check if update was successful
+        console.log("Updated data:", data); // Log success
     }
-  
-    // Handle the error or success
+
     if (!error) {
-      alert("Check-out time updated successfully.");
+        alert("Check-out time updated successfully.");
     } else {
-      console.error("Error updating check-out time:", error);
+        console.error("Error updating check-out time:", error);
     }
-  
-    // Close the modal after the update
+
+    // Close modal after update
     setIsModalOpen(false);
-  };
+};
+
   
 
 
@@ -399,7 +541,7 @@ const handleCloseModal = () => {
       // Fetch attendance logs for the selected date
       const { data: attendanceLogs, error: attendanceError } = await supabase
         .from("attendance_logs")
-        .select("user_id, check_in, check_out, work_mode, status , autocheckout")
+        .select("user_id, check_in, check_out, work_mode, status, created_at , autocheckout")
         .gte("check_in", `${formattedDate}T00:00:00`)
         .lte("check_in", `${formattedDate}T23:59:59`);
 
@@ -424,8 +566,12 @@ const handleCloseModal = () => {
 
         if (!log) {
           return {
+            id : user.id,
             full_name: user.full_name,
             check_in: "N/A",
+            check_in2: "N/A",
+            created_at: "N/A",
+            check_out2: "N/A",
             check_out: "N/A",
             autocheckout : "",
             work_mode: "N/A",
@@ -438,6 +584,9 @@ const handleCloseModal = () => {
           id : user.id,
           full_name: user.full_name,
           check_in2: log.check_in ? log.check_in : "N/A",
+          check_out2: log.check_out ? log.check_out : "N/A",
+          created_at: log.created_at ? log.created_at : "N/A",
+          // created_at: log.created_at ?  new Date(log.created_at).toISOString().split('.')[0] + "+00:00" : "N/A",
           check_in: log.check_in ? formatTime(log.check_in) : "N/A",
           check_out: log.check_out ? formatTime(log.check_out) : "N/A",
           autocheckout : log.autocheckout || "",
@@ -502,6 +651,16 @@ const handleCloseModal = () => {
         setFilteredData(attendanceData);
     }
   };
+      const handlenotification = () => {
+        Notification.requestPermission()
+        .then(()=> {
+          const notification = new Notification("Office Time Update",{
+             body: "Please note that our office time is from 9:00 AM to 4:00 PM.",
+             icon : "./efficiency.png"
+          })
+        })
+      }
+
 
   return (
     <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 px-6">
@@ -511,8 +670,18 @@ const handleCloseModal = () => {
       <div className="w-full max-w-5xl flex justify-between items-center mb-6">
         {/* Buttons Row */}
         <div className="w-[40%] flex space-x-4">
+        <button
+            onClick={() => handlenotification()}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              selectedTab === "Daily"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-100"
+            }`}
+          >
+            notify
+          </button>
           <button
-            onClick={() => setSelectedTab("Daily")}
+            onClick={() =>  setSelectedTab("Daily")}
             className={`px-4 py-2 rounded-lg transition-all ${
               selectedTab === "Daily"
                 ? "bg-blue-500 text-white"
@@ -927,7 +1096,7 @@ const handleCloseModal = () => {
           <div className="clock bg-gray-100 p-4 rounded-lg shadow-md">
             <div className="time-display text-4xl font-bold text-center text-gray-800 mb-4">
             <span>{hourin.toString().padStart(2, '0').slice(0, 2)}:</span>
-           <span>{minutein.toString().padStart(2, '0').slice(0, 2)}</span>
+            <span>{minutein.toString().padStart(2, '0').slice(0, 2)}</span>
             </div>
 
             {/* AM/PM Toggle */}

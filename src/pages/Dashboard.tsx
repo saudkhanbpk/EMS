@@ -81,7 +81,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       if(error){
         console.error("Error Fetching Absentees Count", error);
       }else{
-        console.log("absentees Count :" , count);
+        console.log("leaves Count :" , count);
         if(count > 0){
           setleaves(count)
         }else{
@@ -354,9 +354,9 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
           <div className='flex gap-3 mt-3 mb-2'>
             <button onClick={()=> setSelectedtab("Dailydata")}
             // className='px-3 py-1 rounded-2xl hover:bg-gray-300'
-            className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${
+            className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
               selectedtab === "Dailydata"
-                ? "bg-[#a36fd4] text-white"
+                ? "bg-[#8c4fc5] text-white"
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}  >
               Daily</button>
@@ -364,17 +364,17 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             
               <button onClick={()=> setSelectedtab("Weeklydata")}
             // className='px-3 py-1 rounded-2xl hover:bg-gray-300'
-            className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${
+            className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
               selectedtab === "Weeklydata"
-                ? "bg-[#a36fd4] text-white"
+                ? "bg-[#8c4fc5] text-white"
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}  >
               Weekly</button>
               <button onClick={()=> setSelectedtab("Monthlydata")}
             // className='px-3 py-1 rounded-2xl hover:bg-gray-300'
-            className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${
+            className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
               selectedtab === "Monthlydata"
-                ? "bg-[#a36fd4] text-white"
+                ? "bg-[#8c4fc5] text-white"
                 : "bg-white text-gray-700 hover:bg-gray-100"
             }`}  >
               Monthly</button>
@@ -683,7 +683,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-gray-600">Leaves:</span>
-                      <span className="font-medium text-green-600">{leaves || 0}</span>
+                      <span className="font-medium text-green-600">{leaves}</span>
                     </div>
                   </div>
                 </div>
