@@ -365,37 +365,86 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   // Function to format data
   const processAttendanceData = (data, mode) => {
     if (mode === 'daily') {
-      return data.map(entry => ({
-        name: format(new Date(entry.check_in), 'HH:mm'), // Time for daily view
-        value: 1, // Count each check-in as 1
-      }));
+      // Group by hour for daily view
+      const hourlyData = {};
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      
+      // Initialize all hours with 0
+      for (let hour = 0; hour < 24; hour++) {
+        const hourStr = hour.toString().padStart(2, '0') + ':00';
+        hourlyData[hourStr] = 0;
+      }
+      
+      // Count check-ins by hour
+      data.forEach(entry => {
+        const entryDate = new Date(entry.check_in);
+        const hourStr = format(entryDate, 'HH:00');
+        hourlyData[hourStr] = (hourlyData[hourStr] || 0) + 1;
+      });
+      
+      // Convert to array format for chart
+      return Object.keys(hourlyData)
+        .sort()
+        .map(hour => ({
+          name: hour,
+          value: hourlyData[hour],
+        }));
     }
 
     if (mode === 'weekly') {
-      const grouped = {};
+      // Create an object with all days of the week
+      const weekDays = {
+        'Sun': 0,
+        'Mon': 0,
+        'Tue': 0,
+        'Wed': 0,
+        'Thu': 0,
+        'Fri': 0,
+        'Sat': 0
+      };
+      
+      // Count check-ins by day
       data.forEach(entry => {
-        const day = format(new Date(entry.check_in), 'EEE'); // Short weekday name (e.g., Mon, Tue)
-        grouped[day] = (grouped[day] || 0) + 1;
+        const day = format(new Date(entry.check_in), 'EEE'); // Short weekday name
+        weekDays[day] = (weekDays[day] || 0) + 1;
       });
-
-      return Object.keys(grouped).map(day => ({
+      
+      // Convert to array format for chart, maintaining day order
+      return Object.keys(weekDays).map(day => ({
         name: day,
-        value: grouped[day],
+        value: weekDays[day],
       }));
     }
 
     if (mode === 'monthly') {
-      const grouped = {};
+      // Get current month's days
+      const today = new Date();
+      const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
+      
+      // Initialize all days with 0
+      const monthlyData = {};
+      for (let day = 1; day <= daysInMonth; day++) {
+        const dayStr = day.toString().padStart(2, '0');
+        monthlyData[dayStr] = 0;
+      }
+      
+      // Count check-ins by day of month
       data.forEach(entry => {
-        const day = format(new Date(entry.check_in), 'dd'); // Day of the month
-        grouped[day] = (grouped[day] || 0) + 1;
+        const day = format(new Date(entry.check_in), 'dd');
+        monthlyData[day] = (monthlyData[day] || 0) + 1;
       });
-
-      return Object.keys(grouped).map(day => ({
-        name: day,
-        value: grouped[day],
-      }));
+      
+      // Convert to array format for chart
+      return Object.keys(monthlyData)
+        .sort((a, b) => parseInt(a) - parseInt(b))
+        .map(day => ({
+          name: day,
+          value: monthlyData[day],
+        }));
     }
+    
+    return [];
   };
 
 
@@ -791,9 +840,36 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         view === 'graph' && (
           <>
             <div className="flex space-x-4 mb-4">
-              <button onClick={() => setViewMode('daily')} className={viewMode === 'daily' ? 'bg-blue-500 text-white' : ''}>Daily</button>
-              <button onClick={() => setViewMode('weekly')} className={viewMode === 'weekly' ? 'bg-blue-500 text-white' : ''}>Weekly</button>
-              <button onClick={() => setViewMode('monthly')} className={viewMode === 'monthly' ? 'bg-blue-500 text-white' : ''}>Monthly</button>
+              <button 
+                onClick={() => setViewMode('daily')} 
+                className={`px-4 py-2 rounded-md transition-all ${
+                  viewMode === 'daily' 
+                    ? 'bg-[#7E69AB] text-white shadow-md' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Daily
+              </button>
+              <button 
+                onClick={() => setViewMode('weekly')} 
+                className={`px-4 py-2 rounded-md transition-all ${
+                  viewMode === 'weekly' 
+                    ? 'bg-[#7E69AB] text-white shadow-md' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Weekly
+              </button>
+              <button 
+                onClick={() => setViewMode('monthly')} 
+                className={`px-4 py-2 rounded-md transition-all ${
+                  viewMode === 'monthly' 
+                    ? 'bg-[#7E69AB] text-white shadow-md' 
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+                }`}
+              >
+                Monthly
+              </button>
             </div>
             <div className='mb-16'>
               <SalesChart
