@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import EmployeeWeeklyAttendanceTable from "./ListViewWeekly";
-import { ChevronLeft, ChevronRight } from "lucide-react"; // Assuming you're using Lucide icons
+import { ChevronLeft, ChevronRight , SearchIcon } from "lucide-react"; // Assuming you're using Lucide icons
 import { format, parse, isAfter, addMonths, addWeeks } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
@@ -10,6 +10,7 @@ import ReactTooltip from 'react-tooltip';
 import TimePicker from 'react-time-picker';
 import "./style.css"
 import { AttendanceProvider } from "./AttendanceContext";
+import FilteredDataAdmin from "./filteredListAdmin";
 
 const EmployeeAttendanceTable = () => {
   const [attendanceData, setAttendanceData] = useState([]);
@@ -41,8 +42,12 @@ const EmployeeAttendanceTable = () => {
   const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
   const [isModalOpen , setIsModalOpen] = useState(false);
   // const [formattedDate2, setformattedDate2] = useState('');
+  const [startdate, setStartdate] = useState(''); 
+  const [enddate, setEnddate] = useState('');
+  const [search , setsearch] = useState(false);
 
   const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
+  const {AttendanceDataFiltered , setattendanceDataFiltered} = useContext(AttendanceContext);
 
   const handleHourChange = (e) => {
     setHour(e.target.value);
@@ -340,6 +345,65 @@ const handleCloseModal = () => {
 
 
 
+
+
+
+
+
+
+
+
+
+
+  const downloadPDFFiltered = async () => {   
+    // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
+    //   console.error("No data available to generate PDF");
+    //   return;
+    // } 
+    try {
+      const response = await fetch('http://localhost:4000/generate-Filtered', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: AttendanceDataFiltered }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+  
+      const blob = await response.blob();
+  
+      if (blob.type !== "application/pdf") {
+        throw new Error("Received incorrect file format");
+      }
+  
+      const url = window.URL.createObjectURL(blob);
+      const currentDate = new Date().toISOString().split('T')[0];
+      const fileName = `attendance_${currentDate}.pdf`;
+  
+      // Create and trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+  
+      // Open PDF manually
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+    }
+  };
+
+
+
+
+
+
+
   const downloadPDFWeekly = async () => {   
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
     //   console.error("No data available to generate PDF");
@@ -584,11 +648,18 @@ const handleCloseModal = () => {
         })
       }
 
+     const  handleDateFilter = () => {
+      setSelectedTab("Filter")
+      setsearch((prev) => !prev)
+     }
+
 
   return (
     <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 px-6">
       {/* Heading */}
+      <div className=" w-full max-w-5xl items-center flex">
       <h1 className="text-3xl font-semibold text-gray-800 mb-6">Employee Attendance</h1>
+      </div>
       {/* Buttons and Date Navigation */}
       <div className="w-full max-w-5xl flex justify-between items-center mb-6">
         {/* Buttons Row */}
@@ -633,8 +704,18 @@ const handleCloseModal = () => {
           >
             Monthly
           </button>
+          <button
+            onClick={() => setSelectedTab("Filter")}
+            className={`px-4 py-2 rounded-lg transition-all ${
+              selectedTab === "Filter"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-200"
+            }`}
+          >
+            Filter
+          </button>
         </div>
-        <div className="flex flex-row gap-10">
+        <div className="flex flex-row gap-5">
         {/* Date Navigation */}
         {selectedTab === "Daily" && (
           <div className="flex items-center space-x-4">
@@ -686,13 +767,47 @@ const handleCloseModal = () => {
               {format(selectedDateW, "MMMM yyyy")}
             </span>
             <button
-              onClick={() => handleWeekChange("next")}
+              onClick={() => {
+                handleWeekChange("next")
+                // console.log("selectedDateW", selectedDateW);
+              }}
               className="p-2 hover:bg-gray-200 rounded-full transition-all"
             >
               <ChevronRight className="w-5 h-5" />
             </button>
           </div>
         )}
+        {selectedTab === "Filter" && (
+  <div className="flex items-center justify-center space-x-4">
+    {/* Date Range Inputs */}
+    <input
+      type="date"
+      value={startdate} // State variable for the start date
+      onChange={(e) => setStartdate(e.target.value)} // Update start date
+      className="p-2 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+    <span className="mx-2 text-xl font-semibold">to</span>
+    <input
+      type="date"
+      value={enddate} // State variable for the end date
+      onChange={(e) => setEnddate(e.target.value)} // Update end date
+      className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+    />
+
+    {/* Search Button */}
+    <button
+      onClick={() => {
+        // const enddate2 = endDate.toString() + "T23:59:59";
+        // console.log("Start Date:", startDate.toString() + "T00:00:00");
+        // console.log("End Date:", enddate2);
+        handleDateFilter()
+      }}
+      className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
+    >
+      <SearchIcon className="w-5 h-5" />
+    </button>
+  </div>
+)}
         {selectedTab === "Daily" && (
           <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
           onClick={downloadPDF}><DownloadIcon/> </button>
@@ -704,6 +819,12 @@ const handleCloseModal = () => {
         {selectedTab === "Monthly" && (
           <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
           onClick={downloadPDFMonthly}><DownloadIcon/> </button>
+        )}
+        {selectedTab === "Filter" && (
+          <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
+          onClick={downloadPDFFiltered}
+          >
+            <DownloadIcon/> </button>
         )}
         </div>
       </div>
@@ -1142,13 +1263,12 @@ const handleCloseModal = () => {
       {/* Monthly View */}
       {!loading && selectedTab === "Monthly" && (
           <EmployeeMonthlyAttendanceTable 
-            selectedDateM={selectedDateM} 
-            // downloadPDFWeekly={downloadPDFWeekly} 
-            // sendDataToParent={handleDataFromChild}           
+            selectedDateM={selectedDateM}          
               />
              
               )}
       {!loading && selectedTab === "Weekly" && <EmployeeWeeklyAttendanceTable selectedDateW={selectedDateW} />}
+      {!loading && selectedTab === "Filter" && <FilteredDataAdmin search={search} startdate={startdate} enddate={enddate} />}
     </div>
   );
 };

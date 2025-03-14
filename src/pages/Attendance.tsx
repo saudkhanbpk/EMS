@@ -556,6 +556,8 @@ try {
 
   // Calculate total attendance duration (in hours)
   const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
+  console.log("Atttendance Duration" , attendanceDuration);
+  
 
   console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 
