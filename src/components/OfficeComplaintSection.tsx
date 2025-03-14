@@ -48,7 +48,7 @@ const OfficeComplaintSection: React.FC = () => {
       .insert([{
         complaint_text: complaint,
         // user_id: localStorage.getItem("user_id")
-        user_id: user.user.id
+        user_id: localStorage.getItem('user_id')
       }]);
 
     if (error) {
@@ -67,7 +67,7 @@ const OfficeComplaintSection: React.FC = () => {
     const { error } = await supabase
       .from('office_complaints')
       .delete()
-      .eq('id', user.user.id);
+      .eq('id', id);
 
     if (error) {
       console.error('Error deleting complaint:', error.message);

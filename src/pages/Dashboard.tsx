@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
+import { format, addWeeks, addMonths, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
@@ -19,6 +19,9 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { SalesChart } from '../components/GraphComponent';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import WeeklyDataUser from './WeeklyDataUser';
+import MonthlyDataUser from './MonthlyDataUser';
 
 
 
@@ -73,8 +76,15 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'weekly' | 'monthly'
   const [chartData, setChartData] = useState([]);
-
+  const [selectedDate, setSelectedDate] = useState(new (Date));
+  const [selectedtab, setSelectedtab] = useState("Dailydata");
   const userID = localStorage.getItem('user_id')
+
+  const todayDate = selectedDate;
+  //  const today = new Date();
+
+  const monthStart = startOfMonth(todayDate);
+  const monthEnd = endOfMonth(todayDate);
   useEffect(() => {
     const fetchleaves = async () => {
       const { count, error } = await supabase
@@ -82,6 +92,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         .select("*", { count: "exact", head: true })
         .eq('user_id', userID)
         .eq('absentee_type', "leave")
+        .gte('created_at', monthStart.toISOString())
+        .gte('created_at', monthEnd.toISOString())
       if (error) {
         console.error("Error Fetching Absentees Count", error);
       } else {
@@ -97,6 +109,9 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   }, [userID])
 
 
+
+
+
   useEffect(() => {
     const fetchabsentees = async () => {
       const { count, error } = await supabase
@@ -104,6 +119,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         .select("*", { count: "exact", head: true })
         .eq('user_id', userID)
         .eq('absentee_type', "Absent")
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEnd.toISOString());
       if (error) {
         console.error("Error Fetching Absentees Count", error);
       } else {
@@ -129,6 +146,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         return;
       }
       try {
+        setLoading(true)
         // Load user profile with retry mechanism
         const { data: profileData, error: profileError } = await withRetry(() =>
           supabase
@@ -142,12 +160,9 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         if (profileError) throw profileError;
         if (profileData) setUserProfile(profileData);
 
-        // Get today's date in the correct format
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+        const startOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate());
+        const endOfDay = new Date(todayDate.getFullYear(), todayDate.getMonth(), todayDate.getDate(), 23, 59, 59)
 
-        // Get today's attendance
         const { data: attendanceData, error: attendanceError } = await withRetry(() =>
           supabase
             .from('attendance_logs')
@@ -159,9 +174,10 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             .limit(1)
             .single()
         );
-
         if (attendanceError && attendanceError.code !== 'PGRST116') throw attendanceError;
-
+        console.log("Attendance Data", attendanceData);
+        if (!attendanceData) setTodayAttendance(null);
+        setLoading(false);
         if (attendanceData) {
           setTodayAttendance(attendanceData);
 
@@ -173,22 +189,12 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
               .eq('attendance_id', attendanceData.id)
             // .order('date', { ascending: true })
 
+            // .order('date', { ascending: true })
           );
-
           if (breakError) throw breakError;
           if (breakData) setTodayBreak(breakData);
+          if (!breakData) setTodayBreak(null);
         }
-
-
-
-
-
-
-
-        // Load monthly statistics
-        const monthStart = startOfMonth(today);
-        const monthEnd = endOfMonth(today);
-
         // Calculate expected working days (excluding weekends)
         const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
         const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
@@ -224,26 +230,17 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             remoteDays: uniqueAttendance.filter(a => a.work_mode === 'remote').length,
             averageWorkHours: 0
           };
-
-          // // Calculate average work hours
-          // let totalHours = 0;
-          // uniqueAttendance.forEach(attendance => {
-          //   const start = new Date(attendance.check_in);
-          //   const end = attendance.check_out
-          //    ? new Date(attendance.check_out)
-          //    : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
-          //   const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          //   totalHours += Math.min(hours, 12); // Cap at 24 hours to avoid outliers
-          // });
-
           let totalHours = 0;
 
           uniqueAttendance.forEach(attendance => {
             const start = new Date(attendance.check_in);
-            // If an employee has no CheckOut, assign 4 working hours
             const end = attendance.check_out
               ? new Date(attendance.check_out)
-              : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+              : new Date(start.getTime()); // Adds 4 hours
+            // If an employee has no CheckOut, assign 4 working hours
+            // const end = attendance.check_out
+            //   ? new Date(attendance.check_out)
+            //   : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
 
             const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
             totalHours += Math.min(hours, 12);
@@ -272,16 +269,10 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           // Subtract break hours from total work hours
           totalHours -= totalBreakHours;
 
-
-
-
           stats.averageWorkHours = totalHours / uniqueAttendance.length;
 
           setMonthlyStats(stats);
         }
-
-
-
 
       } catch (err) {
         console.error('Error in loadTodayData:', err);
@@ -290,11 +281,10 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         setLoading(false);
       }
     };
-
     loadTodayData();
     const interval = setInterval(loadTodayData, 60000);
     return () => clearInterval(interval);
-  }, []);
+  }, [selectedDate, userID]);
 
   const calculateDuration = (start: string, end: string | null) => {
     if (!end) {
@@ -369,20 +359,20 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
       const hourlyData = {};
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      
+
       // Initialize all hours with 0
       for (let hour = 0; hour < 24; hour++) {
         const hourStr = hour.toString().padStart(2, '0') + ':00';
         hourlyData[hourStr] = 0;
       }
-      
+
       // Count check-ins by hour
       data.forEach(entry => {
         const entryDate = new Date(entry.check_in);
         const hourStr = format(entryDate, 'HH:00');
         hourlyData[hourStr] = (hourlyData[hourStr] || 0) + 1;
       });
-      
+
       // Convert to array format for chart
       return Object.keys(hourlyData)
         .sort()
@@ -403,13 +393,13 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         'Fri': 0,
         'Sat': 0
       };
-      
+
       // Count check-ins by day
       data.forEach(entry => {
         const day = format(new Date(entry.check_in), 'EEE'); // Short weekday name
         weekDays[day] = (weekDays[day] || 0) + 1;
       });
-      
+
       // Convert to array format for chart, maintaining day order
       return Object.keys(weekDays).map(day => ({
         name: day,
@@ -421,20 +411,20 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
       // Get current month's days
       const today = new Date();
       const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate();
-      
+
       // Initialize all days with 0
       const monthlyData = {};
       for (let day = 1; day <= daysInMonth; day++) {
         const dayStr = day.toString().padStart(2, '0');
         monthlyData[dayStr] = 0;
       }
-      
+
       // Count check-ins by day of month
       data.forEach(entry => {
         const day = format(new Date(entry.check_in), 'dd');
         monthlyData[day] = (monthlyData[day] || 0) + 1;
       });
-      
+
       // Convert to array format for chart
       return Object.keys(monthlyData)
         .sort((a, b) => parseInt(a) - parseInt(b))
@@ -443,7 +433,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           value: monthlyData[day],
         }));
     }
-    
+
     return [];
   };
 
@@ -456,9 +446,39 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     );
   }
 
+
+  const handleDayNext = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() + 1);
+    setSelectedDate(newDate);
+    // loadTodayData2(newDate);
+  };
+
+  const handleDayPrev = () => {
+    const newDate = new Date(selectedDate);
+    newDate.setDate(selectedDate.getDate() - 1);
+    setSelectedDate(newDate);
+    // loadTodayData2(newDate);
+  };
+
+  // Handle week change (previous/next)
+  const handleWeekChange = (direction) => {
+    setSelectedDate((prevDate) =>
+      direction === "prev" ? addWeeks(prevDate, -1) : addWeeks(prevDate, 1)
+    );
+  };
+
+  // Handle Month change (previous/next)
+  const handleMonthChange = (direction) => {
+    setSelectedDate((prevDate) =>
+      direction === "prev" ? addMonths(prevDate, -1) : addMonths(prevDate, 1)
+    );
+  };
+
+
   if (error) {
     return (
-      <div className='max-w-7xl mx-auto  px-4 py-8'>
+      <div className='max-w-7xl mx-auto  px-4 '>
         <div className="bg-red-50 text-red-600 p-4 rounded-lg">
           <p>Error loading dashboard: {error}</p>
         </div>
@@ -480,408 +500,542 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             <p className="text-gray-600 mt-1">Department: {userProfile.department}</p>
           )}
         </div>
-        <div className='text-right'>
-          <select name="view" id="view" className='w-[134px] h-[40px] rounded-[8px] border py-1 px-2  border-[#D0D5DD]'
-            onChange={(e) => setView(e.target.value)}
-          >
-            <option value="default">Default View</option>
-            <option value="table">Table View</option>
-            <option value="graph">Graph View</option>
-          </select>
+        <div>
+          <div className='flex gap-3 mt-3 mb-2'>
+            {view === 'default' && (
+              <>
+                <button onClick={() => setSelectedtab("Dailydata")}
+                  className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Dailydata"
+                    ? "bg-[#a36fd4] text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
+                    }`}  >
+                  Daily</button>
+
+                <button onClick={() => setSelectedtab("Weeklydata")}
+                  className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Weeklydata"
+                    ? "bg-[#a36fd4] text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
+                    }`}  >
+                  Weekly</button>
+                <button onClick={() => setSelectedtab("Monthlydata")}
+                  className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Monthlydata"
+                    ? "bg-[#a36fd4] text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
+                    }`}  >
+                  Monthly</button>
+              </>
+            )}
+          </div>
+          <div className="flex flex-row gap-5">
+            {/* Date Navigation - Only show in Default View */}
+            {view === 'default' && selectedtab === "Dailydata" && (
+              <div className="flex items-center space-x-4">
+                <button
+                  onClick={() => handleDayPrev()}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="text-lg font-semibold">
+                  {format(selectedDate, "MMMM d, yyyy")}
+                </span>
+                <button
+                  onClick={() => handleDayNext()}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            {view === 'default' && selectedtab === "Monthlydata" && (
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  onClick={() => handleMonthChange("prev")}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="mx-4 text-lg font-semibold">
+                  {format(selectedDate, "MMMM yyyy")}
+                </span>
+                <button
+                  onClick={() => handleMonthChange("next")}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            {view === 'default' && selectedtab === "Weeklydata" && (
+              <div className="flex items-center justify-center space-x-4">
+                <button
+                  onClick={() => handleWeekChange("prev")}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                >
+                  <ChevronLeft className="w-5 h-5" />
+                </button>
+                <span className="mx-4 text-lg font-semibold">
+                  {format(selectedDate, "MMMM yyyy")}
+                </span>
+                <button
+                  onClick={() => handleWeekChange("next")}
+                  className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                >
+                  <ChevronRight className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </div>
+          <div className='text-right'>
+            <select 
+              name="view" 
+              id="view" 
+              className='w-[160px] h-[40px] rounded-[8px] border py-1 px-3 border-[#D0D5DD] bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#7E69AB] focus:border-[#7E69AB] transition-all'
+              onChange={(e) => setView(e.target.value)}
+              value={view}
+            >
+              <option value="default">Default View</option>
+              <option value="table">Table View</option>
+              <option value="graph">Graph View</option>
+            </select>
+          </div>
         </div>
 
       </div>
-      <div className="flex justify-end">
-        <p className="font-inter font-medium text-base text-[#000000] leading-7 ">{format(new Date(), 'EEEE, MMMM d, yyyy')}</p> &nbsp; &nbsp;
-        <p className="font-inter font-medium text-base text-[#000000] leading-7  ">{format(new Date(), 'h:mm a')}</p>
-      </div>
-      <DashboardCards
-      />
-      {
-        view === 'table' && (
-          <>
-            <div className='mb-16'>
-              <DailyStatusTable
-                todayAttendance={todayAttendance}
-                todayBreak={todayBreak}
+
+      <DashboardCards />
+
+      {selectedtab === "Weeklydata" && (
+        <WeeklyDataUser selectedtab={selectedtab} selectedDate={selectedDate} />
+      )}
+      {selectedtab === "Monthlydata" && (
+        <MonthlyDataUser selectedtab={selectedtab} selectedDate={selectedDate} />
+      )}
+
+      {/* Table View - Show DailyStatusTable, BreakRecordsTable, and MonthlyRecord */}
+      {view === 'table' && selectedtab === "Dailydata" && (
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Daily Status</h2>
+            {todayAttendance ? (
+              <DailyStatusTable 
+                todayAttendance={{
+                  check_in: todayAttendance.check_in,
+                  check_out: todayAttendance.check_out || '',
+                  work_mode: todayAttendance.work_mode,
+                  latitude: todayAttendance.latitude,
+                  longitude: todayAttendance.longitude,
+                  totalTime: calculateDuration(todayAttendance.check_in, todayAttendance.check_out),
+                  breakTime: getTotalBreakDuration() || '0h 0m',
+                  status: todayAttendance.status,
+                  checkInStatus: !todayAttendance.check_out ? 'Working' : 'Completed',
+                  totalBreaks: todayBreak.length,
+                  breakHours: getTotalBreakDuration() || '0h 0m',
+                }}
+                todayBreak={todayBreak.map(breakRecord => ({
+                  break_in: breakRecord.start_time,
+                  break_out: breakRecord.end_time || '',
+                }))}
                 calculateDuration={calculateDuration}
                 getTotalBreakDuration={getTotalBreakDuration}
               />
-
-            </div>
-            <div className='mb-16'>
-              <BreakRecordsTable
-                todayBreak={todayBreak}
-              />
-            </div>
-            <div className='mb-10'>
-              <MonthlyRecord
-                monthlyStats={monthlyStats}
-                absentees={absentees}
-                leaves={leaves}
-
-              />
-            </div>
-          </>
-        )
-      }
-
-      {
-        view === 'default' && (
-          <>
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              {/* Today's Status Card */}
-              <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <div className="flex items-center">
-                    <Clock className="w-6 h-6 text-blue-600 mr-2" />
-                    <h2 className="text-xl font-semibold">Today's Status</h2>
-                  </div>
-                  {todayAttendance && (
-                    <span className={`px-3 py-1 rounded-full text-sm font-medium ${todayAttendance.status === 'present'
-                      ? 'bg-green-100 text-green-800'
-                      : 'bg-yellow-100 text-yellow-800'
-                      }`}>
-                      {todayAttendance.status}
-                    </span>
-                  )}
+            ) : (
+              <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                  <p className="text-gray-600">Not checked in yet</p>
+                  <p className="text-sm text-gray-500 mt-1">Check in from the Attendance page to start your day</p>
                 </div>
-
-                {todayAttendance ? (
-                  <div className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      {/* Check-in/out Details */}
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Details</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Check-in:</span>
-                            <span className="font-medium">
-                              {format(new Date(todayAttendance.check_in), 'h:mm a')}
-                            </span>
-                          </div>
-                          {todayAttendance.check_out && (
-                            <div className="flex items-center justify-between">
-                              <span className="text-gray-600">Check-out:</span>
-                              <span className="font-medium">
-                                {format(new Date(todayAttendance.check_out), 'h:mm a')}
-                              </span>
-                            </div>
-                          )}
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Work Mode:</span>
-                            <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${todayAttendance.work_mode === 'on_site'
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-purple-100 text-purple-800'
-                              }`}>
-                              {todayAttendance.work_mode}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Location:</span>
-                            <span className="font-medium text-sm">
-                              {todayAttendance.latitude.toFixed(4)}, {todayAttendance.longitude.toFixed(4)}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Work Duration */}
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <h3 className="text-sm font-medium text-gray-500 mb-3">Work Duration</h3>
-                        <div className="space-y-3">
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Total Time:</span>
-                            <span className="font-medium">
-                              {calculateDuration(todayAttendance.check_in, todayAttendance.check_out)}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Break Time:</span>
-                            <span className="font-medium">
-                              {getTotalBreakDuration() || '0h 0m'}
-                            </span>
-                          </div>
-                          <div className="flex items-center justify-between">
-                            <span className="text-gray-600">Status:</span>
-                            <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${!todayAttendance.check_out
-                              ? 'bg-blue-100 text-blue-800'
-                              : 'bg-green-100 text-green-800'
-                              }`}>
-                              {!todayAttendance.check_out ? 'Working' : 'Completed'}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Break Records */}
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-sm font-medium text-gray-500 mb-3">Break Records</h3>
-                      {todayBreak.length > 0 ? (
-                        <div className="space-y-3">
-                          {todayBreak.map((breakRecord, index) => (
-                            <div key={index} className="flex items-center justify-between">
-                              <div className="flex items-center">
-                                <Coffee className="w-4 h-4 text-gray-400 mr-2" />
-                                <span className="text-gray-600">Break {index + 1}:</span>
-                                <span className="ml-2">
-                                  {format(new Date(breakRecord.start_time), 'h:mm a')}
-                                  {breakRecord.end_time && (
-                                    <> - {format(new Date(breakRecord.end_time), 'h:mm a')}</>
-                                  )}
-                                </span>
-                              </div>
-                              {breakRecord.status && (
-                                <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${breakRecord.status === 'on_time'
-                                  ? 'bg-green-100 text-green-800'
-                                  : 'bg-yellow-100 text-yellow-800'
-                                  }`}>
-                                  {breakRecord.status}
-                                </span>
-                              )}
-                            </div>
-                          ))}
-                        </div>
-                      ) : (
-                        <p className="text-gray-500">No breaks taken today</p>
-                      )}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg">
-                    <div className="text-center">
-                      <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
-                      <p className="text-gray-600">Not checked in yet</p>
-                      <p className="text-sm text-gray-500 mt-1">Check in from the Attendance page to start your day</p>
-                    </div>
-                  </div>
-                )}
               </div>
+            )}
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Break Records</h2>
+            <BreakRecordsTable 
+              todayBreak={todayBreak.map(breakRecord => ({
+                start_time: breakRecord.start_time,
+                end_time: breakRecord.end_time || '',
+                duration: breakRecord.end_time 
+                  ? calculateDuration(breakRecord.start_time, breakRecord.end_time)
+                  : 'In progress',
+                status: breakRecord.status || '',
+              }))}
+            />
+          </div>
+          
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <h2 className="text-xl font-semibold mb-4">Monthly Records</h2>
+            {monthlyStats && (
+              <MonthlyRecord 
+                monthlyStats={{
+                  expectedWorkingDays: monthlyStats.expectedWorkingDays,
+                  daysAttended: monthlyStats.totalWorkingDays,
+                  presentDays: monthlyStats.presentDays,
+                  lateDays: monthlyStats.lateDays,
+                  absentees: parseInt(absentees) || 0,
+                  leaves: parseInt(leaves) || 0,
+                  totalWorkingDays: monthlyStats.totalWorkingDays,
+                  averageDailyHours: monthlyStats.averageWorkHours.toFixed(1) + 'h',
+                  expectedHours: (6 * monthlyStats.expectedWorkingDays) + 'h',
+                  expectedWorkHours: 6 * monthlyStats.expectedWorkingDays,
+                  averageWorkHours: monthlyStats.averageWorkHours,
+                }}
+                leaves={parseInt(leaves) || 0}
+                absentees={parseInt(absentees) || 0}
+              />
+            )}
+          </div>
+        </div>
+      )}
 
-              {/* Quick Stats Card */}
-              <div className="bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center mb-6">
-                  <Calendar className="w-6 h-6 text-blue-600 mr-2" />
-                  <h2 className="text-xl font-semibold">Quick Stats</h2>
-                </div>
+      {/* Graph View - Already implemented */}
+      {view === 'graph' && selectedtab === "Dailydata" && (
+        <>
+          <div className="flex space-x-4 mb-4">
+            <button 
+              onClick={() => setViewMode('daily')} 
+              className={`px-4 py-2 rounded-md transition-all ${
+                viewMode === 'daily' 
+                  ? 'bg-[#7E69AB] text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Daily
+            </button>
+            <button 
+              onClick={() => setViewMode('weekly')} 
+              className={`px-4 py-2 rounded-md transition-all ${
+                viewMode === 'weekly' 
+                  ? 'bg-[#7E69AB] text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Weekly
+            </button>
+            <button 
+              onClick={() => setViewMode('monthly')} 
+              className={`px-4 py-2 rounded-md transition-all ${
+                viewMode === 'monthly' 
+                  ? 'bg-[#7E69AB] text-white shadow-md' 
+                  : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+              }`}
+            >
+              Monthly
+            </button>
+          </div>
+          <div className='mb-16'>
+            <SalesChart
+              activeTab={viewMode}
+              data={chartData}
+            />
+          </div>
+        </>
+      )}
 
-                <div className="space-y-6">
+      {/* Default View - Show the current UI */}
+      {(view === 'default' && selectedtab === "Dailydata") && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Today's Status Card */}
+          <div className="lg:col-span-2 bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center">
+                <Clock className="w-6 h-6 text-blue-600 mr-2" />
+                <h2 className="text-xl font-semibold">Today's Status</h2>
+              </div>
+              {todayAttendance && (
+                <span className={`px-3 py-1 rounded-full text-sm font-medium ${todayAttendance.status === 'present'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-yellow-100 text-yellow-800'
+                  }`}>
+                  {todayAttendance.status}
+                </span>
+              )}
+            </div>
+
+            {todayAttendance ? (
+              <div className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  {/* Check-in/out Details */}
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Today's Timeline</h3>
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Details</h3>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Check-in:</span>
                         <span className="font-medium">
-                          {todayAttendance
-                            ? format(new Date(todayAttendance.check_in), 'h:mm a')
-                            : '-'}
+                          {format(new Date(todayAttendance.check_in), 'h:mm a')}
                         </span>
                       </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Check-out:</span>
-                        <span className="font-medium">
-                          {todayAttendance?.check_out
-                            ? format(new Date(todayAttendance.check_out), 'h:mm a')
-                            : '-'}
-                        </span>
-                      </div>
-                      <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Latest Break:</span>
-                        <span className="font-medium">
-                          {todayBreak.length > 0
-                            ? format(new Date(todayBreak[todayBreak.length - 1].start_time), 'h:mm a')
-                            : '-'}
-                        </span>
-                      </div>
+                      {todayAttendance.check_out && (
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Check-out:</span>
+                          <span className="font-medium">
+                            {format(new Date(todayAttendance.check_out), 'h:mm a')}
+                          </span>
+                        </div>
+                      )}
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Work Mode:</span>
-                        <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${todayAttendance?.work_mode === 'on_site'
+                        <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${todayAttendance.work_mode === 'on_site'
                           ? 'bg-blue-100 text-blue-800'
-                          : todayAttendance?.work_mode === 'remote'
-                            ? 'bg-purple-100 text-purple-800'
-                            : 'bg-gray-100 text-gray-800'
+                          : 'bg-purple-100 text-purple-800'
                           }`}>
-                          {todayAttendance?.work_mode || 'Not Set'}
+                          {todayAttendance.work_mode}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Location:</span>
+                        <span className="font-medium text-sm">
+                          {todayAttendance.latitude.toFixed(4)}, {todayAttendance.longitude.toFixed(4)}
                         </span>
                       </div>
                     </div>
                   </div>
 
+                  {/* Work Duration */}
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Break Summary</h3>
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Work Duration</h3>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Total Breaks:</span>
-                        <span className="font-medium">{todayBreak.length}</span>
+                        <span className="text-gray-600">Total Time:</span>
+                        <span className="font-medium">
+                          {calculateDuration(todayAttendance.check_in, todayAttendance.check_out)}
+                        </span>
                       </div>
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Break Duration:</span>
+                        <span className="text-gray-600">Break Time:</span>
                         <span className="font-medium">
                           {getTotalBreakDuration() || '0h 0m'}
                         </span>
                       </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Status:</span>
+                        <span className={`px-2 py-0.5 rounded-full text-sm font-medium ${!todayAttendance.check_out
+                          ? 'bg-blue-100 text-blue-800'
+                          : 'bg-green-100 text-green-800'
+                          }`}>
+                          {!todayAttendance.check_out ? 'Working' : 'Completed'}
+                        </span>
+                      </div>
                     </div>
+                  </div>
+                </div>
+
+                {/* Break Records */}
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Break Records</h3>
+                  {todayBreak.length > 0 ? (
+                    <div className="space-y-3">
+                      {todayBreak.map((breakRecord, index) => (
+                        <div key={index} className="flex items-center justify-between">
+                          <div className="flex items-center">
+                            <Coffee className="w-4 h-4 text-gray-400 mr-2" />
+                            <span className="text-gray-600">Break {index + 1}:</span>
+                            <span className="ml-2">
+                              {format(new Date(breakRecord.start_time), 'h:mm a')}
+                              {breakRecord.end_time && (
+                                <> - {format(new Date(breakRecord.end_time), 'h:mm a')}</>
+                              )}
+                            </span>
+                          </div>
+                          {breakRecord.status && (
+                            <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${breakRecord.status === 'on_time'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                              {breakRecord.status}
+                            </span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <p className="text-gray-500">No breaks taken today</p>
+                  )}
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center h-48 bg-gray-50 rounded-lg">
+                <div className="text-center">
+                  <AlertCircle className="w-8 h-8 text-yellow-500 mx-auto mb-2" />
+                  <p className="text-gray-600">Not checked in yet</p>
+                  <p className="text-sm text-gray-500 mt-1">Check in from the Attendance page to start your day</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Quick Stats Card */}
+          <div className="bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center mb-6">
+              <Calendar className="w-6 h-6 text-blue-600 mr-2" />
+              <h2 className="text-xl font-semibold">Quick Stats</h2>
+            </div>
+
+            <div className="space-y-6">
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Today's Timeline</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Check-in:</span>
+                    <span className="font-medium">
+                      {todayAttendance
+                        ? format(new Date(todayAttendance.check_in), 'h:mm a')
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Check-out:</span>
+                    <span className="font-medium">
+                      {todayAttendance?.check_out
+                        ? format(new Date(todayAttendance.check_out), 'h:mm a')
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Latest Break:</span>
+                    <span className="font-medium">
+                      {todayBreak.length > 0
+                        ? format(new Date(todayBreak[todayBreak.length - 1].start_time), 'h:mm a')
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Work Mode:</span>
+                    <span className={`px-2 py-0.5 rounded-full text-xs font-medium ${todayAttendance?.work_mode === 'on_site'
+                      ? 'bg-blue-100 text-blue-800'
+                      : todayAttendance?.work_mode === 'remote'
+                        ? 'bg-purple-100 text-purple-800'
+                        : 'bg-gray-100 text-gray-800'
+                      }`}>
+                      {todayAttendance?.work_mode || 'Not Set'}
+                    </span>
                   </div>
                 </div>
               </div>
 
-              {/* Monthly Overview Card */}
-              <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center mb-6">
-                  <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                  <h2 className="text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
+              <div className="bg-gray-50 rounded-lg p-4">
+                <h3 className="text-sm font-medium text-gray-500 mb-3">Break Summary</h3>
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Total Breaks:</span>
+                    <span className="font-medium">{todayBreak.length}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Break Duration:</span>
+                    <span className="font-medium">
+                      {getTotalBreakDuration() || '0h 0m'}
+                    </span>
+                  </div>
                 </div>
+              </div>
+            </div>
+          </div>
 
-                {monthlyStats ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Expected Working Days:</span>
-                          <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Days Attended:</span>
-                          <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Present Days:</span>
-                          <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Late Days:</span>
-                          <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Absentees:</span>
-                          <span className="font-medium text-red-600">{absentees}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Leaves:</span>
-                          <span className="font-medium text-green-600">{leaves}</span>
-                        </div>
-                      </div>
+          {/* Monthly Overview Card */}
+          <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center mb-6">
+              <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+              <h2 className="text-xl font-semibold">Monthly Overview - {format(selectedDate, 'MMMM yyyy')}</h2>
+            </div>
+
+            {monthlyStats ? (
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Expected Working Days:</span>
+                      <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
                     </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">On-site Days:</span>
-                          <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Remote Days:</span>
-                          <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Attendance Rate:</span>
-                          <span className="font-medium">
-                            {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Days Attended:</span>
+                      <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
                     </div>
-
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
-                      <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Average Daily Hours:</span>
-                          <span className="font-medium">
-                            {monthlyStats.averageWorkHours.toFixed(1)}h
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Total Hours:</span>
-                          <span className="font-medium">
-                            {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Expected Hours:</span>
-                          <span className="font-medium">
-                            {(7 * monthlyStats.expectedWorkingDays)}h
-                          </span>
-                        </div>
-                      </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Present Days:</span>
+                      <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Late Days:</span>
+                      <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Absentees:</span>
+                      <span className="font-medium text-red-600">{absentees || 0}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Leaves:</span>
+                      <span className="font-medium text-green-600">{leaves || 0}</span>
                     </div>
                   </div>
-                ) : (
-                  <div className="text-center py-8 text-gray-500">
-                    No attendance records found for this month
+                </div>
+
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">On-site Days:</span>
+                      <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Remote Days:</span>
+                      <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Attendance Rate:</span>
+                      <span className="font-medium">
+                        {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
+                      </span>
+                    </div>
                   </div>
-                )}
-              </div>
-
-              {/* Absentees Details */}
-              <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-                <div className="flex items-center mb-6">
-                  <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                  <h2 className="text-xl font-semibold">Absentees Details- {format(new Date(), 'MMMM yyyy')}</h2>
                 </div>
 
-                <div>
-                  {/* Absentee Data Div */}
-                  <AbsenteeComponent />
+                <div className="bg-gray-50 rounded-lg p-4">
+                  <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Average Daily Hours:</span>
+                      <span className="font-medium">
+                        {monthlyStats.averageWorkHours.toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Total Hours:</span>
+                      <span className="font-medium">
+                        {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                      </span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">Expected Hours:</span>
+                      <span className="font-medium">
+                        {(6 * monthlyStats.expectedWorkingDays)}h
+                      </span>
+                    </div>
+                  </div>
                 </div>
-
-
               </div>
+            ) : (
+              <div className="text-center py-8 text-gray-500">
+                No attendance records found for this month
+              </div>
+            )}
+          </div>
 
-            </div>
-          </>
-        )
-      }
-
-      {
-        view === 'graph' && (
-          <>
-            <div className="flex space-x-4 mb-4">
-              <button 
-                onClick={() => setViewMode('daily')} 
-                className={`px-4 py-2 rounded-md transition-all ${
-                  viewMode === 'daily' 
-                    ? 'bg-[#7E69AB] text-white shadow-md' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Daily
-              </button>
-              <button 
-                onClick={() => setViewMode('weekly')} 
-                className={`px-4 py-2 rounded-md transition-all ${
-                  viewMode === 'weekly' 
-                    ? 'bg-[#7E69AB] text-white shadow-md' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Weekly
-              </button>
-              <button 
-                onClick={() => setViewMode('monthly')} 
-                className={`px-4 py-2 rounded-md transition-all ${
-                  viewMode === 'monthly' 
-                    ? 'bg-[#7E69AB] text-white shadow-md' 
-                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                }`}
-              >
-                Monthly
-              </button>
-            </div>
-            <div className='mb-16'>
-              <SalesChart
-                activeTab={viewMode}
-                data={chartData}
-              />
+          {/* Absentees Details */}
+          <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+            <div className="flex items-center mb-6">
+              <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+              <h2 className="text-xl font-semibold">Absentees Details - {format(selectedDate, 'MMMM yyyy')}</h2>
             </div>
 
-          </>
-        )
-      }
-
+            <div>
+              {/* Absentee Data Div */}
+              <AbsenteeComponent selectedDate={selectedDate} />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

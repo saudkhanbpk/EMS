@@ -1,8 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { eachDayOfInterval, isWeekend, format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react'; // Assuming you're using Lucide icons
-// import { Skeleton } from './ui/skeleton'; // Example: A modern skeleton loading component
+import { AttendanceContext } from './AttendanceContext';
+import { DownloadIcon } from 'lucide-react';
 
 interface User {
   id: string;
@@ -27,11 +28,22 @@ interface EmployeeStats {
   workingHoursPercentage: number;
 }
 
-const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
+const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
   const [attendanceData, setAttendanceData] = useState<EmployeeStats[]>([]);
+  const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]); // Filtered data for display
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-//   const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
+  const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "bad", "better", "best"
+    const { setAttendanceDataMonthly } = useContext(AttendanceContext);
+  
+// Fetch data for the selected month
+// const fetchAllEmployeesStats = async (date) => {
+//   setLoading(true);
+//   try {
+//     // Fetch all users
+//     const { data: users, error: usersError } = await supabase
+//       .from('users')
+//       .select('*');
 
   // Fetch data for the selected month
   const fetchAllEmployeesStats = async (date: Date) => {
@@ -42,163 +54,329 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
         .from('users')
         .select('*');
 
-      if (usersError) throw usersError;
+    const monthStart = startOfMonth(date);
+    const monthEnd = endOfMonth(date);
 
-      const monthStart = startOfMonth(date);
-      const monthEnd = endOfMonth(date);
+    // Fetch all attendance records for the selected month in one go
+    const { data: monthlyAttendance, error: monthlyError } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString())
+      .order('check_in', { ascending: true });
 
-      // Fetch all attendance records for the selected month in one go
-      const { data: monthlyAttendance, error: monthlyError } = await supabase
-        .from('attendance_logs')
-        .select('*')
-        .gte('check_in', monthStart.toISOString())
-        .lte('check_in', monthEnd.toISOString())
-        .order('check_in', { ascending: true });
+    if (monthlyError) throw monthlyError;
 
-      if (monthlyError) throw monthlyError;
+    // Fetch all breaks in one go
+    const { data: breaks, error: breaksError } = await supabase
+      .from('breaks')
+      .select('*')
+      .gte('start_time', monthStart.toISOString())
+      .lte('start_time', monthEnd.toISOString());
 
-      // Fetch all breaks in one go
-      const { data: breaks, error: breaksError } = await supabase
-        .from('breaks')
-        .select('*')
-        .gte('start_time', monthStart.toISOString())
-        .lte('start_time', monthEnd.toISOString());
+    if (breaksError) throw breaksError;
 
-      if (breaksError) throw breaksError;
+    // Fetch all absentees in one go
+    const { data: absentees, error: absenteesError } = await supabase
+      .from('absentees')
+      .select('*')
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
 
-      // Fetch all absentees in one go
-      const { data: absentees, error: absenteesError } = await supabase
-        .from('absentees')
-        .select('*')
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString());
+    if (absenteesError) throw absenteesError;
 
-      if (absenteesError) throw absenteesError;
+    // Calculate expected working days
+    const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
 
-      // Calculate expected working days
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+    const stats: EmployeeStats[] = await Promise.all(users.map(async (user) => {
+      const { id, full_name } = user;
 
-      const stats: EmployeeStats[] = await Promise.all(users.map(async (user) => {
-        const { id, full_name } = user;
+      // Filter attendance records for the current user
+      const userAttendance = monthlyAttendance.filter(record => record.user_id === id);
 
-        // Filter attendance records for the current user
-        const userAttendance = monthlyAttendance.filter(record => record.user_id === id);
+      // Calculate unique attendance days
+      const attendanceByDate = userAttendance.reduce((acc, curr) => {
+        const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
+        if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+          acc[date] = curr;
+        }
+        return acc;
+      }, {} as Record<string, AttendanceRecord>);
 
-        // Calculate unique attendance days
-        const attendanceByDate = userAttendance.reduce((acc, curr) => {
-          const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
-          if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
-            acc[date] = curr;
-          }
-          return acc;
-        }, {} as Record<string, AttendanceRecord>);
+      const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
 
-        const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
+      // Calculate total working hours
+      let totalHours = 0;
 
-        // Calculate total working hours
-        let totalHours = 0;
+      uniqueAttendance.forEach(attendance => {
+        const start = new Date(attendance.check_in);
+        const end = attendance.check_out
+          ? new Date(attendance.check_out)
+          : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
 
-        uniqueAttendance.forEach(attendance => {
-          const start = new Date(attendance.check_in);
-          const end = attendance.check_out 
-            ? new Date(attendance.check_out) 
-            : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
+        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        totalHours += Math.min(hours, 12); // Cap at 12 hours per day
+      });
 
-          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 12); // Cap at 12 hours per day
-        });
+      // Calculate total break hours for the user
+      const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
+      let totalBreakHours = 0;
 
-        // Calculate total break hours for the user
-        const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
-        let totalBreakHours = 0;
+      userBreaks.forEach(breakEntry => {
+        const breakStart = new Date(breakEntry.start_time);
+        const breakEnd = breakEntry.end_time
+          ? new Date(breakEntry.end_time)
+          : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
 
-        userBreaks.forEach(breakEntry => {
-          const breakStart = new Date(breakEntry.start_time);
-          const breakEnd = breakEntry.end_time 
-            ? new Date(breakEntry.end_time) 
-            : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
+        const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
+        totalBreakHours += Math.min(breakHours, 12); // Cap at 12 hours per break
+      });
 
-          const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-          totalBreakHours += Math.min(breakHours, 12); // Cap at 12 hours per break
-        });
+      totalHours -= totalBreakHours;
 
-        totalHours -= totalBreakHours;
+      // Calculate absent days
+      const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
+      const leavesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'leave').length;
+      const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
 
-        // Calculate absent days
-        const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
-        const leavesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'leave').length;
-        const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
+      const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
+      const absentDays = leavesCount + absenteesCount;
 
-        const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
-        const absentDays = leavesCount + absenteesCount;
+      // Calculate working hours percentage
+      const workingHoursPercentage = (totalHours / (workingDaysInMonth * 8)) * 100; // Assuming 8 hours per day
 
-        // Calculate working hours percentage
-        const workingHoursPercentage = (totalHours / (workingDaysInMonth * 8)) * 100; // Assuming 8 hours per day
+      return {
+        user: { id, full_name },
+        presentDays,
+        absentDays,
+        totalHoursWorked: totalHours,
+        workingHoursPercentage,
+      };
+    }));
 
-        return {
-          user: { id, full_name },
-          presentDays,
-          absentDays,
-          totalHoursWorked: totalHours,
-          workingHoursPercentage,
-        };
-      }));
+    setAttendanceData(stats);
+    setFilteredData(stats); // Initialize filtered data with all data
+    setAttendanceDataMonthly(stats);
+  } catch (error) {
+    console.error('Error fetching employee data:', error);
+    setError('Error fetching employee data');
+  } finally {
+    setLoading(false);
+  }
+};
 
-      setAttendanceData(stats);
-    } catch (error) {
-      console.error('Error fetching employee data:', error);
-      setError('Error fetching employee data');
-    } finally {
-      setLoading(false);
-    }
-  };
+// Fetch data when the selected date changes
+useEffect(() => {
+  fetchAllEmployeesStats(selectedDateM);
+}, [selectedDateM]);
 
-  // Fetch data when the selected date changes
-  useEffect(() => {
-    fetchAllEmployeesStats(selectedDateM);
-  }, [selectedDateM]);
+// Handle filter change
+const handleFilterChange = (filter) => {
+  setCurrentFilter(filter);
+  switch (filter) {
+    case 'all':
+      setFilteredData(attendanceData);
+      break;
+    case 'bad':
+      setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage < 50));
+      break;
+    case 'better':
+      setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80));
+      break;
+    case 'best':
+      setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 80));
+      break;
+    default:
+      setFilteredData(attendanceData);
+  }
+};
 
-  // Handle month change (previous/next)
-//   const handleMonthChange = (direction: 'prev' | 'next') => {
-//     setSelectedDate((prevDate) =>
-//       direction === 'prev' ? addMonths(prevDate, -1) : addMonths(prevDate, 1)
-//     );
-//   };
+// Downloading Monthly Attendance of specific Employee
+const handleDownload = async (userId: string, fullName: string) => {
+  try {
+    const monthStart = startOfMonth(selectedDateM); // Start of the month
+    const monthEnd = endOfMonth(selectedDateM); // End of the month
+
+    // Fetch attendance records for the user in the current month
+    const { data: monthlyAttendance, error: attendanceError } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString())
+      .order('check_in', { ascending: true });
+
+    if (attendanceError) throw attendanceError;
+
+    // Fetch absentees for the user in the current month
+    const { data: absentees, error: absenteesError } = await supabase
+      .from('absentees')
+      .select('*')
+      .eq('user_id', userId)
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
+
+    if (absenteesError) throw absenteesError;
+
+    // Create an array of all days in the month
+    const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+
+    // Function to format date as [25 Jul 2025 9:00 AM]
+    const formatDate = (date: Date) => {
+      return new Intl.DateTimeFormat('en-US', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: 'numeric',
+        minute: '2-digit',
+        hour12: true,
+      }).format(date);
+    };
+
+    // Process each day in the month
+    const dailyAttendance = allDaysInMonth.map((date) => {
+      const dateStr = format(date, 'yyyy-MM-dd');
+
+      // Find attendance record for the day
+      const attendance = monthlyAttendance.find(
+        (a) => format(new Date(a.check_in), 'yyyy-MM-dd') === dateStr
+      );
+
+      // Find absentee record for the day
+      const absentee = absentees.find(
+        (a) => format(new Date(a.created_at), 'yyyy-MM-dd') === dateStr
+      );
+
+      let status = 'Null'; // Default status
+      let workmode = 'Null'; // Default work mode
+      let checkIn = null;
+      let checkOut = null;
+
+      // If attendance record exists, prioritize it over absentee record
+      if (attendance) {
+        status = 'Present'; // Set status to Present
+        workmode = attendance.work_mode; // Set work mode from attendance
+        checkIn = formatDate(new Date(attendance.check_in)); // Format check-in time
+        checkOut = formatDate(new Date(attendance.check_out || new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000))); // Default 4 hours if no check-out
+      }
+      // If no attendance record exists, check for absentee record
+      else if (absentee) {
+        if (absentee.absentee_Timing === 'Full Day' && absentee.absentee_type === 'Absent') {
+          status = 'Absent'; // Override status to Absent
+        } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'Absent') {
+          status = 'Half Day Absent'; // Override status to Half Day Absent
+        } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'leave') {
+          status = 'Half Day Leave'; // Override status to Half Day Leave
+        } else if (absentee.absentee_type === 'Sick Leave') {
+          status = 'Sick Leave'; // Override status to Sick Leave
+        }
+
+        // If the employee is absent, set workmode to null
+        if (status !== 'Present') {
+          workmode = 'null';
+        }
+      }
+
+      return {
+        date: dateStr,
+        status: status,
+        Check_in: checkIn,
+        Check_out: checkOut,
+        workmode: workmode,
+        fullname: fullName,
+      };
+    });
+
+    console.log(`Monthly Attendance for ${fullName}:`, dailyAttendance);
+
+    // Filter out undefined values
+    const filteredDailyAttendance = dailyAttendance.filter((entry) => entry);
+
+    // Generate and download PDF
+    downloadPDF(filteredDailyAttendance, fullName);
+
+  } catch (error) {
+    console.error('Error fetching monthly data:', error);
+    alert('Error fetching monthly data');
+  }
+};
+
+
+
+
+
+
+
+
+
+
+  // Calculate counts for each category
+  const totalEmployees = attendanceData.length;
+  const badCount = attendanceData.filter((entry) => entry.workingHoursPercentage < 50).length;
+  const betterCount = attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80).length;
+  const bestCount = attendanceData.filter((entry) => entry.workingHoursPercentage >= 80).length;
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 ">
-      {/* Heading */}
-
-      {/* Month Navigation */}
-      {/* <div className="flex items-center justify-center my-4">
-        <button
-          onClick={() => handleMonthChange('prev')}
-          className="p-2 hover:bg-gray-200 rounded-full transition-all"
-        >
-          <ChevronLeft className="w-5 h-5" />
-        </button>
-        <span className="mx-4 text-xl font-semibold">
-          {format(selectedDate, 'MMMM yyyy')}
-        </span>
-        <button
-          onClick={() => handleMonthChange('next')}
-          className="p-2 hover:bg-gray-200 rounded-full transition-all"
-        >
-          <ChevronRight className="w-5 h-5" />
-        </button>
-      </div> */}
-
-
-
-
+    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100">
       {/* Loading Animation */}
       {loading && (
         <div className="w-full max-w-5xl space-y-6">
           {[...Array(5)].map((_, index) => (
             <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
-
           ))}
+        </div>
+      )}
+
+      {/* Filter Div */}
+      {!loading && (
+        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
+          <div className="flex justify-between items-center text-lg font-medium">
+            <button
+              onClick={() => handleFilterChange('all')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'all' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
+              <h2 className="text-gray-600">
+                Total: <span className="font-bold">{totalEmployees}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('bad')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'bad' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-red-500 rounded-full"></span>
+              <h2 className="text-red-600">
+                Bad: <span className="font-bold">{badCount}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('better')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'better' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-yellow-500 rounded-full"></span>
+              <h2 className="text-yellow-600">
+                Fair: <span className="font-bold">{betterCount}</span>
+              </h2>
+            </button>
+            <button
+              onClick={() => handleFilterChange('best')}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'best' ? 'font-bold' : ''
+              }`}
+            >
+              <span className="w-4 h-4 bg-green-500 rounded-full"></span>
+              <h2 className="text-green-600">
+                Good: <span className="font-bold">{bestCount}</span>
+              </h2>
+            </button>
+          </div>
         </div>
       )}
 
@@ -218,10 +396,10 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
                 </tr>
               </thead>
               <tbody className="text-md font-normal">
-                {attendanceData.map((entry, index) => (
+                {filteredData.map((entry, index) => (
                   <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
                     <td className="py-4 px-6">
-                    <span
+                      <span
                         className={` ${
                           entry.workingHoursPercentage >= 80
                             ? ' text-green-500'
@@ -236,7 +414,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
                     <td className="py-4 px-6">{entry.presentDays}</td>
                     <td className="py-4 px-6">{entry.absentDays}</td>
                     <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
-                    <td className="py-4 px-6">
+                    <td className="py-4 pl-6 max-w-fit">
                       <span
                         className={`px-3 py-1 rounded-full text-sm font-semibold ${
                           entry.workingHoursPercentage >= 80
@@ -249,9 +427,12 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({selectedDateM}) => {
                         {entry.workingHoursPercentage.toFixed(2)}%
                       </span>
                     </td>
+                    <button className='w-full h-full' onClick={() => handleDownload(entry.user.id, entry.user.full_name) }> 
+                      <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 transition-all rounded-2xl
+                       text-gray-500'/></button>
                   </tr>
                 ))}
-                {attendanceData.length === 0 && (
+                {filteredData.length === 0 && (
                   <tr>
                     <td colSpan="5" className="text-center py-4 text-gray-500">
                       No attendance records found for this month.

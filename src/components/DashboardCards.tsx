@@ -11,20 +11,20 @@ const leaveData = [
 
 export default function DashboardCards() {
   return (
-    <div className="flex flex-wrap gap-6 md:gap-5 justify-center mb-10 mt-2">
+    <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-5 mb-6 mt-2">
       {leaveData.map((leave, index) => (
         <div
           key={index}
-          className="bg-white p-4 rounded-lg shadow-md w-32 sm:w-36 md:w-40 text-center"
+          className="bg-white p-3 sm:p-4 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-200"
         >
           <h2
-            className="text-base sm:text-sm font-semibold text-left leading-5"
+            className="text-sm sm:text-base font-semibold text-left leading-5 mb-2 sm:mb-3"
             style={{ color: leave.color }}
           >
             {leave.type}
           </h2>
-          <div className="flex items-center justify-center">
-            <div className="w-14 sm:w-16 mx-auto my-2">
+          <div className="flex items-center justify-between gap-3">
+            <div className="w-12 sm:w-14 md:w-16">
               <CircularProgressbar
                 counterClockwise
                 value={(leave.used / leave.total) * 100}
@@ -33,17 +33,17 @@ export default function DashboardCards() {
                   textColor: leave.color,
                   pathColor: leave.color,
                   trailColor: "#e5e7eb",
+                  textSize: "24px",
                 })}
               />
             </div>
-            <div className="font-medium text-[#344054] text-[8px] sm:text-[9px] leading-5">
-              <p>Available: {leave.total - leave.used}</p>
+            <div className="font-medium text-[#344054] text-[8px] sm:text-[10px]">
+              <p className="mb-1">Available: {leave.total - leave.used}</p>
               <p>Used: {leave.used}</p>
             </div>
           </div>
         </div>
       ))}
     </div>
-
   );
 }

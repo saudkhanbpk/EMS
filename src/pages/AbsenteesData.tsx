@@ -1,12 +1,14 @@
 import React, { useState, useEffect } from "react";
 import { supabase } from '../lib/supabase';
+import { startOfMonth, endOfMonth } from "date-fns";
 
-const AbsenteeComponent = () => {
+const AbsenteeComponent = ({selectedDate}) => {
   const [absenteeData, setAbsenteeData] = useState<any[]>([]);
   const [loading , setloading] = useState(false);
 
-  const now = new Date();
-  const todayDate = now.toISOString().split('T')[0];
+  const today =  selectedDate;
+  const monthStart = startOfMonth(today);
+  const monthEnd = endOfMonth(today);
 
 
 
@@ -18,8 +20,13 @@ const AbsenteeComponent = () => {
         .from('absentees')
         .select('*')
         .eq('user_id', localStorage.getItem('user_id'))
+        .gte('created_at', monthStart.toISOString())
+        .lte('created_at', monthEnd.toISOString())
+
         // .gte('created_at', startOfDay)
         // .lt('created_at', endOfDay);
+        console.log("absenteeRecords" , absenteeRecords);
+        
 
       if (absenteeError) throw absenteeError;
       setloading(false)
@@ -29,16 +36,13 @@ const AbsenteeComponent = () => {
     } catch (error) {
       console.error("Error fetching absentee data:", error);
     }
+    setloading(false)
   };
 
   useEffect(() => {
     FetchAbsenteeData();
   }, []);
   
-
-
-
-
 
   return (
     <div>

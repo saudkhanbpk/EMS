@@ -5,7 +5,14 @@ import fetch from "node-fetch"; // Required for sending HTTP requests
 import cron from "node-cron";
 import nodemailer from "nodemailer"
 import sendgrid from "@sendgrid/mail";
-
+import PDFDocument from "pdfkit";
+import fs from "fs";
+import { createClient } from "@supabase/supabase-js";
+import puppeteer from "puppeteer";
+import bodyParser from "body-parser";
+import { fileURLToPath } from "url";
+import path from "path";
+import pdf from 'html-pdf'
 dotenv.config(); // Load environment variables
 
 const app = express();
@@ -13,30 +20,99 @@ const PORT = process.env.PORT || 4000; // Set a default port
 
 app.use(cors());
 app.use(express.json());
+app.use(bodyParser.json());
 
-// API Route to Send Slack Notification On Approval Or Rejection Of Leave Request.
+
+// // API Route to Send Slack Notification On Approval Or Rejection Of Leave Request.
+// app.post("/send-slack", async (req, res) => {
+//     const { message } = req.body;
+//     const SLACK_WEBHOOK_URL = process.env.VITE_SLACK_WEBHOOK_URL;
+
+//     if (!SLACK_WEBHOOK_URL) {
+//         return res.status(500).json({ error: "Slack Webhook URL is missing!" });
+//     }
+
+//     try {
+//         const response = await fetch(SLACK_WEBHOOK_URL, {
+//             method: "POST",
+//             headers: { "Content-Type": "application/json" },
+//             body: JSON.stringify({ text: message }),
+//         });
+
+//         if (!response.ok) throw new Error("Failed to send Slack notification");
+
+//         return res.status(200).json({ success: true, message: "Notification sent successfully!" });
+//     } catch (error) {
+//         return res.status(500).json({ error: error.message });
+//     }
+// });
+
+//Sending Slack Notification To specific User On Rejection Of Leave Request. 
+
 app.post("/send-slack", async (req, res) => {
-    const { message } = req.body;
-    const SLACK_WEBHOOK_URL = process.env.VITE_SLACK_WEBHOOK_URL;
+    const { USERID, message } = req.body;
+    const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
 
-    if (!SLACK_WEBHOOK_URL) {
-        return res.status(500).json({ error: "Slack Webhook URL is missing!" });
+    if (!SLACK_BOT_TOKEN) {
+        return res.status(500).json({ error: "Slack Bot Token is missing!" });
     }
 
     try {
-        const response = await fetch(SLACK_WEBHOOK_URL, {
+        const response = await fetch("https://slack.com/api/chat.postMessage", {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ text: message }),
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+                channel: USERID, // Use the Slack User ID
+                text: message,
+            }),
         });
 
-        if (!response.ok) throw new Error("Failed to send Slack notification");
+        const data = await response.json();
+
+        if (!data.ok) throw new Error(data.error);
 
         return res.status(200).json({ success: true, message: "Notification sent successfully!" });
     } catch (error) {
         return res.status(500).json({ error: error.message });
     }
 });
+
+
+//Sending Slack Notification On Request Reject
+app.post("/send-slackreject", async (req, res) => {
+    const { USERID, message } = req.body;
+    const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
+
+    if (!SLACK_BOT_TOKEN) {
+        return res.status(500).json({ error: "Slack Bot Token is missing!" });
+    }
+
+    try {
+        const response = await fetch("https://slack.com/api/chat.postMessage", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+                channel: USERID, // Use the Slack User ID
+                text: message,
+            }),
+        });
+
+        const data = await response.json();
+
+        if (!data.ok) throw new Error(data.error);
+
+        return res.status(200).json({ success: true, message: "Notification sent successfully!" });
+    } catch (error) {
+        return res.status(500).json({ error: error.message });
+    }
+});
+
 
 
 
@@ -267,6 +343,282 @@ const sendAdminResponsereject = async (req, res) => {
 };
 
 app.post("/send-rejectresponse", sendAdminResponsereject);
+
+
+
+
+
+
+//Path To Download Daily Attendance Data PDF
+app.post('/generate-pdfDaily', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Daily Attendance Report</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Check-in</th>
+                    <th>Check-out</th>
+                    <th>Work Mode</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.full_name}</td>
+                        <td>${item.check_in}</td>
+                        <td>${item.check_out}</td>
+                        <td>${item.work_mode}</td>
+                        <td>${item.status}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
+
+
+
+
+//Path To Download Weekly Attendance Data PDF
+app.post('/generate-pdfWeekly', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Weekly Attendance Report</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Attendance</th>
+                    <th>Absentees</th>
+                    <th>Working Hours</th>
+                    <th>Working Hours %</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.user.full_name}</td>
+                        <td>${item.presentDays}</td>
+                        <td>${item.absentDays}</td>
+                        <td>${item.totalHoursWorked.toFixed(2)}</td>
+                        <td>${item.workingHoursPercentage.toFixed(2)}%</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
+
+
+
+
+//Path To Download Weekly Attendance Data PDF
+app.post('/generate-pdfMonthly', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Monthly Attendance Report</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Employee Name</th>
+                    <th>Attendance</th>
+                    <th>Absentees</th>
+                    <th>Working Hours</th>
+                    <th>Working Hours %</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.user.full_name}</td>
+                        <td>${item.presentDays}</td>
+                        <td>${item.absentDays}</td>
+                        <td>${item.totalHoursWorked.toFixed(2)}</td>
+                        <td>${item.workingHoursPercentage.toFixed(2)}%</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
+
+
+
+
+//Path To Download Weekly Attendance Data PDF
+app.post('/generate-pdfWeeklyOfEmployee', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Weekly Attendance Report of ${req.body.data[0].fullname}</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Work Mode</th>
+
+                    
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td>${item.status}</td>
+                        <td>${item.Check_in}</td>
+                        <td>${item.Check_out}</td>
+                        <td>${item.workmode}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
+
+//Path To Download Monthly Attendance Data PDF
+app.post('/generate-pdfMonthlyOfEmployee', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Monthly Attendance Report of ${req.body.data[0].fullname} </h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Work Mode</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td>${item.status}</td>
+                        <td>${item.Check_in}</td>
+                        <td>${item.Check_out}</td>
+                        <td>${item.workmode}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
 
 
 // Start the Server

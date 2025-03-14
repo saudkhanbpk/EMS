@@ -2,14 +2,14 @@ import React, { useState } from "react";
 import LeaveRequest from "./leaveRequest";
 import LeaveHistory from "./LeaveHistory";
 import arrow from './../assets/Arrow.png'
-// Make sure this component exists
+// Updated leave policies as per TechCreator Leave Policy
 const leavePolicies = [
   {
-    title: "Annual Leaves",
+    title: "Total Leave Entitlement",
     description: (
       <>
-        Employees are entitled to <strong className="text-[#C26AFC]">22 paid</strong> annual leave days per year. <br />
-        Any leave beyond <strong className="text-[#C26AFC]">22 days</strong> will be <span className="text-red-500">unpaid</span>.
+        Employees are entitled to <strong className="text-[#C26AFC]">22 paid leave days</strong> per year, covering all types of leave, including WFH. <br />
+        Any leave beyond <strong className="text-[#C26AFC]">22 days</strong> will be <span className="text-red-500">unpaid</span> and require managerial approval.
       </>
     ),
   },
@@ -17,7 +17,7 @@ const leavePolicies = [
     title: "Sick Leave",
     description: (
       <>
-        Employees can take up to <strong className="text-[#C26AFC]">10 paid sick leave</strong> days per year. <br />
+        Sick leave is included within the <strong className="text-[#C26AFC]">22 total leave days</strong>. <br />
         A medical certificate is required if sick leave exceeds <strong className="text-red-500">2 consecutive days</strong>.
       </>
     ),
@@ -26,8 +26,8 @@ const leavePolicies = [
     title: "Casual Leave",
     description: (
       <>
-        Employees have <strong className="text-[#C26AFC]">6 casual leave</strong> days per year. <br />
-        Must be informed at least <strong className="text-red-500">1 day in advance</strong> (except emergencies).
+        Casual leave is included within the <strong className="text-[#C26AFC]">22 total leave days</strong>. <br />
+        Must be informed at least <strong className="text-red-500">1 day in advance</strong> except in emergencies.
       </>
     ),
   },
@@ -35,7 +35,7 @@ const leavePolicies = [
     title: "Public Holidays",
     description: (
       <>
-        Employees will observe all national and company-declared public holidays as <strong className="text-[#C26AFC]">paid leave</strong>.
+        Employees will observe all national and company-declared public holidays as <strong className="text-[#C26AFC]">paid leave</strong>, separate from the 22-day entitlement.
       </>
     ),
   },
@@ -43,7 +43,7 @@ const leavePolicies = [
     title: "Maternity & Paternity Leave",
     description: (
       <>
-        Male employees are entitled to <strong className="text-[#C26AFC]">5 days</strong> of paid paternity leave.
+        Male employees are entitled to <strong className="text-[#C26AFC]">5 days</strong> of paid paternity leave, separate from the 22-day entitlement.
       </>
     ),
   },
@@ -51,7 +51,7 @@ const leavePolicies = [
     title: "Unpaid Leave",
     description: (
       <>
-        Any additional leave beyond entitlement will be <span className="text-red-500">unpaid</span> and require managerial approval.
+        Any additional leave beyond the <strong className="text-[#C26AFC]">22 days</strong> will be <span className="text-red-500">unpaid</span> and require managerial approval.
       </>
     ),
   },

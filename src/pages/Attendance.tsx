@@ -1,10 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { format, parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
+import { parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import timeImage from './../assets/Time.png'
 import teaImage from './../assets/Tea.png'
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { toZonedTime, format } from 'date-fns-tz';
+import { error } from 'console';
 
 
 
@@ -98,13 +100,15 @@ const Attendance: React.FC = () => {
             .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
-            .is('check_out', null)
+            // .is('check_out', null)
             .order('check_in', { ascending: false })
             .limit(1)
             .single()
         );
 
         if (error) {
+          setisButtonLoading(false)
+
           if (error.code !== 'PGRST116') { // If no record exists, it's okay
             console.error('Error loading current attendance:', error);
           }
@@ -112,11 +116,12 @@ const Attendance: React.FC = () => {
         }
 
         if (data) {
+          setisButtonLoading(false)
+
           if (data.check_in) { setalreadycheckedin(true) }
 
           if (data.check_out === null) {
             // User has an active session (not checked out)
-            setisButtonLoading(false);
             setIsCheckedIn(true);
             setAttendanceId(data.id);
             setCheckIn(data.check_in)
@@ -185,8 +190,8 @@ const Attendance: React.FC = () => {
           .lte('check_in', endOfDay.toISOString())
           .is('check_out', null)
           .order('check_in', { ascending: false })
-          .limit(1)
-          .single()
+        // .limit(1)
+        // .single()
       );
 
       if (error) {
@@ -201,15 +206,14 @@ const Attendance: React.FC = () => {
         setIsDisabled(true);
       } else {
         setIsDisabled(false);
-
       }
+      // fetchAttendanceStatus();
+      // checkAbsenteeStatus();
+    } catch (error) {
+      console.log(error);
 
-    } catch (err) {
-      console.error('Unexpected error fetching attendance status:', err);
     }
-  };
-  // fetchAttendanceStatus();
-  // checkAbsenteeStatus();
+  }
 
 
   useEffect(() => {
@@ -347,83 +351,113 @@ const Attendance: React.FC = () => {
 
     })
 
-
+  //Handle Check in
   const handleCheckIn = async () => {
 
     if (!user) {
       setError('User not authenticated');
       return;
     }
+    const now = new Date();
 
-    try {
-      setLoading(true);
-      setError(null);
+    // Convert the current time to Pakistan Time (PKT)
+    const timeZone = 'Asia/Karachi'; // Pakistan Time Zone
+    const pktTime = toZonedTime(now, timeZone); // Convert to Pakistan Time
+    const formattedTime = format(pktTime, 'yyyy-MM-dd HH:mm:ss', { timeZone });
+    console.log('Current Pakistan Time:', formattedTime);
+
+    const hours = pktTime.getHours();
+    const minutes = pktTime.getMinutes();
+    const totalMinutes = hours * 60 + minutes;
+    const startOfWorkDay = 8 * 60 + 0; // 8:00 AM in minutes
+    const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
+    if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
+      return;
+    } else {
+
+      try {
+        setLoading(true);
+        setError(null);
 
 
-      const position = await getCurrentLocation();
-      const { latitude, longitude } = position.coords;
+        const position = await getCurrentLocation();
+        const { latitude, longitude } = position.coords;
 
-      setCurrentLocation({ lat: latitude, lng: longitude });
+        setCurrentLocation({ lat: latitude, lng: longitude });
 
-      const now = new Date();
-      const checkInTimeLimit = parse('09:30', 'HH:mm', now);
+        const now = new Date();
+        const checkInTimeLimit = parse('09:30', 'HH:mm', now);
 
-      let attendanceStatus = 'present';
-      if (isAfter(now, checkInTimeLimit)) {
-        attendanceStatus = 'late';
+        let attendanceStatus = 'present';
+        if (isAfter(now, checkInTimeLimit)) {
+          attendanceStatus = 'late';
+        }
+
+        const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
+        const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
+
+        // If outside office location, prompt for remote check-in confirmation
+        if (mode === 'remote') {
+          const confirmRemote = window.confirm(
+            "Your check-in will be counted as Remote because you are currently outside the office zone. If you don’t have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
+          );
+
+          if (!confirmRemote) {
+            console.log("Remote check-in aborted by user.");
+            return;
+          }
+        }
+
+        const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
+          supabase
+            .from('attendance_logs')
+            .insert([
+              {
+                user_id: localStorage.getItem('user_id'),
+                check_in: now.toISOString(),
+                work_mode: mode,
+                latitude,
+                longitude,
+                status: attendanceStatus
+              }
+            ])
+            .select()
+            .single()
+        );
+
+
+
+        // Putting Half Day For Employee Checkin if the Checkin is After 11 am
+        //  const checkInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
+        //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
+        //  if (checkInTime > cutoffTime) {
+        //    await withRetry(() =>
+        //             supabase.from('absentees')
+        //          .insert([{
+        //          user_id: localStorage.getItem('user_id'),
+        //          absentee_type: 'Absent',
+        //          absentee_Timing: 'Half Day',
+        //        }
+        //      ])
+        //    );
+        //  }
+
+
+        if (dbError) throw dbError;
+
+        setIsCheckedIn(true);
+        setCheckIn(now.toISOString());
+        setWorkMode(mode);
+        setAttendanceId(data.id);
+        await loadAttendanceRecords();
+      } catch (err) {
+        setError(handleSupabaseError(err));
+      } finally {
+        setLoading(false);
       }
+    };
+  }
 
-      const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
-      const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
-
-      const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
-        supabase
-          .from('attendance_logs')
-          .insert([
-            {
-              user_id: localStorage.getItem('user_id'),
-              check_in: now.toISOString(),
-              work_mode: mode,
-              latitude,
-              longitude,
-              status: attendanceStatus
-            }
-          ])
-          .select()
-          .single()
-      );
-
-
-
-      // Putting Half Day For Employee Checkin if the Checkin is After 11 am
-      //  const checkInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
-      //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
-      //  if (checkInTime > cutoffTime) {
-      //    await withRetry(() =>
-      //             supabase.from('absentees')
-      //          .insert([{
-      //          user_id: localStorage.getItem('user_id'),
-      //          absentee_type: 'Absent',
-      //          absentee_Timing: 'Half Day',
-      //        }
-      //      ])
-      //    );
-      //  }
-
-
-      if (dbError) throw dbError;
-
-      setIsCheckedIn(true);
-      setCheckIn(now.toISOString());
-      setWorkMode(mode);
-      setAttendanceId(data.id);
-      await loadAttendanceRecords();
-    } catch (err) {
-      setError(handleSupabaseError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleCheckOut = async () => {
     if (!user || !attendanceId) {
@@ -528,7 +562,7 @@ const Attendance: React.FC = () => {
         console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 
         // If attendance duration is sufficient, skip further actions
-        if (attendanceDuration >= 7) {
+        if (attendanceDuration >= 4) {
           console.log("Attendance is sufficient. No further action needed.");
           return;
         }
@@ -852,7 +886,7 @@ const Attendance: React.FC = () => {
           ) : (
             <button
               onClick={handleCheckIn}
-              disabled={loading || isDisabled || alreadycheckedin} // Button is disabled if loading or if the condition is met
+              disabled={loading || isDisabled || alreadycheckedin || isButtonLoading} // Button is disabled if loading or if the condition is met
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
               {loading ? 'Checking in...' : 'Check In'}
@@ -893,6 +927,6 @@ const Attendance: React.FC = () => {
       {renderAttendanceRecords()}
     </div>
   );
-};
+}
 
 export default Attendance;

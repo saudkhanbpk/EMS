@@ -97,71 +97,81 @@ const EmployeeLayout: React.FC = () => {
         setIsSidebarOpen={setIsSidebarOpen}
         handleSignOut={handleSignOut}
       />
-      <div className="flex h-screen">
-        {/* Sidebar Toggle Button (Only for Small Screens) */}
-        {isSmallScreen && (
-          <button
-            className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white shadow-md rounded-md"
-            onClick={() => setIsSidebarOpen((prev) => !prev)}
-          >
-            <Menu size={24} />
-          </button>
-        )}
+      {/* <div className="flex h-screen"> */}
+      <div >
+        <div className="min-h-screen bg-gray-100 overflow-hidden">
+          <div className='w-full overflow-hidden bg-[#a36fd4] py-2 flex items-center'>
+            <p className='text-lg font-[400] text-white animate-marquee whitespace-nowrap'>
+              📢 Alert! Office Timing Update ⏰ Please note that our official office hours are from 9:00 AM to 4:00 PM.
+              Break time is scheduled from 1:00 PM to 1:30 PM.
+            </p>
+          </div>
+          <div className="flex ">
 
-        {/* Overlay (Only for Small Screens when Sidebar is Open) */}
-        {isSmallScreen && isSidebarOpen && (
-          <div
-            className="fixed inset-0 bg-black bg-opacity-50 lg:hidden z-40"
-            onClick={() => setIsSidebarOpen(false)}
-          />
-        )}
+            {/* Sidebar Toggle Button (Only for Small Screens) */}
+            {isSmallScreen && (
+              <button
+                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white shadow-md rounded-md"
+                onClick={() => setIsSidebarOpen((prev) => !prev)}
+              >
+                <Menu size={24} />
+              </button>
+            )}
 
-        {/* Sidebar */}
-        <div className={`bg-white p-4 shadow-lg
+            {/* Overlay (Only for Small Screens when Sidebar is Open) */}
+            {isSmallScreen && isSidebarOpen && (
+              <div
+                className="fixed inset-0 bg-white bg-opacity-50 lg:hidden z-40"
+                onClick={() => setIsSidebarOpen(false)}
+              />
+            )}
+
+            {/* Sidebar */}
+            <div className={`bg-white p-4 shadow-lg
           ${isSmallScreen
-            ? isSidebarOpen
-              ? 'translate-x-0'
-              : '-translate-x-full'
-            : 'translate-x-0 w-64'
-          }`}></div>
-        <div
-          className={`bg-[#000000] w-64 p-4 z-40 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
+                ? isSidebarOpen
+                  ? 'translate-x-0'
+                  : '-translate-x-full'
+                : 'translate-x-0 w-64'
+              }`}></div>
+            <div
+              className={`bg-[#000000] w-64 p-4 z-40 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
           ${isSmallScreen
-              ? isSidebarOpen
-                ? 'translate-x-0'
-                : '-translate-x-full'
-              : 'translate-x-0'
-            }`}
-        >
-          <div className="flex flex-col h-full ">
-            <div className="flex items-center justify-center">
-              <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
-            </div>
+                  ? isSidebarOpen
+                    ? 'translate-x-0'
+                    : '-translate-x-full'
+                  : 'translate-x-0'
+                }`}
+            >
+              <div className="flex flex-col h-full ">
+                <div className="flex items-center justify-center">
+                  <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
+                </div>
 
-            <nav className="flex-1 px-4 py-16 space-y-1">
-              {navigation.map((item) => {
-                const Icon = item.icon;
-                return (
-                  <Link
-                    key={item.name}
-                    to={item.href}
-                    onClick={handleScrollToTop}
-                    className={`
+                <nav className="flex-1 px-4 py-16 space-y-1">
+                  {navigation.map((item) => {
+                    const Icon = item.icon;
+                    return (
+                      <Link
+                        key={item.name}
+                        to={item.href}
+                        onClick={handleScrollToTop}
+                        className={`
                       flex items-center px-4 py-4 text-sm rounded-lg
                       ${location.pathname === item.href
-                        ? 'bg-[#9A00FF] text-[white]'
-                        : 'text-[white] '
-                      }
+                            ? 'bg-[#9A00FF] text-[white]'
+                            : 'text-[white] '
+                          }
                     `}
-                  >
-                    <Icon className="w-5 h-5 mr-3" />
-                    {item.name}
-                  </Link>
-                );
-              })}
-            </nav>
+                      >
+                        <Icon className="w-5 h-5 mr-3" />
+                        {item.name}
+                      </Link>
+                    );
+                  })}
+                </nav>
 
-            {/* <div className="p-4 border-t">
+                {/* <div className="p-4 border-t">
               <div className="flex items-center mb-4">
                 <User className="w-5 h-5 mr-3 text-gray-500" />
                 <span className="text-sm text-gray-600">
@@ -176,18 +186,21 @@ const EmployeeLayout: React.FC = () => {
                 Sign Out
               </button>
             </div> */}
-          </div>
-        </div>
+              </div>
+            </div>
 
-        {/* Main Content */}
-        <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
+            {/* Main Content */}
+            <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
              `}>
-          <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "p-8"}`}>
-            <Outlet isSmallScreen={isSmallScreen} isSidebarOpen={isSidebarOpen} />
+              <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "p-8"}`}>
+                <Outlet isSmallScreen={isSmallScreen} isSidebarOpen={isSidebarOpen} />
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+    // </div>
   );
 };
 

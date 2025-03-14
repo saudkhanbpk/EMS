@@ -19,6 +19,7 @@ import TaskBoard from './components/TaskBoard';
 import ProfileCard from './components/Profile';
 
 
+import { AttendanceProvider } from './pages/AttendanceContext';
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
@@ -38,7 +39,14 @@ function App() {
     setTimeout(() => setLoading(false), 1000); // Simulate async loading
   }, []);
 
-  if (loading) return <div>Loading...</div>; // Prevents flickering on refresh
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <Router>
@@ -51,7 +59,9 @@ function App() {
           path="/admin"
           element={
             <PrivateRoute adminOnly>
-              <AdminPage />
+              <AttendanceProvider>
+                <AdminPage />
+              </AttendanceProvider>
             </PrivateRoute>
           }
         />

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import { useAuthStore } from '../lib/store';
 
 interface Task {
   id: string;
@@ -18,6 +19,7 @@ const COLUMN_IDS = {
 };
 
 function TaskBoard() {
+  const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<Task[]>([
     {
@@ -124,12 +126,18 @@ function TaskBoard() {
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-[#9A00FF]">To do</h2>
-                <button
-                  onClick={() => setIsAddingTask(true)}
-                  className="bg-[#9A00FF] text-white p-2 rounded-[9px] flex items-center text-[10px] font-bold"
-                >
-                  <Plus size={16} className="mr-1" /> New Task
-                </button>
+                {
+                  user?.user.role === "admin" && (
+                    <>
+                      <button
+                        onClick={() => setIsAddingTask(true)}
+                        className="bg-[#9A00FF] text-white p-2 rounded-[9px] flex items-center text-[10px] font-bold"
+                      >
+                        <Plus size={16} className="mr-1" /> New Task
+                      </button>
+                    </>
+                  )
+                }
               </div>
               {isAddingTask && (
                 <form onSubmit={handleAddTask} className="mb-4">
