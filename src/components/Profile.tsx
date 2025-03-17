@@ -1,18 +1,19 @@
 import { useState } from "react";
-import { Mail, MapPin, Edit, Save, X, Slack, Eye, EyeOff } from "lucide-react";
+import { Mail, Edit, Save, X, Slack, Eye, EyeOff, Calendar } from "lucide-react";
 import profileImage from './../assets/profile_breakdown.jpeg'
 import { useAuthStore } from "../lib/store";
 import { User } from "@supabase/supabase-js";
 import { supabase } from "../lib/supabase";
 
 interface ExtendedUser extends User {
-  location?: string;
   slack_id?: string;
+  personal_email?: string;
+  joining_date?: string;
 }
 
 const ProfileCard: React.FC = () => {
   const userFromStore = useAuthStore((state) => state.user);
-  const user = userFromStore?.user as ExtendedUser | null;
+  const user = userFromStore as ExtendedUser | null;
   const [isEditing, setIsEditing] = useState(false);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
@@ -23,9 +24,9 @@ const ProfileCard: React.FC = () => {
   const [success, setSuccess] = useState<string | null>(null);
 
   const [formData, setFormData] = useState({
-    email: user?.email || "",
-    location: user?.location || "",
-    slackId: user?.slack_id || "",
+    personalEmail: user?.user_metadata?.personal_email || "",
+    slackId: user?.user_metadata?.slack_id || "",
+    joiningDate: user?.user_metadata?.joining_date || "",
     currentPassword: "",
     newPassword: "",
     confirmPassword: ""
@@ -54,47 +55,62 @@ const ProfileCard: React.FC = () => {
     setSuccess(null);
 
     try {
-      if (formData.newPassword || formData.currentPassword || formData.confirmPassword) {
-        if (!formData.currentPassword || !formData.newPassword || !formData.confirmPassword) {
-          setError("Please fill in all password fields");
+      // Only validate password fields if the user is trying to change password
+      if (formData.newPassword || formData.confirmPassword) {
+        // Only require current password if new password is provided
+        if (!formData.currentPassword) {
+          setError("Current password is required to set a new password");
           return;
         }
+        
         if (formData.newPassword !== formData.confirmPassword) {
           setError("New passwords do not match");
           return;
         }
+        
         if (formData.newPassword.length < 6) {
           setError("New password must be at least 6 characters long");
           return;
         }
-      }
-
-      if (formData.email !== user?.email) {
-        const { error: emailError } = await supabase.auth.updateUser({
-          email: formData.email
-        });
-        if (emailError) throw emailError;
-      }
-
-      if (formData.newPassword) {
+        
+        // Update password
         const { error: passwordError } = await supabase.auth.updateUser({
           password: formData.newPassword
         });
+        
         if (passwordError) throw passwordError;
       }
 
-      const { error: profileError } = await supabase
-        .from('users')
-        .update({
-          slack_id: formData.slackId
-        })
-        .eq('id', user?.id);
+      // Update profile information - only fields that have values
+      const updateData: Record<string, any> = {};
+      
+      if (formData.personalEmail) updateData.personal_email = formData.personalEmail;
+      if (formData.slackId) updateData.slack_id = formData.slackId;
+      if (formData.joiningDate) updateData.joining_date = formData.joiningDate;
+      
+      // Only make the API call if there's data to update
+      if (Object.keys(updateData).length > 0) {
+        // Check if user ID exists
+        if (!user?.id) {
+          throw new Error("User ID not found");
+        }
 
-      if (profileError) throw profileError;
+        // Update the user profile in the 'users' table
+        const { error: updateError } = await supabase
+          .from('users')
+          .update(updateData)
+          .eq('id', user.id);
+        
+        if (updateError) {
+          console.error("Update error details:", updateError);
+          throw updateError;
+        }
+      }
 
       setSuccess("Profile updated successfully!");
       setIsEditing(false);
 
+      // Reset password fields
       setFormData(prev => ({
         ...prev,
         currentPassword: "",
@@ -102,6 +118,7 @@ const ProfileCard: React.FC = () => {
         confirmPassword: ""
       }));
     } catch (err: any) {
+      console.error("Profile update error:", err);
       setError(err.message || "Failed to update profile");
     }
   };
@@ -111,9 +128,9 @@ const ProfileCard: React.FC = () => {
     setError(null);
     setSuccess(null);
     setFormData({
-      email: user?.email || "",
-      location: user?.location || "",
-      slackId: user?.slack_id || "",
+      personalEmail: user?.user_metadata?.personal_email || "",
+      slackId: user?.user_metadata?.slack_id || "",
+      joiningDate: user?.user_metadata?.joining_date || "",
       currentPassword: "",
       newPassword: "",
       confirmPassword: ""
@@ -124,6 +141,21 @@ const ProfileCard: React.FC = () => {
     if (!email) return "Techcreator";
     const atIndex = email.indexOf('@');
     return atIndex > 0 ? email.slice(0, atIndex) : "Techcreator";
+  };
+
+  // Format date for display
+  const formatDate = (dateString: string | undefined) => {
+    if (!dateString) return "Not provided";
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    } catch (e) {
+      return dateString;
+    }
   };
 
   return (
@@ -175,18 +207,34 @@ const ProfileCard: React.FC = () => {
 
           {!isEditing ? (
             // View Mode
-            <div className="flex flex-col md:flex-row justify-between items-start md:items-end mt-8 text-gray-700 text-sm gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-8 text-gray-700 text-sm">
               <div className="flex items-center space-x-2">
                 <Mail className="text-[#9A00FF]" size={20} />
-                <span>{user?.email || "example@techcreator.co"}</span>
+                <div>
+                  <p className="font-medium">Login Email</p>
+                  <p>{user?.email || "example@techcreator.co"}</p>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
-                <MapPin className="text-[#9A00FF]" size={20} />
-                <span>{user?.location || "Not provided"}</span>
+                <Mail className="text-[#9A00FF]" size={20} />
+                <div>
+                  <p className="font-medium">Personal Email</p>
+                  <p>{user?.user_metadata?.personal_email || "Not provided"}</p>
+                </div>
               </div>
               <div className="flex items-center space-x-2">
                 <Slack className="text-[#9A00FF]" size={20} />
-                <span>{user?.slack_id || "Not provided"}</span>
+                <div>
+                  <p className="font-medium">Slack ID</p>
+                  <p>{user?.user_metadata?.slack_id || "Not provided"}</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-2">
+                <Calendar className="text-[#9A00FF]" size={20} />
+                <div>
+                  <p className="font-medium">Joining Date</p>
+                  <p>{formatDate(user?.user_metadata?.joining_date)}</p>
+                </div>
               </div>
             </div>
           ) : (
@@ -204,10 +252,10 @@ const ProfileCard: React.FC = () => {
               )}
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                {/* Email */}
+                {/* Login Email (Read-only) */}
                 <div>
-                  <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-1">
-                    Email Address
+                  <label htmlFor="loginEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                    Login Email (Read-only)
                   </label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -215,12 +263,32 @@ const ProfileCard: React.FC = () => {
                     </div>
                     <input
                       type="email"
-                      id="email"
-                      name="email"
-                      value={formData.email}
+                      id="loginEmail"
+                      value={user?.email || ""}
+                      readOnly
+                      disabled
+                      className="pl-10 block w-full rounded-md border border-gray-300 bg-gray-100 py-2 px-3 shadow-sm text-gray-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Personal Email */}
+                <div>
+                  <label htmlFor="personalEmail" className="block text-sm font-medium text-gray-700 mb-1">
+                    Personal Email
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Mail size={16} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="email"
+                      id="personalEmail"
+                      name="personalEmail"
+                      value={formData.personalEmail}
                       onChange={handleChange}
                       className="pl-10 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-[#9A00FF] focus:outline-none focus:ring-1 focus:ring-[#9A00FF]"
-                      placeholder="your.email@example.com"
+                      placeholder="your.personal@example.com"
                     />
                   </div>
                 </div>
@@ -242,6 +310,26 @@ const ProfileCard: React.FC = () => {
                       onChange={handleChange}
                       className="pl-10 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-[#9A00FF] focus:outline-none focus:ring-1 focus:ring-[#9A00FF]"
                       placeholder="Your Slack ID"
+                    />
+                  </div>
+                </div>
+
+                {/* Joining Date */}
+                <div>
+                  <label htmlFor="joiningDate" className="block text-sm font-medium text-gray-700 mb-1">
+                    Joining Date
+                  </label>
+                  <div className="relative">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <Calendar size={16} className="text-gray-400" />
+                    </div>
+                    <input
+                      type="date"
+                      id="joiningDate"
+                      name="joiningDate"
+                      value={formData.joiningDate}
+                      onChange={handleChange}
+                      className="pl-10 block w-full rounded-md border border-gray-300 py-2 px-3 shadow-sm focus:border-[#9A00FF] focus:outline-none focus:ring-1 focus:ring-[#9A00FF]"
                     />
                   </div>
                 </div>

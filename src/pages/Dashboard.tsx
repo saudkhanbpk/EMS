@@ -151,7 +151,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         const { data: profileData, error: profileError } = await withRetry(() =>
           supabase
             .from('users')
-            .select('full_name, department')
+            .select('full_name, department, personal_email, slack_id,joining_date ')
             .eq('id', user.id)
             .single()
         );
