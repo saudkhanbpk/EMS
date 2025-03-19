@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { useAuthStore } from './lib/store';
@@ -17,7 +16,7 @@ import ExtraHours from './pages/ExtraHours2';
 import SalaryBreakdown from './components/SalaryBreakdown';
 import TaskBoard from './components/TaskBoard';
 import ProfileCard from './components/Profile';
-
+import WidgetDemo from './components/WidgetDemo';
 
 import { AttendanceProvider } from './pages/AttendanceContext';
 
@@ -53,6 +52,9 @@ function App() {
       <Routes>
         {/* Public Route: Login */}
         <Route path="/login" element={<Login />} />
+
+        {/* Widget Demo Route */}
+        <Route path="/widget-demo" element={<WidgetDemo />} />
 
         {/* Admin Route (Protected) */}
         <Route

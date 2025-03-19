@@ -29,6 +29,7 @@ import {
 import AbsenteeComponent from './AbsenteesData';
 import { id } from 'date-fns/locale/id';
 import { error } from 'console';
+import TimeTrackerAdminWidget from '../components/TimeTrackerAdminWidget';
 
 interface AttendanceRecord {
   id: string;
@@ -1402,6 +1403,8 @@ const AdminPage: React.FC = () => {
 
 
     </div>
+    {/* Add TimeTrackerAdminWidget */}
+    <TimeTrackerAdminWidget />
     </>
   );
 };

@@ -16,6 +16,7 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { toDate } from 'date-fns';
 import Header from './Header';
+import TimeTrackerWidget from './TimeTrackerWidget';
 
 const EmployeeLayout: React.FC = () => {
   const location = useLocation();
@@ -82,7 +83,8 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     {
       name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote
-    }
+    },
+    // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
 
   const handleScrollToTop = () => {
@@ -193,12 +195,14 @@ const EmployeeLayout: React.FC = () => {
             <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
              `}>
               <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "p-8"}`}>
-                <Outlet isSmallScreen={isSmallScreen} isSidebarOpen={isSidebarOpen} />
+                <Outlet />
               </div>
             </div>
           </div>
         </div>
       </div>
+      {/* Add TimeTrackerWidget */}
+      {/* <TimeTrackerWidget /> */}
     </div>
     // </div>
   );
