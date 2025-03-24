@@ -5,9 +5,11 @@
   "description": "EMS",
   "version": "0.0.0",
   "type": "module",
+  "main": "electron/electron.cjs",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "electron:dev": "electron .",
     "lint": "eslint .",
     "preview": "vite preview"
   },
@@ -50,7 +52,10 @@
     "@types/react": "^18.3.5",
     "@types/react-dom": "^18.3.0",
     "@vitejs/plugin-react": "^4.3.1",
+    "7zip-bin": "^5.2.0",
     "autoprefixer": "^10.4.18",
+    "electron": "^35.0.2",
+    "electron-builder": "^25.1.8",
     "eslint": "^9.9.1",
     "eslint-plugin-react-hooks": "^5.1.0-rc.0",
     "eslint-plugin-react-refresh": "^0.4.11",
@@ -60,5 +65,29 @@
     "typescript": "^5.5.3",
     "typescript-eslint": "^8.3.0",
     "vite": "^5.4.14"
+  },
+  "build": {
+    "appId": "electron-react-vite",
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    },
+    "files": [
+      "dist/**/**",
+      "electron/electron.cjs",
+      "node_modules/**/**",
+      "package.json"
+    ],
+    "nsis": {
+      "uninstallDisplayName": "Uninstall this app",
+      "license": "license.txt",
+      "oneClick": "false",
+      "allowToChangeInstallationDirectory": "true"
+    },
+    "directories": {
+      "output": "releases",
+      "buildResources": "dist"
+    }
   }
 }

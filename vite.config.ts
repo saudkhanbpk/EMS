@@ -16,6 +16,10 @@ import react from '@vitejs/plugin-react';
 // https://vitejs.dev/config/
 export default defineConfig({
   plugins: [react()],
+  base: './',
+  server: {
+    port: 5173
+  },
   optimizeDeps: {
     // Exclude lucide-react from pre-bundling (only if necessary)
     exclude: ['lucide-react'],
