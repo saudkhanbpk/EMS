@@ -3,10 +3,6 @@ import { supabase } from '../lib/supabase';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isWeekend } from 'date-fns';
 import {  DownloadIcon } from 'lucide-react'; // Assuming you're using Lucide icons
 import { AttendanceContext } from './AttendanceContext';
-import { getToken , getMessaging } from "firebase/messaging";
-import { initializeApp } from "firebase/app";
-//@ts-ignore
-// import firebaseConfig from "../firebaseConfig"
 
 interface User {
   id: string;
@@ -38,66 +34,16 @@ interface DailyAttendance {
 
 const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
 //   const [FilteredData, setFilteredData] = useState<EmployeeStats[]>([]);
-  const [AttendanceDataFiltered, setAttendanceDataFiltered] = useState<EmployeeStats[]>([]);
+  const [attendanceDataFiltered, setattendanceDataFiltered] = useState<EmployeeStats[]>([]);
   const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState('all');
   const [status , setStatus] = useState('');
   const [workmode , setworkmode] = useState('');
-  const { setattendanceDataFiltered } = useContext(AttendanceContext);
-
-  const firebaseConfig = {
-    apiKey: "AIzaSyAAUF5qzZrljXJjb96NmesXBydmn9Hmjss",
-    authDomain: "emsm-1d63e.firebaseapp.com",
-    projectId: "emsm-1d63e",
-    storageBucket: "emsm-1d63e.appspot.com",
-    messagingSenderId: "98198623661",
-    appId: "1:98198623661:web:6e75496c45508cf37d7d24",
-    measurementId: "G-T7352X97BH",
-  };
+  const { AttendanceDataFiltered } = useContext(AttendanceContext);
   
       // setattendanceDataFiltered
-
-
-      // function requestPermission() {
-      //   const app = initializeApp(firebaseConfig);
-      //   const messaging = getMessaging(app); // ✅ Initialize messaging her
-      //   Notification.requestPermission().then((permission) => {
-      //     if (permission === "granted") {
-      //       console.log("Notification permission granted.");
-      //       // Get the FCM token
-      //       getToken(messaging, { vapidKey: "BL3HfaZnS0yXgz9MfkaJ4puWaxE7Yl1qtL7Yko4vxbDBAHsGRhZPLU-55SJrw4HTgLNnIi0_VVfaQF4UnoGCzLI"})
-      //       .then((currentToken) => {
-      //         if (currentToken) {
-      //           console.log("FCM Token:", currentToken);
-      //           saveTokenToServer(currentToken);
-      //           // Send this token to your server for sending notifications
-      //         } else {
-      //           console.log("No token available.");
-      //         }
-      //       });
-      //     } else {
-      //       console.log("Notification permission denied.");
-      //     }
-      //   });
-      // }
-      
-      // requestPermission();
-
-      // function saveTokenToServer(token) {
-      //   fetch("https://yourserver.com/save-token", {
-      //     method: "POST",
-      //     headers: { "Content-Type": "application/json" },
-      //     body: JSON.stringify({ fcmToken: token }),
-      //   })
-      //     .then(response => response.json())
-      //     .then(data => console.log("Token saved successfully:", data))
-      //     .catch(error => console.error("Error saving token:", error));
-      // }
-      
-
-
 
   const fetchAllEmployeesStats = async () => {
     setLoading(true);
@@ -294,10 +240,9 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
           workingHoursPercentage,
         };
       }));
-      setAttendanceDataFiltered(stats);
-      setFilteredData(stats);
       setattendanceDataFiltered(stats);
-      
+      setFilteredData(stats);
+      AttendanceDataFiltered(stats);
  
     } catch (error) {
     //   console.error('Error fetching employee data:', error);
@@ -317,19 +262,19 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
     setCurrentFilter(filter);
     switch (filter) {
       case 'all':
-        setFilteredData(AttendanceDataFiltered);
+        setFilteredData(attendanceDataFiltered);
         break;
       case 'poor':
-        setFilteredData(AttendanceDataFiltered.filter((entry) => entry.workingHoursPercentage < 70));
+        setFilteredData(attendanceDataFiltered.filter((entry) => entry.workingHoursPercentage < 70));
         break;
       case 'good':
-        setFilteredData(AttendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80));
+        setFilteredData(attendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80));
         break;
       case 'excellent':
-        setFilteredData(AttendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 80));
+        setFilteredData(attendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 80));
         break;
       default:
-        setFilteredData(AttendanceDataFiltered);
+        setFilteredData(attendanceDataFiltered);
     }
   };
 
@@ -437,8 +382,8 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
       downloadPDF(filteredDailyAttendance, fullName);
   
     } catch (error) {
-      console.error("Error fetching Filtered data:", error);
-      alert("Error fetching Filtered data");
+      console.error("Error fetching weekly data:", error);
+      alert("Error fetching weekly data");
     }
   };
   

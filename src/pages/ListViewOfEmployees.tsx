@@ -3,12 +3,11 @@ import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import { useAuthStore } from '../lib/store';
 import EmployeeWeeklyAttendanceTable from "./ListViewWeekly";
-import { ChevronLeft, ChevronRight , Radio, SearchIcon } from "lucide-react"; // Assuming you're using Lucide icons
-import { parse, isAfter, addMonths, addWeeks } from "date-fns"; // Import the format function
+import { ChevronLeft, ChevronRight , SearchIcon } from "lucide-react"; // Assuming you're using Lucide icons
+import { format, parse, isAfter, addMonths, addWeeks } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
 import "./style.css"
-import FilteredDataAdmin from "./filteredListAdmin";
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer,   BarChart,  Bar, XAxis, YAxis } from 'recharts';
 import { Trash2 } from 'lucide-react';
 import { forwardRef, useImperativeHandle } from "react";
@@ -16,12 +15,13 @@ import "./style.css";
 import { useNavigate } from 'react-router-dom';
 import AbsenteeComponentAdmin from "./AbsenteeDataAdmin";
 import {
-  format,
   startOfMonth,
   endOfMonth,
   isWeekend,
   eachDayOfInterval
 } from 'date-fns';
+import { AttendanceProvider } from "./AttendanceContext";
+import FilteredDataAdmin from "./filteredListAdmin";
 
 interface AttendanceRecord {
   id: string;
@@ -1109,6 +1109,65 @@ const handleCloseModal = () => {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({ data: attendanceDataFiltered }),
+      });
+  
+      if (!response.ok) {
+        throw new Error('Failed to generate PDF');
+      }
+  
+      const blob = await response.blob();
+  
+      if (blob.type !== "application/pdf") {
+        throw new Error("Received incorrect file format");
+      }
+  
+      const url = window.URL.createObjectURL(blob);
+      const currentDate = new Date().toISOString().split('T')[0];
+      const fileName = `attendance_${currentDate}.pdf`;
+  
+      // Create and trigger download
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+  
+      // Open PDF manually
+      window.open(url, '_blank');
+    } catch (error) {
+      console.error('Error downloading PDF:', error);
+    }
+  };
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+  const downloadPDFFiltered = async () => {   
+    // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
+    //   console.error("No data available to generate PDF");
+    //   return;
+    // } 
+    try {
+      const response = await fetch('http://localhost:4000/generate-Filtered', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ data: AttendanceDataFiltered }),
       });
   
       if (!response.ok) {

@@ -7,11 +7,11 @@ export const AttendanceContext = createContext();
 export const AttendanceProvider = ({ children }) => {
   const [attendanceDataWeekly, setAttendanceDataWeekly] = useState([]);
   const [attendanceDataMonthly, setAttendanceDataMonthly] = useState([]);
-  const [attendanceDataFiltered, setattendanceDataFiltered] = useState([]);
+  const [AttendanceDataFiltered, setattendanceDataFiltered] = useState([]);
 
   return (
     <AttendanceContext.Provider value={{ attendanceDataWeekly, setAttendanceDataWeekly , 
-    attendanceDataMonthly , setAttendanceDataMonthly , attendanceDataFiltered , setattendanceDataFiltered} }>
+    attendanceDataMonthly , setAttendanceDataMonthly , AttendanceDataFiltered , setattendanceDataFiltered} }>
       {children}
     </AttendanceContext.Provider>
   );
