@@ -1097,48 +1097,48 @@ const handleCloseModal = () => {
 
 
 
-  const downloadPDFFiltered = async () => {   
-    // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
-    //   console.error("No data available to generate PDF");
-    //   return;
-    // } 
-    try {
-      const response = await fetch('http://localhost:4000/generate-Filtered', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: attendanceDataFiltered }),
-      });
+  // const downloadPDFFiltered = async () => {   
+  //   // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
+  //   //   console.error("No data available to generate PDF");
+  //   //   return;
+  //   // } 
+  //   try {
+  //     const response = await fetch('http://localhost:4000/generate-Filtered', {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //       body: JSON.stringify({ data: attendanceDataFiltered }),
+  //     });
   
-      if (!response.ok) {
-        throw new Error('Failed to generate PDF');
-      }
+  //     if (!response.ok) {
+  //       throw new Error('Failed to generate PDF');
+  //     }
   
-      const blob = await response.blob();
+  //     const blob = await response.blob();
   
-      if (blob.type !== "application/pdf") {
-        throw new Error("Received incorrect file format");
-      }
+  //     if (blob.type !== "application/pdf") {
+  //       throw new Error("Received incorrect file format");
+  //     }
   
-      const url = window.URL.createObjectURL(blob);
-      const currentDate = new Date().toISOString().split('T')[0];
-      const fileName = `attendance_${currentDate}.pdf`;
+  //     const url = window.URL.createObjectURL(blob);
+  //     const currentDate = new Date().toISOString().split('T')[0];
+  //     const fileName = `attendance_${currentDate}.pdf`;
   
-      // Create and trigger download
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = fileName;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
+  //     // Create and trigger download
+  //     const a = document.createElement('a');
+  //     a.href = url;
+  //     a.download = fileName;
+  //     document.body.appendChild(a);
+  //     a.click();
+  //     a.remove();
   
-      // Open PDF manually
-      window.open(url, '_blank');
-    } catch (error) {
-      console.error('Error downloading PDF:', error);
-    }
-  };
+  //     // Open PDF manually
+  //     window.open(url, '_blank');
+  //   } catch (error) {
+  //     console.error('Error downloading PDF:', error);
+  //   }
+  // };
 
 
 
