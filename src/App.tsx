@@ -17,35 +17,85 @@ import SalaryBreakdown from './components/SalaryBreakdown';
 import TaskBoard from './components/TaskBoard';
 import ProfileCard from './components/Profile';
 import WidgetDemo from './components/WidgetDemo';
-
+import { getMessaging, onMessage } from "firebase/messaging";
+import { initializeApp } from "firebase/app";
+import { messaging } from "../notifications/firebase";
 import { AttendanceProvider } from './pages/AttendanceContext';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyAAUF5qzZrljXJjb96NmesXBydmn9Hmjss",
+  authDomain: "emsm-1d63e.firebaseapp.com",
+  projectId: "emsm-1d63e",
+  storageBucket: "emsm-1d63e.appspot.com",
+  messagingSenderId: "98198623661",
+  appId: "1:98198623661:web:6e75496c45508cf37d7d24",
+  measurementId: "G-T7352X97BH"
+};
+
+// const app = initializeApp(firebaseConfig);
+// const messaging = getMessaging(app);
 
 const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
-
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
 
-
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession);
-  // const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    restoreSession();
-    setTimeout(() => setLoading(false), 1000); // Simulate async loading
+    // ✅ Register Firebase Service Worker
+    if ("serviceWorker" in navigator) {
+      navigator.serviceWorker.register("/firebase-messaging-sw.js")
+        .then((registration) => {
+          console.log("Service Worker registered successfully:", registration);
+        })
+        .catch((error) => {
+          console.error("Service Worker registration failed:", error);
+        });
+    }
+
+    // ✅ Enable Foreground Notifications
+    onMessage(messaging, (payload) => {
+      console.log("🔥 Foreground message received:", payload);
+      alert(`🔔 New Notification: ${payload.notification.title}`);
+    });
+
   }, []);
 
+  //   return (
+  //       <Router>
+  //           <Routes>
+  //               <Route path="/login" element={<Login />} />
+  //               <Route path="/admin" element={
+  //                   <PrivateRoute adminOnly>
+  //                       <AttendanceProvider>
+  //                           <AdminPage />
+  //                       </AttendanceProvider>
+  //                   </PrivateRoute>
+  //               } />
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  //               <Route path="/" element={
+  //                   <PrivateRoute>
+  //                       <EmployeeLayout />
+  //                   </PrivateRoute>
+  //               }>
+  //                   <Route index element={<Dashboard />} />
+  //                   <Route path="attendance" element={<Attendance />} />
+  //                   <Route path="leave" element={<Leave />} />
+  //                   <Route path="tasks" element={<Tasks />} />
+  //                   <Route path="software-complaint" element={<SoftwareComplaintSection />} />
+  //                   <Route path="office-complaint" element={<OfficeComplaintSection />} />
+  //                   <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
+  //                   <Route path="overtime" element={<ExtraHours />} />
+  //               </Route>
+
+  //               <Route path="*" element={<Navigate to="/login" replace />} />
+  //           </Routes>
+  //       </Router>
+  //   );
+  // }
 
   return (
     <Router>

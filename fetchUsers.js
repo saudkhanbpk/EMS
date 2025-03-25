@@ -220,6 +220,28 @@ const fetchUsers = async () => {
           autocheckout: "yes" // Mark as auto-checkout
         });
 
+        const sendNotification = async () => {
+          try {
+              const response = await fetch("http://localhost:4000/send-singlenotifications", {
+                  method: "POST",
+                  headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify(
+                    { title : "Auto Check Out" ,
+                       body : "You are Checked Out Automatically for today on [4:30 PM] PKT",
+                      fcmtoken: fcmtoken }
+                      ) // Send title & body in request
+              });
+      
+              const result = await response.json();
+              console.log("Notification Response:", result);
+          } catch (error) {
+              console.error("Error sending notification:", error);
+          }
+      };
+      
+      // Example Call:
+      sendNotification();
+
         console.log(`User ${user.id} checkout time will be updated to 4:30 PM PKT.`);
         continue;
       }

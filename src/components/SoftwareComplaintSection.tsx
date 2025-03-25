@@ -40,6 +40,24 @@ const SoftwareComplaintSection: React.FC = () => {
     e.preventDefault();
     setErrorMsg(null);
 
+    const sendNotification = async () => {
+      try {
+          const response = await fetch("http://localhost:4000/send-notifications", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ title : "Testing" , body : "This is the Test notification" }) // Send title & body in request
+          });
+  
+          const result = await response.json();
+          console.log("Notification Response:", result);
+      } catch (error) {
+          console.error("Error sending notification:", error);
+      }
+  };
+  
+  // Example Call:
+  sendNotification();
+  
     // Insert the complaint into the "software_complaints" table.
     const { error } = await supabase
       .from('software_complaints')
@@ -61,6 +79,26 @@ const SoftwareComplaintSection: React.FC = () => {
 
   // Delete a complaint.
   const handleDelete = async (id: number | string) => {
+    const sendNotification = async () => {
+      try {
+          const response = await fetch("http://localhost:4000/send-notifications", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                  title: "TEST", // Send title
+                  body: "This is a TEST Notification" // Send body
+              })
+          });
+  
+          const result = await response.json();
+          console.log("Notification Response:", result);
+      } catch (error) {
+          console.error("Error sending notification:", error);
+      }
+  };
+  
+  // Example Call:
+  sendNotification();
     const { error } = await supabase
       .from('software_complaints')
       .delete()

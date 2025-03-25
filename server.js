@@ -1,4 +1,5 @@
 import express from "express";
+import admin from "firebase-admin";
 import dotenv from "dotenv";
 import cors from "cors";
 import fetch from "node-fetch"; // Required for sending HTTP requests
@@ -10,9 +11,17 @@ import fs from "fs";
 import { createClient } from "@supabase/supabase-js";
 import puppeteer from "puppeteer";
 import bodyParser from "body-parser";
-import { fileURLToPath } from "url";
 import path from "path";
 import pdf from 'html-pdf'
+import { fileURLToPath } from "url";
+// Convert ES module URL to file path
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+// Read Firebase credentials
+const serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-admin-sdk.json"), "utf8"));
+
+
+
 dotenv.config(); // Load environment variables
 
 const app = express();
@@ -23,6 +32,103 @@ app.use(express.json());
 app.use(bodyParser.json());
 
 
+
+// Initialize Firebase Admin SDK
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount),
+});
+const supabase = createClient(process.env.VITE_SUPABASE_URL , process.env.VITE_SUPABASE_ANON_KEY);
+
+// // Send notification To All Users With Fcm Token , On An Action performing API
+// app.post("/send-notifications", async (req, res) => {
+//     try {
+//         const { title, body } = req.body;
+//         if (!title || !body) return res.status(400).json({ message: "Title and body are required." });
+
+//         const { data: users, error } = await supabase.from("users").select("fcm_token , full_name");
+//         if (error) return res.status(500).json({ error });
+
+//         const tokens = users.map(user => user.fcm_token).filter(token => token);
+//         const user1 = users.map(user => user.full_name).filter(token => token);
+
+//         if (tokens.length === 0) return res.status(400).json({ message: "No valid FCM tokens found." });
+
+//         const message = {
+//             notification: { title, body },
+//             tokens
+//         };
+
+//         // const response = await admin.messaging().sendMulticast(message);
+//         const response = await admin.messaging().sendEachForMulticast(message);
+
+//         res.json({ success: true, response });
+//     } catch (error) {
+//         res.status(500).json({ error: error.message });
+//     }
+// });
+
+
+app.post("/send-notifications", async (req, res) => {
+    try {
+        const { title, body } = req.body;
+        if (!title || !body) return res.status(400).json({ message: "Title and Body are required." });
+
+        // Fetch users from Supabase
+        const { data: users, error } = await supabase.from("users").select("fcm_token, full_name");
+        if (error) return res.status(500).json({ error });
+
+        // Filter users with valid FCM tokens
+        const validUsers = users.filter(user => user.fcm_token);
+        if (validUsers.length === 0) return res.status(400).json({ message: "No valid FCM tokens found." });
+
+        // Send notifications individually to each user
+        const responses = await Promise.all(
+            validUsers.map(user => {
+                const message = {
+                    token: user.fcm_token, // Sending to a single user at a time
+                    notification: {
+                        title: `${user.full_name}: ${title}`, // Adding user's name to title
+                        body: body
+                    }
+                };
+                return admin.messaging().send(message);
+            })
+        );
+
+        res.json({ success: true, responses });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
+
+
+app.post("/send-singlenotifications", async (req, res) => {
+    try {
+        const { title, body, fcmtoken } = req.body;
+        if (!title || !body || !fcmtoken) {
+            return res.status(400).json({ message: "Title, body, and FCM token are required." });
+        }
+
+        const message = {
+            notification: { title, body },
+            token: fcmtoken  // Use 'token' instead of including it inside 'notification'
+        };
+
+        const response = await admin.messaging().send(message);
+
+        res.json({ success: true, response });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
+
+
+  
 //Sending slack notoiifcation on request approval
 app.post("/send-slack", async (req, res) => {
     const { USERID, message } = req.body;
@@ -543,6 +649,62 @@ app.post('/generate-pdfMonthly', (req, res) => {
 });
 
 
+
+
+
+//Path To Download Weekly Attendance Data PDF
+app.post('/generate-pdfFilteredOfEmployee', (req, res) => {
+    const htmlContent = `
+    <html>
+    <head>
+        <style>
+            table { width: 100%; border-collapse: collapse; }
+            th, td { border: 1px solid black; padding: 8px; text-align: left; }
+            th { background-color: #f2f2f2; }
+        </style>
+    </head>
+    <body>
+        <h1>Filtered Attendance Report of ${req.body.data[0].fullname}</h1>
+        <table>
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Status</th>
+                    <th>Check In</th>
+                    <th>Check Out</th>
+                    <th>Work Mode</th>
+
+                    
+                </tr>
+            </thead>
+            <tbody>
+                ${req.body.data.map(item => `
+                    <tr>
+                        <td>${item.date}</td>
+                        <td>${item.status}</td>
+                        <td>${item.Check_in}</td>
+                        <td>${item.Check_out}</td>
+                        <td>${item.workmode}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+    </body>
+    </html>
+    `;
+
+    const fileName = `attendance_${new Date().toISOString().split('T')[0]}.pdf`;
+
+    pdf.create(htmlContent).toFile(fileName, (err, result) => {
+        if (err) {
+            console.error("Error generating PDF:", err);
+            return res.status(500).send("Error generating PDF");
+        }
+        res.download(result.filename, fileName, () => {
+            fs.unlinkSync(result.filename); // Delete file after sending
+        });
+    });
+});
 
 
 //Path To Download Weekly Attendance Data PDF

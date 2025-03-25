@@ -389,7 +389,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
   
   const downloadPDF = async (filteredDailyAttendance, fullName) => {    
     try {
-      const response = await fetch('http://localhost:4000/generate-Filtered', {
+      const response = await fetch('http://localhost:4000/generate-pdfFilteredOfEmployee', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -444,10 +444,10 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
 
 
 
-  const totalEmployees = attendanceDataFiltered.length;
-  const badCount = attendanceDataFiltered.filter((entry) => entry.workingHoursPercentage < 50).length;
-  const betterCount = attendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80).length;
-  const bestCount = attendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 80).length;
+  const totalEmployees = AttendanceDataFiltered.length;
+  const badCount = AttendanceDataFiltered.filter((entry) => entry.workingHoursPercentage < 50).length;
+  const betterCount = AttendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80).length;
+  const bestCount = AttendanceDataFiltered.filter((entry) => entry.workingHoursPercentage >= 80).length;
 
   return (
     <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 p-0">
@@ -528,7 +528,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
                 </tr>
               </thead>
               <tbody className="text-md font-normal">
-                {attendanceDataFiltered.map((entry, index) => {
+                {filteredData.map((entry, index) => {
                   const percentageColor =
                     entry.workingHoursPercentage < 70
                       ? 'bg-red-500 text-white'
@@ -565,7 +565,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
                     </tr>
                   );
                 })}
-                {attendanceDataFiltered.length === 0 && (
+                {AttendanceDataFiltered.length === 0 && (
                   <tr>
                     <td colSpan="6" className="text-center py-4 text-gray-500">
                       No attendance records found for this Filter

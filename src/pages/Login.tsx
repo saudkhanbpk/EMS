@@ -5,6 +5,9 @@ import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { Clock, User } from 'lucide-react';
 import { toDate } from 'date-fns';
+import { onMessage } from "firebase/messaging";
+import { useEffect } from 'react';
+import { messaging , GenerateToken } from "../../notifications/firebase";
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -40,25 +43,30 @@ const Login: React.FC = () => {
           throw signInError;
         }
       } else if (authData.user) {
-        
         // Set session expiry time to 4 hours
         localStorage.setItem('sessionExpiresAt', Date.now() + 4 * 60 * 60 * 1000);
-
+      
         // Set user and role
         const isAdmin = email.endsWith('@admin.com');
         setUser(authData.user);
+      
         // Navigate based on user role
         navigate(isAdmin ? '/admin' : '/');
-  
+      
         // Save session details in localStorage
         const session = authData.session;
         localStorage.setItem('supabaseSession', JSON.stringify(session));
         localStorage.setItem('user_id', authData.user.id);
         localStorage.setItem('user_email', authData.user.email);
         
-        console.log('Session:', session);
+        // **Request notification permission AFTER login**
+        GenerateToken();
+      
+        // **Listen for messages AFTER permission is granted**
+        onMessage(messaging, (payload) => {
+          console.log('Message received: ', payload);
+        });
         
-
         // Set session expiry time to 4 hours
         
       }

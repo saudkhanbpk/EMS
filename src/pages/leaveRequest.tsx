@@ -20,10 +20,12 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
   const [email, setEmail] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const navigate = useNavigate();  // Fix: Add parentheses to properly call useNavigate
+  const [isloading, setIsLoading] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
+    setIsLoading(true);
     e.preventDefault();
     const sendEmail = async () => {
 
@@ -205,9 +207,9 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
               Submit Request
             </button>
           </div>
-        </form>
-      </div>
-    </div>
+        </form >
+      </div >
+    </div >
   );
 };
 
