@@ -19,10 +19,12 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
   const [fullname, setFullname] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
   const navigate = useNavigate();  // Fix: Add parentheses to properly call useNavigate
+  const [isloading, setIsLoading] = useState(false);
 
   const today = new Date().toISOString().split('T')[0];
   // Handle form submission
   const handleSubmit = async (e: React.FormEvent) => {
+    setIsLoading(true);
     e.preventDefault();
     const sendEmail = async () => {
       
@@ -43,8 +45,9 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
                   reason: description,
               }),  
           });
-  
+        
           const data = await response.json();
+          setIsLoading(false);
           if (response.ok) {
               alert("Email sent successfully!");
           } else {
@@ -181,6 +184,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
         {/* Submit Button */}
         <div className="flex justify-end gap-6 mt-6 mr-4">
           <button
+          disabled={isloading}
             type="submit"
             className="bg-gray-800 text-white px-6 py-2 rounded-lg shadow hover:bg-gray-900 transition"
           >

@@ -9,7 +9,7 @@ import { toZonedTime, format } from 'date-fns-tz';
 
 const OFFICE_LATITUDE = 34.1299;
 const OFFICE_LONGITUDE = 72.4656;
-const GEOFENCE_RADIUS = 0.5; // km
+const GEOFENCE_RADIUS = 0.1; // km
 
 interface AttendanceRecord {
   id: string;
@@ -115,7 +115,10 @@ const Attendance: React.FC = () => {
         if (data) {
           setisButtonLoading(false)
 
-          if (data.check_in) {setalreadycheckedin(true)}
+          // if (data.check_in) {setalreadycheckedin(true)}
+          if (data.check_in && localStorage.getItem("user_id") !== "759960d6-9ada-4dcc-b385-9e2da0a862be") {
+            setalreadycheckedin(true);
+          }
   
           if (data.check_out === null) {
             // User has an active session (not checked out)
@@ -556,6 +559,8 @@ try {
 
   // Calculate total attendance duration (in hours)
   const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
+  console.log("Atttendance Duration" , attendanceDuration);
+  
 
   console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 

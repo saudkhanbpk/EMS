@@ -5,10 +5,10 @@ import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
 import AbsenteeComponent from './AbsenteesData';
-import { ChevronLeft , ChevronRight } from 'lucide-react';
+import { ChevronLeft ,SearchIcon, ChevronRight } from 'lucide-react';
 import WeeklyDataUser from './WeeklyDataUser';
 import MonthlyDataUser from './MonthlyDataUser';
-
+import FilterDataUser from './FilterDataUser';
 
 
 interface AttendanceRecord {
@@ -60,6 +60,9 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
   const navigate = useNavigate();
   const [selectedDate , setSelectedDate] = useState(new(Date));
   const [selectedtab , setSelectedtab] = useState("Dailydata");
+  const [startdate, setStartdate] = useState();
+  const [enddate , setEnddate] = useState();
+  const [search , setsearch] = useState(false);
 
  console.log("selected Date" , selectedDate);
  
@@ -261,8 +264,8 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       }
     };
     loadTodayData();
-    const interval = setInterval(loadTodayData, 60000);
-    return () => clearInterval(interval);
+    // const interval = setInterval(loadTodayData, 60000);
+    // return () => clearInterval(interval);
   }, [selectedDate , userID]);
 
   const calculateDuration = (start: string, end: string | null) => {
@@ -328,6 +331,11 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
        );
      }; 
 
+     const handleDateFilter = () => {
+      setSelectedtab("Filter");
+      setsearch((prev) => !prev)
+     }
+
 
   if (error) {
     return (
@@ -351,13 +359,14 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
           )}
         </div>
         <div>
+        <div className="flex items-left justify-end">
           <div className='flex gap-3 mt-3 mb-2'>
             <button onClick={()=> setSelectedtab("Dailydata")}
             // className='px-3 py-1 rounded-2xl hover:bg-gray-300'
             className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
               selectedtab === "Dailydata"
                 ? "bg-[#8c4fc5] text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100"
+                : "bg-white text-gray-700 hover:bg-[#c799f3]"
             }`}  >
               Daily</button>
 
@@ -367,7 +376,7 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
               selectedtab === "Weeklydata"
                 ? "bg-[#8c4fc5] text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100"
+                : "bg-white text-gray-700 hover:bg-[#c799f3]"
             }`}  >
               Weekly</button>
               <button onClick={()=> setSelectedtab("Monthlydata")}
@@ -375,11 +384,20 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
             className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
               selectedtab === "Monthlydata"
                 ? "bg-[#8c4fc5] text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100"
+                : "bg-white text-gray-700 hover:bg-[#c799f3]"
             }`}  >
               Monthly</button>
+              <button onClick={()=> setSelectedtab("Filter")}
+            // className='px-3 py-1 rounded-2xl hover:bg-gray-300'
+            className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${
+              selectedtab === "Filter"
+                ? "bg-[#8c4fc5] text-white"
+                : "bg-white text-gray-700 hover:bg-[#c799f3]"
+            }`}  >
+              Filter</button>
           </div>
-          <div className="flex flex-row gap-5">
+          </div>
+          <div className="flex flex-row gap-5 justify-center items-center">
                   {/* Date Navigation */}
                   {selectedtab === "Dailydata" && (
                     <div className="flex items-center space-x-4">
@@ -438,6 +456,34 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
                       </button>
                     </div>
                   )}
+                  {selectedtab === "Filter" && (
+                     <div className="flex items-center justify-center space-x-4">
+                     {/* Date Range Inputs */}
+                     <input
+                       type="date"
+                       value={startdate} // State variable for the start date
+                       onChange={(e) => setStartdate(e.target.value)} // Update start date
+                       className="px-2 py-1 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     />
+                     <span className="mx-2 text-xl font-semibold">to</span>
+                     <input
+                       type="date"
+                       value={enddate} // State variable for the end date
+                       onChange={(e) => setEnddate(e.target.value)} // Update end date
+                       className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                     />
+                 
+                     {/* Search Button */}
+                     <button
+                       onClick={() => {
+                         handleDateFilter()
+                       }}
+                       className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
+                     >
+                       <SearchIcon className="w-5 h-5" />
+                     </button>
+                   </div>
+                  )}
                   </div>
 
 
@@ -449,6 +495,10 @@ const Dashboard: React.FC = ({isSmallScreen , isSidebarOpen}) => {
       )}
       {selectedtab === "Monthlydata" && (
         <MonthlyDataUser selectedtab={selectedtab} selectedDate={selectedDate} />
+      )}
+  
+      {selectedtab === "Filter" && (
+        <FilterDataUser  startdate={startdate} enddate={enddate} search={search}  selectedtab={selectedtab}/>
       )}
   
       {selectedtab === "Dailydata" && (

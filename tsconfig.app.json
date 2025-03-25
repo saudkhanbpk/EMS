@@ -20,5 +20,5 @@
     "noUnusedParameters": true,
     "noFallthroughCasesInSwitch": true
   },
-  "include": ["src", "fetchUsers.js"]
+  "include": ["src", "fetchUsers.js", "api/public/firebase-messaging-sw.js"]
 }
