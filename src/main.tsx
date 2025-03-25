@@ -8,10 +8,10 @@ import { getMessaging, getToken, onMessage } from "firebase/messaging";
 
 
 createRoot(document.getElementById('root')!).render(
-  
-    <AuthProvider>
-      <App />
-    </AuthProvider>
+
+  <AuthProvider>
+    <App />
+  </AuthProvider>
 
 );
 if ("serviceWorker" in navigator) {
@@ -54,15 +54,15 @@ if ("serviceWorker" in navigator) {
 onMessage(messaging, (payload) => {
   console.log("Foreground message received", payload);
   new Notification(payload.notification.title, {
-      body: payload.notification.body,
-      icon: "/firebase-logo.png",
+    body: payload.notification.body,
+    icon: "/firebase-logo.png",
   });
 });
 
 // Register service worker
 if ("serviceWorker" in navigator) {
   navigator.serviceWorker.register("/firebase-messaging-sw.js").then((registration) => {
-      console.log("Service Worker registered:", registration);
+    console.log("Service Worker registered:", registration);
   });
 }
 

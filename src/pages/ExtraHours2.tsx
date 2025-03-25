@@ -4,8 +4,6 @@ import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 
-
-
 const OFFICE_LATITUDE = 34.1299;
 const OFFICE_LONGITUDE = 72.4656;
 const GEOFENCE_RADIUS = 0.5; // km
@@ -31,17 +29,17 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
 
 const ExtraHours: React.FC = () => {
   const user = useAuthStore((state) => state.user);
-  const initializeUser = useAuthStore((state) => state.initializeUser); 
+  const initializeUser = useAuthStore((state) => state.initializeUser);
   // console.log("User  id 1:" , user.user.id);
   // console.log("User id 2 :" , user.id);
 
@@ -49,11 +47,11 @@ const ExtraHours: React.FC = () => {
     initializeUser();
   }, [initializeUser]);
 
-  const { 
-    isRemoteCheckedIn, 
-    RemotecheckInTime, 
-    isOnRemoteBreak, 
-    RemotebreakStartTime, 
+  const {
+    isRemoteCheckedIn,
+    RemotecheckInTime,
+    isOnRemoteBreak,
+    RemotebreakStartTime,
     RemoteworkMode,
     setRemoteCheckIn,
     setRemoteBreakTime,
@@ -64,162 +62,162 @@ const ExtraHours: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [, setCurrenRemotetLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [, setCurrenRemotetLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [RemoteattendanceId, setRemoteAttendanceId] = useState<string | null>(null);
   const [Remoteview, setRemoteView] = useState<ViewType>('daily');
   const [selectedRemoteDate, setSelectedRemoteDate] = useState(new Date());
   const [RemoteattendanceRecords, setRemoteAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [RemotebreakRecords, setRemoteBreakRecords] = useState<Record<string, BreakRecord[]>>({});
   const [isRemoteDisabled, setIsRemoteDisabled] = useState(false);
-  const [isDisabled , setIsDisabled] = useState(false);
+  const [isDisabled, setIsDisabled] = useState(false);
 
 
 
-useEffect(() => {
-  const fetchAttendanceStatus = async () => {
-    setIsDisabled(true)
-    if (!user) return;
+  useEffect(() => {
+    const fetchAttendanceStatus = async () => {
+      setIsDisabled(true)
+      if (!user) return;
 
-    try {
-      const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-
-      // Checking whether the user has already checked in today
-      const { data, error } = await withRetry(() =>
-        supabase
-          .from('attendance_logs')
-          .select('id, check_in, check_out')
-          .eq('user_id', localStorage.getItem('user_id'))
-          .gte('check_in', startOfDay.toISOString())
-          .lte('check_in', endOfDay.toISOString())
-          .is('check_out', null)
-          .order('check_in', { ascending: false })
-      );
-
-      if (error) {
-        if (error.code !== 'PGRST116') { // Ignore "no record found" errors
-          console.error('Error loading current attendance:', error);
-        }
-        return;
-      }
-
-      // If user has checked in today but not checked out, disable remote check-in
-      // if (data && data.check_in && data.check_out===null) {
-      //   setIsRemoteDisabled(true);
-      // } else {
-      //   setIsRemoteDisabled(false);
-      //   // loadCurrentAttendance();
-      // }
-      if (data.length > 0){
-        setIsRemoteDisabled(true)
-      }else{
-        setIsRemoteDisabled(false)
-      }
-
-    } catch (err) {
-      console.error('Unexpected error fetching attendance status:', err);
-    }
-  };
-
-  fetchAttendanceStatus();
-  loadCurrentAttendance();
-
-}, []); 
-
-
-
-// Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
-  // useEffect(() => {
-    
-    const loadCurrentAttendance = async () => {
-      if (!user ) return;
-      // || !isRemoteCheckedIn
       try {
         const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-        
-
-
-        // Updated query to get the most recent unchecked-out attendance
-        const { data, error } = await withRetry(() => 
+        // Checking whether the user has already checked in today
+        const { data, error } = await withRetry(() =>
           supabase
-            .from('extrahours')
+            .from('attendance_logs')
             .select('id, check_in, check_out')
             .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
             .is('check_out', null)
             .order('check_in', { ascending: false })
-            // .limit(1)
-            // .single()
         );
 
         if (error) {
-          if (error.code !== 'PGRST116') { // If no record exists, it's okay
+          if (error.code !== 'PGRST116') { // Ignore "no record found" errors
             console.error('Error loading current attendance:', error);
           }
           return;
         }
 
-  
-        if (data) {
-  
-          if (data.length > 0) {
-            // User has an active session (not checked out)
-            setIsRemoteCheckedIn(true);
-            setRemoteAttendanceId(data.id);
-            setRemoteCheckIn(data.check_in)
-          } else {
-            // User has checked out
-            setIsDisabled(false)
-            setIsRemoteCheckedIn(false);
-          }
+        // If user has checked in today but not checked out, disable remote check-in
+        // if (data && data.check_in && data.check_out===null) {
+        //   setIsRemoteDisabled(true);
+        // } else {
+        //   setIsRemoteDisabled(false);
+        //   // loadCurrentAttendance();
+        // }
+        if (data.length > 0) {
+          setIsRemoteDisabled(true)
         } else {
-          // No record found means user is not checked in
-          setIsRemoteCheckedIn(false);
-          setIsDisabled(false)
-          console.log('No attendance record found');
+          setIsRemoteDisabled(false)
         }
+
       } catch (err) {
-        console.error('Error in loadCurrentAttendance:', err);
-        setError(handleSupabaseError(err));
+        console.error('Unexpected error fetching attendance status:', err);
       }
     };
-  
+
+    fetchAttendanceStatus();
+    loadCurrentAttendance();
+
+  }, []);
+
+
+
+  // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
+  // useEffect(() => {
+
+  const loadCurrentAttendance = async () => {
+    if (!user) return;
+    // || !isRemoteCheckedIn
+    try {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+
+
+
+      // Updated query to get the most recent unchecked-out attendance
+      const { data, error } = await withRetry(() =>
+        supabase
+          .from('extrahours')
+          .select('id, check_in, check_out')
+          .eq('user_id', localStorage.getItem('user_id'))
+          .gte('check_in', startOfDay.toISOString())
+          .lte('check_in', endOfDay.toISOString())
+          .is('check_out', null)
+          .order('check_in', { ascending: false })
+        // .limit(1)
+        // .single()
+      );
+
+      if (error) {
+        if (error.code !== 'PGRST116') { // If no record exists, it's okay
+          console.error('Error loading current attendance:', error);
+        }
+        return;
+      }
+
+
+      if (data) {
+
+        if (data.length > 0) {
+          // User has an active session (not checked out)
+          setIsRemoteCheckedIn(true);
+          setRemoteAttendanceId(data.id);
+          setRemoteCheckIn(data.check_in)
+        } else {
+          // User has checked out
+          setIsDisabled(false)
+          setIsRemoteCheckedIn(false);
+        }
+      } else {
+        // No record found means user is not checked in
+        setIsRemoteCheckedIn(false);
+        setIsDisabled(false)
+        console.log('No attendance record found');
+      }
+    } catch (err) {
+      console.error('Error in loadCurrentAttendance:', err);
+      setError(handleSupabaseError(err));
+    }
+  };
+
   //   loadCurrentAttendance();
   // }, [user]);
 
 
 
-// // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
-//   const checkAbsenteeStatus = async () => {
-//     // Get today's date in YYYY-MM-DD format
-//     const today = new Date().toISOString().split("T")[0];      
+  // // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
+  //   const checkAbsenteeStatus = async () => {
+  //     // Get today's date in YYYY-MM-DD format
+  //     const today = new Date().toISOString().split("T")[0];
 
-//     const { data, error } = await supabase
-//       .from("absentees")
-//       .select("absentee_type, absentee_date")
-//       .eq("user_id", localStorage.getItem('user_id'))
-//       .eq("absentee_type", "leave")
-//       .eq("absentee_date", today);
+  //     const { data, error } = await supabase
+  //       .from("absentees")
+  //       .select("absentee_type, absentee_date")
+  //       .eq("user_id", localStorage.getItem('user_id'))
+  //       .eq("absentee_type", "leave")
+  //       .eq("absentee_date", today);
 
-//     if (error) {
-//       console.error("Error fetching absentee data:", error);
-//       return;
-//     }
-//     // console.log("Data from absentees" , data);
-    
+  //     if (error) {
+  //       console.error("Error fetching absentee data:", error);
+  //       return;
+  //     }
+  //     // console.log("Data from absentees" , data);
 
-//     // If there's at least one record, disable the button
-//     if (data.length > 0) {
-//       setIsRemoteDisabled(true);
-//     }
-//   };
 
-//   checkAbsenteeStatus();
+  //     // If there's at least one record, disable the button
+  //     if (data.length > 0) {
+  //       setIsRemoteDisabled(true);
+  //     }
+  //   };
+
+  //   checkAbsenteeStatus();
 
 
 
@@ -227,10 +225,10 @@ useEffect(() => {
 
   const loadRemoteAttendanceRecords = async () => {
     if (!user) return;
-  
+
     try {
       let startDate, endDate;
-  
+
       switch (Remoteview) {
         case 'daily':
           startDate = format(selectedRemoteDate, 'yyyy-MM-dd');
@@ -245,8 +243,8 @@ useEffect(() => {
           endDate = format(endOfMonth(selectedRemoteDate), 'yyyy-MM-dd');
           break;
       }
-  
-      const { data: records, error: recordsError } = await withRetry(() => 
+
+      const { data: records, error: recordsError } = await withRetry(() =>
         supabase
           .from('extrahours')
           .select('*')
@@ -255,16 +253,16 @@ useEffect(() => {
           .lt('check_in', `${endDate}T23:59:59Z`)  // Corrected here
           .order('check_in', { ascending: false })
       );
-    
-  
+
+
       if (recordsError) throw recordsError;
-  
+
       if (records && records.length > 0) {
         setRemoteAttendanceRecords(records);
-  
+
         // Use the most recent attendance record to determine break status
         const latestRecord = records[0];
-  
+
         // Load break records only for the latest attendance record
         const { data: breaks, error: breaksError }: { data: BreakRecord[], error: any } = await withRetry(() =>
           supabase
@@ -273,13 +271,13 @@ useEffect(() => {
             .eq('Remote_Id', latestRecord.id)
             .order('start_time', { ascending: true })
         );
-        
+
         if (breaksError) throw breaksError;
-        
+
         const breakData: Record<string, BreakRecord[]> = {};
         if (breaks) {
           breakData[latestRecord.id] = breaks;
-          
+
           // Check the last break for this attendance record
           const previousBreak = breaks[breaks.length - 1];
           if (previousBreak) {
@@ -302,7 +300,7 @@ useEffect(() => {
           setIsOnRemoteBreak(false);
           setRemoteBreakTime(null);
         }
-        
+
         setRemoteBreakRecords(breakData);
       } else {
         // No attendance records found for the period
@@ -316,11 +314,11 @@ useEffect(() => {
       setError(handleSupabaseError(err));
     }
   };
-  
+
   useEffect(() => {
     loadRemoteAttendanceRecords();
   }, [user, Remoteview, selectedRemoteDate]);
-  
+
 
 
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
@@ -335,18 +333,18 @@ useEffect(() => {
   };
 
   getCurrentLocation()
-  .then((position)=>{
-    // console.log(position.coords.latitude);
-    // console.log(position.coords.longitude);
-    
-  }).catch(()=>{
-    console.log("User Location Undefined");
-    
-  })
+    .then((position) => {
+      // console.log(position.coords.latitude);
+      // console.log(position.coords.longitude);
+
+    }).catch(() => {
+      console.log("User Location Undefined");
+
+    })
 
 
   const handleCheckIn = async () => {
-    
+
     if (!user) {
       setError('User not authenticated');
       return;
@@ -355,16 +353,16 @@ useEffect(() => {
     try {
       setLoading(true);
       setError(null);
-      
+
 
       const position = await getCurrentLocation();
       const { latitude, longitude } = position.coords;
-    
+
       setCurrenRemotetLocation({ lat: latitude, lng: longitude });
-      
+
       const now = new Date();
       const checkInTimeLimit = parse('09:30', 'HH:mm', now);
- 
+
       let attendanceStatus = 'present';
       if (isAfter(now, checkInTimeLimit)) {
         attendanceStatus = 'late';
@@ -389,10 +387,10 @@ useEffect(() => {
           .select()
           .single()
       );
-      
 
 
-    // Putting Half Day For Employee Checkin if the Checkin is After 11 am
+
+      // Putting Half Day For Employee Checkin if the Checkin is After 11 am
       //  const RemotecheckInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
       //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
       //  if (RemotecheckInTime > cutoffTime) {
@@ -406,7 +404,7 @@ useEffect(() => {
       //      ])
       //    );
       //  }
-      
+
 
       if (dbError) throw dbError;
 
@@ -415,7 +413,7 @@ useEffect(() => {
       setRemoteWorkMode(mode);
       setRemoteAttendanceId(data.id);
       await loadRemoteAttendanceRecords();
-    } catch (err) {      
+    } catch (err) {
       setError(handleSupabaseError(err));
     } finally {
       setLoading(false);
@@ -439,7 +437,7 @@ useEffect(() => {
         const { error: breakError }: { error: any } = await withRetry(() =>
           supabase
             .from('Remote_Breaks')
-            .update({ 
+            .update({
               end_time: now.toISOString(),
               status: 'on_time'
             })
@@ -457,7 +455,7 @@ useEffect(() => {
       const { error: dbError }: { error: any } = await withRetry(() =>
         supabase
           .from('extrahours')
-          .update({ 
+          .update({
             check_out: now.toISOString()
           })
           .eq('id', RemoteattendanceId)
@@ -493,7 +491,7 @@ useEffect(() => {
 
       const now = new Date();
       const breakEndLimit = parse('14:10', 'HH:mm', now);
-      
+
       if (!isOnRemoteBreak) {
         // Starting break
         const { error: dbError } = await withRetry(() =>
@@ -522,7 +520,7 @@ useEffect(() => {
         const { error: dbError } = await withRetry(() =>
           supabase
             .from('Remote_Breaks')
-            .update({ 
+            .update({
               end_time: now.toISOString(),
               status: breakStatus
             })
@@ -543,7 +541,7 @@ useEffect(() => {
     }
   };
 
-  
+
 
 
   const renderRemoteAttendanceRecords = () => {
@@ -558,25 +556,22 @@ useEffect(() => {
             <div className="flex items-center space-x-4">
               <button
                 onClick={() => setRemoteView('daily')}
-                className={`px-3 py-1 rounded-lg ${
-                  Remoteview === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded-lg ${Remoteview === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 Daily
               </button>
               <button
                 onClick={() => setRemoteView('weekly')}
-                className={`px-3 py-1 rounded-lg ${
-                  Remoteview === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded-lg ${Remoteview === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setRemoteView('monthly')}
-                className={`px-3 py-1 rounded-lg ${
-                  Remoteview === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded-lg ${Remoteview === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 Monthly
               </button>
@@ -653,11 +648,10 @@ useEffect(() => {
                       </span>
                     </td> */}
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        record.work_mode === 'on_site'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.work_mode === 'on_site'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
+                        }`}>
                         {record.work_mode}
                       </span>
                     </td>
@@ -695,7 +689,7 @@ useEffect(() => {
   return (
     <div className="max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Over Time</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 mb-5 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
@@ -704,9 +698,8 @@ useEffect(() => {
               <h2 className="text-xl font-semibold">Over-Time Status</h2>
             </div>
             {RemoteworkMode && (
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                RemoteworkMode === 'on_site' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm ${RemoteworkMode === 'on_site' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                }`}>
                 {RemoteworkMode === 'on_site' ? 'On-site' : 'Remote'}
               </span>
             )}
@@ -760,15 +753,14 @@ useEffect(() => {
                   Break started at: {format(new Date(RemotebreakStartTime), 'hh:mm a')}
                 </p>
               )}
-              
+
               <button
                 onClick={handleBreak}
                 disabled={loading}
-                className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isOnRemoteBreak
-                    ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                } disabled:opacity-50`}
+                className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnRemoteBreak
+                  ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
+                  : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
+                  } disabled:opacity-50`}
               >
                 {loading ? 'Updating...' : isOnRemoteBreak ? 'End Break' : 'Start Break'}
               </button>
@@ -776,7 +768,7 @@ useEffect(() => {
           )}
         </div>
       </div>
-        
+
       {renderRemoteAttendanceRecords()}
     </div>
   );

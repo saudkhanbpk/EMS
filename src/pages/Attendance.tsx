@@ -1,9 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import {parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
+import { parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
+import timeImage from './../assets/Time.png'
+import teaImage from './../assets/Tea.png'
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { toZonedTime, format } from 'date-fns-tz';
+import { error } from 'console';
 
 
 
@@ -32,28 +35,28 @@ const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: numbe
   const R = 6371; // Earth's radius in km
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
-  const a = 
-    Math.sin(dLat/2) * Math.sin(dLat/2) +
-    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
-    Math.sin(dLon/2) * Math.sin(dLon/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+    Math.sin(dLon / 2) * Math.sin(dLon / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
 
 const Attendance: React.FC = () => {
   const user = useAuthStore((state) => state.user);
-  const initializeUser = useAuthStore((state) => state.initializeUser); 
+  const initializeUser = useAuthStore((state) => state.initializeUser);
 
 
   useEffect(() => {
     initializeUser();
   }, [initializeUser]);
 
-  const { 
-    isCheckedIn, 
-    checkInTime, 
-    isOnBreak, 
-    breakStartTime, 
+  const {
+    isCheckedIn,
+    checkInTime,
+    isOnBreak,
+    breakStartTime,
     workMode,
     setCheckIn,
     setBreakTime,
@@ -64,23 +67,23 @@ const Attendance: React.FC = () => {
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [, setCurrentLocation] = useState<{lat: number, lng: number} | null>(null);
+  const [, setCurrentLocation] = useState<{ lat: number, lng: number } | null>(null);
   const [attendanceId, setAttendanceId] = useState<string | null>(null);
   const [view, setView] = useState<ViewType>('daily');
   const [selectedDate, setSelectedDate] = useState(new Date());
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>([]);
   const [breakRecords, setBreakRecords] = useState<Record<string, BreakRecord[]>>({});
   const [isDisabled, setIsDisabled] = useState(false);
-  const [isButtonLoading , setisButtonLoading] = useState(false);
-  const [alreadycheckedin , setalreadycheckedin] = useState(false)
+  const [isButtonLoading, setisButtonLoading] = useState(false);
+  const [alreadycheckedin, setalreadycheckedin] = useState(false)
 
-  
 
-// Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
+
+  // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
   useEffect(() => {
-    
+
     const loadCurrentAttendance = async () => {
-      if (!user ) return;
+      if (!user) return;
       // || !isCheckedIn
       try {
         setisButtonLoading(true)
@@ -90,7 +93,7 @@ const Attendance: React.FC = () => {
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
         // Updated query to get the most recent unchecked-out attendance
-        const { data, error } = await withRetry(() => 
+        const { data, error } = await withRetry(() =>
           supabase
             .from('attendance_logs')
             .select('id, check_in, check_out')
@@ -102,7 +105,7 @@ const Attendance: React.FC = () => {
             .limit(1)
             .single()
         );
-           
+
         if (error) {
           setisButtonLoading(false)
 
@@ -111,15 +114,14 @@ const Attendance: React.FC = () => {
           }
           return;
         }
-  
+
         if (data) {
           setisButtonLoading(false)
 
-          // if (data.check_in) {setalreadycheckedin(true)}
+          // if (data.check_in) { setalreadycheckedin(true) }
           if (data.check_in && localStorage.getItem("user_id") !== "759960d6-9ada-4dcc-b385-9e2da0a862be") {
             setalreadycheckedin(true);
           }
-  
           if (data.check_out === null) {
             // User has an active session (not checked out)
             setIsCheckedIn(true);
@@ -139,16 +141,16 @@ const Attendance: React.FC = () => {
         setError(handleSupabaseError(err));
       }
     };
-  
+
     loadCurrentAttendance();
   }, []);
 
 
 
-// Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
+  // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
   const checkAbsenteeStatus = async () => {
     // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split("T")[0];      
+    const today = new Date().toISOString().split("T")[0];
 
     const { data, error } = await supabase
       .from("absentees")
@@ -162,7 +164,7 @@ const Attendance: React.FC = () => {
       return;
     }
     // console.log("Data from absentees" , data);
-    
+
 
     // If there's at least one record, disable the button
     if (data.length > 0) {
@@ -172,60 +174,59 @@ const Attendance: React.FC = () => {
 
 
 
-   const fetchAttendanceStatus = async () => {
-      if (!user) return;
-  
-      try {
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
-  
-        // Checking whether the user has already checked in today
-        const { data, error } = await withRetry(() =>
-          supabase
-            .from('extrahours')
-            .select('id, check_in, check_out')
-            .eq('user_id', localStorage.getItem('user_id'))
-            .gte('check_in', startOfDay.toISOString())
-            .lte('check_in', endOfDay.toISOString())
-            .is('check_out', null)
-            .order('check_in', { ascending: false })
-            // .limit(1)
-            // .single()
-        );
-  
-        if (error) {
-          if (error.code !== 'PGRST116') { // Ignore "no record found" errors
-            console.error('Error loading current attendance:', error);
-          }
-          return;
-        }
-  
-        // If user has checked in today but not checked out, disable remote check-in
-        if (data.check_in && data.check_out===null) {
-          setIsDisabled(true);
-        } else {
-          setIsDisabled(false);
+  const fetchAttendanceStatus = async () => {
+    if (!user) return;
 
+    try {
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+      // Checking whether the user has already checked in today
+      const { data, error } = await withRetry(() =>
+        supabase
+          .from('extrahours')
+          .select('id, check_in, check_out')
+          .eq('user_id', localStorage.getItem('user_id'))
+          .gte('check_in', startOfDay.toISOString())
+          .lte('check_in', endOfDay.toISOString())
+          .is('check_out', null)
+          .order('check_in', { ascending: false })
+        // .limit(1)
+        // .single()
+      );
+
+      if (error) {
+        if (error.code !== 'PGRST116') { // Ignore "no record found" errors
+          console.error('Error loading current attendance:', error);
         }
-  
-      } catch (err) {
-        console.error('Unexpected error fetching attendance status:', err);
+        return;
       }
+
+      // If user has checked in today but not checked out, disable remote check-in
+      if (data.check_in && data.check_out === null) {
+        setIsDisabled(true);
+      } else {
+        setIsDisabled(false);
+      }
+      // fetchAttendanceStatus();
+      // checkAbsenteeStatus();
+    } catch (error) {
+      console.log(error);
+
+    }
+  }
+
+
+  useEffect(() => {
+    const runSequentialChecks = async () => {
+      // await fetchAttendanceStatus();  // Run the second function first
+      fetchAttendanceStatus();
+      await checkAbsenteeStatus();    // Run the first function after it completes
     };
-  // fetchAttendanceStatus();
-  // checkAbsenteeStatus();
 
-
-useEffect(() => {
-  const runSequentialChecks = async () => {
-    // await fetchAttendanceStatus();  // Run the second function first
-    fetchAttendanceStatus(); 
-    await checkAbsenteeStatus();    // Run the first function after it completes
-  };
-
-  runSequentialChecks();
-}, []);  
+    runSequentialChecks();
+  }, []);
 
 
 
@@ -235,10 +236,10 @@ useEffect(() => {
 
   const loadAttendanceRecords = async () => {
     if (!user) return;
-  
+
     try {
       let startDate, endDate;
-  
+
       switch (view) {
         case 'daily':
           startDate = format(selectedDate, 'yyyy-MM-dd');
@@ -253,8 +254,8 @@ useEffect(() => {
           endDate = format(endOfMonth(selectedDate), 'yyyy-MM-dd');
           break;
       }
-  
-      const { data: records, error: recordsError } = await withRetry(() => 
+
+      const { data: records, error: recordsError } = await withRetry(() =>
         supabase
           .from('attendance_logs')
           .select('*')
@@ -263,16 +264,16 @@ useEffect(() => {
           .lt('check_in', `${endDate}T23:59:59Z`)  // Corrected here
           .order('check_in', { ascending: false })
       );
-    
-  
+
+
       if (recordsError) throw recordsError;
-  
+
       if (records && records.length > 0) {
         setAttendanceRecords(records);
-  
+
         // Use the most recent attendance record to determine break status
         const latestRecord = records[0];
-  
+
         // Load break records only for the latest attendance record
         const { data: breaks, error: breaksError }: { data: BreakRecord[], error: any } = await withRetry(() =>
           supabase
@@ -281,13 +282,13 @@ useEffect(() => {
             .eq('attendance_id', latestRecord.id)
             .order('start_time', { ascending: true })
         );
-        
+
         if (breaksError) throw breaksError;
-        
+
         const breakData: Record<string, BreakRecord[]> = {};
         if (breaks) {
           breakData[latestRecord.id] = breaks;
-          
+
           // Check the last break for this attendance record
           const previousBreak = breaks[breaks.length - 1];
           if (previousBreak) {
@@ -310,7 +311,7 @@ useEffect(() => {
           setIsOnBreak(false);
           setBreakTime(null);
         }
-        
+
         setBreakRecords(breakData);
       } else {
         // No attendance records found for the period
@@ -324,11 +325,11 @@ useEffect(() => {
       setError(handleSupabaseError(err));
     }
   };
-  
+
   useEffect(() => {
     loadAttendanceRecords();
   }, [user, view, selectedDate]);
-  
+
 
 
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
@@ -343,121 +344,121 @@ useEffect(() => {
   };
 
   getCurrentLocation()
-  .then((position)=>{
-    // console.log(position.coords.latitude);
-    // console.log(position.coords.longitude);
-    
-  }).catch(()=>{
-    console.log("User Location Undefined");
-    
-  })
+    .then((position) => {
+      // console.log(position.coords.latitude);
+      // console.log(position.coords.longitude);
 
-  //Handle Check in 
+    }).catch(() => {
+      console.log("User Location Undefined");
+
+    })
+
+  //Handle Check in
   const handleCheckIn = async () => {
-    
+
     if (!user) {
       setError('User not authenticated');
       return;
     }
     const now = new Date();
 
-  // Convert the current time to Pakistan Time (PKT)
-  const timeZone = 'Asia/Karachi'; // Pakistan Time Zone
-  const pktTime = toZonedTime(now, timeZone); // Convert to Pakistan Time
-  const formattedTime = format(pktTime, 'yyyy-MM-dd HH:mm:ss', { timeZone });
-  console.log('Current Pakistan Time:', formattedTime);
+    // Convert the current time to Pakistan Time (PKT)
+    const timeZone = 'Asia/Karachi'; // Pakistan Time Zone
+    const pktTime = toZonedTime(now, timeZone); // Convert to Pakistan Time
+    const formattedTime = format(pktTime, 'yyyy-MM-dd HH:mm:ss', { timeZone });
+    console.log('Current Pakistan Time:', formattedTime);
 
-  const hours = pktTime.getHours();
-  const minutes = pktTime.getMinutes();
-  const totalMinutes = hours * 60 + minutes;
-  const startOfWorkDay = 8 * 60 + 0; // 8:00 AM in minutes
-  const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
-  if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
-    return ; 
-  } else {
+    const hours = pktTime.getHours();
+    const minutes = pktTime.getMinutes();
+    const totalMinutes = hours * 60 + minutes;
+    const startOfWorkDay = 8 * 60 + 0; // 8:00 AM in minutes
+    const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
+    if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
+      return;
+    } else {
 
-    try {
-      setLoading(true);
-      setError(null);
-      
+      try {
+        setLoading(true);
+        setError(null);
 
-      const position = await getCurrentLocation();
-      const { latitude, longitude } = position.coords;
-    
-      setCurrentLocation({ lat: latitude, lng: longitude });
-      
-      const now = new Date();
-      const checkInTimeLimit = parse('09:30', 'HH:mm', now);
- 
-      let attendanceStatus = 'present';
-      if (isAfter(now, checkInTimeLimit)) {
-        attendanceStatus = 'late';
-      }
 
-      const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
-      const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
+        const position = await getCurrentLocation();
+        const { latitude, longitude } = position.coords;
 
-       // If outside office location, prompt for remote check-in confirmation
+        setCurrentLocation({ lat: latitude, lng: longitude });
+
+        const now = new Date();
+        const checkInTimeLimit = parse('09:30', 'HH:mm', now);
+
+        let attendanceStatus = 'present';
+        if (isAfter(now, checkInTimeLimit)) {
+          attendanceStatus = 'late';
+        }
+
+        const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
+        const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
+
+        // If outside office location, prompt for remote check-in confirmation
         if (mode === 'remote') {
           const confirmRemote = window.confirm(
-           "Your check-in will be counted as Remote because you are currently outside the office zone. If you don’t have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
+            "Your check-in will be counted as Remote because you are currently outside the office zone. If you don’t have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
           );
-    
+
           if (!confirmRemote) {
             console.log("Remote check-in aborted by user.");
             return;
           }
         }
-   
-      const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
-        supabase
-          .from('attendance_logs')
-          .insert([
-            {
-              user_id: localStorage.getItem('user_id'),
-              check_in: now.toISOString(),
-              work_mode: mode,
-              latitude,
-              longitude,
-              status: attendanceStatus
-            }
-          ])
-          .select()
-          .single()
-      );
-      
+
+        const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
+          supabase
+            .from('attendance_logs')
+            .insert([
+              {
+                user_id: localStorage.getItem('user_id'),
+                check_in: now.toISOString(),
+                work_mode: mode,
+                latitude,
+                longitude,
+                status: attendanceStatus
+              }
+            ])
+            .select()
+            .single()
+        );
 
 
-    // Putting Half Day For Employee Checkin if the Checkin is After 11 am
-      //  const checkInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
-      //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
-      //  if (checkInTime > cutoffTime) {
-      //    await withRetry(() =>
-      //             supabase.from('absentees')
-      //          .insert([{
-      //          user_id: localStorage.getItem('user_id'),
-      //          absentee_type: 'Absent',
-      //          absentee_Timing: 'Half Day',
-      //        }
-      //      ])
-      //    );
-      //  }
-      
 
-      if (dbError) throw dbError;
+        // Putting Half Day For Employee Checkin if the Checkin is After 11 am
+        //  const checkInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
+        //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
+        //  if (checkInTime > cutoffTime) {
+        //    await withRetry(() =>
+        //             supabase.from('absentees')
+        //          .insert([{
+        //          user_id: localStorage.getItem('user_id'),
+        //          absentee_type: 'Absent',
+        //          absentee_Timing: 'Half Day',
+        //        }
+        //      ])
+        //    );
+        //  }
 
-      setIsCheckedIn(true);
-      setCheckIn(now.toISOString());
-      setWorkMode(mode);
-      setAttendanceId(data.id);
-      await loadAttendanceRecords();
-    } catch (err) {      
-      setError(handleSupabaseError(err));
-    } finally {
-      setLoading(false);
-    }
-  };
-}
+
+        if (dbError) throw dbError;
+
+        setIsCheckedIn(true);
+        setCheckIn(now.toISOString());
+        setWorkMode(mode);
+        setAttendanceId(data.id);
+        await loadAttendanceRecords();
+      } catch (err) {
+        setError(handleSupabaseError(err));
+      } finally {
+        setLoading(false);
+      }
+    };
+  }
 
 
   const handleCheckOut = async () => {
@@ -477,7 +478,7 @@ useEffect(() => {
         const { error: breakError }: { error: any } = await withRetry(() =>
           supabase
             .from('breaks')
-            .update({ 
+            .update({
               end_time: now.toISOString(),
               status: 'on_time'
             })
@@ -491,123 +492,121 @@ useEffect(() => {
         setBreakTime(null);
       }
 
-       // Checking the Total Time in Office, If it is less than 6 hrs then put half day in absentees database
-try {
-  const today = new Date();
-  const todayDate = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+      // Checking the Total Time in Office, If it is less than 6 hrs then put half day in absentees database
+      try {
+        const today = new Date();
+        const todayDate = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
 
-  // 1️⃣ Check if there is already an attendance record for the user today
-  const { data: attendanceData, error: attendanceError } = await withRetry(() =>
-    supabase
-      .from('attendance_logs')
-      .select('check_in, check_out, created_at')
-      .eq('user_id', localStorage.getItem('user_id'))
-      .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
-      .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
-  );
+        // 1️⃣ Check if there is already an attendance record for the user today
+        const { data: attendanceData, error: attendanceError } = await withRetry(() =>
+          supabase
+            .from('attendance_logs')
+            .select('check_in, check_out, created_at')
+            .eq('user_id', localStorage.getItem('user_id'))
+            .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
+            .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
+        );
 
-  if (attendanceError) throw attendanceError;
+        if (attendanceError) throw attendanceError;
 
         // Then update the attendance record with check-out time
         const { error: dbError }: { error: any } = await withRetry(() =>
           supabase
             .from('attendance_logs')
-            .update({ 
+            .update({
               check_out: now.toISOString()
             })
             .eq('id', attendanceId)
             .is('check_out', null)
         );
-  
+
         if (dbError) throw dbError;
-  
-  
-  
+
+
+
         // Reset all states
         setIsCheckedIn(false);
         setCheckIn(null);
         setWorkMode(null);
         setAttendanceId(null);
 
-  console.log("Today's Date:", todayDate);
-  console.log("Attendance Data:", attendanceData);
+        console.log("Today's Date:", todayDate);
+        console.log("Attendance Data:", attendanceData);
 
-  // If both check_in and check_out exist for today, skip further actions
-  if (attendanceData.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
-    console.log("Both check-in and check-out available for today. No further action needed.");
-    setLoading(false);
-    return;
-  }
+        // If both check_in and check_out exist for today, skip further actions
+        if (attendanceData.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
+          console.log("Both check-in and check-out available for today. No further action needed.");
+          setLoading(false);
+          return;
+        }
 
-  // 2️⃣ If it's the first check-in and check-out for the user today, proceed with the logic
-  const { data: checkInData, error: checkInError } = await withRetry(() =>
-    supabase
-      .from('attendance_logs')
-      .select('check_in')
-      .eq('user_id', localStorage.getItem('user_id'))
-      .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
-      .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
-      .limit(1)
-      .single()
-  );
+        // 2️⃣ If it's the first check-in and check-out for the user today, proceed with the logic
+        const { data: checkInData, error: checkInError } = await withRetry(() =>
+          supabase
+            .from('attendance_logs')
+            .select('check_in')
+            .eq('user_id', localStorage.getItem('user_id'))
+            .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
+            .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
+            .limit(1)
+            .single()
+        );
 
-  if (checkInError) throw checkInError;
+        if (checkInError) throw checkInError;
 
-  // Convert timestamps to Date objects
-  const checkInTime = new Date(checkInData.check_in);
-  const checkOutTime = new Date(now.toISOString());
+        // Convert timestamps to Date objects
+        const checkInTime = new Date(checkInData.check_in);
+        const checkOutTime = new Date(now.toISOString());
 
-  // Calculate total attendance duration (in hours)
-  const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
-  console.log("Atttendance Duration" , attendanceDuration);
-  
+        // Calculate total attendance duration (in hours)
+        const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
 
-  console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
+        console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 
-  // If attendance duration is sufficient, skip further actions
-  if (attendanceDuration >= 4) {
-    console.log("Attendance is sufficient. No further action needed.");
-    return;
-  }
+        // If attendance duration is sufficient, skip further actions
+        if (attendanceDuration >= 4) {
+          console.log("Attendance is sufficient. No further action needed.");
+          return;
+        }
 
-  // 3️⃣ Check if the user has a leave record for today
-  const { data: absenteeData, error: absenteeError } = await supabase
-    .from('absentees')
-    .select('id')
-    .eq('user_id', localStorage.getItem('user_id'))
-    .eq('absentee_date', todayDate);
+        // 3️⃣ Check if the user has a leave record for today
+        const { data: absenteeData, error: absenteeError } = await supabase
+          .from('absentees')
+          .select('id')
+          .eq('user_id', localStorage.getItem('user_id'))
+          .eq('absentee_date', todayDate);
 
-  if (absenteeError) {
-    console.error("Error checking absentee records:", absenteeError);
-    return;
-  }
+        if (absenteeError) {
+          console.error("Error checking absentee records:", absenteeError);
+          return;
+        }
 
-  // If a leave record exists, skip further actions
-  if (absenteeData.length > 0) {
-    console.log("User is on leave today. No action needed.");
-    return;
-  }
+        // If a leave record exists, skip further actions
+        if (absenteeData.length > 0) {
+          console.log("User is on leave today. No action needed.");
+          return;
+        }
 
-  // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
-  const { error: insertError } = await supabase
-    .from('absentees')
-    .insert([
-      {
-        user_id: localStorage.getItem('user_id'),
-        absentee_date: todayDate,
-        absentee_type: 'Absent',
-        absentee_Timing: 'Half Day',
-      },
-    ]);
+        // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
+        const { error: insertError } = await supabase
+          .from('absentees')
+          .insert([
+            {
+              user_id: localStorage.getItem('user_id'),
+              absentee_date: todayDate,
+              absentee_type: 'Absent',
+              absentee_Timing: 'Half Day',
+            },
+          ]);
 
-  if (insertError) {
-    console.error("Error inserting half-day absent record:", insertError);
-  } else {
-    console.log("Half-day absent record added successfully.");
-  }
-} catch (error) {
-  console.error("Unexpected error in attendance check:", error);
-}
+        if (insertError) {
+          console.error("Error inserting half-day absent record:", insertError);
+        } else {
+          console.log("Half-day absent record added successfully.");
+        }
+      } catch (error) {
+        console.error("Unexpected error in attendance check:", error);
+      }
 
 
 
@@ -632,7 +631,7 @@ try {
 
       const now = new Date();
       const breakEndLimit = parse('14:10', 'HH:mm', now);
-      
+
       if (!isOnBreak) {
         // Starting break
         const { error: dbError } = await withRetry(() =>
@@ -662,7 +661,7 @@ try {
         const { error: dbError } = await withRetry(() =>
           supabase
             .from('breaks')
-            .update({ 
+            .update({
               end_time: now.toISOString(),
               status: breakStatus
             })
@@ -683,7 +682,7 @@ try {
     }
   };
 
-  
+
 
 
   const renderAttendanceRecords = () => {
@@ -692,35 +691,47 @@ try {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              <Calendar className="w-6 h-6 text-blue-600" />
-              <h2 className="text-xl font-semibold">Attendance Records</h2>
+              {/* <Calendar className="w-6 h-6 text-blue-600" /> */}
+              <h2 className="text-xl font-semibold">
+                Monthly Overview - &nbsp;
+                {
+                  format(selectedDate, 'MMMM yyyy')
+                }
+              </h2>
             </div>
-            <div className="flex items-center space-x-4">
+            <select className="text-sm rounded-lg px-3 py-1 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              value={view}
+              onChange={(e) => setView(e.target.value as ViewType)}
+            >
+              <option value="daily">Daily</option>
+              <option value="weekly">Weekly</option>
+              <option value="monthly">Monthly</option>
+            </select>
+
+
+            {/* <div className="flex items-center space-x-4">
               <button
                 onClick={() => setView('daily')}
-                className={`px-3 py-1 rounded-lg ${
-                  view === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded-lg ${view === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 Daily
               </button>
               <button
                 onClick={() => setView('weekly')}
-                className={`px-3 py-1 rounded-lg ${
-                  view === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded-lg ${view === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setView('monthly')}
-                className={`px-3 py-1 rounded-lg ${
-                  view === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                }`}
+                className={`px-3 py-1 rounded-lg ${view === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+                  }`}
               >
                 Monthly
               </button>
-            </div>
+            </div> */}
           </div>
 
           <div className="flex items-center justify-between mb-4">
@@ -737,9 +748,9 @@ try {
               })}
               className="p-2 hover:bg-gray-100 rounded-full"
             >
-              <ChevronLeft className="w-5 h-5" />
+              <ChevronLeft className="w-6 h-6" />
             </button>
-            <span className="font-medium">
+            <span className="font-semibold text-xl leading-5 text-[#344054]">
               {format(selectedDate, view === 'daily' ? 'MMMM d, yyyy' : 'MMMM yyyy')}
             </span>
             <button
@@ -755,53 +766,51 @@ try {
               })}
               className="p-2 hover:bg-gray-100 rounded-full"
             >
-              <ChevronRight className="w-5 h-5" />
+              <ChevronRight className="w-6 h-6" />
             </button>
           </div>
 
           <div className="overflow-x-auto">
-            <table className="min-w-full">
+            <table className="min-w-full border-collapse border-2 border-[#F5F5F9]">
               <thead>
-                <tr className="bg-gray-50">
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check In</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Mode</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Breaks</th>
+                <tr className=" text-gray-700 text-sm">
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Date</th>
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Check In</th>
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Check Out</th>
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Status</th>
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Work Mode</th>
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Breaks</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {attendanceRecords.map((record) => (
                   <tr key={record.id}>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 border whitespace-nowrap  tex-[#666666] text-xs leading-5 font-normal">
                       {format(new Date(record.check_in), 'MMM d, yyyy')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 border whitespace-nowrap  tex-[#666666] text-xs leading-5 font-normal">
                       {format(new Date(record.check_in), 'hh:mm a')}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                    <td className="px-6 py-4 border whitespace-nowrap text-xs leading-5 font-normal tex-[#666666]">
                       {record.check_out ? format(new Date(record.check_out), 'hh:mm a') : '-'}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        record.status === 'present'
-                          ? 'bg-green-100 text-green-800'
-                          : 'bg-yellow-100 text-yellow-800'
-                      }`}>
+                    <td className="px-6 py-4 border whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.status === 'present'
+                        ? 'bg-green-100 text-green-800'
+                        : 'bg-yellow-100 text-yellow-800'
+                        }`}>
                         {record.status}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                        record.work_mode === 'on_site'
-                          ? 'bg-blue-100 text-blue-800'
-                          : 'bg-purple-100 text-purple-800'
-                      }`}>
+                    <td className="px-6 py-4 border whitespace-nowrap">
+                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.work_mode === 'on_site'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
+                        }`}>
                         {record.work_mode}
                       </span>
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    <td className="px-6 py-4 border whitespace-nowrap text-sm text-gray-500">
                       {breakRecords[record.id]?.map((breakRecord, index) => (
                         <div key={breakRecord.id} className="mb-1">
                           <span className="text-gray-600">Break {index + 1}: </span>
@@ -810,11 +819,10 @@ try {
                             <> - {format(new Date(breakRecord.end_time), 'hh:mm a')}</>
                           )}
                           {breakRecord.status && (
-                            <span className={`ml-2 px-2 text-xs rounded-full ${
-                              breakRecord.status === 'on_time'
-                                ? 'bg-green-100 text-green-800'
-                                : 'bg-yellow-100 text-yellow-800'
-                            }`}>
+                            <span className={`ml-2 px-2 text-xs rounded-full ${breakRecord.status === 'on_time'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-yellow-100 text-yellow-800'
+                              }`}>
                               {breakRecord.status}
                             </span>
                           )}
@@ -835,18 +843,18 @@ try {
   return (
     <div className="max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Attendance</h1>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-2 mb-5 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
-              <Clock className="w-6 h-6 text-blue-600 mr-2" />
-              <h2 className="text-xl font-semibold">Check-in Status</h2>
+              <img src={timeImage} alt="clock" className='w-8 h-8' />&nbsp;&nbsp;
+              {/* <Clock className="w-6 h-6 text-blue-600 mr-2" /> */}
+              <h2 className="text-[22px] leading-7 text-[#000000] font-semibold">Check-in Status</h2>
             </div>
             {workMode && (
-              <span className={`px-3 py-1 rounded-full text-sm ${
-                workMode === 'on_site' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-              }`}>
+              <span className={`px-3 py-1 rounded-full text-sm ${workMode === 'on_site' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
+                }`}>
                 {workMode === 'on_site' ? 'On-site' : 'Remote'}
               </span>
             )}
@@ -864,17 +872,18 @@ try {
 
           {isCheckedIn ? (
             <div className="space-y-4">
-              <p className="text-gray-600">
-                Checked in at: {checkInTime && format(new Date(checkInTime), 'hh:mm a')}
-              </p>
+
               <button
                 onClick={handleCheckOut}
                 disabled={loading}
-                className="w-full flex items-center justify-center bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
+                className="w-full flex items-center justify-center bg-[#FF2828] text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
               >
                 <LogOut className="w-5 h-5 mr-2" />
                 {loading ? 'Checking out...' : 'Check Out'}
               </button>
+              <p className="text-[#7B7E85] font-medium text-[13px] leading-7">
+                Checked in at: {checkInTime && format(new Date(checkInTime), 'hh:mm a')}
+              </p>
             </div>
           ) : (
             <button
@@ -889,8 +898,9 @@ try {
 
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center mb-6">
-            <Coffee className="w-6 h-6 text-blue-600 mr-2" />
-            <h2 className="text-xl font-semibold">Break Time</h2>
+            <img src={teaImage} alt="teaImage" className='w-8 h-8' /> &nbsp;&nbsp;
+            {/* <Coffee className="w-6 h-6 text-blue-600 mr-2" /> */}
+            <h2 className="text-[22px] leading-7 text-[#000000] font-semibold">Break Time</h2>
           </div>
 
           {isCheckedIn && (
@@ -900,15 +910,14 @@ try {
                   Break started at: {format(new Date(breakStartTime), 'hh:mm a')}
                 </p>
               )}
-              
+
               <button
                 onClick={handleBreak}
                 disabled={loading}
-                className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isOnBreak
-                    ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
-                    : 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500'
-                } disabled:opacity-50`}
+                className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnBreak
+                  ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
+                  : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'
+                  } disabled:opacity-50`}
               >
                 {loading ? 'Updating...' : isOnBreak ? 'End Break' : 'Start Break'}
               </button>
@@ -916,10 +925,10 @@ try {
           )}
         </div>
       </div>
-        
+
       {renderAttendanceRecords()}
     </div>
   );
-};
+}
 
 export default Attendance;
