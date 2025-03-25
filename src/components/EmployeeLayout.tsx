@@ -73,6 +73,8 @@ const EmployeeLayout: React.FC = () => {
     navigate('/login');
   };
 
+
+
   const navigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Attendance', href: '/attendance', icon: Clock },
@@ -93,6 +95,7 @@ const EmployeeLayout: React.FC = () => {
 
 
   return (
+
     <div className="min-h-screen bg-gray-100">
       <Header
 
@@ -119,7 +122,6 @@ const EmployeeLayout: React.FC = () => {
                 <Menu size={24} />
               </button>
             )}
-
             {/* Overlay (Only for Small Screens when Sidebar is Open) */}
             {isSmallScreen && isSidebarOpen && (
               <div

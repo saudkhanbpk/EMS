@@ -121,7 +121,7 @@ const Attendance: React.FC = () => {
           // if (data.check_in) { setalreadycheckedin(true) }
           if (data.check_in && localStorage.getItem("user_id") !== "759960d6-9ada-4dcc-b385-9e2da0a862be") {
             setalreadycheckedin(true);
-          }
+          }
           if (data.check_out === null) {
             // User has an active session (not checked out)
             setIsCheckedIn(true);
