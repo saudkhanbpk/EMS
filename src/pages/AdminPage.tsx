@@ -11,6 +11,7 @@ import { LucideDelete } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 import { motion } from "framer-motion";
 import EmployeesDetails from './EmployeesDetails';
+import ProjectsAdmin from '../components/ProjectsAdmin';
 import "./style.css";
 import { useRef } from 'react';
 import {
@@ -611,7 +612,7 @@ const AdminPage: React.FC = () => {
               initial={{ x: "-100%" }}
               animate={{ x: sideopen ? "0%" : "-100%" }}
               transition={{ duration: 0.4, ease: "easeInOut" }} // Smooth transition
-            // onMouseLeave={handleClose} // Close when mouse leaves
+            onMouseLeave={handleClose} // Close when mouse leaves
             >
 
               {/* Sidebar Space Filler */}
@@ -711,6 +712,21 @@ const AdminPage: React.FC = () => {
     </ul>
         </div>
       )} */}
+
+<button
+                      onClick={() => {
+                        setSelectedTab("Projects");
+                        // setShowEmployeeList(!showEmployeeList);
+                        handleClose()
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "Projects"
+                          ? "bg-[#9A00FF] text-White"
+                          : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Projects
+                    </button>
+
 
                     <button
                       onClick={() => {
@@ -828,6 +844,11 @@ const AdminPage: React.FC = () => {
         {selectedTab === "EmployeesDetails" && (
           <div className='flex-1 py-10'>
             <EmployeesDetails selectedTab={selectedTab} />
+          </div>
+        )}
+        {selectedTab === "Projects" && (
+          <div className='flex-1 py-10'>
+            <ProjectsAdmin />
           </div>
         )}
         {selectedTab === 'Employees' && (

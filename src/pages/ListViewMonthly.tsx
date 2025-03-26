@@ -52,7 +52,8 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('*');
+        .select('*')
+        .neq("role", "admin");
 
     const monthStart = startOfMonth(date);
     const monthEnd = endOfMonth(date);

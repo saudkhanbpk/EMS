@@ -3,10 +3,12 @@ import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
+import AdminDashboard from './AdminDashboard';
+import { useNavigate } from 'react-router-dom';
 
 interface Task {
   id: string;
-  title: string;
+  title: string;  
   createdAt: string;
   status: 'todo' | 'inProgress' | 'review' | 'done';
 }
@@ -18,7 +20,7 @@ const COLUMN_IDS = {
   done: 'done'
 };
 
-function TaskBoard() {
+function TaskBoard({setSelectedTAB}) {
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<Task[]>([
@@ -47,7 +49,7 @@ function TaskBoard() {
       status: 'done'
     }
   ]);
-
+  const navigate = useNavigate();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
@@ -102,14 +104,33 @@ function TaskBoard() {
     setNewTaskTitle('');
     setIsAddingTask(false);
   };
+//   const handleNavigation = (e: React.MouseEvent) => {
+//   e.preventDefault();
+//   const userid = localStorage.getItem("user_email");
+  
+//   // Check email and navigate in the same block
+//   if (userid?.endsWith("@admin.com")) {
+//     navigate('/admin'); // ✅ Directly navigate
+//   } else {
+//     navigate('/');
+//   }
+// };
 
   return (
     <div className="min-h-screen  p-8">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center mb-8">
-          <Link to="/" className="mr-4 text-gray-600 hover:text-gray-800">
-            <ArrowLeft size={24} />
-          </Link>
+        <div className="flex items-center ml-6 mb-8">
+        <Link 
+  to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"} 
+  className="mr-4 text-gray-600 hover:text-gray-800"
+  onClick={(e) => {
+    e.preventDefault();
+    const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
+    navigate(isAdmin ? "/admin" : "/");
+  }}
+>
+  <ArrowLeft className='hover:bg-gray-300  rounded-2xl' size={24} onClick={() => setSelectedTAB("Projects")} />
+</Link>
           <div className="flex-1 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Work Planner</h1>
             <div className="text-sm text-gray-600">
