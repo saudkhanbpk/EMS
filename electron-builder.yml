@@ -1,0 +1,23 @@
+
+appId: com.lovable.timetracker
+productName: "Time Tracker"
+copyright: "Copyright © 2023"
+directories:
+  output: "release"
+files:
+  - "dist/**/*"
+  - "electron/**/*"
+mac:
+  category: public.app-category.productivity
+  target:
+    - dmg
+    - zip
+win:
+  target:
+    - nsis
+    - portable
+linux:
+  target:
+    - AppImage
+    - deb
+  category: Utility
