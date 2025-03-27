@@ -1,17 +1,20 @@
-import React, { useState , useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
+import { formatDistanceToNow } from 'date-fns';
 import AdminDashboard from './AdminDashboard';
 import { useNavigate } from 'react-router-dom';
+import AddNewTask from '../AddNewTask';
 import { supabase } from '../lib/supabase';
 
-interface Task {
+interface task {
   id: string;
   title: string;  
-  createdAt: string;
+  created_at: string;
   status: 'todo' | 'inProgress' | 'review' | 'done';
+  score : number;
 }
 
 const COLUMN_IDS = {
@@ -21,64 +24,44 @@ const COLUMN_IDS = {
   done: 'done'
 };
 
-function TaskBoard({setSelectedTAB }) {
+function TaskBoardAdmin({setSelectedTAB, ProjectId , devopss}) {
   const user = useAuthStore();
   const { id } = useParams();
-  const [tasks, setTasks] = useState<Task[]>([]);
-    // {
-    //   id: '1',
-    //   title: 'Make the card functional in the end of the page.',
-    //   createdAt: '6 month ago',
-    //   status: 'todo'
-    // },
-    // {
-    //   id: '2',
-    //   title: 'Implement drag and drop functionality.',
-    //   createdAt: '6 month ago',
-    //   status: 'inProgress'
-    // },
-    // {
-    //   id: '3',
-    //   title: 'Review the new design system.',
-    //   createdAt: '6 month ago',
-    //   status: 'review'
-    // },
-    // {
-    //   id: '4',
-    //   title: 'Complete the landing page.',
-    //   createdAt: '6 month ago',
-    //   status: 'done'
-    // }
+  const [selectedtab ,setselectedtab] = useState("tasks")
+  const [tasks, setTasks] = useState<task[]>([]);
+  const [mockDevelopers , setMockDevelopers] = useState([]);
 
-     useEffect( () => {
-        const fetchtasks = async () => {
-          const {data , error} = await supabase
-          .from("tasks_of_projects")
-          .select("*")
-          .eq("project_id" , id)
-    
-          if(!error) setTasks(data)
-            console.log("Tasks of Projects" , data);
-            
-        }
-        fetchtasks();
-      },[])
+
 
   const navigate = useNavigate();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
-  const getTasksByStatus = (status: Task['status']) =>
+  const getTasksByStatus = (status: task['status']) =>
     tasks.filter(task => task.status === status);
 
-  const getStatusCount = (status: Task['status']) =>
+  const getStatusCount = (status: task['status']) =>
     tasks.filter(task => task.status === status).length;
 
   const totalTasks = tasks.length;
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
 
-  const handleDragEnd = (result: DropResult) => {
+  useEffect( () => {
+    const fetchtasks = async () => {
+      const {data , error} = await supabase
+      .from("tasks_of_projects")
+      .select("*")
+      .eq("project_id" , ProjectId)
+
+      if(!error) setTasks(data)
+        console.log("Tasks of Projects" , data);
+        
+    }
+    fetchtasks();
+  },[])
+
+  const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
 
     if (!destination) return;
@@ -102,16 +85,30 @@ function TaskBoard({setSelectedTAB }) {
     newTasks.splice(insertIndex, 0, draggedTask);
 
     setTasks(newTasks);
+    try {
+      const { error } = await supabase
+        .from('tasks_of_projects')  // Table Name
+        .update({ status: destination.droppableId }) // Update status column
+        .eq('id', draggedTask.id); // Find task by ID
+  
+      if (error) {
+        console.error('Error updating task status:', error.message);
+        // Optionally, revert the UI state if needed
+      }
+    } catch (err) {
+      console.error('Unexpected error:', err);
+    }
+    
   };
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
     if (!newTaskTitle.trim()) return;
 
-    const newTask: Task = {
+    const newTask: task = {
       id: String(Date.now()),
       title: newTaskTitle,
-      createdAt: 'Just now',
+      created_at: 'Just now',
       status: 'todo'
     };
 
@@ -120,26 +117,43 @@ function TaskBoard({setSelectedTAB }) {
     setIsAddingTask(false);
   };
 
+
   return (
-    <div className="min-h-screen  p-8">
+    <div className="min-h-screen  px-8">
       <div className="max-w-7xl mx-auto">
+       {selectedtab === "addtask" && (
+        <AddNewTask setselectedtab={setselectedtab} ProjectId={ProjectId} devopss={devopss}/>
+       )}
+
+        {selectedtab === "tasks" && (<>
         <div className="flex items-center ml-6 mb-8">
         <Link 
-            to={"/"} 
-            className="mr-4 text-gray-600 hover:text-gray-800"
-            onClick={(e) => {
-              e.preventDefault();
-              navigate("/");
-            } }
-          >
-          <ArrowLeft className='hover:bg-gray-300  rounded-2xl' size={24} onClick={() => setSelectedTAB("Projects")} />
-        </Link>
+  to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"} 
+  className="mr-4 text-gray-600 hover:text-gray-800"
+  onClick={(e) => {
+    e.preventDefault();
+    const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
+    navigate(isAdmin ? "/admin" : "/");
+  }}
+>
+  <ArrowLeft className='hover:bg-gray-300  rounded-2xl' size={24} onClick={() => setSelectedTAB("Projects")} />
+</Link>
           <div className="flex-1 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Work Planner</h1>
             <div className="text-sm text-gray-600">
-              <span className='font-semibold text-[13px] '>Total Tasks: <strong>{totalTasks}</strong></span>
+              {/* <span className='font-semibold text-[13px] '>Total Tasks: <strong>{totalTasks}</strong></span>
               <span className="mx-3 font-semibold text-[13px]">Completed Tasks: <strong>{completedTasks}</strong></span>
-              <span className='font-semibold text-[13px] '>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
+              <span className='font-semibold text-[13px] '>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span> */}
+              <button
+                //   onClick={openAddModal}
+                  className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center"
+                 >
+                     <PlusCircle size={20} className="mr-2" 
+                     onClick={() => {setselectedtab("addtask")
+                      // setMockDevelopers(tasks.devops)
+                      setselectedtab("addtask")}
+                     }/> New Task
+                </button>
             </div>
           </div>
         </div>
@@ -284,12 +298,13 @@ function TaskBoard({setSelectedTAB }) {
             </div>
           </div>
         </DragDropContext>
+        </>)}
       </div>
     </div>
   );
 }
 
-function TaskCard({ task, index }: { task: Task; index: number }) {
+function TaskCard({ task, index }: { task: task; index: number }) {
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided) => (
@@ -299,11 +314,14 @@ function TaskCard({ task, index }: { task: Task; index: number }) {
           {...provided.dragHandleProps}
           className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1  "
         >
-          <p className="text-[10px] leading-7 font-medium text-[#C4C7CF]">{task.createdAt}</p>
+          <p className="text-[10px] leading-7 font-medium text-[#C4C7CF]"> {formatDistanceToNow(new Date(task.created_at))} ago</p>
           <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <span className="text-[11px] leading-5 font-normal text-[#404142]">15</span>
+            <div className="flex flex-col items-left space-x-2">
+            <span className="text-[11px] leading-5 font-normal text-[#404142]">{task.score}</span>
+            <span className="text-[11px]  leading-5 font-normal text-[#404142]">              
+                 {task.devops.map((dev) => dev.name).join(", ")}
+               </span>             
             </div>
             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
               <User size={14} className="text-gray-600" />
@@ -315,4 +333,4 @@ function TaskCard({ task, index }: { task: Task; index: number }) {
   );
 }
 
-export default TaskBoard;
+export default TaskBoardAdmin;

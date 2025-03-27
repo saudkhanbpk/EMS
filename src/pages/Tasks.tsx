@@ -902,6 +902,7 @@ interface Dev {
 function Task() {
   const navigate = useNavigate();
   const [Loading , setLoading] = useState (false);
+  const  [ProjectId , setProjectId] = useState('');
 
   // const [newProject, setNewProject] = useState({
   //   title: '',
@@ -1038,7 +1039,9 @@ function Task() {
             <div
               key={project.id}
               className="bg-white rounded-[20px] w-[316px] min-h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/board/${project.id}`)}
+              onClick={() => {navigate(`/board/${project.id}`)
+              //  setProjectId(project.id)
+              }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center px-4 py-1  bg-[#F4F6FC] rounded-full ">

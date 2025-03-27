@@ -3,9 +3,9 @@ import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Pencil, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
-import TaskBoard from './TaskBoard';
+import TaskBoardAdmin from './TaskBoardAdmin';
 
-interface Project {
+interface Project { 
   id: string;
   title: string;
   type: 'Front-End Developer' | 'Back End Developer';
@@ -18,15 +18,21 @@ interface Dev {
   id: string;
   full_name: string;
 }
+interface devopss {
+  id : string;
+  full_name : string;
+}
 
 function ProjectsAdmin() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [ProjectId , setProjectId] = useState("");
   const [Devs, setDevs] = useState<Dev[]>([]);
   const [selectedDevs, setSelectedDevs] = useState<{ id: string; name: string }[]>([]);
   const [projects, setProjects] = useState<Project[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedTAB , setSelectedTAB] = useState("Projects")
+  const [devopss , setdevops] = useState<devopss[]>([]);
   const [newProject, setNewProject] = useState({
     title: '',
     type: 'Front-End Developer' as const
@@ -155,7 +161,7 @@ function ProjectsAdmin() {
       ) : (
         <>
         {selectedTAB === "taskBoard" && (
-          <TaskBoard setSelectedTAB={setSelectedTAB}/>
+          <TaskBoardAdmin setSelectedTAB={setSelectedTAB} ProjectId={ProjectId} devopss={devopss} />
         )}
         {selectedTAB == "Projects" && (
           <div className="max-w-7xl mx-auto">
@@ -217,7 +223,7 @@ function ProjectsAdmin() {
                           onChange={handleChange}
                           className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
                         >
-                          <option value="" disabled>Select a developer</option>
+                          <option value="" disabled>Select DevOps</option>
                           {Devs.map((dev) => (
                             <option key={dev.id} value={dev.id}>
                               {dev.full_name}
@@ -271,7 +277,11 @@ function ProjectsAdmin() {
                   <div
                     key={project.id}
                     className="bg-white rounded-[20px] w-[316px] min-h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => setSelectedTAB("taskBoard")}
+                    onClick={() => {setSelectedTAB("taskBoard")
+                                   setdevops(project.devops)
+                                   console.log(project.devops);
+                                   setProjectId(project.id)
+                                 }}
                   >
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center px-4 py-1 bg-[#F4F6FC] rounded-full">

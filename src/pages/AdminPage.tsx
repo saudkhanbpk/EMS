@@ -648,6 +648,7 @@ const AdminPage: React.FC = () => {
 
                 {/* Sidebar Buttons Container (Ensures Space Between) */}
                 <div className="flex flex-col flex-grow justify-between">
+
                   <div className="space-y-4">
 
                     <button
@@ -890,6 +891,7 @@ const AdminPage: React.FC = () => {
                             <Trash2 />
                           </button>
                         </div>
+                  
                       </li>
                     ))}
                   </ul>

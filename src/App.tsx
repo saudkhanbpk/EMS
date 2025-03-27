@@ -21,6 +21,7 @@ import { getMessaging, onMessage } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
 import { messaging } from "../notifications/firebase";
 import { AttendanceProvider } from './pages/AttendanceContext';
+import AddNewTask from './AddNewTask';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAAUF5qzZrljXJjb96NmesXBydmn9Hmjss",
@@ -117,6 +118,16 @@ function App() {
             </PrivateRoute>
           }
         />
+
+{/* <Route path="/admin" element={
+  <PrivateRoute adminOnly>
+    <AttendanceProvider>
+      <AdminPage />
+    </AttendanceProvider>
+  </PrivateRoute>
+}>
+  <Route path="addtask" element={<AddNewTask />} />
+</Route> */}
 
         {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
         <Route
