@@ -56,7 +56,7 @@ export default function ActivityStats({ mouseActivity, keyboardActivity, isActiv
           </div>
 
           <div className="text-xs text-muted-foreground">
-            Last activity: {lastActivityTime}
+            Last activity: {lastActivityTime.toLocaleTimeString()}
           </div>
         </div>
       </CardContent>
