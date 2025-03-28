@@ -1,17 +1,21 @@
-import React, { useState , useEffect } from 'react';
+import React, { useState , useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import AdminDashboard from './AdminDashboard';
+import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
+import { AttendanceContext } from '../pages/AttendanceContext';
 
-interface Task {
+interface task {
   id: string;
   title: string;  
-  createdAt: string;
+  created_at: string;
   status: 'todo' | 'inProgress' | 'review' | 'done';
+  score: number;
+  // Devs?: Array<{ id:string , name: string }>; // Make optional if not always present
 }
 
 const COLUMN_IDS = {
@@ -24,101 +28,96 @@ const COLUMN_IDS = {
 function TaskBoard({setSelectedTAB }) {
   const user = useAuthStore();
   const { id } = useParams();
-  const [tasks, setTasks] = useState<Task[]>([]);
-    // {
-    //   id: '1',
-    //   title: 'Make the card functional in the end of the page.',
-    //   createdAt: '6 month ago',
-    //   status: 'todo'
-    // },
-    // {
-    //   id: '2',
-    //   title: 'Implement drag and drop functionality.',
-    //   createdAt: '6 month ago',
-    //   status: 'inProgress'
-    // },
-    // {
-    //   id: '3',
-    //   title: 'Review the new design system.',
-    //   createdAt: '6 month ago',
-    //   status: 'review'
-    // },
-    // {
-    //   id: '4',
-    //   title: 'Complete the landing page.',
-    //   createdAt: '6 month ago',
-    //   status: 'done'
-    // }
-
-     useEffect( () => {
-        const fetchtasks = async () => {
-          const {data , error} = await supabase
-          .from("tasks_of_projects")
-          .select("*")
-          .eq("project_id" , id)
-    
-          if(!error) setTasks(data)
-            console.log("Tasks of Projects" , data);
-            
-        }
-        fetchtasks();
-      },[])
+  const [tasks, setTasks] = useState<task[]>([]);
+  // const [Devs]= useContext(AttendanceContext)
+  
+  useEffect(() => {
+    const fetchtasks = async () => {
+      const { data, error } = await supabase
+        .from("tasks_of_projects")
+        .select("*") // Include related devops data if needed
+        .eq("project_id", id)
+        .order('created_at', { ascending: true });
+  
+      if (!error) {
+        setTasks(data);
+      } else {
+        console.error("Error fetching tasks:", error);
+      }
+    };
+    fetchtasks();
+  }, []);
 
   const navigate = useNavigate();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
 
-  const getTasksByStatus = (status: Task['status']) =>
+  const getTasksByStatus = (status: task['status']) =>
     tasks.filter(task => task.status === status);
 
-  const getStatusCount = (status: Task['status']) =>
+  const getStatusCount = (status: task['status']) =>
     tasks.filter(task => task.status === status).length;
 
   const totalTasks = tasks.length;
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
 
-  const handleDragEnd = (result: DropResult) => {
-    const { destination, source, draggableId } = result;
-
-    if (!destination) return;
-
-    if (
-      destination.droppableId === source.droppableId &&
-      destination.index === source.index
-    ) {
-      return;
-    }
-
-    const newTasks = Array.from(tasks);
-    const draggedTask = newTasks.find(task => task.id === draggableId);
-    if (!draggedTask) return;
-
-    newTasks.splice(newTasks.indexOf(draggedTask), 1);
-    const tasksInDestination = newTasks.filter(task => task.status === destination.droppableId);
-    const insertIndex = newTasks.findIndex(task => task.status === destination.droppableId) + destination.index;
-
-    draggedTask.status = destination.droppableId as Task['status'];
-    newTasks.splice(insertIndex, 0, draggedTask);
-
-    setTasks(newTasks);
-  };
-
-  const handleAddTask = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newTaskTitle.trim()) return;
-
-    const newTask: Task = {
-      id: String(Date.now()),
-      title: newTaskTitle,
-      createdAt: 'Just now',
-      status: 'todo'
+  const handleDragEnd = async (result: DropResult) => {
+      const { destination, source, draggableId } = result;
+  
+      if (!destination) return;
+  
+      if (
+        destination.droppableId === source.droppableId &&
+        destination.index === source.index
+      ) {
+        return;
+      }
+  
+      const newTasks = Array.from(tasks);
+      const draggedTask = newTasks.find(task => task.id === draggableId);
+      if (!draggedTask) return;
+  
+      newTasks.splice(newTasks.indexOf(draggedTask), 1);
+      const tasksInDestination = newTasks.filter(task => task.status === destination.droppableId);
+      const insertIndex = newTasks.findIndex(task => task.status === destination.droppableId) + destination.index;
+  
+      draggedTask.status = destination.droppableId as task['status'];
+      newTasks.splice(insertIndex, 0, draggedTask);
+  
+      setTasks(newTasks);
+      try {
+        const { error } = await supabase
+          .from('tasks_of_projects')  // Table Name
+          .update({ status: destination.droppableId }) // Update status column
+          .eq('id', draggedTask.id); // Find task by ID
+    
+        if (error) {
+          console.error('Error updating task status:', error.message);
+          // Optionally, revert the UI state if needed
+        }
+      } catch (err) {
+        console.error('Unexpected error:', err);
+      }
+      
     };
-
-    setTasks([...tasks, newTask]);
-    setNewTaskTitle('');
-    setIsAddingTask(false);
-  };
+  
+    const handleAddTask = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newTaskTitle.trim()) return;
+  
+      const newTask: task = {
+        id: String(Date.now()),
+        title: newTaskTitle,
+        created_at: 'Just now',
+        status: 'todo'
+      };
+  
+      setTasks([...tasks, newTask]);
+      setNewTaskTitle('');
+      setIsAddingTask(false);
+    };
+  
 
   return (
     <div className="min-h-screen  p-8">
@@ -201,16 +200,24 @@ function TaskBoard({setSelectedTAB }) {
                   </div>
                 </form>
               )}
-              <Droppable droppableId={COLUMN_IDS.todo}>
-                {(provided) => (
+         <Droppable droppableId={COLUMN_IDS.todo}>
+                {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-4"
+                    className={`space-y-4 min-h-[100px] ${
+                      snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''
+                    }`}
                   >
-                    {getTasksByStatus('todo').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
+                    {getTasksByStatus('todo').length > 0 ? (
+                      getTasksByStatus('todo').map((task, index) => (
+                        <TaskCard key={task.id} task={task} index={index} />
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-400">
+                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                      </div>
+                    )}
                     {provided.placeholder}
                   </div>
                 )}
@@ -224,15 +231,23 @@ function TaskBoard({setSelectedTAB }) {
                 <span className="text-gray-600">{getStatusCount('inProgress')}</span>
               </div>
               <Droppable droppableId={COLUMN_IDS.inProgress}>
-                {(provided) => (
+                {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-4"
+                    className={`space-y-4 min-h-[100px] ${
+                      snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''
+                    }`}
                   >
-                    {getTasksByStatus('inProgress').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
+                    {getTasksByStatus('inProgress').length > 0 ? (
+                      getTasksByStatus('inProgress').map((task, index) => (
+                        <TaskCard key={task.id} task={task} index={index} />
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-400">
+                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                      </div>
+                    )}
                     {provided.placeholder}
                   </div>
                 )}
@@ -246,15 +261,23 @@ function TaskBoard({setSelectedTAB }) {
                 <span className="text-gray-600">{String(getStatusCount('review')).padStart(2, '0')}</span>
               </div>
               <Droppable droppableId={COLUMN_IDS.review}>
-                {(provided) => (
+                {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-4"
+                    className={`space-y-4 min-h-[100px] ${
+                      snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''
+                    }`}
                   >
-                    {getTasksByStatus('review').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
+                    {getTasksByStatus('review').length > 0 ? (
+                      getTasksByStatus('review').map((task, index) => (
+                        <TaskCard key={task.id} task={task} index={index} />
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-400">
+                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                      </div>
+                    )}
                     {provided.placeholder}
                   </div>
                 )}
@@ -268,15 +291,23 @@ function TaskBoard({setSelectedTAB }) {
                 <span className="text-gray-600">{getStatusCount('done')}</span>
               </div>
               <Droppable droppableId={COLUMN_IDS.done}>
-                {(provided) => (
+                {(provided, snapshot) => (
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className="space-y-4"
+                    className={`space-y-4 min-h-[100px] ${
+                      snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''
+                    }`}
                   >
-                    {getTasksByStatus('done').map((task, index) => (
-                      <TaskCard key={task.id} task={task} index={index} />
-                    ))}
+                    {getTasksByStatus('done').length > 0 ? (
+                      getTasksByStatus('done').map((task, index) => (
+                        <TaskCard key={task.id} task={task} index={index} />
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-gray-400">
+                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                      </div>
+                    )}
                     {provided.placeholder}
                   </div>
                 )}
@@ -289,7 +320,9 @@ function TaskBoard({setSelectedTAB }) {
   );
 }
 
-function TaskCard({ task, index }: { task: Task; index: number }) {
+
+
+function TaskCard({ task, index }: { task: task; index: number }) {
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided) => (
@@ -297,22 +330,32 @@ function TaskCard({ task, index }: { task: Task; index: number }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1  "
+          style={provided.draggableProps.style} // Add this
+          className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
         >
-          <p className="text-[10px] leading-7 font-medium text-[#C4C7CF]">{task.createdAt}</p>
           <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
           <div className="flex justify-between items-center">
-            <div className="flex items-center space-x-2">
-              <span className="text-[11px] leading-5 font-normal text-[#404142]">15</span>
+            <div className="flex flex-col">
+              <span className="text-[11px]">{task.score}</span>
+             
             </div>
             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
               <User size={14} className="text-gray-600" />
             </div>
           </div>
+          <p className="text-[10px] text-[#C4C7CF]">
+            {formatDistanceToNow(new Date(task.created_at))} ago
+          </p>
         </div>
       )}
     </Draggable>
   );
 }
 
+
 export default TaskBoard;
+ {/* {task.devops && (
+                <span className="text-[11px]">
+                  {task.devops.map(dev => dev.name).join(", ")}
+                </span>
+              )}*/}

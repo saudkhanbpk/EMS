@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from "react";
 import { ArrowLeft } from "lucide-react";
-import { supabase } from "./lib/supabase";
+import { supabase } from "../lib/supabase";
 
 interface Developer {
   id: string;
   full_name: string;
 }
-interface Developer { 
+interface Developer {
     id : string;
     full_name : string;
   }
@@ -17,7 +17,7 @@ interface AddNewTaskProps {
   mockDevelopers: Developer[];
 }
 
-const AddNewTask = ({ setselectedtab, ProjectId, devopss }: AddNewTaskProps) => {
+const EditProjectTask = ({ setselectedtab, ProjectId, devopss , Task }: AddNewTaskProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
@@ -202,4 +202,4 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss }: AddNewTaskProps) => 
   );
 };
 
-export default AddNewTask;
+export default EditProjectTask;
