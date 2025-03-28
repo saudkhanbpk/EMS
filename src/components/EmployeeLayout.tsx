@@ -11,6 +11,7 @@ import {
   CloudCog,
   Building2,
   Menu,
+  Timer as TimerIcon,
   Banknote
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -86,6 +87,9 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     {
       name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote
+    },
+    {
+      name: "Timer", href: "/timer", icon: TimerIcon
     },
     // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];

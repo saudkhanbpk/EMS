@@ -25,7 +25,7 @@ interface TimeTrackerState {
   isTracking: boolean;
   elapsedSeconds: number;
   lastScreenshotTime: string | null;
-  screenshotInterval: [number, number]; // Min and max seconds between screenshots
+  screenshotInterval: number; // Fixed interval in seconds
   
   // Methods
   startTracking: () => Promise<void>;
@@ -34,19 +34,24 @@ interface TimeTrackerState {
   resumeTracking: () => void;
   captureScreenshot: () => Promise<void>;
   updateElapsedTime: (seconds: number) => void;
-  setScreenshotInterval: (min: number, max: number) => void;
+  setScreenshotInterval: (seconds: number) => void;
   
   // Session history
   sessions: TimeSession[];
   loadSessions: () => Promise<void>;
 }
 
+// Helper function to get the next screenshot delay
+const getNextScreenshotDelay = (interval: number) => {
+  return interval * 1000; // Convert seconds to milliseconds
+};
+
 export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
   currentSession: null,
   isTracking: false,
   elapsedSeconds: 0,
   lastScreenshotTime: null,
-  screenshotInterval: [60, 300], // Between 1 and 5 minutes
+  screenshotInterval: 600, // 10 minutes in seconds
   sessions: [],
   
   startTracking: async () => {
@@ -94,7 +99,7 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
       if (get().isTracking) {
         get().captureScreenshot();
       }
-    }, getRandomScreenshotDelay(get().screenshotInterval));
+    }, getNextScreenshotDelay(get().screenshotInterval));
   },
   
   stopTracking: async () => {
@@ -144,7 +149,7 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
       if (get().isTracking) {
         get().captureScreenshot();
       }
-    }, getRandomScreenshotDelay(get().screenshotInterval));
+    }, getNextScreenshotDelay(get().screenshotInterval));
   },
   
   captureScreenshot: async () => {
@@ -218,7 +223,7 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
           if (get().isTracking) {
             get().captureScreenshot();
           }
-        }, getRandomScreenshotDelay(get().screenshotInterval));
+        }, getNextScreenshotDelay(get().screenshotInterval));
       }
     } catch (error) {
       console.error('Error capturing screenshot:', error);
@@ -234,8 +239,8 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
     }));
   },
   
-  setScreenshotInterval: (min, max) => {
-    set({ screenshotInterval: [min, max] });
+  setScreenshotInterval: (seconds) => {
+    set({ screenshotInterval: seconds });
   },
   
   loadSessions: async () => {
@@ -256,50 +261,32 @@ export const useTimeTrackerStore = create<TimeTrackerState>((set, get) => ({
     }
     
     // Load screenshots for each session
-    const sessions: TimeSession[] = [];
+    const sessionsWithScreenshots = await Promise.all(
+      sessionsData.map(async (session) => {
+        const { data: screenshotsData, error: screenshotsError } = await supabase
+          .from('screenshots')
+          .select('*')
+          .eq('session_id', session.id)
+          .order('timestamp', { ascending: false });
+        
+        if (screenshotsError) {
+          console.error('Failed to load screenshots:', screenshotsError);
+          return session;
+        }
+        
+        return {
+          ...session,
+          screenshots: screenshotsData.map(screenshot => ({
+            id: screenshot.id,
+            timestamp: screenshot.timestamp,
+            imageUrl: screenshot.image_url,
+            userId: screenshot.user_id,
+            sessionId: screenshot.session_id
+          }))
+        };
+      })
+    );
     
-    for (const session of sessionsData) {
-      const { data: screenshotsData, error: screenshotsError } = await supabase
-        .from('screenshots')
-        .select('*')
-        .eq('session_id', session.id);
-      
-      if (screenshotsError) {
-        console.error('Failed to load screenshots:', screenshotsError);
-        continue;
-      }
-      
-      sessions.push({
-        id: session.id,
-        userId: session.user_id,
-        startTime: session.start_time,
-        endTime: session.end_time,
-        totalSeconds: session.total_seconds,
-        isActive: session.is_active,
-        screenshots: screenshotsData.map(s => ({
-          id: s.id,
-          timestamp: s.timestamp,
-          imageUrl: s.image_url,
-          userId: s.user_id,
-          sessionId: s.session_id
-        }))
-      });
-    }
-    
-    // Check for active session
-    const activeSession = sessions.find(s => s.isActive);
-    
-    set({ 
-      sessions,
-      currentSession: activeSession || null,
-      isTracking: !!activeSession,
-      elapsedSeconds: activeSession?.totalSeconds || 0
-    });
+    set({ sessions: sessionsWithScreenshots });
   }
-}));
-
-// Helper function to get random delay between min and max
-function getRandomScreenshotDelay(interval: [number, number]): number {
-  const [min, max] = interval;
-  return Math.floor(Math.random() * (max - min + 1) + min) * 1000;
-} 
+})); 

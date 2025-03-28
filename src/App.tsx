@@ -21,6 +21,12 @@ import { getMessaging, onMessage } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
 import { messaging } from "../notifications/firebase";
 import { AttendanceProvider } from './pages/AttendanceContext';
+import { Toaster } from "./timer-components/ui/toaster";
+import { Toaster as Sonner } from "./timer-components/ui/sonner";
+import { TooltipProvider } from "./timer-components/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Index from './pages/Index';
+import AddNewTask from './AddNewTask';
 
 const firebaseConfig = {
   apiKey: "AIzaSyAAUF5qzZrljXJjb96NmesXBydmn9Hmjss",
@@ -40,6 +46,8 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }>
   if (!user) return <Navigate to="/login" replace />;
   return <>{children}</>;
 };
+
+const queryClient = new QueryClient();
 
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession);
@@ -98,52 +106,60 @@ function App() {
   // }
 
   return (
-    <Router>
-      <Routes>
-        {/* Public Route: Login */}
-        <Route path="/login" element={<Login />} />
+    <QueryClientProvider client={queryClient}>
+      <TooltipProvider>
+        <Toaster />
+        <Sonner />
+        <Router>
+          <Routes>
+            {/* Public Route: Login */}
+            <Route path="/login" element={<Login />} />
 
-        {/* Widget Demo Route */}
-        <Route path="/widget-demo" element={<WidgetDemo />} />
+            {/* Widget Demo Route */}
+            <Route path="/widget-demo" element={<WidgetDemo />} />
 
-        {/* Admin Route (Protected) */}
-        <Route
-          path="/admin"
-          element={
-            <PrivateRoute adminOnly>
-              <AttendanceProvider>
-                <AdminPage />
-              </AttendanceProvider>
-            </PrivateRoute>
-          }
-        />
+            {/* Admin Route (Protected) */}
+            <Route
+              path="/admin"
+              element={
+                <PrivateRoute adminOnly>
+                  <AttendanceProvider>
+                    <AdminPage />
+                  </AttendanceProvider>
+                </PrivateRoute>
+              }
+            />
 
-        {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
-        <Route
-          path="/"
-          element={
-            <PrivateRoute>
-              <EmployeeLayout />
-            </PrivateRoute>
-          }
-        >
-          <Route index element={<Dashboard />} />
-          <Route path="attendance" element={<Attendance />} />
-          <Route path="leave" element={<Leave />} />
-          <Route path="tasks" element={<Tasks />} />
-          <Route path="software-complaint" element={<SoftwareComplaintSection />} />
-          <Route path="office-complaint" element={<OfficeComplaintSection />} />
-          <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
-          <Route path="overtime" element={<ExtraHours />} />
-          <Route path="salary-breakdown" element={<SalaryBreakdown />} />
-          <Route path="board/:id" element={<TaskBoard />} />
-          <Route path="profile" element={<ProfileCard />} />
-        </Route>
+            {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
+            <Route
+              path="/"
+              element={
+                <PrivateRoute>
+                  <EmployeeLayout />
+                </PrivateRoute>
+              }
+            >
+              <Route index element={<Dashboard />} />
+              <Route path="attendance" element={<Attendance />} />
+              <Route path="leave" element={<Leave />} />
+              <Route path="tasks" element={<Tasks />} />
+              <Route path="software-complaint" element={<SoftwareComplaintSection />} />
+              <Route path="office-complaint" element={<OfficeComplaintSection />} />
+              <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
+              <Route path="overtime" element={<ExtraHours />} />
+              <Route path="salary-breakdown" element={<SalaryBreakdown />} />
+              <Route path="board/:id" element={<TaskBoard />} />
+              <Route path="profile" element={<ProfileCard />} />
+              <Route path="timer" element={<Index />} />
 
-        {/* Redirect unknown routes to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+            </Route>
+
+            {/* Redirect unknown routes to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Router>
+      </TooltipProvider>
+    </QueryClientProvider>
   );
 }
 

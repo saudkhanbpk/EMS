@@ -879,184 +879,89 @@
 
 
 
-import React, { useState } from 'react';
+import React, { useState , useEffect, useContext } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, User, Pencil, Trash2, X } from 'lucide-react';
-
+import { supabase } from '../lib/supabase';
+import { formatDistanceToNow } from 'date-fns';
+import { AttendanceContext } from './AttendanceContext';
+interface devops {
+  id : string;
+  full_name : string;
+}
 interface Project {
   id: string;
   title: string;
   type: 'Front-End Developer' | 'Back End Developer';
-  owner: string;
-  createdAt: string;
-}
+  devops: { id: string; name: string }[];
+  created_at: string;
+  start_date?: string;
+} 
+ 
 
 function Task() {
   const navigate = useNavigate();
-  const [isAddingProject, setIsAddingProject] = useState(false);
-  const [newProject, setNewProject] = useState({
-    title: '',
-    type: 'Front-End Developer' as const
-  });
+  const [Loading , setLoading] = useState (false);
+  const  [ProjectId , setProjectId] = useState('');
+  const [devops , setdevops] = useState<devops[]>([]);
+  // const [setDevs] = useContext(AttendanceContext)
+  
+
 
   const [projects, setProjects] = useState<Project[]>([
-    {
-      id: '1',
-      title: 'Services Mobile App',
-      type: 'Front-End Developer',
-      owner: 'Robert Wilson',
-      createdAt: '6 month ago'
-    },
-    {
-      id: '2',
-      title: 'VentoPay',
-      type: 'Back End Developer',
-      owner: 'Robert Wilson',
-      createdAt: '6 month ago'
-    },
-    {
-      id: '3',
-      title: 'Move Muse',
-      type: 'Front-End Developer',
-      owner: 'Robert Wilson',
-      createdAt: '6 month ago'
-    }
+
   ]);
+    // Fetch projects
+    useEffect(() => {
+      const fetchProjects = async () => {
+        setLoading(true);
+        const { data, error } = await supabase
+          .from("projects")
+          .select("*");
+        if (!error) setProjects(data);
+        setLoading(false);
+      };
+      fetchProjects();
+    }, []);
 
-  const handleAddProject = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!newProject.title.trim()) return;
 
-    const project: Project = {
-      id: String(Date.now()),
-      title: newProject.title,
-      type: newProject.type,
-      owner: 'Robert Wilson',
-      createdAt: 'Just now'
-    };
-
-    setProjects([...projects, project]);
-    setNewProject({ title: '', type: 'Front-End Developer' });
-    setIsAddingProject(false);
-  };
 
   return (
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
           <h1 className="text-[26px] font-bold">Your Projects</h1>
-          <button
-            onClick={() => setIsAddingProject(true)}
-            className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center"
-          >
-            <PlusCircle size={20} className="mr-2" /> New Project
-          </button>
         </div>
-
-        {isAddingProject && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg p-6 w-full max-w-md">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-xl font-semibold">Create New Project</h2>
-                <button
-                  onClick={() => setIsAddingProject(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X size={24} />
-                </button>
-              </div>
-              <form onSubmit={handleAddProject}>
-                <div className="space-y-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Project Title
-                    </label>
-                    <input
-                      type="text"
-                      value={newProject.title}
-                      onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
-                      placeholder="Enter project title"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Project Type
-                    </label>
-                    <select
-                      value={newProject.type}
-                      onChange={(e) => setNewProject({ ...newProject, type: e.target.value as 'Front-End Developer' | 'Back End Developer' })}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
-                    >
-                      <option value="Front-End Developer">Front-End Developer</option>
-                      <option value="Back End Developer">Back End Developer</option>
-                    </select>
-                  </div>
-                  <div className="flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      onClick={() => setIsAddingProject(false)}
-                      className="px-4 py-2 text-gray-600 hover:text-gray-800"
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="submit"
-                      className="px-4 py-2 bg-[#9A00FF] text-white rounded-md hover:bg-violet-700"
-                    >
-                      Create Project
-                    </button>
-                  </div>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
             <div
               key={project.id}
-              className="bg-white rounded-[20px] w-[316px] h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
-              onClick={() => navigate(`/board/${project.id}`)}
+              className="bg-white rounded-[20px] w-[316px] min-h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
+              onClick={() => {navigate(`/board/${project.id}`)
+                  //  setDevs(project.devops)
+              }}
             >
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center px-4 py-1  bg-[#F4F6FC] rounded-full ">
                   <span className={`w-2 h-2 rounded-full bg-[#9A00FF]
                     }`}></span>&nbsp;&nbsp;
                   <span className="text-sm font-semibold text-[#9A00FF]">{project.type}</span>
-                </div>
-                <div className="flex space-x-2">
-                  <button
-                    className="text-gray-400 hover:text-gray-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // Add edit functionality
-                    }}
-                  >
-                    <Pencil size={16} color='#667085' />
-                  </button>
-                  <button
-                    className="text-gray-400 hover:text-red-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-
-                      // Add delete functionality
-                    }}
-                  >
-                    <Trash2 size={16} color='#667085' />
-                  </button>
-                </div>
+                </div>      
               </div>
               <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
               <div className="flex gap-10 flex-col items-start justify-between">
-                <div className="flex items-center space-x-2">
-                  {/* <User size={16} /> */}
-                  <span className='font-medium text-base leading-7 text-[#85878B]'>{project.owner}</span>
-                </div>
+              <div className="mb-2">
+                      <span className='leading-7 text-[#686a6d]'>
+                        <label className='font-semibold'>DevOps: </label>
+                        <ul className='ml-2 list-disc list-inside'>
+                          {project.devops.map((dev) => (
+                            <li key={dev.id}>{dev.name}</li>
+                          ))}
+                        </ul>
+                      </span>
+                    </div>
                 <div>
-                  <span className='font-medium text-base leading-7 text-[#C4C7CF]'>{project.createdAt}</span>
-
+                  <span className='font-medium text-base leading-7 text-[#C4C7CF]'>  {formatDistanceToNow(new Date(project.created_at))} ago</span>
                 </div>
               </div>
             </div>

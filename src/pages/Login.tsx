@@ -59,6 +59,7 @@ const Login: React.FC = () => {
         localStorage.setItem('user_id', authData.user.id);
         localStorage.setItem('user_email', authData.user.email);
         
+        
         // **Request notification permission AFTER login**
         GenerateToken();
       
