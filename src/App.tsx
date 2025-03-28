@@ -26,6 +26,8 @@ import { Toaster as Sonner } from "./timer-components/ui/sonner";
 import { TooltipProvider } from "./timer-components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Index from './pages/Index';
+import AddNewTask from './AddNewTask';
+
 const firebaseConfig = {
   apiKey: "AIzaSyAAUF5qzZrljXJjb96NmesXBydmn9Hmjss",
   authDomain: "emsm-1d63e.firebaseapp.com",

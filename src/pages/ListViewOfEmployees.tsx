@@ -1316,6 +1316,8 @@ const handleCloseModal = () => {
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
+        .neq("role", "admin");
+        
       if (usersError) throw usersError;
 
       // Fetch attendance logs for the selected date
