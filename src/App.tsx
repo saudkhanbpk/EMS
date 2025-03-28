@@ -21,9 +21,9 @@ import { getMessaging, onMessage } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
 import { messaging } from "../notifications/firebase";
 import { AttendanceProvider } from './pages/AttendanceContext';
-import { Toaster } from "./timer-components/ui/toaster";
-import { Toaster as Sonner } from "./timer-components/ui/sonner";
-import { TooltipProvider } from "./timer-components/ui/tooltip";
+import { Toaster } from "./component/ui/toaster";
+import { Toaster as Sonner } from "./component/ui/sonner";
+import { TooltipProvider } from "./component/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import Index from './pages/Index';
 import AddNewTask from './AddNewTask';
@@ -116,7 +116,7 @@ function App() {
             <Route path="/login" element={<Login />} />
 
             {/* Widget Demo Route */}
-            <Route path="/widget-demo" element={<WidgetDemo />} />
+            {/* <Route path="/widget-demo" element={<WidgetDemo />} /> */}
 
             {/* Admin Route (Protected) */}
             <Route

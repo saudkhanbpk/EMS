@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useRef } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Play, Pause, Square, Clock } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card, CardContent, CardFooter } from './ui/card';
@@ -8,63 +9,36 @@ interface TimerProps {
   isTracking: boolean;
   isPaused: boolean;
   sessionStartTime: string | null;
-  elapsedSeconds: number;
   onStart: () => void;
   onPause: () => void;
   onStop: () => void;
-  onTimeUpdate: (seconds: number) => void;
 }
 
-export default function Timer({ 
-  isTracking, 
-  isPaused, 
-  sessionStartTime, 
-  elapsedSeconds,
-  onStart, 
-  onPause, 
-  onStop,
-  onTimeUpdate 
-}: TimerProps) {
-  const [timeElapsed, setTimeElapsed] = useState<number>(elapsedSeconds * 1000);
-  const intervalRef = useRef<NodeJS.Timeout | null>(null);
-  const lastUpdateRef = useRef<number>(Date.now());
+export default function Timer({ isTracking, isPaused, sessionStartTime, onStart, onPause, onStop }: TimerProps) {
+  const [timeElapsed, setTimeElapsed] = useState<number>(0);
   const { toast } = useToast();
 
   useEffect(() => {
-    // Clear any existing interval
-    if (intervalRef.current) {
-      clearInterval(intervalRef.current);
-    }
+    let interval: NodeJS.Timeout | null = null;
 
     if (isTracking && !isPaused && sessionStartTime) {
-      // Initialize the timer with the current elapsed seconds
-      setTimeElapsed(elapsedSeconds * 1000);
-      lastUpdateRef.current = Date.now();
+      console.log('Timer started with session time:', sessionStartTime);
+      const startTime = new Date(sessionStartTime).getTime();
 
-      // Start the interval
-      intervalRef.current = setInterval(() => {
+      interval = setInterval(() => {
         const now = Date.now();
-        const delta = now - lastUpdateRef.current;
-        lastUpdateRef.current = now;
-
-        setTimeElapsed(prev => {
-          const newTime = prev + delta;
-          onTimeUpdate(Math.floor(newTime / 1000));
-          return newTime;
-        });
+        const elapsed = now - startTime;
+        console.log('Time elapsed:', elapsed);
+        setTimeElapsed(elapsed);
       }, 1000);
-    } else if (elapsedSeconds > 0) {
-      // If paused or stopped, just show the current elapsed time
-      setTimeElapsed(elapsedSeconds * 1000);
+    } else {
+      console.log('Timer state:', { isTracking, isPaused, sessionStartTime });
     }
 
-    // Cleanup function
     return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current);
-      }
+      if (interval) clearInterval(interval);
     };
-  }, [isTracking, isPaused, sessionStartTime, elapsedSeconds, onTimeUpdate]);
+  }, [isTracking, isPaused, sessionStartTime]);
 
   const formatTime = (ms: number) => {
     const totalSeconds = Math.floor(ms / 1000);
@@ -78,6 +52,7 @@ export default function Timer({
   };
 
   const handleStart = () => {
+    console.log('Start button clicked');
     onStart();
     toast({
       title: "Tracking Started",
@@ -86,6 +61,7 @@ export default function Timer({
   };
 
   const handlePause = () => {
+    console.log('Pause button clicked');
     onPause();
     toast({
       title: "Tracking Paused",
@@ -94,6 +70,7 @@ export default function Timer({
   };
 
   const handleStop = () => {
+    console.log('Stop button clicked');
     onStop();
     toast({
       title: "Tracking Stopped",
@@ -105,17 +82,16 @@ export default function Timer({
     <Card className="w-full max-w-md mx-auto">
       <CardContent className="pt-6">
         <div className="flex flex-col items-center justify-center space-y-4">
-          <div className={`flex items-center justify-center w-24 h-24 rounded-full border-4 ${
-            isTracking && !isPaused
+          <div className={`flex items-center justify-center w-24 h-24 rounded-full border-4 ${isTracking && !isPaused
               ? 'border-primary tracking-active'
               : isPaused
                 ? 'border-amber-500 tracking-paused'
                 : 'border-gray-300'
-          }`}>
+            }`}>
             <Clock size={40} className={isTracking ? (isPaused ? "text-amber-500" : "text-primary") : "text-gray-400"} />
           </div>
 
-          <div className="timer-display text-center text-2xl font-mono">
+          <div className="timer-display text-center">
             {formatTime(timeElapsed)}
           </div>
 
