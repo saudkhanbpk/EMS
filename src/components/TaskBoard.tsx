@@ -29,8 +29,8 @@ function TaskBoard({setSelectedTAB }) {
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<task[]>([]);
-  const [totalRSI , setTotalRSI] = useState('');
-  const [earnedRSI , setEarnedRSI] = useState('');
+  const [totalKPI , setTotalKPI] = useState('');
+  const [earnedKPI , setEarnedKPI] = useState('');
   // const [Devs]= useContext(AttendanceContext)
   
   useEffect(() => {
@@ -59,7 +59,7 @@ function TaskBoard({setSelectedTAB }) {
   }, []);
 
   useEffect( () => {
-    const FetchRSI = async () => {
+    const FetchKPI = async () => {
       const {data , error} = await supabase
       .from('tasks_of_projects')
       .select("score , status")
@@ -69,15 +69,15 @@ function TaskBoard({setSelectedTAB }) {
           .filter(task => task.status === "done") // Filter tasks with status "done"
           .map(task => task.score); // Extract only the score values
           const totalEarnedScore = earnedScores.reduce((sum, score) => sum + score, 0);
-          setEarnedRSI(totalEarnedScore);
+          setEarnedKPI(totalEarnedScore);
 
 
           const totalScores = data.map(task => task.score)
           const total = totalScores.reduce((sum , score) => sum + score ,0);
-          setTotalRSI(total);
+          setTotalKPI(total);
             }
     }
-    FetchRSI();
+    FetchKPI();
    
   })
 
@@ -353,8 +353,8 @@ function TaskBoard({setSelectedTAB }) {
         </DragDropContext>
       </div>
       <div className="fixed bottom-8 right-11 text-right space-y-1 z-50">
-      <p>Total RSI : {totalRSI}</p>
-        <p>Earned RSI : {earnedRSI}</p>
+      <p>Total KPI : {totalKPI}</p>
+        <p>Earned KPI : {earnedKPI}</p>
       </div>
   {/* </div> */}
     </div>
@@ -377,7 +377,7 @@ function TaskCard({ task, index }: { task: task; index: number }) {
           <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
           <div className="flex justify-between items-center">
             <div className="flex flex-row gap-1">
-              <p className="text-[11px] font-semibold">RSI</p>
+              <p className="text-[11px] font-semibold">KPI</p>
               <span className="text-[11px]">{task.score}</span>
              
             </div> 
