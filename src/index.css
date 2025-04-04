@@ -1,0 +1,64 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+/* Hide scrollbar by default */
+.custom-scrollbar::-webkit-scrollbar {
+    width: 8px; /* Thin scrollbar */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  /* Hide the scrollbar track */
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  /* Hide scrollbar thumb (dragging part) */
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #ddeaf8; /* Blue scrollbar */
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  /* Show scrollbar on hover */
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
+  
+  .custom-scrollbar:hover::-webkit-scrollbar {
+    opacity: 1;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb {
+  background: #dad8d8;
+  border-radius: 4px;
+}
+
+.custom-scrollbar::-webkit-scrollbar-thumb:hover {
+  background: #b1afaf;
+}
+
+/* styles.css */
+.react-time-picker__inputGroup__input.react-time-picker__inputGroup__hour {
+  width: 40px !important;
+}
+.react-time-picker__inputGroup__input.react-time-picker__inputGroup__minute.react-time-picker__inputGroup__input--hasLeadingZero{
+  width: 80px !important;
+}
+.react-time-picker__inputGroup__divider{
+  padding: 4px;
+}
+.react-time-picker__inputGroup__leadingZero{
+  display: hidden;
+  width: 0px !important;
+}

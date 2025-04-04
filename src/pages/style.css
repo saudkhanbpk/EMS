@@ -1,0 +1,29 @@
+/* Extra-large devices (Big Screens) - 1441px to 1920px */
+@media (min-width: 1441px) and (max-width: 1920px) {
+    body {
+      font-size: 18px;
+    }
+  }
+  
+  /* Ultra-wide screens (TVs & Large Monitors) - 1921px and above */
+  @media (min-width: 1921px) {
+    body {
+      font-size: 20px;
+    }
+  }
+  @keyframes marquee {
+    0% {
+      transform: translateX(100%);
+    }
+    100% {
+      transform: translateX(-100%);
+    }
+  }
+  .animate-marquee {
+    animation: marquee 30s linear infinite;
+  }
+  .lucide-trash2 {
+    font-size: small;
+    width: 20px;
+  }
+  
