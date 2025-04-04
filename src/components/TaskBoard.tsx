@@ -29,6 +29,8 @@ function TaskBoard({setSelectedTAB }) {
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<task[]>([]);
+  const [totalRSI , setTotalRSI] = useState('');
+  const [earnedRSI , setEarnedRSI] = useState('');
   // const [Devs]= useContext(AttendanceContext)
   
   useEffect(() => {
@@ -38,15 +40,46 @@ function TaskBoard({setSelectedTAB }) {
         .select("*") // Include related devops data if needed
         .eq("project_id", id)
         .order('created_at', { ascending: true });
-  
-      if (!error) {
-        setTasks(data);
-      } else {
-        console.error("Error fetching tasks:", error);
-      }
+
+        if (data && data.length) {
+          const userId = localStorage.getItem("user_id");
+          console.log("User_Id:", userId);
+          
+          const filteredTasks = data.filter(task => {
+            // Check if devops array includes the current user by ID
+            return Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId);
+          }); 
+        setTasks(filteredTasks);
+        } else {
+          console.log("No tasks found");
+        }
+
     };
     fetchtasks();
   }, []);
+
+  useEffect( () => {
+    const FetchRSI = async () => {
+      const {data , error} = await supabase
+      .from('tasks_of_projects')
+      .select("score , status")
+      .eq("project_id" , id);
+      if (data) {
+        const earnedScores = data
+          .filter(task => task.status === "done") // Filter tasks with status "done"
+          .map(task => task.score); // Extract only the score values
+          const totalEarnedScore = earnedScores.reduce((sum, score) => sum + score, 0);
+          setEarnedRSI(totalEarnedScore);
+
+
+          const totalScores = data.map(task => task.score)
+          const total = totalScores.reduce((sum , score) => sum + score ,0);
+          setTotalRSI(total);
+            }
+    }
+    FetchRSI();
+   
+  })
 
   const navigate = useNavigate();
   const [isAddingTask, setIsAddingTask] = useState(false);
@@ -117,10 +150,12 @@ function TaskBoard({setSelectedTAB }) {
       setNewTaskTitle('');
       setIsAddingTask(false);
     };
-  
+
 
   return (
     <div className="min-h-screen  p-8">
+     {/* <div className='flex flex-col'> */}
+
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center ml-6 mb-8">
         <Link 
@@ -142,6 +177,7 @@ function TaskBoard({setSelectedTAB }) {
             </div>
           </div>
         </div>
+
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-4 gap-6">
@@ -316,6 +352,11 @@ function TaskBoard({setSelectedTAB }) {
           </div>
         </DragDropContext>
       </div>
+      <div className="fixed bottom-8 right-11 text-right space-y-1 z-50">
+      <p>Total RSI : {totalRSI}</p>
+        <p>Earned RSI : {earnedRSI}</p>
+      </div>
+  {/* </div> */}
     </div>
   );
 }
@@ -335,10 +376,11 @@ function TaskCard({ task, index }: { task: task; index: number }) {
         >
           <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
           <div className="flex justify-between items-center">
-            <div className="flex flex-col">
+            <div className="flex flex-row gap-1">
+              <p className="text-[11px] font-semibold">RSI</p>
               <span className="text-[11px]">{task.score}</span>
              
-            </div>
+            </div> 
             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
               <User size={14} className="text-gray-600" />
             </div>

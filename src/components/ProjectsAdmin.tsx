@@ -282,7 +282,7 @@ function ProjectsAdmin() {
                                    console.log(project.devops);
                                    setProjectId(project.id)
                                  }}
-                  >
+                  > 
                     <div className="flex items-center justify-between mb-4">
                       <div className="flex items-center px-4 py-1 bg-[#F4F6FC] rounded-full">
                         <span className="w-2 h-2 rounded-full bg-[#9A00FF]"></span>
@@ -321,7 +321,14 @@ function ProjectsAdmin() {
                         <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
                           {formatDistanceToNow(new Date(project.created_at))} ago
                         </span>
+                   
                       </div>
+                      {/* <div>
+                      <span className='text-base leading-7 text-[#7e7e80]'>
+                          RSI : {}
+                        </span>
+                   
+                      </div> */}
                     </div>
                   </div>
                 ))

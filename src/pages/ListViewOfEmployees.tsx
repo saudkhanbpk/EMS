@@ -22,6 +22,7 @@ import {
 } from 'date-fns';
 import { AttendanceProvider } from "./AttendanceContext";
 import FilteredDataAdmin from "./filteredListAdmin";
+import { id } from "date-fns/locale/id";
 
 interface AttendanceRecord {
   id: string;
@@ -758,10 +759,14 @@ const handleCloseModal = () => {
       const minutes = totalMinutes % 60;
       return totalMinutes > 0 ? `${hours}h ${minutes}m` : '0h 0m';
     };
-    
-  
-    const handleEmployeeClick = async (id:any) => {
-      console.log("Selected ID is" , id);
+
+    useEffect(() => {
+      FetchSelectedAttendance(fetchingid);
+    } , [selectedDate])
+
+
+  const FetchSelectedAttendance = async (id) => {
+    console.log("Selected ID is" , id);
       setLoading(true);
       fetchEmployees();
       // const id = DataEmployee;
@@ -782,20 +787,46 @@ const handleCloseModal = () => {
         const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
         const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
         // console.log('startOfDay:', startOfDay, 'endOfDay:', endOfDay);
+
+        
+        const formatDateToUTC = (selectedDate) => {
+          const date = new Date(selectedDate);
+          return date.toISOString(); // Returns in UTC format
+        };
+        
+        const formattedDate = formatDateToUTC(selectedDate);
+        
+        // Convert formattedDate to a Date object
+        const parsedDate = new Date(formattedDate);
+        
+        // Extract year, month, and date in UTC
+        const year = parsedDate.getUTCFullYear();
+        const month = parsedDate.getUTCMonth();
+        const day = parsedDate.getUTCDate();
+        const startOfDayFormat = new Date(Date.UTC(year, month, day - 1, 19, 0, 0, 0)).toISOString();
+        const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 0)).toISOString();
+
+
   
         // Fetch today's attendance based on check_in time.
         const { data: todayAttendance, error: attendanceError } = await supabase
           .from('attendance_logs')
           .select('*')
           .eq('user_id', id)
-          .gte('check_in', startOfDay.toISOString())
-          .lte('check_in', endOfDay.toISOString())
+          // .gte('check_in', startOfDay.toISOString())
+          // .lte('check_in', endOfDay.toISOString())
+          .gte('check_in', startOfDayFormat)
+          .lte('check_in', endOfDayFormat)
           .order('check_in', { ascending: false })
           .limit(1)
           .single();
+          console.log("selectedDate : " , selectedDate );
+
         // console.log('todayAttendance:', todayAttendance);
+        
   
         if (attendanceError && attendanceError.code !== 'PGRST116') throw attendanceError;
+
         
         if (todayAttendance) {
           setAttendanceLogs([todayAttendance]);
@@ -927,6 +958,12 @@ const handleCloseModal = () => {
       } finally {
         setLoading(false);
       }
+    }
+    
+  
+    const handleEmployeeClick = async (id:any) => {
+      FetchSelectedAttendance(id);
+      setfetchingid(id);
     };
     // if (loading) return <div>Loading complaints...</div>;
     if (error) return <div>Error: {error}</div>;
@@ -1404,6 +1441,8 @@ const handleCloseModal = () => {
   };
 
   const now = new Date();
+  const[fetchingid , setfetchingid] = useState('')
+  
 
   // Pakistan is in UTC+5, so add 5 hours to the UTC time
   const offset = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
@@ -1413,9 +1452,11 @@ const handleCloseModal = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + (direction === "prev" ? -1 : 1));
     setSelectedDate(newDate);
-    console.log("passing time : " , newDate);
-    console.log("pakistan time time : " , pakistanTime);
-    
+    // console.log("passing time : " , newDate);
+    // console.log("pakistan time time : " , pakistanTime);
+    if (DetailedVieww === true) {
+       FetchSelectedAttendance(fetchingid)
+    }
   };
 
   // Handle filter change
@@ -1465,16 +1506,15 @@ const handleCloseModal = () => {
     //   setmaintab(y)
     //   console.log(y);
     //  }
-
+ const [DetailedVieww , setDetailedVieww] = useState(false)
     const handleGraphicViewClick = () => {
-      console.log("This is Graph View");
       setgraphicview(true)
     }
     const handleDetailedViewClick = () => {
       setgraphicview(false)
+      setDetailedVieww(true);
     }
     const handleTableViewClick = () => {
-      console.log("This is Table View");
       setgraphicview(false)
     }
 
@@ -2245,6 +2285,7 @@ const handleCloseModal = () => {
                 onClick={() =>{
                   setDataEmployee(employee.id)
                   handleEmployeeClick(employee.id)
+                  
                 } }
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
                   selectedEmployee?.id === employee.id
@@ -2278,12 +2319,12 @@ const handleCloseModal = () => {
                   <h2 className="text-2xl font-bold">
                     {selectedEmployee.full_name}'s Dashboard
                   </h2>
-                  <div > 
+                  {/* <div > 
                        <p className="text-gray-600">
                         {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
                        </p>
   
-                  </div>
+                  </div> */}
                 </div>
 
                 {loading ? (

@@ -82,7 +82,7 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'Over Time', href: '/overtime', icon: Clock },
     { name: 'Leave', href: '/leave', icon: Calendar },
-    { name: 'Tasks', href: '/tasks', icon: ListTodo },
+    { name: 'Projects', href: '/tasks', icon: ListTodo },
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     {

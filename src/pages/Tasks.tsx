@@ -918,11 +918,26 @@ function Task() {
         const { data, error } = await supabase
           .from("projects")
           .select("*");
-        if (!error) setProjects(data);
+
+          if (data && data.length) {
+            const userId = localStorage.getItem("user_id");
+            console.log("User_Id:", userId);
+            
+            const filteredTasks = data.filter(task => {
+              // Check if devops array includes the current user by ID
+              return Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId);
+            }); 
+            setProjects(filteredTasks);
+          } else {
+            console.log("No tasks found");
+          }
+
         setLoading(false);
       };
       fetchProjects();
     }, []);
+
+    
 
 
 
@@ -963,6 +978,7 @@ function Task() {
                 <div>
                   <span className='font-medium text-base leading-7 text-[#C4C7CF]'>  {formatDistanceToNow(new Date(project.created_at))} ago</span>
                 </div>
+
               </div>
             </div>
           ))}
