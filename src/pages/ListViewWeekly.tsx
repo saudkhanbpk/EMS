@@ -571,4 +571,4 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
   );
 };
 
-export default EmployeeWeeklyAttendanceTable;
+export default EmployeeWeeklyAttendanceTable; 
