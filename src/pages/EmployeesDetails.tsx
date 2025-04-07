@@ -8,6 +8,31 @@ const EmployeesDetails = ({ selectedTab }) => {
   const [employeeId, setEmployeeId] = useState('');
   const [employee, setEmployee] = useState('');
   const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [assignment, setAssignment] = useState({
+    title: "",
+    project: "",
+  });
+
+  const defaultProjects = ["Website Redesign", "Marketing Campaign", "Mobile App"];
+
+  const handleAssignClick = (entry) => {
+    setEmployee(entry);
+    setEmployeeId(entry.id);
+    setAssignment({ title: "", project: defaultProjects[0] });
+    setShowModal(true);
+  };
+
+  const handleAssignSubmit = () => {
+    console.log("Assigning:", {
+      employeeId,
+      ...assignment,
+    });
+    // Add your submission logic here (e.g. API call)
+    setShowModal(false);
+  };
+
+
   const formRef = useRef(null);
 
   const [signupData, setSignupData] = useState({
@@ -261,57 +286,112 @@ const EmployeesDetails = ({ selectedTab }) => {
           </div>
 
           <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
-            <div className="overflow-x-auto md:w-full w-[300px]">
-              <table className="min-w-[700px] bg-white">
-                <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
-                  <tr>
-                    <th className="py-2 px-3 text-left">Employee Name</th>
-                    <th className="py-2 px-3 text-left">Joining Date</th>
-                    <th className="py-2 px-3 text-left">Employment Duration</th>
-                    <th className="py-2 px-3 text-left">Role</th>
-                    <th className="py-2 px-3 text-left">Email</th>
-                    <th className="py-2 px-3 text-left">Slack ID</th>
-                    <th className="py-2 px-3 text-left">Phone Number</th>
-                    <th className="py-2 px-3 text-left">Salary</th>
-                    <th className="py-2 px-3 text-left">Per Hour Pay</th>
-                  </tr>
-                </thead>
-                <tbody className="text-sm font-normal">
-                  {employees.map((entry, index) => (
-                    <tr
-                      key={index}
-                      className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+        <div className="overflow-x-auto md:w-full w-[300px]">
+          <table className="min-w-[700px] bg-white">
+            <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
+              <tr>
+                <th className="py-2 px-3 text-left">Employee Name</th>
+                <th className="py-2 px-3 text-left">Joining Date</th>
+                <th className="py-2 px-3 text-left">Employment Duration</th>
+                <th className="py-2 px-3 text-left">Role</th>
+                <th className="py-2 px-3 text-left">Email</th>
+                <th className="py-2 px-3 text-left">Slack ID</th>
+                <th className="py-2 px-3 text-left">Phone Number</th>
+                <th className="py-2 px-3 text-left">Salary</th>
+                <th className="py-2 px-3 text-left">Per Hour Pay</th>
+                <th className="py-2 px-3 text-left">Assign</th>
+              </tr>
+            </thead>
+            <tbody className="text-sm font-normal">
+              {employees.map((entry, index) => (
+                <tr
+                  key={index}
+                  className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+                >
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <button
+                      className="text-gray-900 text-left hover:text-[#9A00FF]"
+                      onClick={() => {
+                        setEmployee(entry);
+                        setEmployeeId(entry.id);
+                        setEmployeeView("detailview");
+                      }}
                     >
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        <button
-                          className="text-gray-900 text-left hover:text-[#9A00FF]"
-                          onClick={() => {
-                            setEmployee(entry);
-                            setEmployeeId(entry.id);
-                            setEmployeeView("detailview");
-                          }}
-                        >
-                          {entry.full_name}
-                        </button>
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {new Date(entry.created_at).toLocaleDateString()}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">
-                        {getEmploymentDuration(entry.created_at)}
-                      </td>
-                      <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{entry.email}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{entry.phone_number}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{entry.salary}</td>
-                      <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      {entry.full_name}
+                    </button>
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {new Date(entry.created_at).toLocaleDateString()}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    {getEmploymentDuration(entry.created_at)}
+                  </td>
+                  <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{entry.email}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{entry.phone_number}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{entry.salary}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td>
+                  <td className="px-3 py-3 whitespace-nowrap">
+                    <button
+                      onClick={() => handleAssignClick(entry)}
+                      className="bg-[#9A00FF] text-white px-3 py-1 rounded hover:bg-[#7a00cc]"
+                    >
+                      Assign
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+             {/* Modal */}
+      {showModal && (
+        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+            <h2 className="text-lg font-semibold mb-4">Assign Task to {employee?.full_name}</h2>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Title</label>
+              <input
+                type="text"
+                className="w-full px-3 py-2 border border-gray-300 rounded"
+                value={assignment.title}
+                onChange={(e) => setAssignment({ ...assignment, title: e.target.value })}
+              />
+            </div>
+            <div className="mb-4">
+              <label className="block text-sm font-medium mb-1">Project</label>
+              <select
+                className="w-full px-3 py-2 border border-gray-300 rounded"
+                value={assignment.project}
+                onChange={(e) => setAssignment({ ...assignment, project: e.target.value })}
+              >
+                {defaultProjects.map((proj, i) => (
+                  <option key={i} value={proj}>
+                    {proj}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="flex justify-end gap-3">
+              <button
+                onClick={() => setShowModal(false)}
+                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleAssignSubmit}
+                className="px-4 py-2 bg-[#9A00FF] text-white rounded hover:bg-[#7a00cc]"
+              >
+                Assign
+              </button>
             </div>
           </div>
+        </div>
+      )}
         </>
       )}
     </div>
