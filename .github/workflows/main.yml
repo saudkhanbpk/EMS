@@ -26,9 +26,6 @@ jobs:
         run: node fetchUsers.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-<<<<<<< Updated upstream
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
-=======
           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
 
 
@@ -82,4 +79,3 @@ jobs:
 #         env:
 #           SUPABASE_URL: ${{ env.SUPABASE_URL }}
 #           SUPABASE_ANON_KEY: ${{ env.SUPABASE_ANON_KEY }}
->>>>>>> Stashed changes
