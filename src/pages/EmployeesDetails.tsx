@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
+import { FaTrash, FaEdit } from "react-icons/fa";
 
 const EmployeesDetails = ({ selectedTab }) => {
   const [employees, setEmployees] = useState([]);
@@ -31,6 +32,16 @@ const EmployeesDetails = ({ selectedTab }) => {
     // Add your submission logic here (e.g. API call)
     setShowModal(false);
   };
+
+  const handleDelete = async (id) => {
+    const { error } = await supabase.from("users").delete().eq("id", id);
+    if (error) {
+      console.error("Error deleting employee:", error.message);
+    } else {
+      setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+    }
+  };
+  
 
 
   const formRef = useRef(null);
@@ -286,66 +297,75 @@ const EmployeesDetails = ({ selectedTab }) => {
           </div>
 
           <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
-        <div className="overflow-x-auto md:w-full w-[300px]">
-          <table className="min-w-[700px] bg-white">
-            <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
-              <tr>
-                <th className="py-2 px-3 text-left">Employee Name</th>
-                <th className="py-2 px-3 text-left">Joining Date</th>
-                <th className="py-2 px-3 text-left">Employment Duration</th>
-                <th className="py-2 px-3 text-left">Role</th>
-                <th className="py-2 px-3 text-left">Email</th>
-                <th className="py-2 px-3 text-left">Slack ID</th>
-                <th className="py-2 px-3 text-left">Phone Number</th>
-                <th className="py-2 px-3 text-left">Salary</th>
-                <th className="py-2 px-3 text-left">Per Hour Pay</th>
-                <th className="py-2 px-3 text-left">Assign</th>
-              </tr>
-            </thead>
-            <tbody className="text-sm font-normal">
-              {employees.map((entry, index) => (
-                <tr
-                  key={index}
-                  className="border-b border-gray-200 hover:bg-gray-50 transition-all"
-                >
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <button
-                      className="text-gray-900 text-left hover:text-[#9A00FF]"
-                      onClick={() => {
-                        setEmployee(entry);
-                        setEmployeeId(entry.id);
-                        setEmployeeView("detailview");
-                      }}
-                    >
-                      {entry.full_name}
-                    </button>
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    {getEmploymentDuration(entry.created_at)}
-                  </td>
-                  <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{entry.email}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{entry.phone_number}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{entry.salary}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td>
-                  <td className="px-3 py-3 whitespace-nowrap">
-                    <button
-                      onClick={() => handleAssignClick(entry)}
-                      className="bg-[#9A00FF] text-white px-3 py-1 rounded hover:bg-[#7a00cc]"
-                    >
-                      Assign
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+  <div className="overflow-x-auto md:w-full w-[300px]">
+    <table className="min-w-[700px] bg-white">
+      <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
+        <tr>
+          <th className="py-2 px-3 text-left">Employee Name</th>
+          <th className="py-2 px-3 text-left">Joining Date</th>
+          <th className="py-2 px-3 text-left">Employment Duration</th>
+          <th className="py-2 px-3 text-left">Role</th>
+          <th className="py-2 px-3 text-left">Email</th>
+          <th className="py-2 px-3 text-left">Slack ID</th>
+          <th className="py-2 px-3 text-left">Phone Number</th>
+          <th className="py-2 px-3 text-left">Salary</th>
+          <th className="py-2 px-3 text-left">Per Hour Pay</th>
+          <th className="py-2 px-3 text-left">Assign</th>
+          <th className="py-2 px-3 text-left">Action</th> 
+        </tr>
+      </thead>
+      <tbody className="text-sm font-normal">
+        {employees.map((entry, index) => (
+          <tr
+            key={index}
+            className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+          >
+            <td className="px-3 py-3 whitespace-nowrap">
+              <button
+                className="text-gray-900 text-left hover:text-[#9A00FF]"
+                onClick={() => {
+                  setEmployee(entry);
+                  setEmployeeId(entry.id);
+                  setEmployeeView("detailview");
+                }}
+              >
+                {entry.full_name}
+              </button>
+            </td>
+            <td className="px-3 py-3 whitespace-nowrap">
+              {new Date(entry.created_at).toLocaleDateString()}
+            </td>
+            <td className="px-3 py-3 whitespace-nowrap">
+              {getEmploymentDuration(entry.created_at)}
+            </td>
+            <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td>
+            <td className="px-3 py-3 whitespace-nowrap">{entry.email}</td>
+            <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td>
+            <td className="px-3 py-3 whitespace-nowrap">{entry.phone_number}</td>
+            <td className="px-3 py-3 whitespace-nowrap">{entry.salary}</td>
+            <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td>
+            <td className="px-3 py-3 whitespace-nowrap">
+              <button
+                onClick={() => handleAssignClick(entry)}
+                className="bg-[#9A00FF] text-white px-3 py-1 rounded hover:bg-[#7a00cc]"
+              >
+                Assign
+              </button>
+            </td>
+            <td className="px-3 py-3 whitespace-nowrap flex gap-3 items-center">
+              <FaEdit className="text-blue-500 cursor-not-allowed" title="Edit" />
+              <FaTrash
+                className="text-red-500 cursor-pointer hover:text-red-700"
+                title="Delete"
+                onClick={() => handleDelete(entry.id)}
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
 
              {/* Modal */}
       {showModal && (
