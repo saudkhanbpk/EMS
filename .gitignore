@@ -27,3 +27,4 @@ dist-ssr
 /firebase-admin-sdk.json
 .firebase-admin-sdk.json
 
+.qodo

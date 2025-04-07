@@ -388,10 +388,9 @@ const Attendance: React.FC = () => {
         setCurrentLocation({ lat: latitude, lng: longitude });
 
         const now = new Date();
+        const checkInTimeLimit = parse('09:30', 'HH:mm', now);
 
-        // Set the check-in time limit to 9:30 AM today
-        const checkInTimeLimit = setMinutes(setHours(new Date(), 9), 30);
-        let attendanceStatus = 'present'; 
+        let attendanceStatus = 'present';
         if (isAfter(now, checkInTimeLimit)) {
           attendanceStatus = 'late';
         }

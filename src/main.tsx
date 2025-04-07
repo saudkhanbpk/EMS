@@ -5,12 +5,14 @@ import './index.css';
 import { AuthProvider } from './lib/AuthProvider.tsx';
 import { initializeApp } from "firebase/app";
 import { getMessaging, getToken, onMessage } from "firebase/messaging";
-
+import { UserProvider } from './lib/userprovider';
 
 createRoot(document.getElementById('root')!).render(
 
   <AuthProvider>
-    <App />
+         <UserProvider>
+      <App />
+    </UserProvider>
   </AuthProvider>
 
 );

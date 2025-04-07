@@ -188,7 +188,6 @@ function TaskBoard({setSelectedTAB }) {
           </div>
         </div>
 
-
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-4 gap-6">
             {/* Todo Column */}
