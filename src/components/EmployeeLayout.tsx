@@ -11,7 +11,6 @@ import {
   CloudCog,
   Building2,
   Menu,
-  Timer as TimerIcon,
   Banknote
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
@@ -19,6 +18,7 @@ import { useAuthStore } from '../lib/store';
 import { toDate } from 'date-fns';
 import Header from './Header';
 import TimeTrackerWidget from './TimeTrackerWidget';
+import Updateview from './updateview';
 
 const EmployeeLayout: React.FC = () => {
   const location = useLocation();
@@ -82,14 +82,11 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'Over Time', href: '/overtime', icon: Clock },
     { name: 'Leave', href: '/leave', icon: Calendar },
-    { name: 'Projects', href: '/tasks', icon: ListTodo },
+    { name: 'Tasks', href: '/tasks', icon: ListTodo },
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     {
       name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote
-    },
-    {
-      name: "Timer", href: "/timer", icon: TimerIcon
     },
     // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
@@ -110,12 +107,7 @@ const EmployeeLayout: React.FC = () => {
       {/* <div className="flex h-screen"> */}
       <div >
         <div className="min-h-screen bg-gray-100 overflow-hidden">
-          <div className='w-full overflow-hidden bg-[#a36fd4] py-2 flex items-center'>
-            <p className='text-lg font-[400] text-white animate-marquee whitespace-nowrap'>
-              📢 Alert! Office Timing Update ⏰ Please note that our official office hours are from 9:00 AM to 4:00 PM.
-              Break time is scheduled from 1:00 PM to 1:30 PM.
-            </p>
-          </div>
+         <Updateview/>
           <div className="flex ">
 
             {/* Sidebar Toggle Button (Only for Small Screens) */}

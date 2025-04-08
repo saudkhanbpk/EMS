@@ -4,12 +4,14 @@ import { PlusCircle, Pencil, Trash2, X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import TaskBoardAdmin from './TaskBoardAdmin';
+import Select from "react-select";
+
 
 interface Project { 
   id: string;
   title: string;
   type: 'Front-End Developer' | 'Back End Developer';
-  devops: { id: string; name: string }[];
+  devops: { id: string; full_name: string }[];
   created_at: string;
   start_date?: string;
 } 
@@ -38,6 +40,12 @@ function ProjectsAdmin() {
     type: 'Front-End Developer' as const
   });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
+   const [searchTerm, setSearchTerm] = useState("");
+    const [selectedEmployeesearch, setDataEmployeesearch] = useState(null);
+  
+    const filteredEmployees = Devs.filter(Dev =>
+      Dev.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+    );
 
   // Fetch developers
   useEffect(() => {
@@ -50,6 +58,7 @@ function ProjectsAdmin() {
     fetchDevs();
   }, []);
 
+  
   // Fetch projects
   useEffect(() => {
     const fetchProjects = async () => {
@@ -63,18 +72,18 @@ function ProjectsAdmin() {
     fetchProjects();
   }, []);
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const selectedId = e.target.value;
-    if (!selectedId) return;
-    
-    const selectedEmployee = Devs.find(dev => dev.id === selectedId);
-    if (selectedEmployee && !selectedDevs.some(dev => dev.id === selectedId)) {
-      setSelectedDevs([...selectedDevs, { 
-        id: selectedEmployee.id, 
-        name: selectedEmployee.full_name 
-      }]);
+  const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
+    if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
+      setSelectedDevs([
+        ...selectedDevs,
+        {
+          id: selectedEmployee.id,
+          name: selectedEmployee.full_name,
+        },
+      ]);
     }
   };
+  
 
   const handleRemove = (id: string) => {
     setSelectedDevs(selectedDevs.filter(dev => dev.id !== id));
@@ -214,23 +223,31 @@ function ProjectsAdmin() {
                           <option value="Back End Developer">Back End Developer</option>
                         </select>
                       </div>
+
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Add Developers
-                        </label>
-                        <select
-                          value=""
-                          onChange={handleChange}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-violet-500"
-                        >
-                          <option value="" disabled>Select DevOps</option>
-                          {Devs.map((dev) => (
-                            <option key={dev.id} value={dev.id}>
-                              {dev.full_name}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                         <label className="block text-sm font-medium text-gray-700 mb-1">
+                           Add Developers
+                         </label>
+
+                         <Select
+                              options={filteredEmployees.map((dev) => ({
+                                value: dev.id,
+                                label: dev.full_name,
+                                fullData: dev, // include full dev object
+                              }))}
+                              onChange={(selectedOption) => {
+                                if (selectedOption) {
+                                  handleChange(selectedOption.fullData); // Pass the full dev object
+                                }
+                              }}
+                              placeholder="Search or select DevOps..."
+                              isSearchable                            
+                              className="w-full"
+                              classNamePrefix="react-select"
+                            />
+
+                       </div>
+                      
                       <div className="mt-3 flex flex-wrap gap-2">
                         {selectedDevs.map((dev) => (
                           <div key={dev.id} className="flex items-center bg-gray-200 px-3 py-1 rounded-md">

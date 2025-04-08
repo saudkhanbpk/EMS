@@ -945,8 +945,13 @@ function Task() {
     <div className="min-h-screen">
       <div className="max-w-7xl mx-auto">
         <div className="flex justify-between items-center mb-8">
-          <h1 className="text-[26px] font-bold">Your Projects</h1>
+          <h1 className="text-[26px] font-bold">Your Project</h1>
         </div>
+        {projects.length === 0 && (
+          <div className="flex items-center justify-center h-full">
+            <p className="text-gray-500">You are Not Assigned To Any Project.</p>
+          </div>
+        )}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {projects.map((project) => (
             <div

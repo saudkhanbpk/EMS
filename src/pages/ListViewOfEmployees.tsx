@@ -220,94 +220,164 @@ const [attendanceData, setAttendanceData] = useState([]);
     
   };
 
+  const handleUpdateCheckInTime = async () => {
+    console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
   
-const handleUpdateCheckInTime = async () => {
-  console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
-
-  // Format hour and minute to ensure two digits
-  const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
-  const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
-
-  // Extract the date from selectedEntry.check_out2
-  let originalDate;
-  if (selectedEntry.check_out2 === null || selectedEntry.check_out2 === "" || !selectedEntry.check_out2 || selectedEntry.check_out2 === "N/A") {
-      originalDate = new Date();
-  } else {
-      originalDate = new Date(selectedEntry.check_out2);
-  }
-
-       
-
-  // Ensure originalDate is valid
-  if (isNaN(originalDate.getTime())) {
-      console.error("Error: selectedEntry.check_out2 is not a valid date.");
+    // Format hour and minute to two digits
+    const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
+    const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+  
+    // Decode the encoded string (if coming from URL/query param)
+    const decodedDateString = decodeURIComponent(selectedEntry.check_out2);
+  
+    // Parse the date (local time) or default to today if invalid
+    let originalDate = decodedDateString && decodedDateString !== "N/A"
+      ? new Date(decodedDateString)
+      : new Date();
+  
+    // Convert to UTC format "YYYY-MM-DD"
+    const formattedUTC = originalDate.toISOString().split("T")[0];
+  
+    console.log("FormattedUTCCCCCCCCCC Date:", formattedUTC);
+  
+    // Check for invalid date format
+    if (isNaN(originalDate.getTime())) {
+      console.error("Invalid check-out date:", selectedEntry.check_out2);
       alert("Error: Invalid check-out date format.");
       return;
-  }
-
-  const year = originalDate.getFullYear();
-  const month = originalDate.getMonth(); // Month is zero-indexed
-  const day = originalDate.getDate();
-
-  const year2 = new Date().getFullYear();
-  const month2 = new Date().getMonth();
-  const day2 = new Date().getDate();
-
-  // Adjust for AM/PM (convert to 24-hour format if PM)
-  let adjustedHourin = isinAM ? parseInt(formattedHourin, 10) : (parseInt(formattedHourin, 10) + 12) % 24;
-
-  // Create a new Date object with the updated time but keeping the original date
-  let formattedDate2;
-  if (selectedEntry.check_out2 === null || selectedDate.check_out2 === "N/A" || selectedDate.check_out2 === "" || selectedDate.check_out2 === undefined) {
-      formattedDate2 = new Date(year2, month2, day2, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
-      const timestamp1 = formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
-      settimestamp(timestamp1.split("T")[0]);
-  } else {
-      formattedDate2 = new Date(year, month, day, adjustedHourin, parseInt(formattedMinutein, 10), 0, 0);
-      settimestamp(formattedDate2.toISOString().replace('T', ' ').split('.')[0] + '.000+00');
-
-  }
-
-  // Convert the Date object to the required format [YYYY-MM-DD HH:MM:SS.000+00]
+    }
   
+    // Convert hour to 24-hour format if PM
+    const adjustedHourin = isinAM
+      ? parseInt(formattedHourin, 10)
+      : (parseInt(formattedHourin, 10) + 12) % 24;
   
-
-  const now = new Date(timestamp);
-  const checkInTimeLimit = parse('09:30', 'HH:mm', now);
-
-  let attendanceStatus = 'present';
-  if (isAfter(now, checkInTimeLimit)) {
-    attendanceStatus = 'late';
-  }
-
-  // Assign the formatted time string to update state
-  setupdatedCheckInTime(timestamp);
-  console.log("checkinTimelimit", checkInTimeLimit);
-  console.log("attendanceStatus", attendanceStatus);
+    // Construct new date with adjusted time
+    const newDate = new Date(
+      originalDate.getFullYear(),
+      originalDate.getMonth(),
+      originalDate.getDate(),
+      adjustedHourin,
+      parseInt(formattedMinutein, 10),
+      0,
+      0
+    );
   
-
-  // Update the `check_in` field in the database
-  const { data, error } = await supabase
+    // Format the final timestamp as "YYYY-MM-DD HH:mm:ss+00"
+    const formattedTimestamp = newDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
+    settimestamp(formattedTimestamp.split(" ")[0]); // Store only the date part
+  
+    console.log("Formatted Timestamp:", formattedTimestamp);
+  
+    // Compare against attendance time limit
+    const now = new Date(formattedTimestamp);
+    const checkInTimeLimit = parse("09:30", "HH:mm", now);
+    const attendanceStatus = isAfter(now, checkInTimeLimit) ? "late" : "present";
+  
+    setupdatedCheckInTime(formattedTimestamp);
+    console.log("Check-in Limit:", checkInTimeLimit);
+    console.log("Attendance Status:", attendanceStatus);
+  
+    // Update the database by matching only the date
+    const { data, error } = await supabase
       .from("attendance_logs")
-      .update({ check_in: timestamp ,
-         status: attendanceStatus }
-      ) // Updating check_in with the new timestamp
-      .eq("user_id", selectedEntry.id) // Ensure correct entry by user_id
-      .eq("check_out", selectedEntry.check_out2); // Match check_in for that specific date
-
-  if (data) {
-      console.log("Updated data:", data); // Log success
-  }
-
-  if (!error) {
-      alert("Check-in time updated successfully.");
-  } else {
+      .update({
+        check_in: formattedTimestamp,
+        status: attendanceStatus,
+      })
+      .eq("user_id", selectedEntry.id)
+      .eq("check_out", selectedEntry.check_out2);
+      if (error) {
       console.error("Error updating check-in time:", error);
-  }
+      alert("Failed to update check-in time.");
+    } else {
+      console.log("Update successful:", data);
+      alert("Check-in time updated successfully.");
+    }
+  
+    setisCheckinModalOpen(false);
+  };
 
-  // Close modal after update
-  setisCheckinModalOpen(false);
-};
+  // const handleUpdateCheckInTime = async () => {
+  //   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
+  
+  //   // Format hour and minute to ensure two digits
+  //   const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
+  //   const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+  
+  //   // Parse original date from selectedEntry.check_out2 or default to today
+  //   let originalDate;
+  //   if (selectedEntry.check_out2 && selectedEntry.check_out2 !== "N/A") {
+  //     // Decode and parse the date string
+  //     const decodedDateString = decodeURIComponent(selectedEntry.check_out2);
+  //     originalDate = new Date(decodedDateString);
+  //   } else {
+  //     originalDate = new Date();
+  //   }
+  
+  //   // Ensure originalDate is valid
+  //   if (isNaN(originalDate.getTime())) {
+  //     console.error("Invalid check-out date:", selectedEntry.check_out2);
+  //     alert("Error: Invalid check-out date format.");
+  //     return;
+  //   }
+  
+  //   // Convert hour to 24-hour format if PM
+  //   const adjustedHourin = isinAM
+  //     ? parseInt(formattedHourin, 10)
+  //     : (parseInt(formattedHourin, 10) + 12) % 24;
+  
+  //   // Construct new date with adjusted time
+  //   const newDate = new Date(
+  //     originalDate.getFullYear(),
+  //     originalDate.getMonth(),
+  //     originalDate.getDate(),
+  //     adjustedHourin,
+  //     parseInt(formattedMinutein, 10),
+  //     0,
+  //     0
+  //   );
+  
+  //   // Convert to UTC ISO string and format as "YYYY-MM-DD HH:mm:ss+00"
+  //   const formattedTimestamp = newDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
+  //   settimestamp(formattedTimestamp.split(" ")[0]);
+  
+  //   console.log("Formatted Timestamp:", formattedTimestamp);
+  
+  //   // Compare against attendance time limit
+  //   const now = new Date(formattedTimestamp);
+  //   const checkInTimeLimit = parse("09:30", "HH:mm", now);
+  //   const attendanceStatus = isAfter(now, checkInTimeLimit) ? "late" : "present";
+  
+  //   setupdatedCheckInTime(formattedTimestamp);
+    
+  //   console.log("Check-in Limit:", checkInTimeLimit);
+  //   console.log("Attendance Status:", attendanceStatus);
+  
+  //   // Update database
+  //   const { data, error } = await supabase
+  //     .from("attendance_logs")
+  //     .update({
+  //       check_in: formattedTimestamp,
+  //       status: attendanceStatus,
+  //     })
+  //     .eq("user_id", selectedEntry.id)
+  //     .eq("created_at::Date", originalDate.toISOString().split("T")[0]); // Match only the date
+  
+  //   if (error) {
+  //     console.error("Error updating check-in time:", error);
+  //     alert("Failed to update check-in time.");
+  //   } else {
+  //     console.log("Update successful:", data);
+  //     alert("Check-in time updated successfully.");
+  //   }
+  
+  //   setisCheckinModalOpen(false);
+  // };
+  
+  
+  
+  
 
   const handleCheckInCloseModal = () => {
     setisCheckinModalOpen(false);
@@ -1235,6 +1305,13 @@ const handleCloseModal = () => {
       console.error('Error downloading PDF:', error);
     }
   };
+
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedEmployeesearch, setDataEmployeesearch] = useState(null);
+
+  const filteredEmployees = employees.filter(employee =>
+    employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())
+  );
 
 
 
@@ -2276,35 +2353,83 @@ const handleCloseModal = () => {
         <div className="grid grid-cols-4 gap-1">
           {/* Employee List Disktop*/}
           {!isSmallScreen && (
-          <div className="col-span-1 ">
-            {/* <h2 className="text-xl font-semibold mb-4">Employee List</h2> */}
-            <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
-              {employees.map((employee) => (
-                <li
-                key={employee.id}
-                onClick={() =>{
-                  setDataEmployee(employee.id)
-                  handleEmployeeClick(employee.id)
+          // <div className="col-span-1 ">
+          //   {/* <h2 className="text-xl font-semibold mb-4">Employee List</h2> */}
+          //   <input 
+          //      type="search" 
+          //      name="search" 
+          //      placeholder="Search Employee..." 
+          //      aria-label="Search"
+          //      className ="w-full max-w-sm px-4 py-1 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200"
+          //    />
+          //   <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
+          //     {employees.map((employee) => (
+          //       <li
+          //       key={employee.id}
+          //       onClick={() =>{
+          //         setDataEmployee(employee.id)
+          //         handleEmployeeClick(employee.id)
                   
-                } }
+          //       } }
+          //       className={`p-3 rounded-lg cursor-pointer transition-colors ${
+          //         selectedEmployee?.id === employee.id
+          //           ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+          //           : "hover:bg-gray-100"
+          //       } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`} // Apply red color if hours < 7
+          //     >
+          //       <div className='flex justify-between'>
+          //       {employee.full_name}
+          //       <button className='hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl' onClick={(e) => {
+          //         e.stopPropagation();
+          //         handleEmployeeDelete(employee.id)}}>
+          //       <Trash2/>
+          //       </button>
+          //       </div>
+          //     </li>
+          //     ))}
+          //   </ul>
+          // </div>
+          <div className="col-span-1">
+          <input 
+            type="search" 
+            name="search" 
+            placeholder="Search Employee..." 
+            aria-label="Search"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="w-full max-w-sm px-4 py-1 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-4"
+          />
+          
+          <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
+            {filteredEmployees.map((employee) => (
+              <li
+                key={employee.id}
+                onClick={() => {
+                  setDataEmployeesearch(employee);
+                  handleEmployeeClick(employee.id);
+                }}
                 className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                  selectedEmployee?.id === employee.id
+                  selectedEmployeesearch?.id === employee.id
                     ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
                     : "hover:bg-gray-100"
-                } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`} // Apply red color if hours < 7
+                } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
               >
-                <div className='flex justify-between'>
-                {employee.full_name}
-                <button className='hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl' onClick={(e) => {
-                  e.stopPropagation();
-                  handleEmployeeDelete(employee.id)}}>
-                <Trash2/>
-                </button>
+                <div className='flex justify-between items-center'>
+                  {employee.full_name}
+                  <button
+                    className='hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl'
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleEmployeeDelete(employee.id);
+                    }}
+                  >
+                    <Trash2 />
+                  </button>
                 </div>
               </li>
-              ))}
-            </ul>
-          </div>
+            ))}
+          </ul>
+        </div>
         )}
        
           

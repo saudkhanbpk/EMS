@@ -31,6 +31,7 @@ function TaskBoard({setSelectedTAB }) {
   const [tasks, setTasks] = useState<task[]>([]);
   const [totalKPI , setTotalKPI] = useState('');
   const [earnedKPI , setEarnedKPI] = useState('');
+  const [assignedKPIs , setAssignedKPIs] = useState('');
   // const [Devs]= useContext(AttendanceContext)
   
   useEffect(() => {
@@ -40,36 +41,44 @@ function TaskBoard({setSelectedTAB }) {
         .select("*") // Include related devops data if needed
         .eq("project_id", id)
         .order('created_at', { ascending: true });
-
-        if (data && data.length) {
-          const userId = localStorage.getItem("user_id");
-          console.log("User_Id:", userId);
-          
-          const filteredTasks = data.filter(task => {
-            // Check if devops array includes the current user by ID
-            return Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId);
-          }); 
+  
+      if (data && data.length) {
+        const userId = localStorage.getItem("user_id");
+        console.log("User_Id:", userId);
+  
+        const filteredTasks = data.filter(task => {
+          // Check if devops array includes the current user by ID or if it's null/empty
+          return (Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId)) || !task.devops || task.devops.length === 0 || task.devops === null;
+          ;
+        });
+  
         setTasks(filteredTasks);
-        } else {
-          console.log("No tasks found");
-        }
-
+      } else {
+        console.log("No tasks found");
+      }
     };
     fetchtasks();
   }, []);
-
+  
   useEffect( () => {
     const FetchKPI = async () => {
       const {data , error} = await supabase
       .from('tasks_of_projects')
-      .select("score , status")
+      .select("score , status , devops")
       .eq("project_id" , id);
       if (data) {
+        const userid = localStorage.getItem("user_id");
         const earnedScores = data
-          .filter(task => task.status === "done") // Filter tasks with status "done"
+          .filter(task => task.status === "done" && task.devops.some(devop => devop.id == userid)) // Filter tasks with status "done"
           .map(task => task.score); // Extract only the score values
           const totalEarnedScore = earnedScores.reduce((sum, score) => sum + score, 0);
           setEarnedKPI(totalEarnedScore);
+
+          const assignedScores = data
+          .filter(task => task.devops.some(devop => devop.id == userid))
+          .map(task => task.score); // Extract only the score values
+
+          setAssignedKPIs(assignedScores)
 
 
           const totalScores = data.map(task => task.score)
@@ -171,13 +180,13 @@ function TaskBoard({setSelectedTAB }) {
           <div className="flex-1 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Work Planner</h1>
             <div className="text-sm text-gray-600">
-              <span className='font-semibold text-[13px] '>Total Tasks: <strong>{totalTasks}</strong></span>
-              <span className="mx-3 font-semibold text-[13px]">Completed Tasks: <strong>{completedTasks}</strong></span>
-              <span className='font-semibold text-[13px] '>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
+              <span className='font-semibold text-[13px] text-red-500 mr-2 '>Total Tasks: <strong>{totalTasks }</strong></span>
+              <span className='font-semibold text-[13px] text-yellow-600'>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
+              <span className="mx-3 font-semibold text-[13px] text-green-500">Completed Tasks: <strong>{completedTasks}</strong></span>
+
             </div>
           </div>
         </div>
-
 
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-4 gap-6">
@@ -352,9 +361,10 @@ function TaskBoard({setSelectedTAB }) {
           </div>
         </DragDropContext>
       </div>
-      <div className="fixed bottom-8 right-11 text-right space-y-1 z-50">
-      <p>Total KPI : {totalKPI}</p>
-        <p>Earned KPI : {earnedKPI}</p>
+      <div className="fixed bottom-8 flex flex-row right-16 text-right gap-3 z-50">
+      <p className='font-bold text-[13px] text-red-500 '>Total KPIs : {totalKPI}</p>
+      <p className='font-bold text-[13px] text-yellow-600 '> Assigned KPIs : {assignedKPIs}</p>
+        <p className='font-bold text-[13px] text-green-600 ' >Earned KPIs : {earnedKPI}</p>
       </div>
   {/* </div> */}
     </div>

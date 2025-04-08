@@ -3,7 +3,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
-import { Clock, User } from 'lucide-react';
+import { Clock, User,Eye,EyeOff  } from 'lucide-react';
 import { toDate } from 'date-fns';
 import { onMessage } from "firebase/messaging";
 import { useEffect } from 'react';
@@ -13,6 +13,7 @@ const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
+  const [passwordVisible, setPasswordVisible] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
@@ -59,7 +60,6 @@ const Login: React.FC = () => {
         localStorage.setItem('user_id', authData.user.id);
         localStorage.setItem('user_email', authData.user.email);
         
-        
         // **Request notification permission AFTER login**
         GenerateToken();
       
@@ -102,6 +102,7 @@ const Login: React.FC = () => {
               <label htmlFor="email" className="block text-sm font-medium text-gray-700">
                 Email
               </label>
+            
               <input
                 id="email"
                 type="email"
@@ -117,15 +118,18 @@ const Login: React.FC = () => {
               <label htmlFor="password" className="block text-sm font-medium text-gray-700">
                 Password
               </label>
+              <div className="relative">
               <input
                 id="password"
-                type="password"
+                type={passwordVisible ? 'text' : 'password'}
                 required
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 placeholder="Enter your password"
               />
+              <span onClick={()=>setPasswordVisible(!passwordVisible)} className='absolute top-1 right-2 text-slate-700 '>{passwordVisible?<EyeOff className='size-5' /> :<Eye  className='size-5'/>}</span>
+              </div>
             </div>
 
             <button

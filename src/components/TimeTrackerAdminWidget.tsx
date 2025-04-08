@@ -52,7 +52,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
   // Load active sessions
   useEffect(() => {
     loadActiveSessions();
-
     // Set up a refresh interval when widget is open
     let interval: NodeJS.Timeout | null = null;
     if (isOpen) {
@@ -63,7 +62,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
         }
       }, 30000); // Refresh every 30 seconds when open
     }
-
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -76,7 +74,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
         loadActiveSessions();
       }
     }, 60000); // Refresh every minute when closed
-
     return () => clearInterval(interval);
   }, [isOpen]);
 
@@ -134,7 +131,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
             .from('screenshots')
             .select('id', { count: 'exact' })
             .eq('session_id', sessionId);
-
           if (countError) {
             console.error(`Error counting screenshots for session ${sessionId}:`, countError);
           } else {
@@ -147,7 +143,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
       // Map sessions to our format
       const formattedEmployees: ActiveEmployee[] = sessionsData?.map(session => {
         totalSeconds += session.total_seconds || 0;
-
         return {
           id: session.id,
           name: session.users?.user_metadata?.name || 'Unknown',
@@ -161,7 +156,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
       setActiveEmployees(formattedEmployees);
       setTotalScreenshots(totalScreenshotsCount);
       setLastRefresh(new Date());
-
       // Format total hours
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -207,7 +201,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
       // Get screenshot counts for each session
       const sessionIds = sessionsData?.map(session => session.id) || [];
       const screenshotCounts: Record<string, number> = {};
-
       if (sessionIds.length > 0) {
         // For each session, count its screenshots
         for (const sessionId of sessionIds) {
@@ -215,7 +208,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
             .from('screenshots')
             .select('id', { count: 'exact' })
             .eq('session_id', sessionId);
-
           if (countError) {
             console.error(`Error counting screenshots for session ${sessionId}:`, countError);
           } else {
@@ -243,7 +235,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
 
       // Generate user summaries
       const userMap = new Map<string, UserSummary>();
-
       formattedSessions.forEach(session => {
         if (!userMap.has(session.userId)) {
           userMap.set(session.userId, {
@@ -277,7 +268,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
           userSummary.lastActive = session.startTime;
         }
       });
-
       setUserSummaries(Array.from(userMap.values()));
     } catch (error) {
       console.error('Error in loadAllSessions:', error);
@@ -343,7 +333,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
               <span className="font-bold">{totalHoursToday}</span>
             </div>
           </div>
-
           {/* Refresh Button */}
           <button
             onClick={(e) => {
@@ -355,7 +344,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
           >
             <RefreshCw size={18} />
           </button>
-
           {/* Main Widget Button */}
           <button
             onClick={toggleWidget}
@@ -496,7 +484,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
                     Last updated: {format(lastRefresh, 'h:mm a')}
                   </p>
                 </div>
-
                 {loading ? (
                   <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#9A00FF]"></div>
@@ -547,7 +534,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
                     {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-
                 {loading ? (
                   <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#9A00FF]"></div>
@@ -604,7 +590,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
                     {filteredSummaries.length} user{filteredSummaries.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-
                 {loading ? (
                   <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#9A00FF]"></div>
