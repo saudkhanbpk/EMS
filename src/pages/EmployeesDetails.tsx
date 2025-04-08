@@ -29,7 +29,6 @@ const EmployeesDetails = ({ selectedTab }) => {
       employeeId,
       ...assignment,
     });
-    // Add your submission logic here (e.g. API call)
     setShowModal(false);
   };
 
@@ -271,7 +270,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       )}
 
       {employeeview === "detailview" && (
-        <Employeeprofile employeeId={employeeId} employeeview={employeeview} employee={employee} />
+        <Employeeprofile employeeid={employeeId} employeeview={employeeview} employee={employee} />
       )}
 
       {employeeview === "generalview" && (

@@ -1,8 +1,13 @@
 import React from "react";
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
+// import { console } from "inspector";
 
 const Employeeprofile = ({ employeeid , employeeview , employee }) => {
+
+  console.log("Employee ID:", employeeid);
+  console.log("Employee View:", employeeview);    
+  console.log("Employee Data:", employee);
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
