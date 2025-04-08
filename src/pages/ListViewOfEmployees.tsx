@@ -162,6 +162,8 @@ const EmployeeAttendanceTable = () => {
     setIsAM(!isAM);
   };
 
+  
+
   const handleCheckInHourChange = (e) => {
     setHourin(e.target.value);
   };
