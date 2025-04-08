@@ -10,7 +10,7 @@ import Select from "react-select";
 interface Project { 
   id: string;
   title: string;
-  type: 'Front-End Developer' | 'Back End Developer';
+  type: 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer';
   devops: { id: string; full_name: string }[];
   created_at: string;
   start_date?: string;
@@ -221,6 +221,7 @@ function ProjectsAdmin() {
                         >
                           <option value="Front-End Developer">Front-End Developer</option>
                           <option value="Back End Developer">Back End Developer</option>
+                          <option value="Back End Developer">Full Stack Developer</option>
                         </select>
                       </div>
 
