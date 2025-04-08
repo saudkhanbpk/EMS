@@ -838,6 +838,9 @@ const handleCloseModal = () => {
   const FetchSelectedAttendance = async (id) => {
     console.log("Selected ID is" , id);
       setLoading(true);
+      setAttendanceLogs([]); 
+      setTodayBreak([]); 
+
       fetchEmployees();
       // const id = DataEmployee;
       try {
@@ -873,10 +876,17 @@ const handleCloseModal = () => {
         const year = parsedDate.getUTCFullYear();
         const month = parsedDate.getUTCMonth();
         const day = parsedDate.getUTCDate();
-        const startOfDayFormat = new Date(Date.UTC(year, month, day - 1, 19, 0, 0, 0)).toISOString();
-        const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 0)).toISOString();
+        // const startOfDayFormat = new Date(Date.UTC(year, month, day - 1, 19, 0, 0, 0)).toISOString();
+        // const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 0)).toISOString();
+        const startOfDayFormat = new Date(Date.UTC(year, month, day, 0, 0, 0, 0)).toISOString(); // Start of same day
+        const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 999)).toISOString(); // End of same day
 
 
+      
+
+        console.log("startOfDayFormat : " , startOfDayFormat);
+        console.log("EndOfDayFormat : " , endOfDayFormat);
+      
   
         // Fetch today's attendance based on check_in time.
         const { data: todayAttendance, error: attendanceError } = await supabase
@@ -892,27 +902,38 @@ const handleCloseModal = () => {
           .single();
           console.log("selectedDate : " , selectedDate );
 
-        // console.log('todayAttendance:', todayAttendance);
+        console.log('todayAttendance:', todayAttendance);
         
   
-        if (attendanceError && attendanceError.code !== 'PGRST116') throw attendanceError;
+        if (attendanceError && attendanceError.code !== 'PGRST116') {
+          setTodayBreak([])
+          throw attendanceError;
+        }
 
-        
-        if (todayAttendance) {
+        if (todayAttendance && todayAttendance.id !== null) {
+          console.log("todayAttendance found:", todayAttendance);
           setAttendanceLogs([todayAttendance]);
-  
-          // Fetch break records associated with today's attendance.
+      
           const { data: breakData, error: breakError } = await supabase
             .from('breaks')
             .select('*')
             .eq('attendance_id', todayAttendance.id)
             .order('start_time', { ascending: true });
-          if (breakError) throw breakError;
-          setTodayBreak(breakData || []);
-        } else {
+      
+          if (breakError) {
+            console.error("Break fetch error:", breakError);
+            throw breakError;
+          }
+      
+          console.log("Fetched breaks:", breakData);
+          setTodayBreak(Array.isArray(breakData) ? breakData : []);
+      } else {
+          console.log("No todayAttendance found, clearing break state",todayBreak);
           setAttendanceLogs([]);
           setTodayBreak([]);
-        }
+      }
+      
+
   
         const monthStart = startOfMonth(today);
         const monthEnd = endOfMonth(today);
@@ -2502,7 +2523,9 @@ const handleCloseModal = () => {
                        <div className="bg-gray-50 rounded-lg p-4">
                         <h3 className="text-lg font-semibold mb-3">Break Records</h3>
                         {todayBreak.length > 0 ? (
-                          todayBreak.map((breakItem, index) => (
+                          todayBreak.map((breakItem, index) => {
+                            console.log("==>",breakItem)
+                            return(
                             <div key={index} className="space-y-3">
                               <div className="flex justify-between">
                                 <span>Start:</span>
@@ -2517,7 +2540,7 @@ const handleCloseModal = () => {
                                 <span>{breakItem.status || 'N/A'}</span>
                               </div>
                             </div>
-                          ))
+                          )})
                         ) : (
                           <p className="text-gray-500">No break records for today</p>
                         )}
