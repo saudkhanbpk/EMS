@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
 import { FaTrash, FaEdit } from "react-icons/fa";
 
+
 const EmployeesDetails = ({ selectedTab }) => {
   const [employees, setEmployees] = useState([]);
   const [employeeview, setEmployeeView] = useState("generalview");
@@ -29,7 +30,6 @@ const EmployeesDetails = ({ selectedTab }) => {
       employeeId,
       ...assignment,
     });
-    // Add your submission logic here (e.g. API call)
     setShowModal(false);
   };
 
@@ -56,10 +56,13 @@ const EmployeesDetails = ({ selectedTab }) => {
     role: "employee",
     phone: "",
     email: "",
+    location: "",
+    profession: "",
     per_hour_pay: "",
     salary: "",
     slack_id: "",
     joining_date: "",
+    profile_image: null, 
   });
 
   const [step, setStep] = useState(1);
@@ -91,10 +94,13 @@ const EmployeesDetails = ({ selectedTab }) => {
       role: "employee",
       phone: "",
       email: "",
+      location: "",
+      profession:"",
       per_hour_pay: "",
       salary: "",
       slack_id: "",
       joining_date: "",
+      profile_image: null,
     });
     setSignupData({
       email: "",
@@ -131,31 +137,52 @@ const EmployeesDetails = ({ selectedTab }) => {
 
   const handleSubmitEmployeeInfo = async (e) => {
     e.preventDefault();
-
-    const {
-      full_name,
-      role,
-      phone,
-      per_hour_pay,
-      salary,
-      slack_id,
-    } = formData;
-
+  
+    const { full_name, role, phone, location, profession, per_hour_pay, salary, slack_id, profile_image } = formData;
+  
     const joiningDate = formData.joining_date || new Date().toISOString();
-
+  
+    let profileImageUrl = null;
+  
+    if (profile_image) {
+      // Upload profile image to Supabase storage
+      const fileExt = profile_image.name.split('.').pop();
+      const fileName = `${employeeId}_profile.${fileExt}`;
+      
+      // First upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('profilepics')
+        .upload(fileName, profile_image);
+  
+      if (uploadError) {
+        alert(uploadError.message);
+        return;
+      }
+  
+      // Then get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profilepics')
+        .getPublicUrl(fileName);
+  
+      profileImageUrl = publicUrl;
+    }
+  
     const { error } = await supabase
       .from("users")
       .update([{
         full_name,
         role,
         phone_number: phone,
+        location,
+        profession,
         per_hour_pay: Number(per_hour_pay),
         salary: Number(salary),
         slack_id,
+        profile_image: profileImageUrl,
         created_at: joiningDate,
       }])
       .eq("id", employeeId);
-
+  
     if (!error) {
       resetForm();
       setShowForm(false);
@@ -222,7 +249,7 @@ const EmployeesDetails = ({ selectedTab }) => {
               <div>
                 <h2 className="text-lg font-bold text-gray-700 mb-4">Employee Info Form</h2>
                 <form ref={formRef} className="space-y-3" onSubmit={handleSubmitEmployeeInfo}>
-                  {["full_name", "role", "phone", "email", "per_hour_pay", "salary", "slack_id", "joining_date"].map((field, idx) => (
+                  {["full_name", "role", "phone", "email", "location","profession", "per_hour_pay", "salary", "slack_id", "joining_date"].map((field, idx) => (
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <label className="text-gray-700 sm:w-32 capitalize">{field.replace(/_/g, ' ')}</label>
                       {field === "role" ? (
@@ -248,6 +275,15 @@ const EmployeesDetails = ({ selectedTab }) => {
                       )}
                     </div>
                   ))}
+                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="text-gray-700 sm:w-32">Profile Image</label>
+                    <input
+                      type="file"
+                      name="profile_image"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, profile_image: e.target.files[0] }))}
+                      className="border p-2 rounded-md flex-1 w-full text-sm sm:text-base"
+                    />
+                  </div>
                   <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
                     <button
                       type="button"
@@ -271,7 +307,13 @@ const EmployeesDetails = ({ selectedTab }) => {
       )}
 
       {employeeview === "detailview" && (
-        <Employeeprofile employeeId={employeeId} employeeview={employeeview} employee={employee} />
+       <Employeeprofile
+       employeeid={employeeId}
+       employeeview={employeeview}
+       employee={employee}
+       setemployeeview={setEmployeeView}
+     />
+     
       )}
 
       {employeeview === "generalview" && (
@@ -295,23 +337,22 @@ const EmployeesDetails = ({ selectedTab }) => {
               </button>
             </div>
           </div>
-
           <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
   <div className="overflow-x-auto md:w-full w-[300px]">
-    <table className="min-w-[700px] bg-white">
+    <table className="min-w-[1100px] bg-white">
       <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
         <tr>
           <th className="py-2 px-3 text-left">Employee Name</th>
           <th className="py-2 px-3 text-left">Joining Date</th>
-          <th className="py-2 px-3 text-left">Employment Duration</th>
-          <th className="py-2 px-3 text-left">Role</th>
+          {/* <th className="py-2 px-3 text-left">Employment Duration</th> */}
+          {/* <th className="py-2 px-3 text-left">Role</th> */}
           <th className="py-2 px-3 text-left">Email</th>
-          <th className="py-2 px-3 text-left">Slack ID</th>
+          {/* <th className="py-2 px-3 text-left">Slack ID</th> */}
           <th className="py-2 px-3 text-left">Phone Number</th>
           <th className="py-2 px-3 text-left">Salary</th>
-          <th className="py-2 px-3 text-left">Per Hour Pay</th>
+          {/* <th className="py-2 px-3 text-left">Per Hour Pay</th> */}
           <th className="py-2 px-3 text-left">Assign</th>
-          <th className="py-2 px-3 text-left">Action</th> 
+          <th className="py-2 px-3 text-left">Action</th>
         </tr>
       </thead>
       <tbody className="text-sm font-normal">
@@ -332,18 +373,18 @@ const EmployeesDetails = ({ selectedTab }) => {
                 {entry.full_name}
               </button>
             </td>
-            <td className="px-3 py-3 whitespace-nowrap">
+            <td className="py-3 whitespace-nowrap">
               {new Date(entry.created_at).toLocaleDateString()}
             </td>
-            <td className="px-3 py-3 whitespace-nowrap">
+            {/* <td className="px-3 py-3 whitespace-nowrap">
               {getEmploymentDuration(entry.created_at)}
-            </td>
-            <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td>
-            <td className="px-3 py-3 whitespace-nowrap">{entry.email}</td>
-            <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td>
-            <td className="px-3 py-3 whitespace-nowrap">{entry.phone_number}</td>
-            <td className="px-3 py-3 whitespace-nowrap">{entry.salary}</td>
-            <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td>
+            </td> */}
+            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td> */}
+            <td className="py-3 whitespace-nowrap">{entry.email}</td>
+            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td> */}
+            <td className="py-3 whitespace-nowrap">{entry.phone_number}</td>
+            <td className="py-3 whitespace-nowrap">{entry.salary}</td>
+            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td> */}
             <td className="px-3 py-3 whitespace-nowrap">
               <button
                 onClick={() => handleAssignClick(entry)}
@@ -353,7 +394,7 @@ const EmployeesDetails = ({ selectedTab }) => {
               </button>
             </td>
             <td className="px-3 py-3 whitespace-nowrap flex gap-3 items-center">
-              <FaEdit className="text-blue-500 cursor-not-allowed" title="Edit" />
+              {/* <FaEdit className="text-blue-500 cursor-not-allowed" title="Edit" /> */}
               <FaTrash
                 className="text-red-500 cursor-pointer hover:text-red-700"
                 title="Delete"
@@ -366,6 +407,7 @@ const EmployeesDetails = ({ selectedTab }) => {
     </table>
   </div>
 </div>
+
 
              {/* Modal */}
       {showModal && (

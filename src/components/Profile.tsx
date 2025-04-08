@@ -23,6 +23,7 @@ const ProfileCard: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
+  console.log("user metadata",user?.user_metadata);
   const [formData, setFormData] = useState({
     personalEmail: user?.user_metadata?.personal_email || "",
     slackId: user?.user_metadata?.slack_id || "",
