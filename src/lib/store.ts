@@ -85,41 +85,52 @@
 //   setIsOnRemoteBreak: (status) => set({ isOnBreak: status }),
 // }));
 
-
 import { create } from 'zustand';
 import { User } from '@supabase/supabase-js';
 
+// ✅ Authentication Store
 interface AuthState {
   user: User | null;
   setUser: (user: User | null) => void;
   restoreSession: () => void;
 }
-// ✅ Authentication Store
+
 export const useAuthStore = create<AuthState>((set) => ({
   user: null,
-  isAuthenticated: false,
 
   setUser: (user) => set({ user }),
-  initializeUser: () => {
-    const sessionData = localStorage.getItem('supabaseSession');
-    const session = sessionData ? JSON.parse(sessionData) : null;
-    if (session?.user) {
-      set({ user: session.user });
-    }
-  },
-  
 
+    isAuthenticated: false,
+  
+    initializeUser: () => {
+      const sessionData = localStorage.getItem('supabaseSession');
+      const session = sessionData ? JSON.parse(sessionData) : null;
+      if (session?.user) {
+        set({ user: session.user });
+      }
+    },
+    
 
   restoreSession: () => {
-    const session = localStorage.getItem('supabaseSession');
-    if (session) {
-      const parsedUser = JSON.parse(session);
-      if (parsedUser) {
-        set({ user: parsedUser});
+    const sessionData = localStorage.getItem('supabaseSession');
+    try {
+      const parsedSession = sessionData ? JSON.parse(sessionData) : null;
+      if (parsedSession?.user) {
+        set({ user: parsedSession.user });
       }
+    } catch (err) {
+      console.error("Failed to parse session from localStorage", err);
     }
   },
 }));
+
+
+
+
+  
+
+// ✅ Attendance Store
+type WorkMode = 'on_site' | 'remote' | null;
 
 interface AttendanceState {
   isCheckedIn: boolean;
@@ -145,7 +156,36 @@ interface AttendanceState {
   setIsOnRemoteBreak: (status: boolean) => void;
 }
 
-// ✅ Attendance Store
+// interface AttendanceState {
+//   // On-site
+//   isCheckedIn: boolean;
+//   checkInTime: string | null;
+//   isOnBreak: boolean;
+//   breakStartTime: string | null;
+//   workMode: WorkMode;
+
+//   // Remote
+//   isRemoteCheckedIn: boolean;
+//   remoteCheckInTime: string | null;
+//   isOnRemoteBreak: boolean;
+//   remoteBreakStartTime: string | null;
+//   remoteWorkMode: WorkMode;
+
+//   // Setters
+//   setIsCheckedIn: (status: boolean) => void;
+//   setCheckInTime: (time: string | null) => void;
+//   setIsOnBreak: (status: boolean) => void;
+//   setBreakStartTime: (time: string | null) => void;
+//   setWorkMode: (mode: WorkMode) => void;
+
+//   setIsRemoteCheckedIn: (status: boolean) => void;
+//   setRemoteCheckInTime: (time: string | null) => void;
+//   setIsOnRemoteBreak: (status: boolean) => void;
+//   setRemoteBreakStartTime: (time: string | null) => void;
+//   setRemoteWorkMode: (mode: WorkMode) => void;
+// }
+
+// / ✅ Attendance Store
 export const useAttendanceStore = create<AttendanceState>((set) => ({
   isCheckedIn: false,
   checkInTime: null,
@@ -171,3 +211,4 @@ export const useAttendanceStore = create<AttendanceState>((set) => ({
   setIsRemoteCheckedIn: (status) => set({ isRemoteCheckedIn: status }),
   setIsOnRemoteBreak: (status) => set({ isOnRemoteBreak: status }),
 }));
+

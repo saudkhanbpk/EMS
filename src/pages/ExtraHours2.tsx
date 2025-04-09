@@ -43,9 +43,9 @@ const ExtraHours: React.FC = () => {
   // console.log("User  id 1:" , user.user.id);
   // console.log("User id 2 :" , user.id);
 
-  useEffect(() => {
-    initializeUser();
-  }, [initializeUser]);
+  // useEffect(() => {
+  //   initializeUser();
+  // }, [initializeUser]);
 
   const {
     isRemoteCheckedIn,
