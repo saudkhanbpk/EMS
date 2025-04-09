@@ -1,62 +1,66 @@
-import { createContext, useContext, useEffect, useState } from "react";
-import { supabase } from "./supabase"; 
+import { createContext, useContext, useEffect, useState } from 'react';
+import { supabase } from './supabase'; 
+import type { Session, User } from '@supabase/supabase-js';
+import { useAuthStore } from './store';
 
-const AuthContext = createContext();
+interface AuthContextType {
+  user: User | null;
+  loading: boolean;
+}
 
-export const AuthProvider = ({ children }) => {
-  const [user, setUser] = useState(null);
+const AuthContext = createContext<AuthContextType>({
+  user: null,
+  loading: true,
+});
+
+export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const fetchSession = async () => {
-      // Retrieve session from localStorage
-      const session = localStorage.getItem('supabaseSession');
-      if (session) {
-        const parsedSession = JSON.parse(session);
-        setUser(parsedSession.user);
-        supabase.auth.setSession(parsedSession.access_token); // Restore session if available
-      } else {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          setUser(session.user);
-          localStorage.setItem('supabaseSession', JSON.stringify(session)); // Store session in localStorage
-          
-        }else{
-            console.log("Session Data Not Available");
-            
-        }
+    // Restore session on app load
+    const restoreSession = async () => {
+      const { data, error } = await supabase.auth.getSession();
+      if (error) {
+        console.error('Error fetching session:', error.message);
+      }
+      if (data?.session) {
+        setUser(data.session.user);
       }
       setLoading(false);
     };
 
-    fetchSession();
+    restoreSession();
 
-    const { data: listener } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session) {
-        setUser(session.user);
-        localStorage.setItem('supabaseSession', JSON.stringify(session)); // Save session to localStorage
-        // console.log("Session Data 1 :" , localStorage.getItem('supabaseSession'));
-      } else {
-        setUser(null);
-        localStorage.removeItem('supabaseSession'); // Remove session from localStorage
-
+    supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
+        localStorage.setItem('supabaseSession', JSON.stringify(session));
+        useAuthStore.getState().setUser(session?.user ?? null);
+      }
+    
+      if (event === 'SIGNED_OUT') {
+        localStorage.removeItem('supabaseSession');
+        useAuthStore.getState().setUser(null);
       }
     });
+    console.log("EVENT ENENT ENENT" , event);
+    
 
-    return () => {
-      listener.subscription.unsubscribe();
-    };
+    // Listen for login/logout/session refresh
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   return (
-    <AuthContext.Provider value={{ user, setUser, loading }}>
+    <AuthContext.Provider value={{ user, loading }}>
       {!loading && children}
     </AuthContext.Provider>
   );
 };
 
 export const useAuth = () => useContext(AuthContext);
-
-
-
-

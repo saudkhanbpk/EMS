@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { useAuthStore } from './lib/store';
 import EmployeeLayout from './components/EmployeeLayout';
 import Login from './pages/Login';
+import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
 import Attendance from './pages/Attendance';
 import Leave from './pages/Leave';
@@ -53,6 +54,8 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }>
 
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession);
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
 
   useEffect(() => {
     // ✅ Register Firebase Service Worker
@@ -73,6 +76,34 @@ function App() {
     });
 
   }, []);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user); // Re-populate Zustand if needed
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    // Initial session restore
+    useAuthStore.getState().restoreSession();
+
+    // Auth state listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
 
   //   return (
   //       <Router>

@@ -28,18 +28,18 @@ const EmployeeLayout: React.FC = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
 
-  //Checking For Session Expiry
-  useEffect(() => {
-    const checksession = () => {
-      const sessionsExpiry = localStorage.getItem('sessionExpiresAt');
-      if (sessionsExpiry && Date.now() >= Number(sessionsExpiry)) {
-        handleSignOut();
-      }
-    }
-    checksession();
-    const interval = setInterval(checksession, 4 * 60 * 1000); // Check every 30 seconds
-    return () => clearInterval(interval);
-  }, [navigate]);
+  // //Checking For Session Expiry
+  // useEffect(() => {
+  //   const checksession = () => {
+  //     const sessionsExpiry = localStorage.getItem('sessionExpiresAt');
+  //     if (sessionsExpiry && Date.now() >= Number(sessionsExpiry)) {
+  //       handleSignOut();
+  //     }
+  //   }
+  //   checksession();
+  //   const interval = setInterval(checksession, 4 * 60 * 1000); // Check every 30 seconds
+  //   return () => clearInterval(interval);
+  // }, [navigate]);
 
 
 
