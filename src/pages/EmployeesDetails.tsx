@@ -11,26 +11,82 @@ const EmployeesDetails = ({ selectedTab }) => {
   const [employee, setEmployee] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [showModal, setShowModal] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
   const [assignment, setAssignment] = useState({
     title: "",
     project: "",
+    description: "",
+    score: ""
   });
 
   const defaultProjects = ["Website Redesign", "Marketing Campaign", "Mobile App"];
 
-  const handleAssignClick = (entry) => {
+  const handleAssignClick = async (entry) => {
     setEmployee(entry);
     setEmployeeId(entry.id);
-    setAssignment({ title: "", project: defaultProjects[0] });
+  
+    const { data: allProjects, error } = await supabase
+      .from("projects")
+      .select("*");
+  
+    if (error) {
+      console.error("Error fetching projects:", error.message);
+      return;
+    }
+  
+    const userProjects = allProjects.filter(project => 
+      project.devops?.some(item => item.id === entry.id)
+    );
+  
+    setUserProjects(userProjects); // Store in state
+  
+    setAssignment(prev => ({
+      ...prev,
+      project: userProjects[0]?.title || ""
+    }));
+  
     setShowModal(true);
   };
-
-  const handleAssignSubmit = () => {
-    console.log("Assigning:", {
-      employeeId,
-      ...assignment,
-    });
-    setShowModal(false);
+  const handleAssignSubmit = async () => {
+    try {
+      // Create the task in the database
+      const { data, error } = await supabase
+        .from("tasks_of_projects")
+        .insert([{
+          project_id: userProjects.find(p => p.title === assignment.project)?.id,
+          title: assignment.title,
+          description: assignment.description,
+          devops: [{ id: employeeId }], // Assign to this developer
+          status: "todo",
+          score: assignment.score,
+          created_at: new Date().toISOString()
+        }])
+        .select();
+  
+      if (error) throw error;
+  
+      console.log("Task assigned successfully:", {
+        employeeId,
+        ...assignment,
+      });
+      
+      // Reset form and close modal
+      setAssignment({
+        title: "",
+        project: "",
+        description: "",
+        score: ""
+      });
+      setShowModal(false);
+      
+      // Optional: Show success message
+      alert("Task assigned successfully!");
+      
+    } catch (err) {
+      console.error("Error assigning task:", err);
+      // Optional: Show error message to user
+      alert("Failed to assign task: " + err.message);
+    }
   };
 
   const handleDelete = async (id) => {
@@ -56,6 +112,7 @@ const EmployeesDetails = ({ selectedTab }) => {
     role: "employee",
     phone: "",
     email: "",
+    personal_email: "",
     location: "",
     profession: "",
     per_hour_pay: "",
@@ -94,6 +151,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       role: "employee",
       phone: "",
       email: "",
+      personal_email: "",
       location: "",
       profession:"",
       per_hour_pay: "",
@@ -138,7 +196,7 @@ const EmployeesDetails = ({ selectedTab }) => {
   const handleSubmitEmployeeInfo = async (e) => {
     e.preventDefault();
   
-    const { full_name, role, phone, location, profession, per_hour_pay, salary, slack_id, profile_image } = formData;
+    const { full_name, role, phone, personal_email, location, profession, per_hour_pay, salary, slack_id, profile_image } = formData;
   
     const joiningDate = formData.joining_date || new Date().toISOString();
   
@@ -173,13 +231,14 @@ const EmployeesDetails = ({ selectedTab }) => {
         full_name,
         role,
         phone_number: phone,
+        personal_email,
         location,
         profession,
         per_hour_pay: Number(per_hour_pay),
         salary: Number(salary),
         slack_id,
         profile_image: profileImageUrl,
-        created_at: joiningDate,
+        joining_date: joiningDate,
       }])
       .eq("id", employeeId);
   
@@ -249,7 +308,7 @@ const EmployeesDetails = ({ selectedTab }) => {
               <div>
                 <h2 className="text-lg font-bold text-gray-700 mb-4">Employee Info Form</h2>
                 <form ref={formRef} className="space-y-3" onSubmit={handleSubmitEmployeeInfo}>
-                  {["full_name", "role", "phone", "email", "location","profession", "per_hour_pay", "salary", "slack_id", "joining_date"].map((field, idx) => (
+                  {["full_name", "role", "phone", "email", "personal_email", "location","profession", "per_hour_pay", "salary", "slack_id", "joining_date"].map((field, idx) => (
                     <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2">
                       <label className="text-gray-700 sm:w-32 capitalize">{field.replace(/_/g, ' ')}</label>
                       {field === "role" ? (
@@ -374,7 +433,7 @@ const EmployeesDetails = ({ selectedTab }) => {
               </button>
             </td>
             <td className="py-3 whitespace-nowrap">
-              {new Date(entry.created_at).toLocaleDateString()}
+              {new Date(entry.joining_date).toLocaleDateString()}
             </td>
             {/* <td className="px-3 py-3 whitespace-nowrap">
               {getEmploymentDuration(entry.created_at)}
@@ -409,51 +468,94 @@ const EmployeesDetails = ({ selectedTab }) => {
 </div>
 
 
-             {/* Modal */}
-      {showModal && (
-        <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-          <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-            <h2 className="text-lg font-semibold mb-4">Assign Task to {employee?.full_name}</h2>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Title</label>
-              <input
-                type="text"
-                className="w-full px-3 py-2 border border-gray-300 rounded"
-                value={assignment.title}
-                onChange={(e) => setAssignment({ ...assignment, title: e.target.value })}
-              />
-            </div>
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Project</label>
-              <select
-                className="w-full px-3 py-2 border border-gray-300 rounded"
-                value={assignment.project}
-                onChange={(e) => setAssignment({ ...assignment, project: e.target.value })}
-              >
-                {defaultProjects.map((proj, i) => (
-                  <option key={i} value={proj}>
-                    {proj}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="flex justify-end gap-3">
-              <button
-                onClick={() => setShowModal(false)}
-                className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
-              >
-                Cancel
-              </button>
-              <button
-                onClick={handleAssignSubmit}
-                className="px-4 py-2 bg-[#9A00FF] text-white rounded hover:bg-[#7a00cc]"
-              >
-                Assign
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+{showModal && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+      <h2 className="text-lg font-semibold mb-4">
+        Assign Task to {employee?.full_name}
+      </h2>
+
+      {/* Title */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Title *</label>
+        <input
+          type="text"
+          className="w-full px-3 py-2 border border-gray-300 rounded"
+          value={assignment.title}
+          onChange={(e) =>
+            setAssignment(prev => ({ ...prev, title: e.target.value }))
+          }
+          required
+        />
+      </div>
+
+      {/* Project */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Project</label>
+        {userProjects.length > 0 ? (
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            value={assignment.project}
+            onChange={(e) =>
+              setAssignment(prev => ({ ...prev, project: e.target.value }))
+            }
+          >
+            <option value="">Select a project</option>
+            {userProjects.map((project) => (
+              <option key={project.id} value={project.title}>
+                {project.title}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-sm text-gray-500">No projects available for this developer</p>
+        )}
+      </div>
+
+      {/* Description */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <textarea
+          className="w-full px-3 py-2 border border-gray-300 rounded"
+          rows={3}
+          value={assignment.description}
+          onChange={(e) =>
+            setAssignment(prev => ({ ...prev, description: e.target.value }))
+          }
+        />
+      </div>
+
+      {/* Score */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Score</label>
+        <input
+          type="number"
+          className="w-full px-3 py-2 border border-gray-300 rounded"
+          value={assignment.score}
+          onChange={(e) =>
+            setAssignment(prev => ({ ...prev, score: e.target.value }))
+          }
+        />
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <button
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded"
+          onClick={() => setShowModal(false)}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-4 py-2 bg-[#9A00FF] text-white rounded"
+          onClick={handleAssignSubmit}
+          disabled={!assignment.title}
+        >
+          Assign Task
+        </button>
+      </div>
+    </div>
+  </div>
+)}
         </>
       )}
     </div>

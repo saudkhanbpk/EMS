@@ -56,7 +56,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss }: AddNewTaskProps) => 
       setIsLoading(true);
       const { data, error } = await supabase
         .from("tasks_of_projects")
-        .insert([{  // Note the array here
+        .insert([{  
           project_id: ProjectId,
           title: title,
           description: description,

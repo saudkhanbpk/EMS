@@ -12,6 +12,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
     full_name: "",
     email: "",
     phone_number: "",
+    personal_email: "",
     slack_id: "",
     location: "",
     profession:"",
@@ -68,6 +69,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
           full_name: data.full_name,
           email: data.email,
           phone_number: data.phone_number,
+          personal_email: data.personal_email,
           slack_id: data.slack_id,
           location: data.location,
           profession: data.profession,
@@ -114,6 +116,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
           full_name: formData.full_name,
           email: formData.email,
           phone_number: formData.phone_number,
+          personal_email: formData.personal_email,
           slack_id: formData.slack_id,
           location: formData.location,
           profession: formData.profession,
@@ -213,6 +216,16 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
             />
           </div>
           <div>
+            <label className="text-gray-700">Personal Email</label>
+            <input
+              type="email"
+              name="personal_email"
+              value={formData.personal_email}
+              onChange={handleChange}
+              className="mt-2 p-2 border rounded w-full"
+            />
+          </div>
+          <div>
             <label className="text-gray-700">Slack ID</label>
             <input
               type="text"
@@ -306,6 +319,10 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
             <span className="text-gray-700">{employeeData.phone_number || "N/A"}</span>
           </div>
           <div className="flex items-center space-x-2 text-purple-600">
+            <Mail className="w-5 h-5" />
+            <span className="text-gray-700">{employeeData.personal_email}</span>
+          </div>
+          <div className="flex items-center space-x-2 text-purple-600">
             <Slack className="w-5 h-5" />
             <span className="text-gray-700">{employeeData.slack_id || "N/A"}</span>
           </div>
@@ -313,9 +330,10 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
             <MapPin className="w-5 h-5" />
             <span className="text-gray-700">{employeeData.location || "Unknown"}</span>
           </div>
+        
 
           <div className="flex items-center space-x-2 text-purple-600">
-            <Globe className="w-5 h-5" />
+            <Briefcase  className="w-5 h-5" />
             <span className="text-gray-700">{employeeData.profession || "N/A"}</span>
           </div>
           <div className="flex items-center space-x-2 text-purple-600">
