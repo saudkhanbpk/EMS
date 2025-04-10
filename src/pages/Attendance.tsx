@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { parse, isAfter, isBefore, addMinutes, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
+import { parse, isAfter, isBefore, addMinutes, setMinutes, setHours, startOfWeek, endOfWeek, startOfMonth, endOfMonth, isToday } from 'date-fns';
 import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import timeImage from './../assets/Time.png'
@@ -466,16 +466,22 @@ const Attendance: React.FC = () => {
       setError('No active attendance record found');
       return;
     }
-
+  
     try {
+      const userConfirmed = confirm("You are about to check out. Please confirm your action.");
+      if (!userConfirmed) {
+        console.log("User canceled the action.");
+        return; // User canceled, exit the function early
+      }
+  
       setLoading(true);
       setError(null);
-
+  
       const now = new Date();
-
+      
       // First, end any ongoing breaks
       if (isOnBreak) {
-        const { error: breakError }: { error: any } = await withRetry(() =>
+        const { error: breakError } = await withRetry(() =>
           supabase
             .from('breaks')
             .update({
@@ -485,131 +491,119 @@ const Attendance: React.FC = () => {
             .eq('attendance_id', attendanceId)
             .is('end_time', null)
         );
-
+  
         if (breakError) throw breakError;
-
+  
         setIsOnBreak(false);
         setBreakTime(null);
       }
-
-      // Checking the Total Time in Office, If it is less than 6 hrs then put half day in absentees database
-      try {
-        const today = new Date();
-        const todayDate = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-
-        // 1️⃣ Check if there is already an attendance record for the user today
-        const { data: attendanceData, error: attendanceError } = await withRetry(() =>
-          supabase
-            .from('attendance_logs')
-            .select('check_in, check_out, created_at')
-            .eq('user_id', localStorage.getItem('user_id'))
-            .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
-            .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
-        );
-
-        if (attendanceError) throw attendanceError;
-
-        // Then update the attendance record with check-out time
-        const { error: dbError }: { error: any } = await withRetry(() =>
-          supabase
-            .from('attendance_logs')
-            .update({
-              check_out: now.toISOString()
-            })
-            .eq('id', attendanceId)
-            .is('check_out', null)
-        );
-
-        if (dbError) throw dbError;
-
-
-
-        // Reset all states
-        setIsCheckedIn(false);
-        setCheckIn(null);
-        setWorkMode(null);
-        setAttendanceId(null);
-
-        console.log("Today's Date:", todayDate);
-        console.log("Attendance Data:", attendanceData);
-
-        // If both check_in and check_out exist for today, skip further actions
-        if (attendanceData.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
-          console.log("Both check-in and check-out available for today. No further action needed.");
-          setLoading(false);
-          return;
-        }
-
-        // 2️⃣ If it's the first check-in and check-out for the user today, proceed with the logic
-        const { data: checkInData, error: checkInError } = await withRetry(() =>
-          supabase
-            .from('attendance_logs')
-            .select('check_in')
-            .eq('user_id', localStorage.getItem('user_id'))
-            .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
-            .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
-            .limit(1)
-            .single()
-        );
-
-        if (checkInError) throw checkInError;
-
-        // Convert timestamps to Date objects
-        const checkInTime = new Date(checkInData.check_in);
-        const checkOutTime = new Date(now.toISOString());
-
-        // Calculate total attendance duration (in hours)
-        const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
-
-        console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
-
-        // If attendance duration is sufficient, skip further actions
-        if (attendanceDuration >= 4) {
-          console.log("Attendance is sufficient. No further action needed.");
-          return;
-        }
-
-        // 3️⃣ Check if the user has a leave record for today
-        const { data: absenteeData, error: absenteeError } = await supabase
-          .from('absentees')
-          .select('id')
+  
+      // Checking the Total Time in Office; If it is less than 6 hrs then put half-day in absentees database
+      const today = new Date();
+      const todayDate = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
+  
+      // 1️⃣ Check if there is already an attendance record for the user today
+      const { data: attendanceData, error: attendanceError } = await withRetry(() =>
+        supabase
+          .from('attendance_logs')
+          .select('check_in, check_out, created_at')
           .eq('user_id', localStorage.getItem('user_id'))
-          .eq('absentee_date', todayDate);
-
-        if (absenteeError) {
-          console.error("Error checking absentee records:", absenteeError);
-          return;
-        }
-
-        // If a leave record exists, skip further actions
-        if (absenteeData.length > 0) {
-          console.log("User is on leave today. No action needed.");
-          return;
-        }
-
-        // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
-        const { error: insertError } = await supabase
-          .from('absentees')
-          .insert([
-            {
-              user_id: localStorage.getItem('user_id'),
-              absentee_date: todayDate,
-              absentee_type: 'Absent',
-              absentee_Timing: 'Half Day',
-            },
-          ]);
-
-        if (insertError) {
-          console.error("Error inserting half-day absent record:", insertError);
-        } else {
-          console.log("Half-day absent record added successfully.");
-        }
-      } catch (error) {
-        console.error("Unexpected error in attendance check:", error);
+          .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
+          .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
+      );
+  
+      if (attendanceError) throw attendanceError;
+  
+      // If both check_in and check_out exist for today, skip further actions
+      if (attendanceData.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
+        console.log("Both check-in and check-out available for today. No further action needed.");
+        setLoading(false);
+        return;
       }
-
-
-
+  
+      // Then update the attendance record with check-out time
+      const { error: dbError } = await withRetry(() =>
+        supabase
+          .from('attendance_logs')
+          .update({
+            check_out: now.toISOString()
+          })
+          .eq('id', attendanceId)
+          .is('check_out', null)
+      );
+  
+      if (dbError) throw dbError;
+  
+      // Reset all states
+      setIsCheckedIn(false);
+      setCheckIn(null);
+      setWorkMode(null);
+      setAttendanceId(null);
+  
+      console.log("Today's Date:", todayDate);
+      console.log("Attendance Data:", attendanceData);
+  
+      // 2️⃣ Calculate total attendance duration (in hours)
+      const { data: checkInData, error: checkInError } = await withRetry(() =>
+        supabase
+          .from('attendance_logs')
+          .select('check_in')
+          .eq('user_id', localStorage.getItem('user_id'))
+          .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
+          .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
+          .limit(1)
+          .single()
+      );
+  
+      if (checkInError) throw checkInError;
+  
+      const checkInTime = new Date(checkInData.check_in);
+      const checkOutTime = new Date(now.toISOString());
+  
+      // Calculate total attendance duration (in hours)
+      const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
+      console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
+  
+      // If attendance duration is sufficient, skip further actions
+      if (attendanceDuration >= 4) {
+        console.log("Attendance is sufficient. No further action needed.");
+        return;
+      }
+  
+      // 3️⃣ Check if the user has a leave record for today
+      const { data: absenteeData, error: absenteeError } = await supabase
+        .from('absentees')
+        .select('id')
+        .eq('user_id', localStorage.getItem('user_id'))
+        .eq('absentee_date', todayDate);
+  
+      if (absenteeError) {
+        console.error("Error checking absentee records:", absenteeError);
+        return;
+      }
+  
+      // If a leave record exists, skip further actions
+      if (absenteeData.length > 0) {
+        console.log("User is on leave today. No action needed.");
+        return;
+      }
+  
+      // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
+      const { error: insertError } = await supabase
+        .from('absentees')
+        .insert([{
+          user_id: localStorage.getItem('user_id'),
+          absentee_date: todayDate,
+          absentee_type: 'Absent',
+          absentee_Timing: 'Half Day',
+        }]);
+  
+      if (insertError) {
+        console.error("Error inserting half-day absent record:", insertError);
+      } else {
+        console.log("Half-day absent record added successfully.");
+      }
+  
       // Reload attendance records to show the updated data
       await loadAttendanceRecords();
     } catch (err) {
@@ -618,6 +612,7 @@ const Attendance: React.FC = () => {
       setLoading(false);
     }
   };
+  
 
   const handleBreak = async () => {
     if (!attendanceId) {

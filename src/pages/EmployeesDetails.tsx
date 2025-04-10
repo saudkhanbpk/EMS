@@ -1,29 +1,255 @@
-import React from "react";
-import { useEffect, useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
+import { FaTrash, FaEdit } from "react-icons/fa";
 
 
 const EmployeesDetails = ({ selectedTab }) => {
   const [employees, setEmployees] = useState([]);
-  const [employeeview , setemployeeview] = useState("generalview")
-  const [employeeid , setemployeeid] = useState('')
-  const [employee , setEmployee] = useState('')
+  const [employeeview, setEmployeeView] = useState("generalview");
+  const [employeeId, setEmployeeId] = useState('');
+  const [employee, setEmployee] = useState('');
+  const [showForm, setShowForm] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const [assignment, setAssignment] = useState({
+    title: "",
+    project: "",
+    description: "",
+    score: ""
+  });
+
+  const defaultProjects = ["Website Redesign", "Marketing Campaign", "Mobile App"];
+
+  const handleAssignClick = async (entry) => {
+    setEmployee(entry);
+    setEmployeeId(entry.id);
+  
+    const { data: allProjects, error } = await supabase
+      .from("projects")
+      .select("*");
+  
+    if (error) {
+      console.error("Error fetching projects:", error.message);
+      return;
+    }
+  
+    const userProjects = allProjects.filter(project => 
+      project.devops?.some(item => item.id === entry.id)
+    );
+  
+    setUserProjects(userProjects); // Store in state
+  
+    setAssignment(prev => ({
+      ...prev,
+      project: userProjects[0]?.title || ""
+    }));
+  
+    setShowModal(true);
+  };
+  const handleAssignSubmit = async () => {
+    try {
+      // Create the task in the database
+      const { data, error } = await supabase
+        .from("tasks_of_projects")
+        .insert([{
+          project_id: userProjects.find(p => p.title === assignment.project)?.id,
+          title: assignment.title,
+          description: assignment.description,
+          devops: [{ id: employeeId }], // Assign to this developer
+          status: "todo",
+          score: assignment.score,
+          created_at: new Date().toISOString()
+        }])
+        .select();
+  
+      if (error) throw error;
+  
+      console.log("Task assigned successfully:", {
+        employeeId,
+        ...assignment,
+      });
+      
+      // Reset form and close modal
+      setAssignment({
+        title: "",
+        project: "",
+        description: "",
+        score: ""
+      });
+      setShowModal(false);
+      
+      // Optional: Show success message
+      alert("Task assigned successfully!");
+      
+    } catch (err) {
+      console.error("Error assigning task:", err);
+      // Optional: Show error message to user
+      alert("Failed to assign task: " + err.message);
+    }
+  };
+
+  const handleDelete = async (id) => {
+    const { error } = await supabase.from("users").delete().eq("id", id);
+    if (error) {
+      console.error("Error deleting employee:", error.message);
+    } else {
+      setEmployees((prev) => prev.filter((emp) => emp.id !== id));
+    }
+  };
+  
+
+
+  const formRef = useRef(null);
+
+  const [signupData, setSignupData] = useState({
+    email: "",
+    password: "",
+  });
+
+  const [formData, setFormData] = useState({
+    full_name: "",
+    role: "employee",
+    phone: "",
+    email: "",
+    personal_email: "",
+    location: "",
+    profession: "",
+    per_hour_pay: "",
+    salary: "",
+    slack_id: "",
+    joining_date: "",
+    profile_image: null, 
+  });
+
+  const [step, setStep] = useState(1);
+
+  const handleInputChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleSignupChange = (e) => {
+    const { name, value } = e.target;
+    setSignupData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const fetchEmployees = async () => {
+    const { data, error } = await supabase.from("users").select("*");
+    if (!error) {
+      setEmployees(data);
+    }
+  };
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      const { data, error } = await supabase
-        .from("users")
-        .select("*");
-      
-      if (!error) {
-        setEmployees(data);
-      }
-    };
     fetchEmployees();
   }, []);
 
-  // Calculate employment duration
+  const resetForm = () => {
+    setFormData({
+      full_name: "",
+      role: "employee",
+      phone: "",
+      email: "",
+      personal_email: "",
+      location: "",
+      profession:"",
+      per_hour_pay: "",
+      salary: "",
+      slack_id: "",
+      joining_date: "",
+      profile_image: null,
+    });
+    setSignupData({
+      email: "",
+      password: "",
+    });
+    if (formRef.current) formRef.current.reset();
+  };
+
+  const handleCancel = () => {
+    resetForm();
+    setShowForm(false);
+    setStep(1);
+  };
+
+  const handleSubmitSignUp = async (e) => {
+    e.preventDefault();
+    const { email, password } = signupData;
+
+    const { data, error: authError } = await supabase.auth.signUp({
+      email,
+      password,
+    });
+
+    if (authError) {
+      alert(authError.message);
+      return;
+    }
+
+    if (data.user) {
+      setEmployeeId(data.user.id);
+      setStep(2);
+    }
+  };
+
+  const handleSubmitEmployeeInfo = async (e) => {
+    e.preventDefault();
+  
+    const { full_name, role, phone, personal_email, location, profession, per_hour_pay, salary, slack_id, profile_image } = formData;
+  
+    const joiningDate = formData.joining_date || new Date().toISOString();
+  
+    let profileImageUrl = null;
+  
+    if (profile_image) {
+      // Upload profile image to Supabase storage
+      const fileExt = profile_image.name.split('.').pop();
+      const fileName = `${employeeId}_profile.${fileExt}`;
+      
+      // First upload the file
+      const { error: uploadError } = await supabase.storage
+        .from('profilepics')
+        .upload(fileName, profile_image);
+  
+      if (uploadError) {
+        alert(uploadError.message);
+        return;
+      }
+  
+      // Then get the public URL
+      const { data: { publicUrl } } = supabase.storage
+        .from('profilepics')
+        .getPublicUrl(fileName);
+  
+      profileImageUrl = publicUrl;
+    }
+  
+    const { error } = await supabase
+      .from("users")
+      .update([{
+        full_name,
+        role,
+        phone_number: phone,
+        personal_email,
+        location,
+        profession,
+        per_hour_pay: Number(per_hour_pay),
+        salary: Number(salary),
+        slack_id,
+        profile_image: profileImageUrl,
+        joining_date: joiningDate,
+      }])
+      .eq("id", employeeId);
+  
+    if (!error) {
+      resetForm();
+      setShowForm(false);
+      setStep(1);
+      fetchEmployees();
+    }
+  };
+
   const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
     const today = new Date();
@@ -32,88 +258,305 @@ const EmployeesDetails = ({ selectedTab }) => {
   };
 
   return (
-    <div className="w-full flex flex-col items-center justify-center p-4">
-        {employeeview === "detailview" && (
-          <Employeeprofile employeeid={employeeid} employeeview={employeeview} employee={employee}/>
-        )}
-       {employeeview === "generalview" && (
-        <>
-      <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
-      <h1 className="text-2xl mb-2 w-full text-left font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
-             Employees Details
-           </h1>
-        <div className="flex justify-between items-center text-lg font-medium">
-          <button className="flex items-center space-x-2 px-4 py-2 rounded-3xl bg-gray-200">
-            <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
-            <h2 className="text-gray-600">
-              Total: <span className="font-bold">{employees.length}</span>
-            </h2>
-          </button>
-          {/* <button className="flex items-center space-x-2 px-4 py-2 rounded-3xl bg-green-200">
-            <span className="w-4 h-4 bg-green-500 rounded-full"></span>
-            <h2 className="text-green-600">
-              Active: <span className="font-bold">{employees.filter(e => e.status === 'active').length}</span>
-            </h2>
-          </button>
-          <button className="flex items-center space-x-2 px-4 py-2 rounded-3xl">
-            <span className="w-4 h-4 bg-red-500 rounded-full"></span>
-            <h2 className="text-red-600">
-              Inactive: <span className="font-bold">{employees.filter(e => e.status === 'inactive').length}</span>
-            </h2>
-          </button> */}
+    <div className="w-full flex flex-col items-center justify-center p-2 sm:p-4">
+      {showForm && (
+        <div className="fixed inset-0 flex items-center justify-center bg-gray-800 bg-opacity-50 z-50 p-2 sm:p-4">
+          <div className="bg-white p-4 sm:p-6 rounded-lg shadow-lg w-full max-w-md sm:max-w-lg md:max-w-xl max-h-[90vh] overflow-y-auto">
+            {step === 1 && (
+              <div>
+                <h2 className="text-lg font-bold text-gray-700 mb-4">Sign Up Form</h2>
+                <form ref={formRef} className="space-y-3" onSubmit={handleSubmitSignUp}>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="text-gray-700 sm:w-32">Email</label>
+                    <input
+                      type="email"
+                      name="email"
+                      value={signupData.email}
+                      onChange={handleSignupChange}
+                      className="border p-2 rounded-md flex-1 w-full text-sm sm:text-base"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="text-gray-700 sm:w-32">Password</label>
+                    <input
+                      type="password"
+                      name="password"
+                      value={signupData.password}
+                      onChange={handleSignupChange}
+                      className="border p-2 rounded-md flex-1 w-full text-sm sm:text-base"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      className="bg-red-500 text-white px-4 py-2 rounded-md text-sm sm:text-base"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-[#9A00FF] hover:brightness-90 text-white px-4 py-2 rounded-md text-sm sm:text-base"
+                    >
+                      Sign Up
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+            {step === 2 && (
+              <div>
+                <h2 className="text-lg font-bold text-gray-700 mb-4">Employee Info Form</h2>
+                <form ref={formRef} className="space-y-3" onSubmit={handleSubmitEmployeeInfo}>
+                  {["full_name", "role", "phone", "email", "personal_email", "location","profession", "per_hour_pay", "salary", "slack_id", "joining_date"].map((field, idx) => (
+                    <div key={idx} className="flex flex-col sm:flex-row sm:items-center gap-2">
+                      <label className="text-gray-700 sm:w-32 capitalize">{field.replace(/_/g, ' ')}</label>
+                      {field === "role" ? (
+                        <select
+                          name="role"
+                          value={formData.role}
+                          onChange={handleInputChange}
+                          className="border p-2 rounded-md flex-1 w-full text-sm sm:text-base"
+                        >
+                          <option value="employee">employee</option>
+                          <option value="manager">manager</option>
+                          <option value="admin">admin</option>
+                        </select>
+                      ) : (
+                        <input
+                          type={field === "joining_date" ? "date" : "text"}
+                          name={field}
+                          value={field === "email" ? signupData.email : formData[field]}
+                          onChange={handleInputChange}
+                          disabled={field === "email"}
+                          className="border p-2 rounded-md flex-1 w-full text-sm sm:text-base"
+                        />
+                      )}
+                    </div>
+                  ))}
+                   <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                    <label className="text-gray-700 sm:w-32">Profile Image</label>
+                    <input
+                      type="file"
+                      name="profile_image"
+                      onChange={(e) => setFormData((prev) => ({ ...prev, profile_image: e.target.files[0] }))}
+                      className="border p-2 rounded-md flex-1 w-full text-sm sm:text-base"
+                    />
+                  </div>
+                  <div className="flex flex-col sm:flex-row justify-end gap-3 pt-4">
+                    <button
+                      type="button"
+                      className="bg-red-500 text-white px-4 py-2 rounded-md text-sm sm:text-base"
+                      onClick={handleCancel}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="bg-[#9A00FF] hover:brightness-90 text-white px-4 py-2 rounded-md text-sm sm:text-base"
+                    >
+                      Save
+                    </button>
+                  </div>
+                </form>
+              </div>
+            )}
+          </div>
         </div>
+      )}
+
+      {employeeview === "detailview" && (
+       <Employeeprofile
+       employeeid={employeeId}
+       employeeview={employeeview}
+       employee={employee}
+       setemployeeview={setEmployeeView}
+     />
+     
+      )}
+
+      {employeeview === "generalview" && (
+        <>
+          <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg mb-4 sm:mb-6">
+            <h1 className="text-xl sm:text-2xl font-bold text-gray-800 mb-3 sm:mb-4 border-b-2 border-gray-200 pb-2">
+              Employees Details
+            </h1>
+            <div className="flex flex-col sm:flex-row justify-between items-center gap-3 sm:gap-0">
+              <button className="flex items-center space-x-2 px-3 py-1 rounded-3xl bg-gray-200">
+                <span className="w-3 h-3 bg-green-600 rounded-full"></span>
+                <h2 className="text-gray-600 text-sm">
+                  Total: <span className="font-bold">{employees.length}</span>
+                </h2>
+              </button>
+              <button
+                className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-[#9A00FF] hover:brightness-90 text-white text-sm"
+                onClick={() => setShowForm(true)}
+              >
+                + Add new Employee
+              </button>
+            </div>
+          </div>
+          <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
+  <div className="overflow-x-auto md:w-full w-[300px]">
+    <table className="min-w-[1100px] bg-white">
+      <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
+        <tr>
+          <th className="py-2 px-3 text-left">Employee Name</th>
+          <th className="py-2 px-3 text-left">Joining Date</th>
+          {/* <th className="py-2 px-3 text-left">Employment Duration</th> */}
+          {/* <th className="py-2 px-3 text-left">Role</th> */}
+          <th className="py-2 px-3 text-left">Email</th>
+          {/* <th className="py-2 px-3 text-left">Slack ID</th> */}
+          <th className="py-2 px-3 text-left">Phone Number</th>
+          <th className="py-2 px-3 text-left">Salary</th>
+          {/* <th className="py-2 px-3 text-left">Per Hour Pay</th> */}
+          <th className="py-2 px-3 text-left">Assign</th>
+          <th className="py-2 px-3 text-left">Action</th>
+        </tr>
+      </thead>
+      <tbody className="text-sm font-normal">
+        {employees.map((entry, index) => (
+          <tr
+            key={index}
+            className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+          >
+            <td className="px-3 py-3 whitespace-nowrap">
+              <button
+                className="text-gray-900 text-left hover:text-[#9A00FF]"
+                onClick={() => {
+                  setEmployee(entry);
+                  setEmployeeId(entry.id);
+                  setEmployeeView("detailview");
+                }}
+              >
+                {entry.full_name}
+              </button>
+            </td>
+            <td className="py-3 whitespace-nowrap">
+              {new Date(entry.joining_date).toLocaleDateString()}
+            </td>
+            {/* <td className="px-3 py-3 whitespace-nowrap">
+              {getEmploymentDuration(entry.created_at)}
+            </td> */}
+            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td> */}
+            <td className="py-3 whitespace-nowrap">{entry.email}</td>
+            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td> */}
+            <td className="py-3 whitespace-nowrap">{entry.phone_number}</td>
+            <td className="py-3 whitespace-nowrap">{entry.salary}</td>
+            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td> */}
+            <td className="px-3 py-3 whitespace-nowrap">
+              <button
+                onClick={() => handleAssignClick(entry)}
+                className="bg-[#9A00FF] text-white px-3 py-1 rounded hover:bg-[#7a00cc]"
+              >
+                Assign
+              </button>
+            </td>
+            <td className="px-3 py-3 whitespace-nowrap flex gap-3 items-center">
+              {/* <FaEdit className="text-blue-500 cursor-not-allowed" title="Edit" /> */}
+              <FaTrash
+                className="text-red-500 cursor-pointer hover:text-red-700"
+                title="Delete"
+                onClick={() => handleDelete(entry.id)}
+              />
+            </td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  </div>
+</div>
+
+
+{showModal && (
+  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+      <h2 className="text-lg font-semibold mb-4">
+        Assign Task to {employee?.full_name}
+      </h2>
+
+      {/* Title */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Title *</label>
+        <input
+          type="text"
+          className="w-full px-3 py-2 border border-gray-300 rounded"
+          value={assignment.title}
+          onChange={(e) =>
+            setAssignment(prev => ({ ...prev, title: e.target.value }))
+          }
+          required
+        />
       </div>
 
-      <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
-        <div className="overflow-x-auto">
-          <table className="min-w-full bg-white">
-            <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
-              <tr>
-                <th className="py-3 px-6 text-center">Employee Name</th>
-                <th className="py-3 px-6 text-center">Joining Date</th>
-                <th className="py-3 px-6 text-center">Employment Duration</th>
-                <th className="py-3 px-6 text-center">Role</th>
-                <th className="py-3 px-6 text-center">Email</th>
-              </tr>
-            </thead>
-            <tbody className="text-md font-normal">
-              {employees.map((entry, index) => (
-                <tr 
-                  key={index}
-                  className="border-b border-gray-200 hover:bg-gray-50  transition-all"
-                >
-                  <td className="py-4 px-6">
-                    <button className="text-gray-900 text-left px-3 py-1"
-                    onClick={() => {
-                      setEmployee(entry)
-                        setemployeeid(entry.id)
-                        setemployeeview("detailview")}}>
-                      {entry.full_name}
-                    </button>
-                  </td>
-                  <td className="py-4 text-center px-6">
-                    {new Date(entry.created_at).toLocaleDateString()}
-                  </td>
-                  <td className="py-4 text-center px-6">
-                    {getEmploymentDuration(entry.created_at)}
-                  </td>
-                  <td className="py-4 text-center px-6">
-                    <button className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm font-semibold">
-                      {entry.role}
-                    </button>
-                  </td>
-                  <td className="py-4 text-center px-6">
-                    <span className="text-gray-600">
-                      {entry.email}
-                    </span>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+      {/* Project */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Project</label>
+        {userProjects.length > 0 ? (
+          <select
+            className="w-full px-3 py-2 border border-gray-300 rounded"
+            value={assignment.project}
+            onChange={(e) =>
+              setAssignment(prev => ({ ...prev, project: e.target.value }))
+            }
+          >
+            <option value="">Select a project</option>
+            {userProjects.map((project) => (
+              <option key={project.id} value={project.title}>
+                {project.title}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <p className="text-sm text-gray-500">No projects available for this developer</p>
+        )}
       </div>
-      </>
+
+      {/* Description */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Description</label>
+        <textarea
+          className="w-full px-3 py-2 border border-gray-300 rounded"
+          rows={3}
+          value={assignment.description}
+          onChange={(e) =>
+            setAssignment(prev => ({ ...prev, description: e.target.value }))
+          }
+        />
+      </div>
+
+      {/* Score */}
+      <div className="mb-4">
+        <label className="block text-sm font-medium mb-1">Score</label>
+        <input
+          type="number"
+          className="w-full px-3 py-2 border border-gray-300 rounded"
+          value={assignment.score}
+          onChange={(e) =>
+            setAssignment(prev => ({ ...prev, score: e.target.value }))
+          }
+        />
+      </div>
+
+      <div className="flex justify-end space-x-3">
+        <button
+          className="px-4 py-2 bg-gray-300 text-gray-700 rounded"
+          onClick={() => setShowModal(false)}
+        >
+          Cancel
+        </button>
+        <button
+          className="px-4 py-2 bg-[#9A00FF] text-white rounded"
+          onClick={handleAssignSubmit}
+          disabled={!assignment.title}
+        >
+          Assign Task
+        </button>
+      </div>
+    </div>
+  </div>
+)}
+        </>
       )}
     </div>
   );

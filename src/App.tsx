@@ -3,6 +3,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { useAuthStore } from './lib/store';
 import EmployeeLayout from './components/EmployeeLayout';
 import Login from './pages/Login';
+import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
 import Attendance from './pages/Attendance';
 import Leave from './pages/Leave';
@@ -21,6 +22,12 @@ import { getMessaging, onMessage } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
 import { messaging } from "../notifications/firebase";
 import { AttendanceProvider } from './pages/AttendanceContext';
+import { Toaster } from "./component/ui/toaster";
+import { Toaster as Sonner } from "./component/ui/sonner";
+import { TooltipProvider } from "./component/ui/tooltip";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import Index from './pages/Index';
+import AddNewTask from './AddNewTask';
 import Chatbutton from './components/chatbtn';
 import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
@@ -47,6 +54,8 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }>
 
 function App() {
   const restoreSession = useAuthStore((state) => state.restoreSession);
+  const user = useAuthStore((state) => state.user);
+  const setUser = useAuthStore((state) => state.setUser);
 
   useEffect(() => {
     // ✅ Register Firebase Service Worker
@@ -67,6 +76,34 @@ function App() {
     });
 
   }, []);
+
+  useEffect(() => {
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        setUser(session.user); // Re-populate Zustand if needed
+      }
+    };
+
+    checkSession();
+  }, []);
+
+  useEffect(() => {
+    // Initial session restore
+    useAuthStore.getState().restoreSession();
+
+    // Auth state listener
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
+
 
   //   return (
   //       <Router>
