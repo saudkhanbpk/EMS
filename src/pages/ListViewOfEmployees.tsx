@@ -224,83 +224,85 @@ const EmployeeAttendanceTable = () => {
 
   };
 
-  const handleUpdateCheckInTime = async () => {
-    console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
+  // const handleUpdateCheckInTime = async () => {
+  //   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
 
-    // Format hour and minute to two digits
-    const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
-    const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
+  //   // Format hour and minute to two digits
+  //   const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
+  //   const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
 
-    // Decode the encoded string (if coming from URL/query param)
-    const decodedDateString = decodeURIComponent(selectedEntry.check_out2);
+  //   // Decode the encoded string (if coming from URL/query param)
+  //   const decodedDateString = decodeURIComponent(selectedEntry.check_out2);
 
-    // Parse the date (local time) or default to today if invalid
-    let originalDate = decodedDateString && decodedDateString !== "N/A"
-      ? new Date(decodedDateString)
-      : new Date();
+  //   // Parse the date (local time) or default to today if invalid
+  //   let originalDate = decodedDateString && decodedDateString !== "N/A"
+  //     ? new Date(decodedDateString)
+  //     : new Date();
 
-    // Convert to UTC format "YYYY-MM-DD"
-    const formattedUTC = originalDate.toISOString().split("T")[0];
+  //   // Convert to UTC format "YYYY-MM-DD"
+  //   const formattedUTC = originalDate.toISOString().split("T")[0];
 
-    console.log("FormattedUTCCCCCCCCCC Date:", formattedUTC);
+  //   console.log("FormattedUTCCCCCCCCCC Date:", formattedUTC);
 
-    // Check for invalid date format
-    if (isNaN(originalDate.getTime())) {
-      console.error("Invalid check-out date:", selectedEntry.check_out2);
-      alert("Error: Invalid check-out date format.");
-      return;
-    }
+  //   // Check for invalid date format
+  //   if (isNaN(originalDate.getTime())) {
+  //     console.error("Invalid check-out date:", selectedEntry.check_out2);
+  //     alert("Error: Invalid check-out date format.");
+  //     return;
+  //   }
 
-    // Convert hour to 24-hour format if PM
-    const adjustedHourin = isinAM
-      ? parseInt(formattedHourin, 10)
-      : (parseInt(formattedHourin, 10) + 12) % 24;
+  //   // Convert hour to 24-hour format if PM
+  //   const adjustedHourin = isinAM
+  //     ? parseInt(formattedHourin, 10)
+  //     : (parseInt(formattedHourin, 10) + 12) % 24;
 
-    // Construct new date with adjusted time
-    const newDate = new Date(
-      originalDate.getFullYear(),
-      originalDate.getMonth(),
-      originalDate.getDate(),
-      adjustedHourin,
-      parseInt(formattedMinutein, 10),
-      0,
-      0
-    );
+  //   // Construct new date with adjusted time
+  //   const newDate = new Date(
+  //     originalDate.getFullYear(),
+  //     originalDate.getMonth(),
+  //     originalDate.getDate(),
+  //     adjustedHourin,
+  //     parseInt(formattedMinutein, 10),
+  //     0,
+  //     0
+  //   );
 
-    // Format the final timestamp as "YYYY-MM-DD HH:mm:ss+00"
-    const formattedTimestamp = newDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
-    settimestamp(formattedTimestamp.split(" ")[0]); // Store only the date part
+  //   // Format the final timestamp as "YYYY-MM-DD HH:mm:ss+00"
+  //   const formattedTimestamp = newDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
+  //   settimestamp(formattedTimestamp.split(" ")[0]); // Store only the date part
 
-    console.log("Formatted Timestamp:", formattedTimestamp);
+  //   console.log("Formatted Timestamp:", formattedTimestamp);
 
-    // Compare against attendance time limit
-    const now = new Date(formattedTimestamp);
-    const checkInTimeLimit = parse("09:30", "HH:mm", now);
-    const attendanceStatus = isAfter(now, checkInTimeLimit) ? "late" : "present";
+  //   // Compare against attendance time limit
+  //   const now = new Date(formattedTimestamp);
+  //   const checkInTimeLimit = parse("09:30", "HH:mm", now);
+  //   const attendanceStatus = isAfter(now, checkInTimeLimit) ? "late" : "present";
 
-    setupdatedCheckInTime(formattedTimestamp);
-    console.log("Check-in Limit:", checkInTimeLimit);
-    console.log("Attendance Status:", attendanceStatus);
+  //   setupdatedCheckInTime(formattedTimestamp);
+  //   console.log("Check-in Limit:", checkInTimeLimit);
+  //   console.log("Attendance Status:", attendanceStatus);
 
-    // Update the database by matching only the date
-    const { data, error } = await supabase
-      .from("attendance_logs")
-      .update({
-        check_in: formattedTimestamp,
-        status: attendanceStatus,
-      })
-      .eq("user_id", selectedEntry.id)
-      .eq("check_out", selectedEntry.check_out2);
-    if (error) {
-      console.error("Error updating check-in time:", error);
-      alert("Failed to update check-in time.");
-    } else {
-      console.log("Update successful:", data);
-      alert("Check-in time updated successfully.");
-    }
+  //   // Update the database by matching only the date
+  //   const { data, error } = await supabase
+  //     .from("attendance_logs")
+  //     .update({
+  //       check_in: formattedTimestamp,
+  //       status: attendanceStatus,
+  //     })
+  //     .eq("user_id", selectedEntry.id)
+  //     .eq("check_out", selectedEntry.check_out2);
+  //   if (error) {
+  //     console.error("Error updating check-in time:", error);
+  //     alert("Failed to update check-in time.");
+  //   } else {
+  //     console.log("Update successful:", data);
+  //     alert("Check-in time updated successfully.");
+  //   }
 
-    setisCheckinModalOpen(false);
-  };
+  //   setisCheckinModalOpen(false);
+  // };
+
+
 
   // const handleUpdateCheckInTime = async () => {
   //   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
@@ -363,7 +365,7 @@ const EmployeeAttendanceTable = () => {
   //     .from("attendance_logs")
   //     .update({
   //       check_in: formattedTimestamp,
-  //       status: attendanceStatus,
+  //       // status: attendanceStatus,
   //     })
   //     .eq("user_id", selectedEntry.id)
   //     .eq("created_at::Date", originalDate.toISOString().split("T")[0]); // Match only the date
@@ -378,6 +380,65 @@ const EmployeeAttendanceTable = () => {
 
   //   setisCheckinModalOpen(false);
   // };
+
+  const handleUpdateCheckInTime = async () => {
+    // Get original created_at date
+    // const originalDate = new Date(selectedEntry.created_at);
+    // Original local date: Wed Apr 09 2025 09:36:43 GMT+0500
+const originalDate = new Date(selectedEntry.created_at);
+
+// Get UTC date components
+const utcYear = originalDate.getUTCFullYear(); // 2025
+const utcMonth = originalDate.getUTCMonth(); // 3 (April)
+const utcDay = originalDate.getUTCDate(); // 9
+
+// Construct UTC date string
+const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
+// Result: "2025-04-09"
+    // Create new date in UTC
+    const adjustedHourin = isinAM ? hourin : (hourin + 12) % 24;
+    const newDate = new Date(Date.UTC(
+      originalDate.getUTCFullYear(),
+      originalDate.getUTCMonth(),
+      originalDate.getUTCDate(),
+      adjustedHourin,
+      minutein
+    ));
+  
+    // Format timestamp correctly
+    const formattedTimestamp = newDate.toISOString().replace("T", " ").replace(/\.\d+Z$/, ".000+00");
+  
+    // Calculate status using UTC
+    const checkInTimeLimit = new Date(Date.UTC(
+      newDate.getUTCFullYear(),
+      newDate.getUTCMonth(),
+      newDate.getUTCDate(),
+      9, 30 // 09:30 UTC
+    ));
+    
+    const attendanceStatus = newDate > checkInTimeLimit ? "late" : "present";
+    console.log("origional Date" , originalDate );
+
+    console.log("origional Date in api" , utcDateString );
+    
+  
+    // Update with correct filtering
+    const { data , error } = await supabase
+      .from("attendance_logs")
+      .select ('*')
+      // .update({
+      //   check_in: formattedTimestamp,
+      //   status: attendanceStatus
+      // })
+      // .eq("user_id", selectedEntry.id)
+      .eq("created_at::date", utcDateString);
+      console.log("Fetched Data " , data);
+      
+    if (!error) {
+      alert("Updated successfully!");
+      setisCheckinModalOpen(false);
+    }
+  };
 
 
 

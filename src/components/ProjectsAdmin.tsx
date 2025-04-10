@@ -91,6 +91,10 @@ function ProjectsAdmin() {
 
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
+  
+    const confirmed = window.confirm("Are you sure you want to delete this project?");
+    if (!confirmed) return;
+  
     try {
       const { error } = await supabase.from("projects").delete().eq("id", id);
       if (error) throw error;
@@ -99,6 +103,7 @@ function ProjectsAdmin() {
       console.error("Failed to delete project:", err);
     }
   };
+  
 
   const openAddModal = () => {
     setNewProject({ title: '', type: 'Front-End Developer' });

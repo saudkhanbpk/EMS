@@ -6,7 +6,9 @@ import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import EmployeeAttendanceTable from './ListViewOfEmployees';
 import ListViewMonthly from './ListViewMonthly';
+import Updates from './Updates';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { LucideDelete } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 import { motion } from "framer-motion";
 import EmployeesDetails from './EmployeesDetails';
@@ -29,7 +31,7 @@ import {
 } from 'date-fns';
 import AbsenteeComponent from './AbsenteesData';
 import { id } from 'date-fns/locale/id';
-import {
+import{
   PanelRightClose,
   Coffee
 } from 'lucide-react';
@@ -798,6 +800,20 @@ const AdminPage: React.FC = () => {
                         </span>
                       )}
                     </button>
+                    <button
+                      onClick={() => {
+                        handleClose()
+                        setSelectedTab("Updates");
+                        handleSoftwareComplaintsClick();
+                        // setIsOpen(false);
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "SoftwareComplaints"
+                          ? "bg-[#9A00FF] text-White"
+                          : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Office Alerts
+                    </button>
                   </div>
 
                   {/* Sign Out Button (Placed at the Bottom) */}
@@ -869,6 +885,12 @@ const AdminPage: React.FC = () => {
         {selectedTab === "Projects" && (
           <div className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
             <ProjectsAdmin />
+          </div>
+        )}
+        {selectedTab === "Updates" && (
+          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
+            <Updates />
           </div>
         )}
         {selectedTab === 'Employees' && (
