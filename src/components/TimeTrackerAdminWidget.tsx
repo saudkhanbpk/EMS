@@ -52,7 +52,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
   // Load active sessions
   useEffect(() => {
     loadActiveSessions();
-    
     // Set up a refresh interval when widget is open
     let interval: NodeJS.Timeout | null = null;
     if (isOpen) {
@@ -63,7 +62,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
         }
       }, 30000); // Refresh every 30 seconds when open
     }
-    
     return () => {
       if (interval) clearInterval(interval);
     };
@@ -76,7 +74,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
         loadActiveSessions();
       }
     }, 60000); // Refresh every minute when closed
-    
     return () => clearInterval(interval);
   }, [isOpen]);
 
@@ -123,10 +120,10 @@ const TimeTrackerAdminWidget: React.FC = () => {
       // Get screenshot counts for each session
       const sessionIds = sessionsData?.map(session => session.id) || [];
       const screenshotCounts: Record<string, number> = {};
-      
+
       let totalScreenshotsCount = 0;
       let totalSeconds = 0;
-      
+
       if (sessionIds.length > 0) {
         // For each session, count its screenshots
         for (const sessionId of sessionIds) {
@@ -134,7 +131,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
             .from('screenshots')
             .select('id', { count: 'exact' })
             .eq('session_id', sessionId);
-            
           if (countError) {
             console.error(`Error counting screenshots for session ${sessionId}:`, countError);
           } else {
@@ -147,7 +143,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
       // Map sessions to our format
       const formattedEmployees: ActiveEmployee[] = sessionsData?.map(session => {
         totalSeconds += session.total_seconds || 0;
-        
         return {
           id: session.id,
           name: session.users?.user_metadata?.name || 'Unknown',
@@ -161,7 +156,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
       setActiveEmployees(formattedEmployees);
       setTotalScreenshots(totalScreenshotsCount);
       setLastRefresh(new Date());
-      
       // Format total hours
       const hours = Math.floor(totalSeconds / 3600);
       const minutes = Math.floor((totalSeconds % 3600) / 60);
@@ -207,7 +201,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
       // Get screenshot counts for each session
       const sessionIds = sessionsData?.map(session => session.id) || [];
       const screenshotCounts: Record<string, number> = {};
-      
       if (sessionIds.length > 0) {
         // For each session, count its screenshots
         for (const sessionId of sessionIds) {
@@ -215,7 +208,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
             .from('screenshots')
             .select('id', { count: 'exact' })
             .eq('session_id', sessionId);
-            
           if (countError) {
             console.error(`Error counting screenshots for session ${sessionId}:`, countError);
           } else {
@@ -243,7 +235,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
 
       // Generate user summaries
       const userMap = new Map<string, UserSummary>();
-      
       formattedSessions.forEach(session => {
         if (!userMap.has(session.userId)) {
           userMap.set(session.userId, {
@@ -256,28 +247,27 @@ const TimeTrackerAdminWidget: React.FC = () => {
             lastActive: null
           });
         }
-        
+
         const userSummary = userMap.get(session.userId)!;
         userSummary.totalSessions += 1;
         userSummary.totalScreenshots += session.screenshotCount;
-        
+
         // Calculate total time
         const currentTotalSeconds = userSummary.totalTime.split(':').reduce((acc, time, index) => {
           return acc + parseInt(time) * Math.pow(60, 2 - index);
         }, 0);
-        
+
         const sessionSeconds = session.elapsedTime.split(':').reduce((acc, time, index) => {
           return acc + parseInt(time) * Math.pow(60, 2 - index);
         }, 0);
-        
+
         userSummary.totalTime = formatTime(currentTotalSeconds + sessionSeconds);
-        
+
         // Update last active time
         if (!userSummary.lastActive || new Date(session.startTime) > new Date(userSummary.lastActive)) {
           userSummary.lastActive = session.startTime;
         }
       });
-      
       setUserSummaries(Array.from(userMap.values()));
     } catch (error) {
       console.error('Error in loadAllSessions:', error);
@@ -343,7 +333,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
               <span className="font-bold">{totalHoursToday}</span>
             </div>
           </div>
-          
           {/* Refresh Button */}
           <button
             onClick={(e) => {
@@ -355,7 +344,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
           >
             <RefreshCw size={18} />
           </button>
-          
           {/* Main Widget Button */}
           <button
             onClick={toggleWidget}
@@ -377,15 +365,15 @@ const TimeTrackerAdminWidget: React.FC = () => {
               <h3 className="font-medium">Time Tracking Monitor</h3>
             </div>
             <div className="flex items-center">
-              <button 
-                onClick={handleRefresh} 
+              <button
+                onClick={handleRefresh}
                 className="text-white hover:text-gray-200 mr-2"
                 title="Refresh Data"
               >
                 <RefreshCw size={18} />
               </button>
-              <button 
-                onClick={toggleWidget} 
+              <button
+                onClick={toggleWidget}
                 className="text-white hover:text-gray-200"
               >
                 <X size={18} />
@@ -412,31 +400,28 @@ const TimeTrackerAdminWidget: React.FC = () => {
           {/* View Mode Tabs */}
           <div className="flex border-b">
             <button
-              className={`flex-1 py-2 text-sm font-medium ${
-                viewMode === 'active' 
-                  ? 'text-[#9A00FF] border-b-2 border-[#9A00FF]' 
+              className={`flex-1 py-2 text-sm font-medium ${viewMode === 'active'
+                  ? 'text-[#9A00FF] border-b-2 border-[#9A00FF]'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
               onClick={() => setViewMode('active')}
             >
               Active Now
             </button>
             <button
-              className={`flex-1 py-2 text-sm font-medium ${
-                viewMode === 'all' 
-                  ? 'text-[#9A00FF] border-b-2 border-[#9A00FF]' 
+              className={`flex-1 py-2 text-sm font-medium ${viewMode === 'all'
+                  ? 'text-[#9A00FF] border-b-2 border-[#9A00FF]'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
               onClick={() => setViewMode('all')}
             >
               All Sessions
             </button>
             <button
-              className={`flex-1 py-2 text-sm font-medium ${
-                viewMode === 'summary' 
-                  ? 'text-[#9A00FF] border-b-2 border-[#9A00FF]' 
+              className={`flex-1 py-2 text-sm font-medium ${viewMode === 'summary'
+                  ? 'text-[#9A00FF] border-b-2 border-[#9A00FF]'
                   : 'text-gray-500 hover:text-gray-700'
-              }`}
+                }`}
               onClick={() => setViewMode('summary')}
             >
               User Summary
@@ -456,13 +441,13 @@ const TimeTrackerAdminWidget: React.FC = () => {
                 />
               </div>
               <div className="flex space-x-2">
-                <button 
+                <button
                   onClick={setYesterday}
                   className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded"
                 >
                   Yesterday
                 </button>
-                <button 
+                <button
                   onClick={setToday}
                   className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded"
                 >
@@ -499,7 +484,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
                     Last updated: {format(lastRefresh, 'h:mm a')}
                   </p>
                 </div>
-                
                 {loading ? (
                   <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#9A00FF]"></div>
@@ -550,7 +534,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
                     {filteredSessions.length} session{filteredSessions.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                
                 {loading ? (
                   <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#9A00FF]"></div>
@@ -584,7 +567,7 @@ const TimeTrackerAdminWidget: React.FC = () => {
                         </div>
                         <div className="mt-2 text-xs text-gray-500 flex justify-between">
                           <span>
-                            {format(new Date(session.startTime), 'h:mm a')} - 
+                            {format(new Date(session.startTime), 'h:mm a')} -
                             {session.endTime ? format(new Date(session.endTime), ' h:mm a') : ' In progress'}
                           </span>
                           <span className={`px-2 py-0.5 rounded-full text-white ${session.isActive ? 'bg-green-600' : 'bg-gray-500'}`}>
@@ -607,7 +590,6 @@ const TimeTrackerAdminWidget: React.FC = () => {
                     {filteredSummaries.length} user{filteredSummaries.length !== 1 ? 's' : ''}
                   </p>
                 </div>
-                
                 {loading ? (
                   <div className="flex justify-center items-center py-4">
                     <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[#9A00FF]"></div>
@@ -675,4 +657,4 @@ const TimeTrackerAdminWidget: React.FC = () => {
   );
 };
 
-export default TimeTrackerAdminWidget; 
+export default TimeTrackerAdminWidget;

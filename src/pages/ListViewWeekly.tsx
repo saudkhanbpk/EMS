@@ -48,7 +48,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from('users')
-        .select('*'); 
+        .select('*')
+        .neq("role", "admin"); 
       if (usersError) throw usersError;
 
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -569,5 +570,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
     </div>
   );
 };
+
+
 
 export default EmployeeWeeklyAttendanceTable;
