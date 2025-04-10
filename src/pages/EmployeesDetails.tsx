@@ -3,7 +3,6 @@ import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
 import { FaTrash, FaEdit } from "react-icons/fa";
 
-
 const EmployeesDetails = ({ selectedTab }) => {
   const [employees, setEmployees] = useState([]);
   const [employeeview, setEmployeeView] = useState("generalview");
@@ -18,8 +17,6 @@ const EmployeesDetails = ({ selectedTab }) => {
     description: "",
     score: ""
   });
-
-  const defaultProjects = ["Website Redesign", "Marketing Campaign", "Mobile App"];
 
   const handleAssignClick = async (entry) => {
     setEmployee(entry);
@@ -38,8 +35,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       project.devops?.some(item => item.id === entry.id)
     );
   
-    setUserProjects(userProjects); // Store in state
-  
+    setUserProjects(userProjects);
     setAssignment(prev => ({
       ...prev,
       project: userProjects[0]?.title || ""
@@ -47,16 +43,16 @@ const EmployeesDetails = ({ selectedTab }) => {
   
     setShowModal(true);
   };
+
   const handleAssignSubmit = async () => {
     try {
-      // Create the task in the database
       const { data, error } = await supabase
         .from("tasks_of_projects")
         .insert([{
           project_id: userProjects.find(p => p.title === assignment.project)?.id,
           title: assignment.title,
           description: assignment.description,
-          devops: [{ id: employeeId }], // Assign to this developer
+          devops: [{ id: employeeId }],
           status: "todo",
           score: assignment.score,
           created_at: new Date().toISOString()
@@ -70,7 +66,6 @@ const EmployeesDetails = ({ selectedTab }) => {
         ...assignment,
       });
       
-      // Reset form and close modal
       setAssignment({
         title: "",
         project: "",
@@ -78,13 +73,10 @@ const EmployeesDetails = ({ selectedTab }) => {
         score: ""
       });
       setShowModal(false);
-      
-      // Optional: Show success message
       alert("Task assigned successfully!");
       
     } catch (err) {
       console.error("Error assigning task:", err);
-      // Optional: Show error message to user
       alert("Failed to assign task: " + err.message);
     }
   };
@@ -97,8 +89,6 @@ const EmployeesDetails = ({ selectedTab }) => {
       setEmployees((prev) => prev.filter((emp) => emp.id !== id));
     }
   };
-  
-
 
   const formRef = useRef(null);
 
@@ -135,10 +125,37 @@ const EmployeesDetails = ({ selectedTab }) => {
   };
 
   const fetchEmployees = async () => {
-    const { data, error } = await supabase.from("users").select("*");
-    if (!error) {
-      setEmployees(data);
+    // Fetch employees
+    const { data: employeesData, error: employeesError } = await supabase
+      .from("users")
+      .select("*");
+
+    if (employeesError) {
+      console.error("Error fetching employees:", employeesError.message);
+      return;
     }
+
+    // Fetch projects
+    const { data: projectsData, error: projectsError } = await supabase
+      .from("projects")
+      .select("id, title, devops");
+
+    if (projectsError) {
+      console.error("Error fetching projects:", projectsError.message);
+      return;
+    }
+
+    // Map projects to employees
+    const employeesWithProjects = employeesData.map(employee => ({
+      ...employee,
+      projects: projectsData
+        .filter(project => 
+          project.devops?.some(dev => dev.id === employee.id)
+        )
+        .map(project => project.title)
+    }));
+
+    setEmployees(employeesWithProjects);
   };
 
   useEffect(() => {
@@ -203,11 +220,9 @@ const EmployeesDetails = ({ selectedTab }) => {
     let profileImageUrl = null;
   
     if (profile_image) {
-      // Upload profile image to Supabase storage
       const fileExt = profile_image.name.split('.').pop();
       const fileName = `${employeeId}_profile.${fileExt}`;
       
-      // First upload the file
       const { error: uploadError } = await supabase.storage
         .from('profilepics')
         .upload(fileName, profile_image);
@@ -217,7 +232,6 @@ const EmployeesDetails = ({ selectedTab }) => {
         return;
       }
   
-      // Then get the public URL
       const { data: { publicUrl } } = supabase.storage
         .from('profilepics')
         .getPublicUrl(fileName);
@@ -372,7 +386,6 @@ const EmployeesDetails = ({ selectedTab }) => {
        employee={employee}
        setemployeeview={setEmployeeView}
      />
-     
       )}
 
       {employeeview === "generalview" && (
@@ -397,165 +410,153 @@ const EmployeesDetails = ({ selectedTab }) => {
             </div>
           </div>
           <div className="w-full max-w-6xl bg-white p-4 sm:p-6 rounded-lg shadow-lg">
-  <div className="overflow-x-auto md:w-full w-[300px]">
-    <table className="min-w-[1100px] bg-white">
-      <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
-        <tr>
-          <th className="py-2 px-3 text-left">Employee Name</th>
-          <th className="py-2 px-3 text-left">Joining Date</th>
-          {/* <th className="py-2 px-3 text-left">Employment Duration</th> */}
-          {/* <th className="py-2 px-3 text-left">Role</th> */}
-          <th className="py-2 px-3 text-left">Email</th>
-          {/* <th className="py-2 px-3 text-left">Slack ID</th> */}
-          <th className="py-2 px-3 text-left">Phone Number</th>
-          <th className="py-2 px-3 text-left">Salary</th>
-          {/* <th className="py-2 px-3 text-left">Per Hour Pay</th> */}
-          <th className="py-2 px-3 text-left">Assign</th>
-          <th className="py-2 px-3 text-left">Action</th>
-        </tr>
-      </thead>
-      <tbody className="text-sm font-normal">
-        {employees.map((entry, index) => (
-          <tr
-            key={index}
-            className="border-b border-gray-200 hover:bg-gray-50 transition-all"
-          >
-            <td className="px-3 py-3 whitespace-nowrap">
-              <button
-                className="text-gray-900 text-left hover:text-[#9A00FF]"
-                onClick={() => {
-                  setEmployee(entry);
-                  setEmployeeId(entry.id);
-                  setEmployeeView("detailview");
-                }}
-              >
-                {entry.full_name}
-              </button>
-            </td>
-            <td className="py-3 whitespace-nowrap">
-              {new Date(entry.joining_date).toLocaleDateString()}
-            </td>
-            {/* <td className="px-3 py-3 whitespace-nowrap">
-              {getEmploymentDuration(entry.created_at)}
-            </td> */}
-            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.role}</td> */}
-            <td className="py-3 whitespace-nowrap">{entry.email}</td>
-            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.slack_id}</td> */}
-            <td className="py-3 whitespace-nowrap">{entry.phone_number}</td>
-            <td className="py-3 whitespace-nowrap">{entry.salary}</td>
-            {/* <td className="px-3 py-3 whitespace-nowrap">{entry.per_hour_pay}</td> */}
-            <td className="px-3 py-3 whitespace-nowrap">
-              <button
-                onClick={() => handleAssignClick(entry)}
-                className="bg-[#9A00FF] text-white px-3 py-1 rounded hover:bg-[#7a00cc]"
-              >
-                Assign
-              </button>
-            </td>
-            <td className="px-3 py-3 whitespace-nowrap flex gap-3 items-center">
-              {/* <FaEdit className="text-blue-500 cursor-not-allowed" title="Edit" /> */}
-              <FaTrash
-                className="text-red-500 cursor-pointer hover:text-red-700"
-                title="Delete"
-                onClick={() => handleDelete(entry.id)}
-              />
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  </div>
-</div>
+            <div className="overflow-x-auto md:w-full w-[300px]">
+              <table className="min-w-[1100px] bg-white">
+                <thead className="bg-gray-50 text-gray-700 uppercase text-xs leading-normal">
+                  <tr>
+                    <th className="py-2 px-3 text-left">Employee Name</th>
+                    <th className="py-2 px-3 text-left">Joining Date</th>
+                    <th className="py-2 px-3 text-left">Email</th>
+                    <th className="py-2 px-3 text-left">Projects</th>
+                    <th className="py-2 px-3 text-left">Assign</th>
+                    <th className="py-2 px-3 text-left">Action</th>
+                  </tr>
+                </thead>
+                <tbody className="text-sm font-normal">
+                  {employees.map((entry, index) => (
+                    <tr
+                      key={index}
+                      className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+                    >
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <button
+                          className="text-gray-900 text-left hover:text-[#9A00FF]"
+                          onClick={() => {
+                            setEmployee(entry);
+                            setEmployeeId(entry.id);
+                            setEmployeeView("detailview");
+                          }}
+                        >
+                          {entry.full_name}
+                        </button>
+                      </td>
+                      <td className="py-3 whitespace-nowrap">
+                        {new Date(entry.joining_date).toLocaleDateString()}
+                      </td>
+                      <td className="py-3 whitespace-nowrap">{entry.email}</td>
+                      <td className="py-3 whitespace-nowrap">
+                        {entry.projects?.length > 0 ? (
+                          entry.projects.join(", ")
+                        ) : (
+                          <span className="text-gray-400">No projects</span>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap">
+                        <button
+                          onClick={() => handleAssignClick(entry)}
+                          className="bg-[#9A00FF] text-white px-3 py-1 rounded hover:bg-[#7a00cc]"
+                        >
+                          Assign
+                        </button>
+                      </td>
+                      <td className="px-3 py-3 whitespace-nowrap flex gap-3 items-center">
+                        <FaTrash
+                          className="text-red-500 cursor-pointer hover:text-red-700"
+                          title="Delete"
+                          onClick={() => handleDelete(entry.id)}
+                        />
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
 
+          {showModal && (
+            <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
+              <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
+                <h2 className="text-lg font-semibold mb-4">
+                  Assign Task to {employee?.full_name}
+                </h2>
 
-{showModal && (
-  <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-30 z-50">
-    <div className="bg-white p-6 rounded-lg shadow-lg w-full max-w-md">
-      <h2 className="text-lg font-semibold mb-4">
-        Assign Task to {employee?.full_name}
-      </h2>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Title *</label>
+                  <input
+                    type="text"
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                    value={assignment.title}
+                    onChange={(e) =>
+                      setAssignment(prev => ({ ...prev, title: e.target.value }))
+                    }
+                    required
+                  />
+                </div>
 
-      {/* Title */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Title *</label>
-        <input
-          type="text"
-          className="w-full px-3 py-2 border border-gray-300 rounded"
-          value={assignment.title}
-          onChange={(e) =>
-            setAssignment(prev => ({ ...prev, title: e.target.value }))
-          }
-          required
-        />
-      </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Project</label>
+                  {userProjects.length > 0 ? (
+                    <select
+                      className="w-full px-3 py-2 border border-gray-300 rounded"
+                      value={assignment.project}
+                      onChange={(e) =>
+                        setAssignment(prev => ({ ...prev, project: e.target.value }))
+                      }
+                    >
+                      <option value="">Select a project</option>
+                      {userProjects.map((project) => (
+                        <option key={project.id} value={project.title}>
+                          {project.title}
+                        </option>
+                      ))}
+                    </select>
+                  ) : (
+                    <p className="text-sm text-gray-500">No projects available for this developer</p>
+                  )}
+                </div>
 
-      {/* Project */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Project</label>
-        {userProjects.length > 0 ? (
-          <select
-            className="w-full px-3 py-2 border border-gray-300 rounded"
-            value={assignment.project}
-            onChange={(e) =>
-              setAssignment(prev => ({ ...prev, project: e.target.value }))
-            }
-          >
-            <option value="">Select a project</option>
-            {userProjects.map((project) => (
-              <option key={project.id} value={project.title}>
-                {project.title}
-              </option>
-            ))}
-          </select>
-        ) : (
-          <p className="text-sm text-gray-500">No projects available for this developer</p>
-        )}
-      </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Description</label>
+                  <textarea
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                    rows={3}
+                    value={assignment.description}
+                    onChange={(e) =>
+                      setAssignment(prev => ({ ...prev, description: e.target.value }))
+                    }
+                  />
+                </div>
 
-      {/* Description */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Description</label>
-        <textarea
-          className="w-full px-3 py-2 border border-gray-300 rounded"
-          rows={3}
-          value={assignment.description}
-          onChange={(e) =>
-            setAssignment(prev => ({ ...prev, description: e.target.value }))
-          }
-        />
-      </div>
+                <div className="mb-4">
+                  <label className="block text-sm font-medium mb-1">Score</label>
+                  <input
+                    type="number"
+                    className="w-full px-3 py-2 border border-gray-300 rounded"
+                    value={assignment.score}
+                    onChange={(e) =>
+                      setAssignment(prev => ({ ...prev, score: e.target.value }))
+                    }
+                  />
+                </div>
 
-      {/* Score */}
-      <div className="mb-4">
-        <label className="block text-sm font-medium mb-1">Score</label>
-        <input
-          type="number"
-          className="w-full px-3 py-2 border border-gray-300 rounded"
-          value={assignment.score}
-          onChange={(e) =>
-            setAssignment(prev => ({ ...prev, score: e.target.value }))
-          }
-        />
-      </div>
-
-      <div className="flex justify-end space-x-3">
-        <button
-          className="px-4 py-2 bg-gray-300 text-gray-700 rounded"
-          onClick={() => setShowModal(false)}
-        >
-          Cancel
-        </button>
-        <button
-          className="px-4 py-2 bg-[#9A00FF] text-white rounded"
-          onClick={handleAssignSubmit}
-          disabled={!assignment.title}
-        >
-          Assign Task
-        </button>
-      </div>
-    </div>
-  </div>
-)}
+                <div className="flex justify-end space-x-3">
+                  <button
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded"
+                    onClick={() => setShowModal(false)}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    className="px-4 py-2 bg-[#9A00FF] text-white rounded"
+                    onClick={handleAssignSubmit}
+                    disabled={!assignment.title}
+                  >
+                    Assign Task
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </>
       )}
     </div>

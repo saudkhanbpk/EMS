@@ -273,7 +273,7 @@ cron.schedule("45 8 * * *", () => {
             <td style="border: 1px solid #ddd; padding: 8px;"><strong>Employee Name:</strong></td>
             <td style="border: 1px solid #ddd; padding: 8px;">${employeeName}</td>
         </tr>
-        <tr>
+        <tr> 
             <td style="border: 1px solid #ddd; padding: 8px;"><strong>Leave Type:</strong></td>
             <td style="border: 1px solid #ddd; padding: 8px;">${leaveType}</td>
         </tr>
@@ -313,12 +313,48 @@ cron.schedule("45 8 * * *", () => {
     } catch (error) {
         console.error("Error sending email:", error);
         res.status(500).json({ error: "Failed to send email" });
-    }
+    }sendEmail
 };
 // API Route
 app.post("/send-email", sendEmail);
 
 
+
+//Sending Bulk Email To Users On Office Alerts
+// Route: Send bulk email
+app.post("/send-alertemail", async (req, res) => {
+    const { recipients, subject, message } = req.body;
+  
+    if (!recipients || recipients.length === 0) {
+      return res.status(400).json({ error: "Recipient list is empty" });
+    }
+  
+    try {
+      // Setup transporter
+      const transporter = nodemailer.createTransport({
+        service: "gmail", // or another provider
+        auth: {
+            user: process.env.VITE_EMAIL_USER, // Your email (EMS system email)
+            pass: process.env.VITE_EMAIL_PASS, // Your app password
+        },
+      });
+  
+      // Send email
+      const info = await transporter.sendMail({
+        from: process.env.VITE_EMAIL_USER, // The email that actually sends the email
+        to: "", // empty TO
+        bcc: recipients, // list of emails
+        subject,
+        text: message, // or use html: "<b>Hello</b>"
+      });
+  
+      console.log("Message sent: %s", info.messageId);
+      res.json({ status: "Emails sent successfully" });
+    } catch (error) {
+      console.error("Error sending email:", error);
+      res.status(500).json({ error: "Failed to send emails", detail: error.message });
+    }
+  });
 
 
 const sendAdminResponse = async (req, res) => {

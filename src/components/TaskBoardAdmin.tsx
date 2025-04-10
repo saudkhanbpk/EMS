@@ -114,7 +114,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   };
   useEffect(() => {
     fetchTasks();
-  }, [ProjectId, devopss]); // Add devopss to dependencies
+  }, [ProjectId]); // Add devopss to dependencies
 
 
   const handleDragEnd = async (result: DropResult) => {
@@ -192,11 +192,13 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   };
 
   const handleDelete = async (DeletedTask: Task) => {
+    const confirmed = window.confirm("Are you sure you want to delete this Task?");
+    if (!confirmed) return;
     try {
       const { error } = await supabase
         .from('tasks_of_projects')
         .delete()
-        .eq('id', DeletedTask.id);
+        .eq('id', DeletedTask.id); 
 
       if (error) {
         throw error;
@@ -297,9 +299,14 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   return (
     <div className="min-h-screen px-8">
       <div className="max-w-7xl mx-auto">
-        {selectedTab === "addtask" && (
-          <AddNewTask setselectedtab={setSelectedTab} ProjectId={ProjectId} devopss={devopss} />
-        )}
+      {selectedTab === "addtask" && (
+  <AddNewTask 
+    setselectedtab={setSelectedTab} 
+    ProjectId={ProjectId} 
+    devopss={devopss}
+    refreshTasks={fetchTasks}  // Add this prop
+  />
+)}
 
         {selectedTab === "tasks" && (
           <>
@@ -320,7 +327,8 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
                     <ArrowLeft
                       className="hover:bg-gray-300 rounded-2xl"
                       size={24}
-                      onClick={() => setSelectedTAB("Projects")}
+                      onClick={() => {setSelectedTAB("Projects")
+                      }}
                     />
                   </Link>
                   <h1 className="md:text-2xl text-md font-bold">Work Planner</h1>
