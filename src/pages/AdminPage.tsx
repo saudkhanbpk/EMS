@@ -5,6 +5,9 @@ import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
 import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
 import EmployeeAttendanceTable from './ListViewOfEmployees';
+import ListViewMonthly from './ListViewMonthly';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { LucideDelete } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 import { motion } from "framer-motion";
 import EmployeesDetails from './EmployeesDetails';
@@ -595,6 +598,7 @@ const AdminPage: React.FC = () => {
 
 
   return (
+    
     <>
       <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
         <div className='flex flex-col'>
