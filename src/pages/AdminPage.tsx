@@ -7,6 +7,7 @@ import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis
 import EmployeeAttendanceTable from './ListViewOfEmployees';
 import ListViewMonthly from './ListViewMonthly';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+
 import { LucideDelete } from 'lucide-react';
 import { Trash2 } from 'lucide-react';
 import { motion } from "framer-motion";
