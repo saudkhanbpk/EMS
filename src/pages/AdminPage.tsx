@@ -18,9 +18,6 @@ import {
   ShieldCheck,
   LogOut,
   PanelLeftClose,
-  PanelRightClose,
-  Coffee
-} from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -32,6 +29,9 @@ import {
 } from 'date-fns';
 import AbsenteeComponent from './AbsenteesData';
 import { id } from 'date-fns/locale/id';
+  PanelRightClose,
+  Coffee
+} from 'lucide-react';
 import { error } from 'console';
 
 interface AttendanceRecord {
