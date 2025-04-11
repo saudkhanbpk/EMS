@@ -287,6 +287,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
               <option value="admin">admin</option>
               <option value="manager">manager</option>
               <option value="employee">employee</option>
+              <option value="employee">project manager</option>
             </select>
           </div>
           <div>

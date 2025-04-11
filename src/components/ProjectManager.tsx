@@ -26,7 +26,7 @@ interface devopss {
   full_name : string;
 }
 
-function ProjectsAdmin() {
+function ProjectManager() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ProjectId , setProjectId] = useState("");
@@ -60,19 +60,28 @@ function ProjectsAdmin() {
     fetchDevs();
   }, []);
 
-  
-  // Fetch projects
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
+      const userId = localStorage.getItem("user_id");
+  
       const { data, error } = await supabase
         .from("projects")
         .select("*");
-      if (!error) setProjects(data);
+  
+      if (!error) {
+        const filteredProjects = data.filter((project) =>
+          project.devops.some((dev) => dev.id == userId)
+        );
+        setProjects(filteredProjects);
+      }
+  
       setLoading(false);
     };
+  
     fetchProjects();
   }, []);
+  
 
   const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
     if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
@@ -159,6 +168,8 @@ function ProjectsAdmin() {
             type: newProject.type,
             devops: selectedDevs,
             created_at: new Date().toISOString(),
+            created_by : localStorage.getItem("user_id"),
+
           }])
           .select();
 
@@ -166,8 +177,14 @@ function ProjectsAdmin() {
       }
 
       // Refresh projects list
+      const userId = localStorage.getItem("user_id");
+
       const { data, error } = await supabase.from("projects").select("*");
-      if (!error) setProjects(data);
+      if (!error) {
+        const filteredProjects = data.filter((project) =>
+            project.devops.some((dev) => dev.created_by == userId || dev.id == userId))
+        setProjects(filteredProjects);
+         }
       
       closeModal();
     } catch (err) {
@@ -374,4 +391,4 @@ function ProjectsAdmin() {
   );
 }
 
-export default ProjectsAdmin;
+export default ProjectManager;

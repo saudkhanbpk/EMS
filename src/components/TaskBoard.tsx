@@ -26,6 +26,7 @@ const COLUMN_IDS = {
 };
 
 function TaskBoard({ setSelectedTAB }) {
+  const { projectIdd, devopsss, selectedTABB } = AttendanceContext();
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<task[]>([]);
@@ -401,8 +402,4 @@ function TaskCard({ task, index }: { task: task; index: number }) {
 
 
 export default TaskBoard;
-{/* {task.devops && (
-                <span className="text-[11px]">
-                  {task.devops.map(dev => dev.name).join(", ")}
-                </span>
-              )}*/}
+
