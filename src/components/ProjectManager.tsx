@@ -70,8 +70,9 @@ function ProjectManager() {
         .select("*");
   
       if (!error) {
-        const filteredProjects = data.filter((project) =>
-          project.devops.some((dev) => dev.id == userId)
+        const filteredProjects = data.filter((project) => 
+          project.created_by === userId || 
+          project.devops.some((dev) => dev.id === userId)
         );
         setProjects(filteredProjects);
       }
@@ -181,10 +182,12 @@ function ProjectManager() {
 
       const { data, error } = await supabase.from("projects").select("*");
       if (!error) {
-        const filteredProjects = data.filter((project) =>
-            project.devops.some((dev) => dev.created_by == userId || dev.id == userId))
+        const filteredProjects = data.filter((project) => 
+          project.created_by === userId || 
+          project.devops.some((dev) => dev.id === userId)
+        );
         setProjects(filteredProjects);
-         }
+      }
       
       closeModal();
     } catch (err) {
@@ -370,6 +373,7 @@ function ProjectManager() {
                         <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
                           {formatDistanceToNow(new Date(project.created_at))} ago
                         </span>
+                        
                    
                       </div>
                       {/* <div>
