@@ -26,7 +26,7 @@ const COLUMN_IDS = {
 };
 
 function TaskBoard({ setSelectedTAB }) {
-  const { projectIdd, devopsss, selectedTABB } = AttendanceContext();
+  const { projectIdd, devopsss, selectedTABB } = useContext(AttendanceContext);
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<task[]>([]);
