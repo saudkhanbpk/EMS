@@ -8,6 +8,8 @@ import { formatDistanceToNow } from 'date-fns';
 import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import AddNewTask from '../AddNewTask';
+import { AttendanceContext } from '../pages/AttendanceContext';
+import { useContext } from 'react';
 interface task {
   id: string;
   title: string;
@@ -39,7 +41,7 @@ const COLUMN_IDS = {
   review: 'review',
   done: 'done'
 };
-
+ 
 function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const user = useAuthStore();
   const { id } = useParams();
@@ -51,7 +53,10 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [devopsScores, setDevopsScores] = useState<{ id: string; name: string; score: number; completed: number }[]>([]);
-
+ 
+      const selectedTABB = useContext(AttendanceContext).selectedTAB;
+    const devopsss = useContext(AttendanceContext).devopss;
+    const ProjectIdd = useContext(AttendanceContext).projectId;
   // const [tasks, setTasks] = useState<task[]>([]);
   const getTasksByStatus = (status: task['status']) =>
     tasks.filter(task => task.status === status);
@@ -62,6 +67,10 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const totalTasks = tasks.length;
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
+  // Current useEffect
+useEffect(() => {
+  fetchTasks();
+}, [ProjectIdd]); // Only watches prop ProjectId, not context value
 
   // useEffect(() => {
   //   const fetchTasks = async () => {
@@ -84,7 +93,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
     const { data, error } = await supabase
       .from("tasks_of_projects")
       .select("*")
-      .eq("project_id", ProjectId);
+      .eq("project_id", ProjectId || ProjectIdd[0]); // Use ProjectId or ProjectIdd
 
     if (!error) {
       setTasks(data);
@@ -308,7 +317,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   />
 )}
 
-        {selectedTab === "tasks" && (
+        {(selectedTab === "tasks" || selectedTABB === "tasks") && (
           <>
             <div className="flex flex-col lg:flex-row items-start lg:items-center lg:ml-6 ml-0 mb-8 gap-4 flex-wrap">
 

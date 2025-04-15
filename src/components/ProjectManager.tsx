@@ -26,7 +26,7 @@ interface devopss {
   full_name : string;
 }
 
-function ProjectsAdmin() {
+function ProjectManager() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ProjectId , setProjectId] = useState("");
@@ -60,19 +60,29 @@ function ProjectsAdmin() {
     fetchDevs();
   }, []);
 
-  
-  // Fetch projects
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
+      const userId = localStorage.getItem("user_id");
+  
       const { data, error } = await supabase
         .from("projects")
         .select("*");
-      if (!error) setProjects(data);
+  
+      if (!error) {
+        const filteredProjects = data.filter((project) => 
+          project.created_by === userId || 
+          project.devops.some((dev) => dev.id === userId)
+        );
+        setProjects(filteredProjects);
+      }
+  
       setLoading(false);
     };
+  
     fetchProjects();
   }, []);
+  
 
   const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
     if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
@@ -159,6 +169,8 @@ function ProjectsAdmin() {
             type: newProject.type,
             devops: selectedDevs,
             created_at: new Date().toISOString(),
+            created_by : localStorage.getItem("user_id"),
+
           }])
           .select();
 
@@ -166,8 +178,16 @@ function ProjectsAdmin() {
       }
 
       // Refresh projects list
+      const userId = localStorage.getItem("user_id");
+
       const { data, error } = await supabase.from("projects").select("*");
-      if (!error) setProjects(data);
+      if (!error) {
+        const filteredProjects = data.filter((project) => 
+          project.created_by === userId || 
+          project.devops.some((dev) => dev.id === userId)
+        );
+        setProjects(filteredProjects);
+      }
       
       closeModal();
     } catch (err) {
@@ -197,7 +217,7 @@ function ProjectsAdmin() {
                 <PlusCircle size={20} className="mr-2" /> New Project
               </button>
             </div>
-   
+  
             {isModalOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -353,6 +373,7 @@ function ProjectsAdmin() {
                         <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
                           {formatDistanceToNow(new Date(project.created_at))} ago
                         </span>
+                        
                    
                       </div>
                       {/* <div>
@@ -374,4 +395,4 @@ function ProjectsAdmin() {
   );
 }
 
-export default ProjectsAdmin;
+export default ProjectManager;

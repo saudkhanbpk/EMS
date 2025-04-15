@@ -19,7 +19,7 @@ import {
   ShieldCheck,
   LogOut,
   PanelLeftClose,
-} from 'lucide-react';
+} from "lucide-react";
 import { supabase } from '../lib/supabase';
 import { useNavigate } from 'react-router-dom';
 import {
