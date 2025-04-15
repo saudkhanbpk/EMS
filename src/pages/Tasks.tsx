@@ -902,8 +902,9 @@ interface Project {
 function Task() {
   const navigate = useNavigate();
   const [Loading , setLoading] = useState (false);
-  const  [ProjectId , setProjectId] = useState('');
+  const [ProjectId , setProjectId] = useState('');
   const [devops , setdevops] = useState<devops[]>([]);
+  const [descriptionopen , setDescriptionOpen] = useState(false);
   // const [setDevs] = useContext(AttendanceContext)
   
 
@@ -967,6 +968,10 @@ function Task() {
                     }`}></span>&nbsp;&nbsp;
                   <span className="text-sm font-semibold text-[#9A00FF]">{project.type}</span>
                 </div>      
+                <button onClick={(e) => {
+                  e.stopPropagation()
+                  setDescriptionOpen(true)}}>open</button>
+
               </div>
               <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
               <div className="flex gap-10 flex-col items-start justify-between">
@@ -988,6 +993,26 @@ function Task() {
             </div>
           ))}
         </div>
+        {/* Description Modal */}
+        {descriptionopen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-semibold">Task Description</h2>
+                  <button
+                    onClick={() => setDescriptionOpen(false)}
+                    className="text-gray-400 hover:text-gray-500"
+                  >
+                    <X className="w-6 h-6" />
+                  </button>
+                </div>
+                {/* Add your task description content here */}
+                <p>Task description goes here...</p>
+              </div>  
+            </div>
+            </div>
+        )}
       </div>
     </div>
   );
