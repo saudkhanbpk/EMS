@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PlusCircle, User, X, ArrowLeft, Plus , Pencil , Trash2 } from 'lucide-react';
+import { PlusCircle, User, X, ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import AdminDashboard from './AdminDashboard';
@@ -170,11 +170,21 @@ function TaskBoard({ setSelectedTAB }) {
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center ml-6 mb-8">
           <Link
-            to="/tasks"
-            className="mr-4 text-gray-600 hover:text-gray-800"
-            onClick={() => setSelectedTAB("Projects")}
+            to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"}
+            className="text-gray-600 hover:text-gray-800"
+            onClick={(e) => {
+              e.preventDefault();
+              const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
+              navigate(isAdmin ? "/admin" : "/tasks");
+            }}
           >
-            <ArrowLeft className="hover:bg-gray-300 rounded-2xl" size={24} />
+            <ArrowLeft
+              className="hover:bg-gray-300 rounded-2xl"
+              size={24}
+              onClick={() => {
+                setSelectedTAB("Projects")
+              }}
+            />
           </Link>
 
           <div className="flex-1 flex justify-between items-center">
@@ -326,8 +336,8 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
-            {/* Done Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md">
+             {/* Done Column */}
+        <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
                 <span className="text-gray-600">{getStatusCount('done')}</span>
@@ -353,9 +363,17 @@ function TaskBoard({ setSelectedTAB }) {
                   </div>
                 )}
               </Droppable>
+                      {/* <div className="p-4 text-center text-gray-400">
+                         You Cannot Drop Here
+                      </div> */}
+           
+
             </div>
+
+            
           </div>
         </DragDropContext>
+       
       </div>
       <div className="fixed bottom-6 flex flex-row right-16 bg-[#ffffff] rounded-2xl shadow-lg p-4 mr-5 text-right gap-3 z-50">
         <p className='font-bold text-[13px] text-red-500 '>Total KPIs : {totalKPI}</p>

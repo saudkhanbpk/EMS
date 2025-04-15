@@ -50,7 +50,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
 
   const removeDeveloper = (id: string) => {
     setSelectedDevs(selectedDevs.filter(devId => devId !== id));
-  };
+  }; 
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];

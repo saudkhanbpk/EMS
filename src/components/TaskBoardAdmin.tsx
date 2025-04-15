@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2, Minus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -56,7 +56,9 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [devopsScores, setDevopsScores] = useState<{ id: string; name: string; score: number; completed: number }[]>([]);
-
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const selectedTABB = useContext(AttendanceContext).selectedTAB;
   const devopsss = useContext(AttendanceContext).devopss;
   const ProjectIdd = useContext(AttendanceContext).projectId;
@@ -189,9 +191,37 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
 
   const handleUpdateTask = async (updatedTask: Task) => {
     try {
+
+      // Upload new image if selected
+      let imageUrl = updatedTask.imageurl;
+      if (imageFile) {
+        const fileExt = imageFile.name.split('.').pop();
+        const fileName = `${Math.random()}.${fileExt}`;
+        const filePath = `task-images/${fileName}`;
+
+        // Upload to Supabase storage
+        const { error: uploadError } = await supabase
+          .storage
+          .from('newtaskimage')
+          .upload(filePath, imageFile);
+
+        if (uploadError) throw uploadError;
+
+        // Get public URL
+        const { data: { publicUrl } } = supabase
+          .storage
+          .from('newtaskimage')
+          .getPublicUrl(filePath);
+
+        imageUrl = publicUrl;
+      }
       const { error } = await supabase
         .from('tasks_of_projects')
-        .update(updatedTask)
+        .update({
+          ...updatedTask,
+          imageurl: imageUrl
+        })
+
         .eq('id', updatedTask.id);
 
       if (error) throw error;
@@ -449,7 +479,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
                     onClick={(e) => {
                       e.preventDefault();
                       const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
-                      navigate(isAdmin ? "/admin" : "/");
+                      navigate(isAdmin ? "/admin" : "/tasks");
                     }}
                   >
                     <ArrowLeft
@@ -526,146 +556,231 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
 
         {/* Edit Task Modal */}
         {isEditModalOpen && currentTask && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-            <div className="bg-white rounded-lg shadow-xl p-6 w-full max-w-2xl">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-2xl font-bold text-gray-800">Edit Task</h2>
+  <div className="fixed inset-0 bg-black bg-opacity-50 flex items-start justify-center z-50 overflow-y-auto py-8">
+    <div 
+      className="bg-white rounded-lg shadow-xl w-full max-w-2xl my-8"
+      onClick={(e) => e.stopPropagation()} // Prevent click-through to backdrop
+    >
+      <div className="p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-gray-800">Edit Task</h2>
+          <button
+            onClick={() => setIsEditModalOpen(false)}
+            className="text-gray-500 hover:text-gray-700"
+          >
+            <X size={24} />
+          </button>
+        </div>
+
+        <form 
+          onSubmit={async (e) => {
+            e.preventDefault();
+            handleUpdateTask(currentTask);
+          }}
+          className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2"
+        >
+          {/* Title Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+            <input
+              type="text"
+              value={currentTask.title}
+              onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {/* Description Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+            <textarea
+              value={currentTask.description || ''}
+              onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+              rows={3}
+            />
+          </div>
+
+          {/* Score Input */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+            <input
+              type="number"
+              value={currentTask.score}
+              onChange={(e) => setCurrentTask({ ...currentTask, score: Number(e.target.value) })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
+
+          {/* Image Upload Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">
+              Task Image
+            </label>
+            
+            {/* Current image preview */}
+            {currentTask.imageurl && !imagePreview && (
+              <div className="relative mb-2">
+                <img 
+                  src={currentTask.imageurl} 
+                  alt="Current task" 
+                  className="h-32 object-contain rounded-md"
+                />
                 <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="text-gray-500 hover:text-gray-700"
+                  type="button"
+                  onClick={() => {
+                    setCurrentTask({...currentTask, imageurl: ''});
+                  }}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
                 >
-                  <X size={24} />
+                  <X size={16} />
                 </button>
               </div>
+            )}
 
-              <form onSubmit={(e) => {
-                e.preventDefault();
-                handleUpdateTask(currentTask);
-              }}>
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                  <input
-                    type="text"
-                    value={currentTask.title}
-                    onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
+            {/* New image preview */}
+            {imagePreview && (
+              <div className="relative mb-2">
+                <img 
+                  src={imagePreview} 
+                  alt="New task image" 
+                  className="h-32 object-contain rounded-md"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setImagePreview(null);
+                    setImageFile(null);
+                    if (fileInputRef.current) {
+                      fileInputRef.current.value = '';
+                    }
+                  }}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-                  <textarea
-                    value={currentTask.description || ''}
-                    onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                    rows={3}
-                  />
-                </div>
+            {/* File input */}
+            <input
+              type="file"
+              ref={fileInputRef}
+              accept="image/*"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setImageFile(file);
+                  const reader = new FileReader();
+                  reader.onloadend = () => {
+                    setImagePreview(reader.result as string);
+                  };
+                  reader.readAsDataURL(file);
+                }
+              }}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            />
+          </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
-                  <input
-                    type="number"
-                    value={currentTask.score}
-                    onChange={(e) => setCurrentTask({ ...currentTask, score: Number(e.target.value) })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  />
-                </div>
+          {/* Priority Select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+            <select
+              id="priority"
+              value={currentTask.priority || ''}
+              onChange={(e) => setCurrentTask({ ...currentTask, priority: e.target.value })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="Todo">Todo</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select
-                    id="priority"
-                    value={currentTask.priority || ''}
-                    onChange={(e) => setCurrentTask({ ...currentTask, priority: e.target.value })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <option value="Todo">Todo</option>
-                    <option value="High">High</option>
-                    <option value="Medium">Medium</option>
-                    <option value="Low">Low</option>
-                  </select>
-                </div>
+          {/* Status Select */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+            <select
+              value={currentTask.status}
+              onChange={(e) => setCurrentTask({ ...currentTask, status: e.target.value as Task['status'] })}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md"
+            >
+              <option value="todo">To Do</option>
+              <option value="inProgress">In Progress</option>
+              <option value="review">Review</option>
+              <option value="done">Done</option>
+            </select>
+          </div>
 
-                <div className="mb-4">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
-                  <select
-                    value={currentTask.status}
-                    onChange={(e) => setCurrentTask({ ...currentTask, status: e.target.value as Task['status'] })}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="todo">To Do</option>
-                    <option value="inProgress">In Progress</option>
-                    <option value="review">Review</option>
-                    <option value="done">Done</option>
-                  </select>
-                </div>
-
-                <div className="mb-6">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Developers</label>
-                  <div className="flex flex-wrap gap-2">
-                    {currentTask.devops?.map(dev => (
-                      <div key={dev.id} className="bg-blue-100 px-3 py-1 rounded-full flex items-center">
-                        <span className="mr-2">{dev.name}</span>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setCurrentTask({
-                              ...currentTask,
-                              devops: currentTask.devops?.filter(d => d.id !== dev.id)
-                            });
-                          }}
-                          className="text-blue-600 hover:text-blue-800"
-                        >
-                          ×
-                        </button>
-                      </div>
-                    ))}
-                  </div>
-                  <select
-                    onChange={(e) => {
-                      const devId = e.target.value;
-                      if (devId && currentTask.devops?.every(d => d.id !== devId)) {
-                        const dev = devopss.find((d: Developer) => d.id === devId);
-                        if (dev) {
-                          setCurrentTask({
-                            ...currentTask,
-                            devops: [...(currentTask.devops || []), dev]
-                          });
-                        }
-                      }
-                    }}
-                    className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md"
-                    value=""
-                  >
-                    <option value="">Add Developer</option>
-                    {devopss?.map((dev: Developer) => (
-                      <option key={dev.id} value={dev.id}>
-                        {dev.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <div className="flex justify-end space-x-3">
+          {/* Developers Section */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">Developers</label>
+            <div className="flex flex-wrap gap-2">
+              {currentTask.devops?.map(dev => (
+                <div key={dev.id} className="bg-blue-100 px-3 py-1 rounded-full flex items-center">
+                  <span className="mr-2">{dev.name}</span>
                   <button
                     type="button"
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                    onClick={() => {
+                      setCurrentTask({
+                        ...currentTask,
+                        devops: currentTask.devops?.filter(d => d.id !== dev.id)
+                      });
+                    }}
+                    className="text-blue-600 hover:text-blue-800"
                   >
-                    Cancel
-                  </button>
-                  <button
-                    type="submit"
-                    className="px-4 py-2 bg-[#9A00FF] text-white rounded-md hover:bg-[#9900ffe3]"
-                  >
-                    Update Task
+                    ×
                   </button>
                 </div>
-              </form>
+              ))}
             </div>
+            <select
+              onChange={(e) => {
+                const devId = e.target.value;
+                if (devId && currentTask.devops?.every(d => d.id !== devId)) {
+                  const dev = devopss.find((d: Developer) => d.id === devId);
+                  if (dev) {
+                    setCurrentTask({
+                      ...currentTask,
+                      devops: [...(currentTask.devops || []), dev]
+                    });
+                  }
+                }
+              }}
+              className="w-full mt-2 px-3 py-2 border border-gray-300 rounded-md"
+              value=""
+            >
+              <option value="">Add Developer</option>
+              {devopss?.map((dev: Developer) => (
+                <option key={dev.id} value={dev.id}>
+                  {dev.name}
+                </option>
+              ))}
+            </select>
           </div>
-        )}
+
+          {/* Form Buttons */}
+          <div className="flex justify-end space-x-3 pt-4">
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-[#9A00FF] text-white rounded-md hover:bg-[#9900ffe3]"
+            >
+              Update Task
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+)}
       </div>
     </div>
   );
