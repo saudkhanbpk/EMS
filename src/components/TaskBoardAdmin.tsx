@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PlusCircle, User, X, ArrowLeft, Plus, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import { formatDistanceToNow } from 'date-fns';
@@ -10,13 +10,15 @@ import { supabase } from '../lib/supabase';
 import AddNewTask from '../AddNewTask';
 import { AttendanceContext } from '../pages/AttendanceContext';
 import { useContext } from 'react';
-interface task {
+interface Task {
   id: string;
   title: string;
   created_at: string;
   status: 'todo' | 'inProgress' | 'review' | 'done';
   score: number;
-  devops?: Array<{ id: string, name: string }>; // Make optional
+  devops?: Developer[];
+  description?: string;
+  priority?: string;
 }
 
 
@@ -33,6 +35,7 @@ interface Task {
   score: number;
   devops?: Developer[];
   description?: string;
+  priority?: string;
 }
 
 const COLUMN_IDS = {
@@ -41,7 +44,7 @@ const COLUMN_IDS = {
   review: 'review',
   done: 'done'
 };
- 
+
 function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const user = useAuthStore();
   const { id } = useParams();
@@ -53,10 +56,10 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [devopsScores, setDevopsScores] = useState<{ id: string; name: string; score: number; completed: number }[]>([]);
- 
-      const selectedTABB = useContext(AttendanceContext).selectedTAB;
-    const devopsss = useContext(AttendanceContext).devopss;
-    const ProjectIdd = useContext(AttendanceContext).projectId;
+
+  const selectedTABB = useContext(AttendanceContext).selectedTAB;
+  const devopsss = useContext(AttendanceContext).devopss;
+  const ProjectIdd = useContext(AttendanceContext).projectId;
   // const [tasks, setTasks] = useState<task[]>([]);
   const getTasksByStatus = (status: task['status']) =>
     tasks.filter(task => task.status === status);
@@ -68,9 +71,9 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
   // Current useEffect
-useEffect(() => {
-  fetchTasks();
-}, [ProjectIdd]); // Only watches prop ProjectId, not context value
+  useEffect(() => {
+    fetchTasks();
+  }, [ProjectIdd]); // Only watches prop ProjectId, not context value
 
   // useEffect(() => {
   //   const fetchTasks = async () => {
@@ -171,7 +174,7 @@ useEffect(() => {
       title: newTaskTitle,
       created_at: new Date().toISOString(),
       status: 'todo',
-      score: 0
+      score: 0,
     };
 
     setTasks([...tasks, newTask]);
@@ -207,7 +210,7 @@ useEffect(() => {
       const { error } = await supabase
         .from('tasks_of_projects')
         .delete()
-        .eq('id', DeletedTask.id); 
+        .eq('id', DeletedTask.id);
 
       if (error) {
         throw error;
@@ -223,6 +226,9 @@ useEffect(() => {
 
 
   const TaskCard = ({ task, index }: { task: Task; index: number }) => {
+    const [descriptionOpen, setDescriptionOpen] = useState(false);
+    const [openedTask, setOpenedTask] = useState<Task | null>(null);
+
     return (
       <Draggable draggableId={task.id} index={index}>
         {(provided) => (
@@ -231,13 +237,18 @@ useEffect(() => {
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             style={provided.draggableProps.style}
-            className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
+            className="group bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
+            onClick={() => {
+              setOpenedTask(task);
+              setDescriptionOpen(true);
+            }}
           >
-            <div className='flex flex-row justify-between'>
+            {/* Task Top Bar */}
+            <div className="flex flex-row justify-between">
               <p className="text-[10px] leading-7 font-medium text-[#C4C7CF]">
                 {formatDistanceToNow(new Date(task.created_at))} ago
               </p>
-              <div className="flex place-content-end space-x-2">
+              <div className="hidden group-hover:flex place-content-end space-x-2">
                 <button
                   className="text-gray-400 hover:text-gray-600"
                   onClick={(e) => {
@@ -245,23 +256,28 @@ useEffect(() => {
                     handleEditClick(task);
                   }}
                 >
-                  <Pencil size={16} color='#667085' />
+                  <Pencil size={16} color="#667085" />
                 </button>
                 <button
                   className="text-gray-400 hover:text-red-600"
                   onClick={(e) => {
+                    e.stopPropagation();
                     handleDelete(task);
-                    e.stopPropagation()
                   }}
                 >
-                  <Trash2 size={16} color='#667085' />
+                  <Trash2 size={16} color="#667085" />
                 </button>
               </div>
             </div>
+
+            {/* Title */}
             <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
+
+            {/* Bottom Info */}
             <div className="flex justify-between items-center">
               <div className="flex flex-col items-left space-x-2">
                 <span className="text-[11px] leading-5 font-normal text-[#404142]">{task.score}</span>
+                <span className={`${task.priority === "High"? "text-red-500" : task.priority === "Medium"? "text-yellow-600" : task.priority === "Low"? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{task.priority}</span>
                 {task.devops && (
                   <span className="text-[11px] leading-5 font-normal text-[#404142]">
                     {task.devops.map((dev) => dev.name).join(", ")}
@@ -272,11 +288,68 @@ useEffect(() => {
                 <User size={14} className="text-gray-600" />
               </div>
             </div>
+
+            {/* Description Modal */}
+            {descriptionOpen && (
+              <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+                <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in">
+                  <div className="p-6">
+                    {/* Modal Header */}
+                    <div className="flex items-center justify-between mb-6">
+                      <h2 className="text-xl font-semibold text-gray-800">{openedTask?.title}</h2>
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setDescriptionOpen(false);
+                        }}
+                        className="text-gray-400 hover:text-gray-600 transition"
+                      >
+                        <X className="w-6 h-6" />
+                      </button>
+                    </div>
+
+                    {/* Description Section */}
+                    <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                      {openedTask?.description}
+                    </p>
+
+                    {/* Info Section */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                      <div className="text-sm text-gray-600">
+                        <span className="font-semibold">Score :</span> {openedTask?.score}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className="font-semibold">Developer :</span> {openedTask?.devops?.map((dev) => dev.name).join(", ")}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        <span className={`${task.priority === "High"? "text-red-500" : task.priority === "Medium"? "text-yellow-600" : task.priority === "Low"? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{openedTask?.priority}</span> 
+                      </div>
+                    </div>
+
+                    {/* Edit Button */}
+                    <div className="flex justify-end">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEditClick(openedTask!);
+                        }}
+                        className="flex items-center gap-2 px-4 py-2 bg-[#9A00FF] text-white rounded-lg hover:bg-[#8500e6] transition"
+                      >
+                        <Pencil size={18} />
+                        <span>Edit Task</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
           </div>
         )}
       </Draggable>
     );
   };
+
 
   const renderColumn = (status: keyof typeof COLUMN_IDS, title: string, color: string) => {
     const tasksInColumn = tasks.filter(task => task.status === COLUMN_IDS[status]);
@@ -308,14 +381,14 @@ useEffect(() => {
   return (
     <div className="min-h-screen px-8">
       <div className="max-w-7xl mx-auto">
-      {selectedTab === "addtask" && (
-  <AddNewTask 
-    setselectedtab={setSelectedTab} 
-    ProjectId={ProjectId} 
-    devopss={devopss}
-    refreshTasks={fetchTasks}  // Add this prop
-  />
-)}
+        {selectedTab === "addtask" && (
+          <AddNewTask
+            setselectedtab={setSelectedTab}
+            ProjectId={ProjectId}
+            devopss={devopss}
+            refreshTasks={fetchTasks}  // Add this prop
+          />
+        )}
 
         {(selectedTab === "tasks" || selectedTABB === "tasks") && (
           <>
@@ -336,7 +409,8 @@ useEffect(() => {
                     <ArrowLeft
                       className="hover:bg-gray-300 rounded-2xl"
                       size={24}
-                      onClick={() => {setSelectedTAB("Projects")
+                      onClick={() => {
+                        setSelectedTAB("Projects")
                       }}
                     />
                   </Link>
@@ -450,6 +524,21 @@ useEffect(() => {
                     onChange={(e) => setCurrentTask({ ...currentTask, score: Number(e.target.value) })}
                     className="w-full px-3 py-2 border border-gray-300 rounded-md"
                   />
+                </div>
+
+                <div className="mb-4">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select
+                    id="priority"
+                    value={currentTask.priority || ''}
+                    onChange={(e) => setCurrentTask({ ...currentTask, priority: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <option value="Todo">Todo</option>
+                    <option value="High">High</option>
+                    <option value="Medium">Medium</option>
+                    <option value="Low">Low</option>
+                  </select>
                 </div>
 
                 <div className="mb-4">
