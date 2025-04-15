@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
+import { PlusCircle, User, X, ArrowLeft, Plus , Pencil , Trash2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import AdminDashboard from './AdminDashboard';
@@ -369,7 +369,14 @@ function TaskBoard({ setSelectedTAB }) {
 
 
 
-function TaskCard({ task, index }: { task: task; index: number }) {
+const TaskCard = ({ task, index }: { task: Task; index: number }) => {
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [openedTask, setOpenedTask] = useState<Task | null>(null);
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const [isFullImageOpen, setIsFullImageOpen] = useState(false);
+  const [fullImageUrl, setFullImageUrl] = useState("");
+
+
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided) => (
@@ -377,28 +384,133 @@ function TaskCard({ task, index }: { task: task; index: number }) {
           ref={provided.innerRef}
           {...provided.draggableProps}
           {...provided.dragHandleProps}
-          style={provided.draggableProps.style} // Add this
-          className="bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
+          style={provided.draggableProps.style}
+          className="group bg-[#F5F5F9] overflow-y-auto rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
+          onClick={() => {
+            setOpenedTask(task);
+            setDescriptionOpen(true);
+          }}
         >
-          <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
-          <div className="flex justify-between items-center">
-            <div className="flex flex-row gap-1">
-              <p className="text-[11px] font-semibold">KPI</p>
-              <span className="text-[11px]">{task.score}</span>
+          {/* Task Top Bar */}
+          <div className="flex flex-row justify-between">
+            <p className="text-[10px] leading-7 font-medium text-[#C4C7CF]">
+              {formatDistanceToNow(new Date(task.created_at))} ago
+            </p>
 
+          </div>
+
+          {/* Title */}
+          <p className="text-[13px] leading-5 font-medium text-[#404142]">{task.title}</p>
+
+          {/* Bottom Info */}
+          <div className="flex justify-between items-center">
+            <div className="flex flex-col items-left space-x-2">
+              <span className="text-[11px] leading-5 font-normal text-[#404142]">{task.score}</span>
+              <span className={`${task.priority === "High" ? "text-red-500" : task.priority === "Medium" ? "text-yellow-600" : task.priority === "Low" ? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{task.priority}</span>
+              {task.devops && (
+                <span className="text-[11px] leading-5 font-normal text-[#404142]">
+                  {task.devops.map((dev) => dev.name).join(", ")}
+                </span>
+              )}
             </div>
             <div className="w-6 h-6 rounded-full bg-gray-200 flex items-center justify-center">
               <User size={14} className="text-gray-600" />
             </div>
           </div>
-          <p className="text-[10px] text-[#C4C7CF]">
-            {formatDistanceToNow(new Date(task.created_at))} ago
-          </p>
+
+          {/* Description Modal */}
+          {descriptionOpen && (
+            <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in">
+                <div className="p-6">
+                  {/* Modal Header */}
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-800">{openedTask?.title}</h2>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDescriptionOpen(false);
+                      }}
+                      className="text-gray-400 hover:text-gray-600 transition"
+                    >
+                      <X className="w-6 h-6" />
+                    </button>
+
+                  </div>
+
+                  <div className="absolute top-4 left-4 flex space-x-2">
+
+                  </div>
+
+                  <img
+                    src={openedTask?.imageurl || ""}
+                    style={{ transform: `scale(${zoomLevel})` }}
+                    className="max-w-full mb-3 max-h-[80vh] object-contain origin-center cursor-pointer transition-transform duration-200"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setFullImageUrl(openedTask?.imageurl || "");
+                      setIsFullImageOpen(true);
+                    }}
+                  />
+
+                  {isFullImageOpen && (
+                    <div
+                      className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+                      onClick={() => setIsFullImageOpen(false)}
+                    >
+                      <button
+                        className="absolute top-5 right-5 text-white hover:text-gray-300 transition"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsFullImageOpen(false);
+                        }}
+                      >
+                        <X className="w-7 h-7" />
+                      </button>
+                      <img
+                        src={fullImageUrl}
+                        alt="Full"
+                        className="max-w-[95vw] max-h-[90vh] object-contain"
+                        onClick={(e) => e.stopPropagation()}
+                      />
+                    </div>
+                  )}
+
+
+
+
+                  {/* Description Section */}
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                    {openedTask?.description}
+                  </p>
+
+                  {/* Info Section */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+                    <div className="text-sm text-gray-600">
+                      <span className="font-semibold">Score :</span> {openedTask?.score}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className="font-semibold">Developer :</span> {openedTask?.devops?.map((dev) => dev.name).join(", ")}
+                    </div>
+                    <div className="text-sm text-gray-600">
+                      <span className={`${task.priority === "High" ? "text-red-500" : task.priority === "Medium" ? "text-yellow-600" : task.priority === "Low" ? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{openedTask?.priority}</span>
+                    </div>
+                  </div>
+
+                  {/* Edit Button */}
+                  <div className="flex justify-end">
+
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
         </div>
       )}
     </Draggable>
   );
-}
+};
 
 
 export default TaskBoard;
