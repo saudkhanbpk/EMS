@@ -1,7 +1,7 @@
 
 import React, { useEffect, useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2 } from 'lucide-react';
+import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2, Minus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import { formatDistanceToNow } from 'date-fns';
@@ -228,6 +228,10 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
   const TaskCard = ({ task, index }: { task: Task; index: number }) => {
     const [descriptionOpen, setDescriptionOpen] = useState(false);
     const [openedTask, setOpenedTask] = useState<Task | null>(null);
+    const [zoomLevel, setZoomLevel] = useState(1);
+    const [isFullImageOpen, setIsFullImageOpen] = useState(false);
+    const [fullImageUrl, setFullImageUrl] = useState("");
+
 
     return (
       <Draggable draggableId={task.id} index={index}>
@@ -237,7 +241,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             style={provided.draggableProps.style}
-            className="group bg-[#F5F5F9] rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
+            className="group bg-[#F5F5F9] overflow-y-auto rounded-[10px] shadow-lg p-4 space-y-1 mb-3"
             onClick={() => {
               setOpenedTask(task);
               setDescriptionOpen(true);
@@ -277,7 +281,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
             <div className="flex justify-between items-center">
               <div className="flex flex-col items-left space-x-2">
                 <span className="text-[11px] leading-5 font-normal text-[#404142]">{task.score}</span>
-                <span className={`${task.priority === "High"? "text-red-500" : task.priority === "Medium"? "text-yellow-600" : task.priority === "Low"? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{task.priority}</span>
+                <span className={`${task.priority === "High" ? "text-red-500" : task.priority === "Medium" ? "text-yellow-600" : task.priority === "Low" ? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{task.priority}</span>
                 {task.devops && (
                   <span className="text-[11px] leading-5 font-normal text-[#404142]">
                     {task.devops.map((dev) => dev.name).join(", ")}
@@ -306,7 +310,49 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
                       >
                         <X className="w-6 h-6" />
                       </button>
+
                     </div>
+
+                    <div className="absolute top-4 left-4 flex space-x-2">
+
+                    </div>
+
+                    <img
+                      src={openedTask?.imageurl || ""}
+                      style={{ transform: `scale(${zoomLevel})` }}
+                      className="max-w-full mb-3 max-h-[80vh] object-contain origin-center cursor-pointer transition-transform duration-200"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setFullImageUrl(openedTask?.imageurl || "");
+                        setIsFullImageOpen(true);
+                      }}
+                    />
+
+                    {isFullImageOpen && (
+                      <div
+                        className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+                        onClick={() => setIsFullImageOpen(false)}
+                      >
+                        <button
+                          className="absolute top-5 right-5 text-white hover:text-gray-300 transition"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setIsFullImageOpen(false);
+                          }}
+                        >
+                          <X className="w-7 h-7" />
+                        </button>
+                        <img
+                          src={fullImageUrl}
+                          alt="Full"
+                          className="max-w-[95vw] max-h-[90vh] object-contain"
+                          onClick={(e) => e.stopPropagation()}
+                        />
+                      </div>
+                    )}
+
+
+
 
                     {/* Description Section */}
                     <p className="text-sm text-gray-700 leading-relaxed mb-4">
@@ -322,7 +368,7 @@ function TaskBoardAdmin({ setSelectedTAB, ProjectId, devopss }) {
                         <span className="font-semibold">Developer :</span> {openedTask?.devops?.map((dev) => dev.name).join(", ")}
                       </div>
                       <div className="text-sm text-gray-600">
-                        <span className={`${task.priority === "High"? "text-red-500" : task.priority === "Medium"? "text-yellow-600" : task.priority === "Low"? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{openedTask?.priority}</span> 
+                        <span className={`${task.priority === "High" ? "text-red-500" : task.priority === "Medium" ? "text-yellow-600" : task.priority === "Low" ? "text-green-400" : "text-gray-600"} text-[12px] font-semibold leading-5 font-normal`}>{openedTask?.priority}</span>
                       </div>
                     </div>
 

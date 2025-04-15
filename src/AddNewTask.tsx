@@ -64,30 +64,37 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
       reader.readAsDataURL(file);
     }
   };
-
+  
   const uploadImage = async () => {
     if (!imageFile) return null;
     
-    const fileExt = imageFile.name.split('.').pop();
-    const fileName = `${Math.random()}.${fileExt}`;
-    const filePath = `task-images/${fileName}`;
-
-    const { data, error } = await supabase
-      .storage
-      .from('newtaskimage') // Make sure this bucket exists in your Supabase Storage
-      .upload(filePath, imageFile);
-
-    if (error) throw error;
-
-    // Get public URL
-    const { data: { publicUrl } } = supabase
-      .storage
-      .from('task-images')
-      .getPublicUrl(filePath);
-
-    return publicUrl;
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `task-images/${fileName}`;
+  
+      // Upload file
+      const { error: uploadError } = await supabase
+        .storage
+        .from('newtaskimage')
+        .upload(filePath, imageFile);
+  
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+  
+      // Get public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('newtaskimage')
+        .getPublicUrl(filePath);
+  
+      return publicUrl;
+    } catch (err) {
+      console.error("Image upload error:", err);
+      throw err; // Re-throw to be caught in handleSubmit
+    }
   };
-
 
   const removeImage = () => {
     setImageFile(null);
