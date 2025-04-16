@@ -496,19 +496,34 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
 
 
   return (
-    <div className='max-w-7xl mx-auto  px-4 py-8'>
-      <div className="flex items-center justify-between mb-8">
+    <div className='max-w-7xl mx-auto  px-4 lg:py-8'>
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">
+          <h1 className="text-2xl font-bold text-gray-900 text-center sm:text-right">
             Welcome, {userProfile?.full_name || 'Employee'}
           </h1>
+
           {userProfile?.department && (
             <p className="text-gray-600 mt-1">Department: {userProfile.department}</p>
+            
           )}
+          <div className='lg:text-right lg:hidden sm:block hidden'>
+              <select
+                name="view"
+                id="view"
+                className='w-[160px] h-[40px] rounded-[8px] border py-1 px-3 border-[#D0D5DD] bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#7E69AB] focus:border-[#7E69AB] transition-all'
+                onChange={(e) => setView(e.target.value)}
+                value={view}
+              >
+                <option value="default">Default View</option>
+                <option value="table">Table View</option>
+                <option value="graph">Graph View</option>
+              </select>
+            </div>
         </div>
-        <div>
-          <div className="flex items-left justify-end">
-            <div className='flex gap-3 mt-3 mb-2'>
+        <div >
+          <div className="flex items-left justify-end lg:flex-row flex-col ">
+            <div className='flex gap-3 mt-3 mb-2 sm:mx-0 mx-auto '>
               {
                 view === 'default' && (
                   <>
@@ -543,11 +558,11 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                 )
               }
             </div >
-            <div className="flex flex-row gap-5">
+            <div className="flex flex-row gap-5 lg:mx-0 mx-auto">
 
               {/* Date Navigation - Only show in Default View */}
               {view === 'default' && selectedtab === "Dailydata" && (
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center  space-x-4">
                   <button
                     onClick={() => handleDayPrev()}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -603,6 +618,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                   </button>
                 </div>
               )}
+              {/* dates  */}
               {view === 'default' && selectedtab === "Filter" && (
                 <div className="flex items-center justify-center space-x-4">
                   {/* Date Range Inputs */}
@@ -633,7 +649,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
               )}
 
             </div>
-            <div className='text-right'>
+            {/* selecter */}
+            <div className='lg:text-right  text-center lg:block sm:hidden  block'>
               <select
                 name="view"
                 id="view"

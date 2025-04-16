@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState } from "react";
+import React, { useContext, useEffect, useState,Fragment } from "react";
 import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import { useAuthStore } from '../lib/store';
@@ -13,6 +13,7 @@ import { Trash2 } from 'lucide-react';
 import { forwardRef, useImperativeHandle } from "react";
 import "./style.css";
 import { useNavigate } from 'react-router-dom';
+import { Dialog, Transition } from '@headlessui/react'
 import AbsenteeComponentAdmin from "./AbsenteeDataAdmin";
 import {
   startOfMonth,
@@ -80,6 +81,7 @@ const EmployeeAttendanceTable = () => {
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
   const [present, setPresent] = useState(0);
+  
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
   const [remote, setRemote] = useState(0); // State for remote employees count
@@ -135,6 +137,8 @@ const EmployeeAttendanceTable = () => {
   const [graphicview, setgraphicview] = useState(false);
   const [tableData, setTableData] = useState('');
   const [breaks, setbreak] = useState('');
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false)
+
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [sideopen, setsideopen] = useState(false);
   //Firebase Notification permission
@@ -149,7 +153,7 @@ const EmployeeAttendanceTable = () => {
 
   const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
 
-  
+
   const handleHourChange = (e) => {
     setHour(e.target.value);
   };
@@ -158,12 +162,12 @@ const EmployeeAttendanceTable = () => {
     setMinute(e.target.value);
   };
 
-  
+
   const toggleAMPM = () => {
     setIsAM(!isAM);
   };
 
-  
+
 
   const handleCheckInHourChange = (e) => {
     setHourin(e.target.value);
@@ -385,16 +389,16 @@ const EmployeeAttendanceTable = () => {
     // Get original created_at date
     // const originalDate = new Date(selectedEntry.created_at);
     // Original local date: Wed Apr 09 2025 09:36:43 GMT+0500
-const originalDate = new Date(selectedEntry.created_at);
+    const originalDate = new Date(selectedEntry.created_at);
 
-// Get UTC date components
-const utcYear = originalDate.getUTCFullYear(); // 2025
-const utcMonth = originalDate.getUTCMonth(); // 3 (April)
-const utcDay = originalDate.getUTCDate(); // 9
+    // Get UTC date components
+    const utcYear = originalDate.getUTCFullYear(); // 2025
+    const utcMonth = originalDate.getUTCMonth(); // 3 (April)
+    const utcDay = originalDate.getUTCDate(); // 9
 
-// Construct UTC date string
-const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
-// Result: "2025-04-09"
+    // Construct UTC date string
+    const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
+    // Result: "2025-04-09"
     // Create new date in UTC
     const adjustedHourin = isinAM ? hourin : (hourin + 12) % 24;
     const newDate = new Date(Date.UTC(
@@ -404,10 +408,10 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
       adjustedHourin,
       minutein
     ));
-  
+
     // Format timestamp correctly
     const formattedTimestamp = newDate.toISOString().replace("T", " ").replace(/\.\d+Z$/, ".000+00");
-  
+
     // Calculate status using UTC
     const checkInTimeLimit = new Date(Date.UTC(
       newDate.getUTCFullYear(),
@@ -415,25 +419,25 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
       newDate.getUTCDate(),
       9, 30 // 09:30 UTC
     ));
-    
-    const attendanceStatus = newDate > checkInTimeLimit ? "late" : "present";
-    console.log("origional Date" , originalDate );
 
-    console.log("origional Date in api" , utcDateString );
-    
-  
+    const attendanceStatus = newDate > checkInTimeLimit ? "late" : "present";
+    console.log("origional Date", originalDate);
+
+    console.log("origional Date in api", utcDateString);
+
+
     // Update with correct filtering
-    const { data , error } = await supabase
+    const { data, error } = await supabase
       .from("attendance_logs")
-      .select ('*')
+      .select('*')
       // .update({
       //   check_in: formattedTimestamp,
       //   status: attendanceStatus
       // })
       // .eq("user_id", selectedEntry.id)
       .eq("created_at::date", utcDateString);
-      console.log("Fetched Data " , data);
-      
+    console.log("Fetched Data ", data);
+
     if (!error) {
       alert("Updated successfully!");
       setisCheckinModalOpen(false);
@@ -1688,7 +1692,7 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
       {/* Heading */}
       <div className=" w-full max-w-5xl justify-between items-center flex">
         {maintab === "TableView" && (
-          <h1 className="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
+          <h1 className="sm:text-2xl text-xl  font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
             Employee Attendance
           </h1>
         )}
@@ -1717,7 +1721,7 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
             }
           }}
         >
-          <option value="TableView">Table View</option>
+          <option value="TableView"  className="mt-4">Table View</option>
           <option value="DetailedView">Detailed View</option>
           <option value="GraphicView">Graphic View</option>
         </select>
@@ -1725,13 +1729,14 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
 
       </div>
       {/* Buttons and Date Navigation */}
-      <div className="w-full max-w-5xl flex justify-between items-center mb-6">
+      <div className="w-full max-w-5xl flex flex-wrap justify-between items-center mb-6">
         {/* Buttons Row */}
         {maintab === "DetailedView" && (
           <div></div>
         )}
         {maintab === "TableView" && (
-          <div className="w-[40%] flex space-x-4">
+          <> 
+          <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto sm:ml-5 md:flex justify-center md:space-x-4 space-x-2 "> 
             {/* <button
             onClick={() => handlenotification()}
             className={`px-4 py-2 rounded-lg transition-all ${
@@ -1742,11 +1747,12 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
           >
             notify
           </button> */}
-            <button
+
+             <button
               onClick={() => setSelectedTab("Daily")}
               className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Daily"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-100"
                 }`}
             >
               Daily
@@ -1754,8 +1760,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
             <button
               onClick={() => setSelectedTab("Weekly")}
               className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Weekly"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-200"
                 }`}
             >
               Weekly
@@ -1763,8 +1769,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
             <button
               onClick={() => setSelectedTab("Monthly")}
               className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Monthly"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-200"
                 }`}
             >
               Monthly
@@ -1772,15 +1778,36 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
             <button
               onClick={() => setSelectedTab("Filter")}
               className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Filter"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
+                ? "bg-blue-500 text-white"
+                : "bg-white text-gray-700 hover:bg-gray-200"
                 }`}
             >
               Filter
             </button>
           </div>
+         
+          <div className="md:hidden block mx-auto">
+  <select
+    className="p-2 mb-3 border border-gray-300 transition-all ease-in-out rounded-md focus:outline-none focus:ring-2 focus:ring-[#9A00FF] w-full sm:w-auto"
+    value={selectedTab}
+    onChange={(e) => setSelectedTab(e.target.value)}
+  >
+    <option value="Daily">Daily</option>
+    <option value="Weekly">Weekly</option>
+    <option value="Monthly">Monthly</option>
+    <option value="Filter">Filter</option>
+  </select>
+</div>
+
+
+          
+         
+          
+          
+        </>
+          
         )}
-        <div className="flex flex-row gap-5">
+        <div className="flex flex-row gap-5 lg:flex-nowrap flex-wrap justify-cente md:mx-0 mx-auto">
           {/* Date Navigation */}
           {maintab === "DetailedView" && (
             <div className="flex items-center space-x-4">
@@ -1790,7 +1817,7 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="text-xl font-semibold">
+              <span className="md:text-xl  font-semibold">
                 {format(selectedDate, "MMMM d, yyyy")}
               </span>
               <button
@@ -1811,7 +1838,7 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="text-xl font-semibold">
+              <span className="md:text-xl font-semibold ">
                 {format(selectedDate, "MMMM d, yyyy")}
               </span>
               <button
@@ -1845,7 +1872,7 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
             <div className="flex items-center justify-center space-x-4">
               <button
                 onClick={() => handleWeekChange("prev")}
-                className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                className="md:p-2 p-0 hover:bg-gray-200 rounded-full transition-all"
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
@@ -1857,42 +1884,90 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                   handleWeekChange("next")
                   // console.log("selectedDateW", selectedDateW);
                 }}
-                className="p-2 hover:bg-gray-200 rounded-full transition-all"
+                className="md:p-2 p-0 hover:bg-gray-200 rounded-full transition-all"
               >
                 <ChevronRight className="w-5 h-5" />
               </button>
             </div>
           )}
           {maintab === "TableView" && selectedTab === "Filter" && (
-            <div className="flex items-center justify-center space-x-4">
-              {/* Date Range Inputs */}
+            <>
+            {/* Mobile: Button to open modal */}
+            <div className="sml:hidden flex justify-center mb-4">
+              <button
+                onClick={() => setIsDateModalOpen(true)}
+                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
+              >
+                Filter Dates
+              </button>
+            </div>
+      
+            {/* Desktop: Inline layout */}
+            <div className="hidden smi:flex md:flex-nowrap flex-wrap items-center justify-center space-x-4">
               <input
                 type="date"
-                value={startdate} // State variable for the start date
-                onChange={(e) => setStartdate(e.target.value)} // Update start date
+                value={startdate}
+                onChange={(e) => setStartdate(e.target.value)}
                 className="p-2 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
               <span className="mx-2 text-xl font-semibold">to</span>
               <input
                 type="date"
-                value={enddate} // State variable for the end date
-                onChange={(e) => setEnddate(e.target.value)} // Update end date
+                value={enddate}
+                onChange={(e) => setEnddate(e.target.value)}
                 className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               />
-
-              {/* Search Button */}
               <button
-                onClick={() => {
-                  // const enddate2 = endDate.toString() + "T23:59:59";
-                  // console.log("Start Date:", startDate.toString() + "T00:00:00");
-                  // console.log("End Date:", enddate2);
-                  handleDateFilter()
-                }}
+                onClick={handleDateFilter}
                 className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
               >
                 <SearchIcon className="w-5 h-5" />
               </button>
             </div>
+      
+            {/* Modal for small screens */}
+            <Transition appear show={isDateModalOpen} as={Fragment}>
+              <Dialog as="div" className="relative z-10 smi:hidden" onClose={() => setIsDateModalOpen(false)}>
+                <Transition.Child
+                  as={Fragment}
+                  enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100"
+                  leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"
+                >
+                  <div className="fixed inset-0 bg-black bg-opacity-25" />
+                </Transition.Child>
+      
+                <div className="fixed inset-0 overflow-y-auto flex items-center justify-center">
+                  <Dialog.Panel className="w-full max-w-md p-6 bg-white rounded-xl shadow-xl">
+                    <Dialog.Title className="text-lg font-semibold mb-4">Select Date Range</Dialog.Title>
+                    <div className="space-y-4">
+                      <input
+                        type="date"
+                        value={startdate}
+                        onChange={(e) => setStartdate(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <input
+                        type="date"
+                        value={enddate}
+                        onChange={(e) => setEnddate(e.target.value)}
+                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                      />
+                      <button
+                        onClick={() => {
+                          handleDateFilter()
+                          setIsDateModalOpen(false)
+                        }}
+                        className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+                      >
+                        <SearchIcon className="inline-block w-5 h-5 mr-2" />
+                        Search
+                      </button>
+                    </div>
+                  </Dialog.Panel>
+                </div>
+              </Dialog>
+            </Transition>
+          </>
           )}
           {maintab === "TableView" && selectedTab === "Daily" && (
             <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
@@ -1907,7 +1982,7 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
               onClick={downloadPDFMonthly}><DownloadIcon /> </button>
           )}
           {maintab === "TableView" && selectedTab === "Filter" && (
-            <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
+            <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all md:ml-0 sm:ml-10 mx-auto"
               onClick={downloadPDFFiltered}
             >
               <DownloadIcon /> </button>
@@ -1927,15 +2002,15 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
       {/* Attendance Summary */}
       {!loading && maintab === "TableView" && selectedTab === "Daily" && (
         <>
-          <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
-            <div className="flex justify-between items-center text-lg font-medium">
+          <div className="w-full max-w-5xl  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6">
+            <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
               <button
                 onClick={() => handleFilterChange("all")}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${currentFilter === "all" ? "bg-gray-200" : ""
                   }`}
               >
-                <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
-                <h2 className="text-gray-600">
+                <span className="md:w-4 md:h-4   bg-gray-600 rounded-full"></span>
+                <h2 className="text-gray-600 md:text-xl text-sm">
                   Total: <span className="font-bold">{present + absent + late}</span>
                 </h2>
               </button>
@@ -1944,8 +2019,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${currentFilter === "present" ? "bg-green-200" : ""
                   }`}
               >
-                <span className="w-4 h-4 bg-green-500 rounded-full"></span>
-                <h2 className="text-green-600">
+                <span className="md:w-4 md:h-4 bg-green-500 rounded-full"></span>
+                <h2 className="text-green-600 md:text-xl text-sm">
                   Present: <span className="font-bold">{present}</span>
                 </h2>
               </button>
@@ -1954,8 +2029,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${currentFilter === "absent" ? "bg-red-100" : ""
                   }`}
               >
-                <span className="w-4 h-4 bg-red-500 rounded-full"></span>
-                <h2 className="text-red-600">
+                <span className="md:w-4 md:h-4 bg-red-500 rounded-full"></span>
+                <h2 className="text-red-600 md:text-xl text-sm">
                   Absent: <span className="font-bold">{absent}</span>
                 </h2>
               </button>
@@ -1964,8 +2039,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${currentFilter === "late" ? "bg-yellow-100" : ""
                   }`}
               >
-                <span className="w-4 h-4 bg-yellow-500 rounded-full"></span>
-                <h2 className="text-yellow-600">
+                <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
+                <h2 className="text-yellow-600 md:text-xl text-sm">
                   Late: <span className="font-bold">{late}</span>
                 </h2>
               </button>
@@ -1974,8 +2049,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === "remote" ? "bg-purple-100" : ""
                   }`}
               >
-                <span className="w-4 h-4 bg-purple-500 rounded-full"></span>
-                <h2 className="text-purple-600">
+                <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
+                <h2 className="text-purple-600 md:text-xl text-sm">
                   Remote: <span className="font-bold">{remote}</span>
                 </h2>
               </button>
@@ -1983,86 +2058,118 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
           </div>
 
           {/* Attendance Table */}
-          <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
+          <div className="w-full overflow-x-auto max-w-5xl bg-white p-6 rounded-lg shadow-lg">
             {error && <p className="text-red-500 text-center">{error}</p>}
             <div className="overflow-x-auto">
-              <table className="min-w-full bg-white">
-                <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
-                  <tr>
-                    <th className="py-3 px-6 text-left">Employee Name</th>
-                    <th className="py-3 px-6 text-left">Check-in</th>
-                    <th className="py-3 px-6 text-left">Check-out</th>
-                    <th className="py-3 px-6 text-left">Work Mode</th>
-                    <th className="py-3 px-6 text-left">Status</th>
-                  </tr>
-                </thead>
-                <tbody className="text-md font-normal">
+
+
+              <div className="w-full shadow-sm rounded-lg">
+                {/* Table view for medium and larger screens */}
+                <div className="hidden sm:block overflow-x-auto">
+                  <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
+                    <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
+                      <tr>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Name</th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Check-in</th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Check-out</th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Mode</th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
+                      {filteredData.map((entry, index) => (
+                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
+                            <span
+                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${entry.status === "present"
+                                  ? "text-green-600"
+                                  : entry.status === "late"
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                }`}
+                              title={entry.full_name}
+                            >
+                              {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
+                            </span>
+                          </td>
+                          <td
+                            className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleCheckinOpenModal(entry)}
+                          >
+                            {entry.check_in}
+                          </td>
+                          <td
+                            className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                            onClick={() => handleOpenModal(entry)}
+                          >
+                            <div className="flex items-center">
+                              <span className="truncate">{entry.check_out}</span>
+                              {entry.autocheckout ? (
+                                <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
+                                  <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
+                                    Auto
+                                  </span>
+                                  {/* Tooltip */}
+                                  <div className="hidden group-hover:block absolute bg-gray-400 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                    Change CheckOut Time
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </td>
+                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                            <button
+                              onClick={() => handleModeOpen(entry)}
+                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === "on_site"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : entry.work_mode === "remote"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-white text-black"
+                                }`}
+                            >
+                              {entry.work_mode === "on_site"
+                                ? "On-site"
+                                : entry.work_mode === "remote"
+                                  ? "Remote"
+                                  : "---"}
+                            </button>
+                          </td>
+                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                            <span
+                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === "present"
+                                  ? "bg-green-100 text-green-800"
+                                  : entry.status === "late"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : "bg-red-100 text-red-800"
+                                }`}
+                            >
+                              {entry.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* Card view for small screens */}
+                <div className="sm:hidden">
                   {filteredData.map((entry, index) => (
-                    <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
-                      <td className="py-4 px-6">
+                    <div key={index} className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]">
+                      <div className="flex justify-between items-center mb-2 border-b pb-2">
                         <span
-                          className={`px-3 py-1 ${entry.status === "present"
+                          className={`font-medium text-[12px] xs:text-[13px] ${entry.status === "present"
                               ? "text-green-600"
                               : entry.status === "late"
                                 ? "text-yellow-600"
                                 : "text-red-600"
                             }`}
+                          title={entry.full_name}
                         >
                           {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
                         </span>
-                      </td>
-                      <td className="py-4 px-6 hover:cursor-pointer hover:bg-gray-100"
-                        onClick={() => {
-                          handleCheckinOpenModal(entry)
-                          // setNewCheckinTime(entry.check_in)
-                        }
-                        }
-                      >{entry.check_in}</td>
-                      <td className="py-4 px-6 hover:cursor-pointer hover:bg-gray-100"
-                        onClick={() => {
-                          handleOpenModal(entry)
-                          // setNewCheckOutTime(entry.check_out)
-                        }
-                        }
-                      > {`${entry.check_out}`}
-                        {entry.autocheckout ? (
-                          <div className="relative inline-block">
-                            <span
-                              className="text-yellow-600 bg-yellow-100 px-2 py-1 font-semibold rounded-xl ml-2 cursor-pointer"
-                            // onMouseEnter={(e) => {
-                            //   const tooltip = e.target.nextSibling;
-                            //   tooltip.classList.remove('hidden');
-                            // }}
-                            // onMouseLeave={(e) => {
-                            //   const tooltip = e.target.nextSibling;
-                            //   tooltip.classList.add('hidden');
-                            // }}
-                            >
-                              Auto
-                            </span>
-                            {/* Tooltip */}
-                            <div className="hidden absolute bg-gray-400 text-white text-sm px-2 py-1 w-max rounded mt-1 -ml-2">
-                              Change CheckOut Time
-                            </div>
-                          </div>
-                        ) : null}
-                      </td>
-                      <td className="py-4 px-6">
-                        <button
-                          onClick={() => handleModeOpen(entry)}
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${entry.work_mode === "on_site"
-                              ? "bg-blue-100 text-blue-800"
-                              : entry.work_mode === "remote"
-                                ? "bg-purple-100 text-purple-800"
-                                : "bg-white text-black"
-                            }`}
-                        >
-                          {entry.work_mode === "on_site" ? "On-site" : entry.work_mode === "remote" ? "Remote" : "-----"}
-                        </button>
-                      </td>
-                      <td className="py-4 px-6">
                         <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${entry.status === "present"
+                          className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
                               ? "bg-green-100 text-green-800"
                               : entry.status === "late"
                                 ? "bg-yellow-100 text-yellow-800"
@@ -2071,11 +2178,61 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                         >
                           {entry.status}
                         </span>
-                      </td>
-                    </tr>
+                      </div>
+
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="flex flex-col">
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">Check-in</span>
+                          <div
+                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer"
+                            onClick={() => handleCheckinOpenModal(entry)}
+                          >
+                            {entry.check_in || "---"}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col">
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">Check-out</span>
+                          <div
+                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
+                            onClick={() => handleOpenModal(entry)}
+                          >
+                            <span className="truncate mr-1">{entry.check_out || "---"}</span>
+                            {entry.autocheckout ? (
+                              <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
+                                Auto
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col col-span-2">
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">Mode</span>
+                          <div className="mt-1">
+                            <button
+                              onClick={() => handleModeOpen(entry)}
+                              className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === "on_site"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : entry.work_mode === "remote"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-gray-100 text-gray-800"
+                                }`}
+                            >
+                              {entry.work_mode === "on_site"
+                                ? "On-site"
+                                : entry.work_mode === "remote"
+                                  ? "Remote"
+                                  : "---"}
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   ))}
-                </tbody>
-              </table>
+                </div>
+              </div>
+
+
             </div>
           </div>
 
@@ -2485,8 +2642,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                           handleEmployeeClick(employee.id);
                         }}
                         className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedEmployeesearch?.id === employee.id
-                            ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                            : "hover:bg-gray-100"
+                          ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                          : "hover:bg-gray-100"
                           } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
                       >
                         <div className='flex justify-between items-center'>
@@ -2554,8 +2711,8 @@ const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${Str
                                 <div className="flex justify-between">
                                   <span>Work Mode:</span>
                                   <span className={`px-2 py-1 rounded-full text-sm ${attendanceLogs[0].work_mode === 'on_site'
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-purple-100 text-purple-800'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-purple-100 text-purple-800'
                                     }`}>
                                     {attendanceLogs[0].work_mode}
                                   </span>

@@ -454,35 +454,59 @@ sendAdminResponsereject();
   
   
   return (
-    <div className="max-w-full mx-auto px-4">
-      {/* Buttons for Selecting Tabs */}
-      <div className="flex justify-center gap-8 mb-6">
-        <button
-          className={`px-6 py-2 rounded-lg font-semibold transition ${selectedTab === "Pending" ? "bg-yellow-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-          onClick={() => { setSelectedTab("Pending"); handlePendingRequests(); }}
-        >
-          Pending Requests
-        </button>
-        <button
-          className={`px-6 py-2 rounded-lg font-semibold transition ${selectedTab === "Approved" ? "bg-green-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-          onClick={() => { setSelectedTab("Approved"); handleApprovedRequests(); }}
-        >
-          Approved Requests
-        </button>
-        <button
-          className={`px-6 py-2 rounded-lg font-semibold transition ${selectedTab === "Rejected" ? "bg-red-500 text-white" : "bg-gray-200 text-gray-700 hover:bg-gray-300"}`}
-          onClick={() => { setSelectedTab("Rejected"); handleRejectedRequests(); }}
-        >
-          Rejected Requests
-        </button>
-      </div>
+    
+<div className="max-w-full mx-auto px-2 sm:px-4">
+  {/* Buttons for Selecting Tabs */}
+  <div className="flex flex-col xs:flex-row justify-center gap-2 xs:gap-4 sm:gap-8 mb-4 sm:mb-6">
+    <button
+      className={`px-3 py-2 text-sm sm:text-base sm:px-6 rounded-lg font-semibold transition ${
+        selectedTab === "Pending" 
+          ? "bg-yellow-500 text-white" 
+          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+      }`}
+      onClick={() => { setSelectedTab("Pending"); handlePendingRequests(); }}
+    >
+      Pending
+    </button>
+    <button
+      className={`px-3 py-2 text-sm sm:text-base sm:px-6 rounded-lg font-semibold transition ${
+        selectedTab === "Approved" 
+          ? "bg-green-500 text-white" 
+          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+      }`}
+      onClick={() => { setSelectedTab("Approved"); handleApprovedRequests(); }}
+    >
+      Approved
+    </button>
+    <button
+      className={`px-3 py-2 text-sm sm:text-base sm:px-6 rounded-lg font-semibold transition ${
+        selectedTab === "Rejected" 
+          ? "bg-red-500 text-white" 
+          : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+      }`}
+      onClick={() => { setSelectedTab("Rejected"); handleRejectedRequests(); }}
+    >
+      Rejected
+    </button>
+  </div>
 
-      {/* Content Display */}
-      <div className="bg-white p-6 rounded-lg shadow-md h-[70vh] overflow-y-auto custom-scrollbar">
-        <h2 className="text-xl font-semibold mb-4">{selectedTab} Requests</h2>
-        {loading ? <p className="text-center text-gray-500">Loading requests...</p> : renderRequests(selectedTab === "Pending" ? pendingRequests : selectedTab === "Approved" ? approvedRequests : rejectedRequests)}
-      </div>
-    </div>
+  {/* Content Display */}
+  <div className="bg-white p-3 sm:p-6 rounded-lg shadow-md h-[60vh] sm:h-[70vh] overflow-y-auto custom-scrollbar">
+    <h2 className="text-lg sm:text-xl font-semibold mb-2 sm:mb-4">{selectedTab} Requests</h2>
+    {loading ? (
+      <p className="text-center text-gray-500">Loading requests...</p>
+    ) : (
+      renderRequests(
+        selectedTab === "Pending" 
+          ? pendingRequests 
+          : selectedTab === "Approved" 
+            ? approvedRequests 
+            : rejectedRequests
+      )
+    )}
+  </div>
+</div>
+
   );
 };
 

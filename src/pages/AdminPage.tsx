@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Menu } from "lucide-react"; // Icons from Lucide React (or use any icon library)
+
 import { useAuthStore } from '../lib/store';
 import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
@@ -162,6 +162,9 @@ const AdminPage: React.FC = () => {
   useEffect(() => {
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth < 795);
+      
+      // console.log(window.innerWidth)
+
     };
 
     // Initial check
@@ -606,7 +609,7 @@ const AdminPage: React.FC = () => {
       <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
         <div className='flex flex-col'>
         <PanelRightClose className={`${permanentopen ? "hidden" : "display-block"} 
-        box-border-2 border-gray-300 rounded-full  m-2 fixed top-2 left-[-20px] z-40  size-[50px] p-3 text-[#7e26b8] hover:bg-gray-200 shadow-lg cursor-pointer `}
+        box-border-2  border-gray-300 rounded-full  m-2 fixed top-2 left-[-20px] z-40  size-[50px] p-3 text-[#7e26b8] hover:bg-gray-200 shadow-lg cursor-pointer `}
                   onClick={ () => setPermanentopen(true)} 
                   />
           <div className="min-h-screen bg-gray-100 flex">
@@ -627,7 +630,7 @@ const AdminPage: React.FC = () => {
             > */}
 
              <motion.div
-              className="fixed top-0 left-0 h-full w-64 bb-white text-white shadow-lg p-4 z-20"
+              className="absolute top-0 left-0 min-h-full w-64 bb-white text-white shadow-lg p-4 z-20"
               initial={{ x: "-100%" }}
               animate={{ 
                 x: permanentopen ? "0%" : "-100%"
@@ -647,11 +650,11 @@ const AdminPage: React.FC = () => {
               {/* <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div> */}
 
               {/* Menu Button (For Small Screens) */}
-              <button
+              {/* <button
                 className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white shadow-md rounded-md"
               >
                 <Menu size={24} />
-              </button>
+              </button> */}
 
               {/* Overlay (Only for Small Screens when Sidebar is Open) */}
              
@@ -804,10 +807,10 @@ const AdminPage: React.FC = () => {
                       onClick={() => {
                         handleClose()
                         setSelectedTab("Updates");
-                        handleSoftwareComplaintsClick();
+                      
                         // setIsOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded ${selectedTab === "SoftwareComplaints"
+                      className={`w-full text-left p-2 rounded ${selectedTab === "Updates"
                           ? "bg-[#9A00FF] text-White"
                           : "text-white hover:bg-[#9A00FF]"
                         }`}
@@ -873,28 +876,28 @@ const AdminPage: React.FC = () => {
 
         {/* Main Content */}
         {selectedTab === "ListView" && (
-          <div className={`flex-1 py-10 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 py-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <EmployeeAttendanceTable />
           </div>
         )}
         {selectedTab === "EmployeesDetails" && (
-          <div className={`flex-1 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <EmployeesDetails selectedTab={selectedTab} />
           </div>
         )}
         {selectedTab === "Projects" && (
-          <div className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <ProjectsAdmin />
           </div>
         )}
         {selectedTab === "Updates" && (
-          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <Updates />
           </div>
         )}
         {selectedTab === 'Employees' && (
-          <div className={`flex-1 px-20 py-8 transition-all duration-300 ${permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 px-20 py-8 transition-all duration-300 ${permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <div className='flex flex-row justify-between px-10'>
               <div></div>
               <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
@@ -1143,7 +1146,7 @@ const AdminPage: React.FC = () => {
 
 
         {selectedTab === 'SoftwareComplaints' && (
-          <div className={`flex-1 px-10 py-8 transition-all duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 px-10 py-8 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
@@ -1185,7 +1188,7 @@ const AdminPage: React.FC = () => {
 
 
         {selectedTab === 'OfficeComplaints' && (
-          <div className={`flex-1 px-10 py-8 transition-all duration-300 ease-in-out ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 px-10 py-8 transition-all duration-300 ease-in-out ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
@@ -1225,7 +1228,7 @@ const AdminPage: React.FC = () => {
           </div>
         )}
         {selectedTab === 'leaveRequests' && (
-          <div className={`flex-1 px-10 py-8 transition-all ease-in-out duration-300 ${ permanentopen ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2  ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
