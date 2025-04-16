@@ -807,7 +807,7 @@ const AdminPage: React.FC = () => {
                         handleSoftwareComplaintsClick();
                         // setIsOpen(false);
                       }}
-                      className={`w-full text-left p-2 rounded ${selectedTab === "SoftwareComplaints"
+                      className={`w-full text-left p-2 rounded ${selectedTab === "Updates"
                           ? "bg-[#9A00FF] text-White"
                           : "text-white hover:bg-[#9A00FF]"
                         }`}
