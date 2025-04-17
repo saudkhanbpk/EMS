@@ -362,13 +362,13 @@ function App() {
   return (
     <Router>
       {/* Notification Enable Button */}
-      {user && (
+      {/* {user && (
         <div className="notification-banner">
           <button onClick={()=> handleEnableNotifications()} className="enable-btn">
             🔔 Enable Notifications
           </button>
         </div>
-      )}
+      )} */}
 
       {/* App Routes */}
       <Routes>
