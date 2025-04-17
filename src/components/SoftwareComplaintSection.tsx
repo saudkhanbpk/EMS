@@ -15,6 +15,63 @@ const SoftwareComplaintSection: React.FC = () => {
   const [editingId, setEditingId] = useState<number | string | null>(null);
   const [editingText, setEditingText] = useState('');
 
+  const triggerNotification = async () => {
+    try {
+      // 1. Get user ID (with null check)
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        throw new Error("No user ID found in localStorage");
+      }
+  
+      // 2. Get user's Supabase session (if needed for auth)
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error("User not authenticated");
+      }
+  
+      // 3. Send notification request
+      const response = await fetch("http://localhost:4000/send-notification", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          // Include auth token if required by your backend
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({ 
+          userId,
+          // Optional: Add more notification details
+          message: "This is a test notification",
+          url: "/notifications" 
+        }),
+      });
+  
+      // 4. Handle response
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || "Failed to send notification");
+      }
+  
+      const data = await response.json();
+      console.log("Notification sent successfully:", data);
+      return data;
+      
+    } catch (error) {
+      console.error("Notification error:", error.message);
+      // Optional: Show user-friendly error message
+      alert(`Failed to send notification: ${error.message}`);
+      throw error; // Re-throw if you want calling code to handle it
+    }
+  };
+  
+  // Usage example - call this from a button click or specific event
+  const handleSendNotification = async () => {
+    try {
+      await triggerNotification();
+    } catch {
+      // Handle errors if needed
+    }
+  };
+
   // Fetch all software complaints from the database.
   const fetchComplaints = async () => {
     const { data, error } = await supabase
@@ -37,26 +94,29 @@ const SoftwareComplaintSection: React.FC = () => {
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
+    handleSendNotification();
     e.preventDefault();
     setErrorMsg(null);
 
-    const sendNotification = async () => {
-      try {
-          const response = await fetch("http://localhost:4000/send-notifications", {
-              method: "POST",
-              headers: { "Content-Type": "application/json" },
-              body: JSON.stringify({ title : "Testing" , body : "This is the Test notification" }) // Send title & body in request
-          });
+  //   const sendNotification = async () => {
+  //     try {
+  //         const response = await fetch("http://localhost:4000/send-notifications", {
+  //             method: "POST",
+  //             headers: { "Content-Type": "application/json" },
+  //             body: JSON.stringify({ title : "Testing" , body : "This is the Test notification" }) // Send title & body in request
+  //         });
   
-          const result = await response.json();
-          console.log("Notification Response:", result);
-      } catch (error) {
-          console.error("Error sending notification:", error);
-      }
-  };
+  //         const result = await response.json();
+  //         console.log("Notification Response:", result);
+  //     } catch (error) {
+  //         console.error("Error sending notification:", error);
+  //     }
+  // };
   
-  // Example Call:
-  sendNotification();
+  // // Example Call:
+  // sendNotification();
+
+
   
     // Insert the complaint into the "software_complaints" table.
     const { error } = await supabase

@@ -126,7 +126,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
           devops: selectedDevs.map(id => developers.find(d => d.id === id)),
           status: "todo",
           score: score,
-          priority: priority,
+          priority: priority || "Low",
           created_at: new Date().toISOString(),
           imageurl : imageUrl, 
         }])
@@ -227,7 +227,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
               onChange={(e) => setPriority(e.target.value)}
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
             >
-              <option value="Todo">Todo</option>
+              <option value="">Select</option>
               <option value="High">High</option>
               <option value="Medium">Medium</option>
               <option value="Low">Low</option>

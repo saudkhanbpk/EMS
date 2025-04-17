@@ -116,7 +116,7 @@ function Task() {
                     <div className="flex gap-10 flex-col items-start justify-between">
                       <div className="mb-2">
                         <span className="leading-7 text-[#686a6d]">
-                          <label className="font-semibold">DevOps: </label>
+                          <label className="font-semibold">Developers: </label>
                           <ul className="ml-2 list-disc list-inside">
                             {project.devops.map((dev) => (
                               <li key={dev.id}>{dev.name}</li>

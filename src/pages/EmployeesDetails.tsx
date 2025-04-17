@@ -2,8 +2,9 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
 import { FaTrash, FaEdit  } from "react-icons/fa";
-import { FiPlus, FiTrash2, FiUserPlus ,FiX} from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUserPlus ,FiX , FiFolderPlus , } from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
+import TaskBoardAdmin from "../components/TaskBoardAdmin";
 
 const EmployeesDetails = ({ selectedTab }) => {
   const [employees, setEmployees] = useState([]);
@@ -20,6 +21,15 @@ const EmployeesDetails = ({ selectedTab }) => {
     score: ""
   });
 
+  const [selectedTAB , setSelectedTAB]= useState('')
+  const [ProjectId , setprojectId] = useState([])
+  console.log("project id :" ,ProjectId);
+  
+  const [devopss , setdevopss] = useState([])
+  console.log("Devopss" , devopss);
+  console.log("selectedTab :" , selectedTAB);
+  
+  
   const { openTaskBoard } = useContext(AttendanceContext); 
   const [employeeTasks, setEmployeess] = useState<any[]>([]);
   const [userProjectss, setUserProjectss] = useState<any[]>([]);
@@ -191,7 +201,9 @@ const EmployeesDetails = ({ selectedTab }) => {
 
   return {
     ...employee,
-    projects: employeeProjects.map(project => project.title),
+    // projects: employeeProjects.map(project => project.title),
+    projects: employeeProjects, // store full project objects
+
     projectid: employeeProjects.map(project => project.id),
     TotalKPI: totalKPI,
     // Optional: include task count for reference
@@ -322,6 +334,10 @@ const EmployeesDetails = ({ selectedTab }) => {
   return (
     <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6">
       {/* Modal Backdrop */}
+      {selectedTAB === "TaskBoard"? (
+        <TaskBoardAdmin devopss={devopss} ProjectId={ProjectId} setSelectedTAB={setSelectedTAB} selectedTAB={selectedTAB} />
+      ) : (
+        <>
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
           <div className="bg-white rounded-xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -637,7 +653,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                           onClick={() => {
                             setEmployee(entry);
                             setEmployeeId(entry.id);
-                            setEmployeeView("detailview");
+                            setEmployeeView("detailview"); 
                           }}
                           className="flex items-center gap-3 group"
                         >
@@ -666,29 +682,19 @@ const EmployeesDetails = ({ selectedTab }) => {
                       <td className="px-6 py-4">
                         {entry.projects?.length > 0 ? (
                           <div className="flex flex-wrap gap-1.5">
-                            {/* {entry.projects.slice(0, 3).map((project) => (
-                              <button>                              
-                                <span 
-                                key={project}
-                                onClick={() => {
-                                  setprojectIdd(entry.projectid)
-                                  setdevopsss(entry.id)
-                                  setselectedTABB("tasks")}}
-                                className="px-2.5 py-1 text-xs rounded-full bg-indigo-50 text-indigo-700"
-                              >
-                                {project}
-                              </span>
-                              </button>
-
-                            ))} */}
                             {entry.projects.slice(0, 3).map((project: any) => (
-                        <button
-                          key={project.id}
-                          onClick={() => openTaskBoard(project.id, project.devops)}
-                          className="px-2.5 py-1 text-sm rounded-full bg-indigo-50 text-indigo-700"
-                        >
-                          {project}
-                        </button>
+                         <button
+                         key={project.id}
+                         onClick={() => {
+                           setdevopss(project.devops);
+                           setprojectId(project.id);
+                           setSelectedTAB("TaskBoard");
+                           openTaskBoard(project.id, project.devops);
+                         }}
+                         className="px-2.5 py-1 text-sm rounded-full bg-indigo-50 text-indigo-700"
+                       >
+                         {project.title}
+                       </button>
                       ))}
                             {entry.projects.length > 3 && (
                               <span className="px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
@@ -731,7 +737,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                             className="p-2 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                             title="Assign Task"
                           >
-                            <FiUserPlus className="w-4 h-4" />
+                            <FiFolderPlus className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(entry.id)}
@@ -750,6 +756,8 @@ const EmployeesDetails = ({ selectedTab }) => {
           </div>
         )}
       </div>
+      </>
+    )}
     </div>
   );
 };
