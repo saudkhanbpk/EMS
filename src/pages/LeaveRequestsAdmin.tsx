@@ -455,7 +455,7 @@ sendAdminResponsereject();
   
   return (
     
-<div className="max-w-full mx-auto px-2 sm:px-4">
+<div className="max-w-full  mx-auto px-2 sm:px-4">
   {/* Buttons for Selecting Tabs */}
   <div className="flex flex-col xs:flex-row justify-center gap-2 xs:gap-4 sm:gap-8 mb-4 sm:mb-6">
     <button

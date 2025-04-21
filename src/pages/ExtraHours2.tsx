@@ -553,29 +553,48 @@ const ExtraHours: React.FC = () => {
               <Calendar className="w-6 h-6 text-blue-600" />
               <h2 className="text-xl font-semibold">OverTime Records</h2>
             </div>
-            <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setRemoteView('daily')}
-                className={`px-3 py-1 rounded-lg ${Remoteview === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                Daily
-              </button>
-              <button
-                onClick={() => setRemoteView('weekly')}
-                className={`px-3 py-1 rounded-lg ${Remoteview === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                Weekly
-              </button>
-              <button
-                onClick={() => setRemoteView('monthly')}
-                className={`px-3 py-1 rounded-lg ${Remoteview === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                Monthly
-              </button>
-            </div>
+            <div>
+  {/* For small and medium screens - Select dropdown */}
+  <div className="block sm:hidden">
+    <select 
+      value={Remoteview}
+      onChange={(e) => setRemoteView(e.target.value as ViewType)}
+      className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+    >
+      <option value="daily">Daily</option>
+      <option value="weekly">Weekly</option>
+      <option value="monthly">Monthly</option>
+    </select>
+  </div>
+  
+  {/* For large screens - Button group */}
+  <div className="hidden sm:flex items-center space-x-4">
+    <button
+      onClick={() => setRemoteView('daily')}
+      className={`px-3 py-1 rounded-lg ${
+        Remoteview === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      Daily
+    </button>
+    <button
+      onClick={() => setRemoteView('weekly')}
+      className={`px-3 py-1 rounded-lg ${
+        Remoteview === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      Weekly
+    </button>
+    <button
+      onClick={() => setRemoteView('monthly')}
+      className={`px-3 py-1 rounded-lg ${
+        Remoteview === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
+      }`}
+    >
+      Monthly
+    </button>
+  </div>
+</div>
           </div>
 
           <div className="flex items-center justify-between mb-4">

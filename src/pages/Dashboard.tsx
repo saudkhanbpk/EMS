@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { format, addWeeks, addMonths, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
-import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut } from 'lucide-react';
+import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut, CalendarIcon } from 'lucide-react';
 import AbsenteeComponent from './AbsenteesData';
 import DashboardCards from '../components/DashboardCards';
+import { Dialog } from "@headlessui/react";
 import DailyStatusTable from '../components/DailyStatusTable';
 import BreakRecordsTable from '../components/BreakRecordTable';
 import MonthlyRecord from '../components/MonthlyRecords';
@@ -62,7 +63,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const sessionData = localStorage.getItem('supabaseSession');
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
-
+  const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   const [todayBreak, setTodayBreak] = useState<BreakRecord[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -499,65 +500,100 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     <div className='max-w-7xl mx-auto  px-4 lg:py-8'>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900 text-center sm:text-right">
+          <div className={`${selectedtab === 'filter'? 'flex flex-col' :  ''} `}>          
+            <h1 className="text-2xl font-bold text-gray-900 sm:text-left text-center">
             Welcome, {userProfile?.full_name || 'Employee'}
           </h1>
-
-          {userProfile?.department && (
-            <p className="text-gray-600 mt-1">Department: {userProfile.department}</p>
-            
-          )}
-          <div className='lg:text-right lg:hidden sm:block hidden'>
-              <select
-                name="view"
-                id="view"
-                className='w-[160px] h-[40px] rounded-[8px] border py-1 px-3 border-[#D0D5DD] bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#7E69AB] focus:border-[#7E69AB] transition-all'
-                onChange={(e) => setView(e.target.value)}
-                value={view}
-              >
-                <option value="default">Default View</option>
-                <option value="table">Table View</option>
-                <option value="graph">Graph View</option>
-              </select>
-            </div>
-        </div>
-        <div >
-          <div className="flex items-left justify-end lg:flex-row flex-col ">
-            <div className='flex gap-3 mt-3 mb-2 sm:mx-0 mx-auto '>
+          <div className={`flex gap-3 mt-3 items-center  justify-center mb-2 sm:mx-0 mx-auto`}>
               {
                 view === 'default' && (
                   <>
-                    <button onClick={() => setSelectedtab("Dailydata")}
-                      className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Dailydata"
-                        ? "bg-[#a36fd4] text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}  >
-                      Daily</button>
 
-                    <button onClick={() => setSelectedtab("Weeklydata")}
-                      className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Weeklydata"
-                        ? "bg-[#a36fd4] text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}  >
-                      Weekly</button>
-                    <button onClick={() => setSelectedtab("Monthlydata")}
-                      className={`px-3 py-1 rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Monthlydata"
-                        ? "bg-[#a36fd4] text-white"
-                        : "bg-white text-gray-700 hover:bg-gray-100"
-                        }`}  >
-                      Monthly</button>
-                    <button onClick={() => setSelectedtab("Filter")}
-                      // className='px-3 py-1 rounded-2xl hover:bg-gray-300'
-                      className={`px-3 py-1 rounded-2xl hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${selectedtab === "Filter"
-                        ? "bg-[#8c4fc5] text-white"
-                        : "bg-white text-gray-700 hover:bg-[#c799f3]"
-                        }`}  >
-                      Filter</button>
+                    <div className="flex flex-col sm:flex-row">
+                      {/* Dropdown for small screens */}
+                      <div className="block xs:hidden w-full mb-2 ">
+                        <select
+                          value={selectedtab}
+                          onChange={(e) => setSelectedtab(e.target.value)}
+                          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-[#a36fd4] focus:border-transparent"
+                        >
+                          <option value="Dailydata">Daily</option>
+                          <option value="Weeklydata">Weekly</option>
+                          <option value="Monthlydata">Monthly</option>
+                          <option value="Filter">Filter</option>
+                        </select>
+                      </div>
 
+                      {/* Buttons for larger screens */}
+                      <div className="hidden xs:flex justify-center  sm:space-x-2">
+                        <button
+                          onClick={() => setSelectedtab("Dailydata")}
+                          className={`px-3 py-1 h-[28px]  rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Dailydata"
+                              ? "bg-[#a36fd4] text-white"
+                              : "bg-white text-gray-700 hover:bg-gray-100"
+                            }`}
+                        >
+                          Daily
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedtab("Weeklydata")}
+                          className={`px-3 py-1 rounded-2xl h-[28px]  hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Weeklydata"
+                              ? "bg-[#a36fd4] text-white"
+                              : "bg-white text-gray-700 hover:bg-gray-100"
+                            }`}
+                        >
+                          Weekly
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedtab("Monthlydata")}
+                          className={`px-3 py-1 h-[28px] rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Monthlydata"
+                              ? "bg-[#a36fd4] text-white"
+                              : "bg-white text-gray-700 hover:bg-gray-100"
+                            }`}
+                        >
+                          Monthly
+                        </button>
+
+                        <button
+                          onClick={() => setSelectedtab("Filter")}
+                          className={`px-3 py-1 rounded-2xl h-[28px]  hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${selectedtab === "Filter"
+                              ? "bg-[#8c4fc5] text-white"
+                              : "bg-white text-gray-700 hover:bg-[#c799f3]"
+                            }`}
+                        >
+                          Filter
+                        </button>
+                      </div>
+                    </div>
                   </>
                 )
               }
             </div >
+          </div>
+
+          {/* {userProfile?.department && (
+            <p className="text-gray-600 mt-1">Department: {userProfile.department}</p>
+
+          )} */}
+          {/* <div className='lg:text-right lg:hidden sm:block hidden'>
+            <select
+              name="view"
+              id="view"
+              className='w-[160px] h-[40px] rounded-[8px] border py-1 px-3 border-[#D0D5DD] bg-white text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#7E69AB] focus:border-[#7E69AB] transition-all'
+              onChange={(e) => setView(e.target.value)}
+              value={view}
+            >
+              <option value="default">Default View</option>
+              <option value="table">Table View</option>
+              <option value="graph">Graph View</option>
+            </select>
+          </div> */}
+        </div>
+        <div >
+          <div className="flex items-left justify-end lg:flex-row flex-col ">
+            
             <div className="flex flex-row gap-5 lg:mx-0 mx-auto">
 
               {/* Date Navigation - Only show in Default View */}
@@ -620,37 +656,78 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
               )}
               {/* dates  */}
               {view === 'default' && selectedtab === "Filter" && (
-                <div className="flex items-center justify-center space-x-4">
-                  {/* Date Range Inputs */}
-                  <input
-                    type="date"
-                    value={startdate} // State variable for the start date
-                    onChange={(e) => setStartdate(e.target.value)} // Update start date
-                    className="px-2 py-1 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
-                  <span className="mx-2 text-xl font-semibold">to</span>
-                  <input
-                    type="date"
-                    value={enddate} // State variable for the end date
-                    onChange={(e) => setEndate(e.target.value)} // Update end date
-                    className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                <div className="w-full flex items-center justify-center">
+                  {/* Desktop Date Picker */}
+                  <div className="hidden xl:flex flex-wrap items-center justify-center space-x-4">
+                    <input
+                      type="date"
+                      value={startdate}
+                      onChange={(e) => setStartdate(e.target.value)}
+                      className="px-2 py-1 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <span className="mx-2 text-xl font-semibold">to</span>
+                    <input
+                      type="date"
+                      value={enddate}
+                      onChange={(e) => setEndate(e.target.value)}
+                      className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    />
+                    <button
+                      onClick={handleDateFilter}
+                      className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
+                    >
+                      <SearchIcon className="w-5 h-5" />
+                    </button>
+                  </div>
 
-                  {/* Search Button */}
-                  <button
-                    onClick={() => {
-                      handleDateFilter()
-                    }}
-                    className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
-                  >
-                    <SearchIcon className="w-5 h-5" />
-                  </button>
+                  {/* Mobile Date Picker */}
+                  <div className="xl:hidden">
+                    <button
+                      onClick={() => setIsDateDialogOpen(true)}
+                      className="flex items-center bg-white space-x-2 border px-4 py-2 rounded-lg shadow-md"
+                    >
+                      <CalendarIcon className="w-5 h-5" />
+                      <span>Select Date Range</span>
+                    </button>
+
+                    <Dialog open={isDateDialogOpen} onClose={() => setIsDateDialogOpen(false)} className="relative z-50">
+                      <div className="fixed inset-0 bg-black/30" aria-hidden="true" />
+                      <div className="fixed inset-0 flex items-center justify-center p-4">
+                        <Dialog.Panel className="w-full max-w-sm rounded-lg bg-white p-6">
+                          <Dialog.Title className="text-lg font-bold mb-4">Select Date Range</Dialog.Title>
+                          <div className="flex flex-col gap-4">
+                            <input
+                              type="date"
+                              value={startdate}
+                              onChange={(e) => setStartdate(e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <input
+                              type="date"
+                              value={enddate}
+                              onChange={(e) => setEndate(e.target.value)}
+                              className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            />
+                            <button
+                              onClick={() => { 
+                                handleDateFilter()
+                                setIsDateDialogOpen(false)
+                               }}
+                              className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
+                            >
+                              Search
+                            </button>
+                          </div>
+                        </Dialog.Panel>
+                      </div>
+                    </Dialog>
+                  </div>
                 </div>
               )}
 
             </div>
             {/* selecter */}
-            <div className='lg:text-right  text-center lg:block sm:hidden  block'>
+            <div className='lg:text-right  text-center '>
               <select
                 name="view"
                 id="view"
