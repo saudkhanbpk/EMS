@@ -15,6 +15,7 @@
     "electron:build": "vite build && electron-builder"
   },
   "dependencies": {
+    "@headlessui/react": "^2.2.1",
     "@hello-pangea/dnd": "^16.6.0",
     "@hookform/resolvers": "^3.9.0",
     "@radix-ui/react-accordion": "^1.2.0",

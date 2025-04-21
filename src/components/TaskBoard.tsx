@@ -242,8 +242,8 @@ function TaskBoard({ setSelectedTAB }) {
 
           <div className="flex-1 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Work Planner</h1>
-            <div className="text-sm text-gray-600">
-              <span className='font-semibold text-[13px] text-red-500 mr-2'>Total Tasks: <strong>{totalTasks}</strong></span>
+            <div className="text-sm text-gray-600 flex flex-wrap">
+              <span className='font-semibold text-[13px] text-red-500 mr-2 '>Total Tasks: <strong>{totalTasks}</strong></span>
               <span className='font-semibold text-[13px] text-yellow-600'>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
               <span className="mx-3 font-semibold text-[13px] text-green-500">Completed Tasks: <strong>{completedTasks}</strong></span>
             </div>
@@ -251,7 +251,7 @@ function TaskBoard({ setSelectedTAB }) {
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-[repeat(auto-fit,_minmax(200px,_1fr))] gap-6">
             {/* Todo Column */}
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">

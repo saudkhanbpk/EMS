@@ -339,8 +339,8 @@ const handleDownload = async (userId: string, fullName: string) => {
                 currentFilter === 'all' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
-              <h2 className="text-gray-600">
+              <span className="sm:block hidden w-4 h-4 bg-gray-600 rounded-full"></span>
+              <h2 className="text-gray-600 sm:text-xl text-sm ">
                 Total: <span className="font-bold">{totalEmployees}</span>
               </h2>
             </button>
@@ -350,9 +350,9 @@ const handleDownload = async (userId: string, fullName: string) => {
                 currentFilter === 'bad' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-red-500 rounded-full"></span>
-              <h2 className="text-red-600">
-                Bad: <span className="font-bold">{badCount}</span>
+              <span className="sm:block hidden w-4 h-4 bg-red-500 rounded-full"></span>
+              <h2 className="text-red-600 sm:text-xl text-sm">
+                Bad: <span className="font-bold ">{badCount}</span>
               </h2>
             </button>
             <button
@@ -361,8 +361,8 @@ const handleDownload = async (userId: string, fullName: string) => {
                 currentFilter === 'better' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-yellow-500 rounded-full"></span>
-              <h2 className="text-yellow-600">
+              <span className="sm:block hidden w-4 h-4 bg-yellow-500 rounded-full"></span>
+              <h2 className="text-yellow-600 sm:text-xl text-sm">
                 Fair: <span className="font-bold">{betterCount}</span>
               </h2>
             </button>
@@ -372,8 +372,8 @@ const handleDownload = async (userId: string, fullName: string) => {
                 currentFilter === 'best' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-green-500 rounded-full"></span>
-              <h2 className="text-green-600">
+              <span className="sm:block hidden w-4 h-4 bg-green-500 rounded-full"></span>
+              <h2 className="text-green-600 sm:text-xl text-sm">
                 Good: <span className="font-bold">{bestCount}</span>
               </h2>
             </button>
@@ -385,64 +385,138 @@ const handleDownload = async (userId: string, fullName: string) => {
       {!loading && (
         <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
           {error && <p className="text-red-500 text-center">{error}</p>}
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
-                <tr>
-                  <th className="py-3 px-6 text-left">Employee Name</th>
-                  <th className="py-3 px-6 text-left">Present Days</th>
-                  <th className="py-3 px-6 text-left">Absent Days</th>
-                  <th className="py-3 px-6 text-left">Total Hours Worked</th>
-                  <th className="py-3 px-6 text-left">Working Hours %</th>
-                </tr>
-              </thead>
-              <tbody className="text-md font-normal">
-                {filteredData.map((entry, index) => (
-                  <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
-                    <td className="py-4 px-6">
-                      <span
-                        className={` ${
-                          entry.workingHoursPercentage >= 80
-                            ? ' text-green-500'
-                            : entry.workingHoursPercentage >= 50
-                            ? ' text-yellow-500'
-                            : ' text-red-500'
-                        }`}
-                      >
-                        {entry.user.full_name}
-                      </span>
-                    </td>
-                    <td className="py-4 px-6">{entry.presentDays}</td>
-                    <td className="py-4 px-6">{entry.absentDays}</td>
-                    <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
-                    <td className="py-4 pl-6 max-w-fit">
-                      <span
-                        className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          entry.workingHoursPercentage >= 80
-                            ? 'bg-green-500 text-white'
-                            : entry.workingHoursPercentage >= 50
-                            ? 'bg-yellow-500 text-white'
-                            : 'bg-red-500 text-white'
-                        }`}
-                      >
-                        {entry.workingHoursPercentage.toFixed(2)}%
-                      </span>
-                    </td>
-                    <button className='w-full h-full' onClick={() => handleDownload(entry.user.id, entry.user.full_name) }> 
-                      <DownloadIcon className='mt-3 p-1 hover:bg-gray-300 transition-all rounded-2xl
-                       text-gray-500'/></button>
-                  </tr>
-                ))}
-                {filteredData.length === 0 && (
-                  <tr>
-                    <td colSpan="5" className="text-center py-4 text-gray-500">
-                      No attendance records found for this month.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
+          <div className="w-full shadow-sm rounded-lg">
+  {/* Table view for medium and larger screens */}
+  <div className="hidden sm:block overflow-x-auto">
+    <table className="min-w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
+      <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
+        <tr>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Employee Name</th>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Present Days</th>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Absent Days</th>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Total Hours Worked</th>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Working Hours %</th>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Download</th>
+        </tr>
+      </thead>
+      <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
+        {filteredData.map((entry, index) => (
+          <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+              <span
+                className={`${
+                  entry.workingHoursPercentage >= 80
+                    ? 'text-green-500'
+                    : entry.workingHoursPercentage >= 50
+                    ? 'text-yellow-500'
+                    : 'text-red-500'
+                }`}
+              >
+                {entry.user.full_name}
+              </span>
+            </td>
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.presentDays}</td>
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.absentDays}</td>
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+              <span
+                className={`px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${
+                  entry.workingHoursPercentage >= 80
+                    ? 'bg-green-500 text-white'
+                    : entry.workingHoursPercentage >= 50
+                    ? 'bg-yellow-500 text-white'
+                    : 'bg-red-500 text-white'
+                }`}
+              >
+                {entry.workingHoursPercentage.toFixed(2)}%
+              </span>
+            </td>
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+              <button 
+                className="p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500"
+                onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
+              > 
+                <DownloadIcon className="w-4 h-4 xs:w-5 xs:h-5" />
+              </button>
+            </td>
+          </tr>
+        ))}
+        {filteredData.length === 0 && (
+          <tr>
+            <td colSpan={6} className="text-center py-4 text-gray-500">
+              No attendance records found for this month.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Card view for small screens */}
+  <div className="sm:hidden">
+    {filteredData.length > 0 ? (
+      filteredData.map((entry, index) => (
+        <div key={index} className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]">
+          <div className="flex justify-between items-center mb-2 border-b pb-2">
+            <span
+              className={`font-medium text-[12px] xs:text-[13px] ${
+                entry.workingHoursPercentage >= 80
+                  ? 'text-green-500'
+                  : entry.workingHoursPercentage >= 50
+                  ? 'text-yellow-500'
+                  : 'text-red-500'
+              }`}
+            >
+              {entry.user.full_name}
+            </span>
+            <span
+              className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
+                entry.workingHoursPercentage >= 80
+                  ? 'bg-green-500 text-white'
+                  : entry.workingHoursPercentage >= 50
+                  ? 'bg-yellow-500 text-white'
+                  : 'bg-red-500 text-white'
+              }`}
+            >
+              {entry.workingHoursPercentage.toFixed(2)}%
+            </span>
           </div>
+          
+          <div className="grid grid-cols-2 gap-2 mb-2">
+            <div className="flex flex-col">
+              <span className="text-gray-500 text-[10px] xs:text-[11px]">Present Days</span>
+              <div className="font-medium">{entry.presentDays}</div>
+            </div>
+            
+            <div className="flex flex-col">
+              <span className="text-gray-500 text-[10px] xs:text-[11px]">Absent Days</span>
+              <div className="font-medium">{entry.absentDays}</div>
+            </div>
+            
+            <div className="flex flex-col col-span-2">
+              <span className="text-gray-500 text-[10px] xs:text-[11px]">Total Hours Worked</span>
+              <div className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</div>
+            </div>
+          </div>
+          
+          <div className="flex justify-end mt-2 pt-2 border-t">
+            <button 
+              className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600 transition-all"
+              onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
+            >
+              <DownloadIcon className="w-3 h-3 xs:w-4 xs:h-4" />
+              <span className="text-[10px] xs:text-[11px]">Download Report</span>
+            </button>
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="bg-white rounded-lg shadow-sm p-4 text-center text-gray-500">
+        No attendance records found for this month.
+      </div>
+    )}
+  </div>
+</div>
         </div>
       )}
     </div>
