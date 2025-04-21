@@ -14,7 +14,7 @@ import bodyParser from "body-parser";
 import path from "path";
 import pdf from 'html-pdf'
 import { fileURLToPath } from "url";
-import webPush from 'web-push'; 
+// Convert ES module URL to file path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 // Read Firebase credentials
@@ -66,56 +66,6 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL , process.env.VITE_S
 //         res.status(500).json({ error: error.message });
 //     }
 // });
-
-// Configure VAPID keys (replace with yours)
-// web push notification seetup
-// server.js
-
-
-// Configure VAPID
-webPush.setVapidDetails(
-  'mailto:elionjohn3@gmail.com',
-  'BFPFkVqWUS4mX-O--KPP3jzy1xyi1pHFREawLt7R9Md2kZpTj8vvbyo9XWE-RIgnsL22pTSpqoX4gOAOsm5flJQ',
-  'UmYOkoiiEVLZJ2IscYhQNwTHhw-xVDadlhXTxpFF9Mc'
-);
-
-// // Supabase Client
-// const supabase = createClient(
-//   process.env.SUPABASE_URL,
-//   process.env.SUPABASE_KEY
-// );
-
-// Send Notification Endpoint
-app.post('/send-notification', async (req, res) => {
-  try {
-    const { userId, message } = req.body;
-    
-    // Get user subscription
-    const { data } = await supabase
-      .from('users')
-      .select('push_subscription')
-      .eq('id', userId)
-      .single();
-
-    if (!data?.push_subscription) {
-      return res.status(404).json({ error: "User not subscribed" });
-    }
-
-    // Send notification
-    await webPush.sendNotification(data.push_subscription, JSON.stringify({
-      title: "New Update!",
-      body: message,
-      icon: "https://yourdomain.com/icon.png",
-      url: "/notifications"
-    }));
-
-    res.json({ success: true });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-
 
 
 app.post("/send-notifications", async (req, res) => {

@@ -31,7 +31,7 @@ const COLUMN_IDS = {
 };
 
 function TaskBoard({ setSelectedTAB }) {
-  const { projectIdd, devopss } = useContext(AttendanceContext);
+  const { projectIdd, devopsss } = useContext(AttendanceContext);
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -364,34 +364,80 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
-            {/* Done Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md">
-              <div className="flex justify-between items-center mb-6">
-                <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
-                <span className="text-gray-600">{getStatusCount('done')}</span>
-              </div>
+ {/* Done Column */}
+<div className="bg-white rounded-[20px] p-4 shadow-md">
+  <div className="flex justify-between items-center mb-6">
+    <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
+    <span className="text-gray-600">{getStatusCount('done')}</span>
+  </div>
 
-              <div className="space-y-4 min-h-[100px]">
-              <p className='text-sm text-gray-400 font-semibold text-center'>You Cannot Drag Or Drop Files Here</p>
+  <div className="space-y-4 min-h-[100px]">
+    <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
+    
+    {getTasksByStatus('done').length > 0 ? (
+      getTasksByStatus('done').map((task, index) => (
+        // Render a simplified version of TaskCard without Draggable
+        <div 
+          key={task.id}
+          className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
+          onClick={() => {
+            setOpenedTask(task);
+            setDescriptionOpen(true);
+          }}
+        >
+          {/* Title */}
+          <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
 
-                {getTasksByStatus('done').length > 0 ? (
-                  getTasksByStatus('done').map((task, index) => (                    
-                    <TaskCard
-                      key={task.id}
-                      task={task}
-                      index={index}
-                      commentByTaskID={commentByTaskID}
-                      descriptionOpen={descriptionOpen}
-                      setDescriptionOpen={setDescriptionOpen}
-                    />
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-gray-400">
-                    No tasks
-                  </div>
-                )}
+          {/* Priority & Score */}
+          <div className="flex flex-row items-center gap-3">
+            {task.priority && (
+              <span className={`text-[12px] text-white font-semibold rounded px-2 py-[2px] capitalize
+                ${task.priority === "High" ? "bg-red-500" :
+                  task.priority === "Medium" ? "bg-yellow-600" :
+                  task.priority === "Low" ? "bg-green-400" : ""}`}>
+                {task.priority}
+              </span>
+            )}
+            <span className="text-[13px] text-[#404142] font-medium">{task.score}</span>
+          </div>
+
+          {/* Devops Info + Comments */}
+          {task.devops?.length > 0 && (
+            <div className="flex justify-between items-center mt-1">
+              <div className="flex items-center gap-2">
+                <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-medium font-semibold flex items-center justify-center">
+                  {task.devops.map((dev) => dev.name[0].toUpperCase()).join("")}
+                </div>
+                <span className="text-[13px] text-[#404142]">
+                  {task.devops.map((dev) => dev.name.charAt(0).toUpperCase() + dev.name.slice(1)).join(", ")}
+                </span>
               </div>
+              {task.commentCount > 0 && (
+                <span className="text-sm text-gray-600">
+                  {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
+                </span>
+              )}
             </div>
+          )}
+
+          {/* Time */}
+          <div className="flex justify-between items-center">
+            <p className="text-[12px] text-[#949597]">{formatDistanceToNow(new Date(task.created_at))} ago</p>
+          </div>
+
+          {/* Comments Section */}
+          <div>
+            <Comments taskid={task.id} />
+          </div>
+        </div>
+      ))
+    ) : (
+      <div className="p-4 text-center text-gray-400">
+        No completed tasks
+      </div>
+    )}
+  </div>
+</div>
 
           </div>
         </DragDropContext>
