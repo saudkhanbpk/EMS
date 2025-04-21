@@ -399,7 +399,8 @@ sendAdminResponsereject();
       ) : (
         requests.map((request) => (
           <div key={request.id} className="p-4 mb-4  text-sm text-gray=400 bg-gray-100 break-words rounded-lg shadow">
-            <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500">{request.leave_date} {"-"} {request.leave_type}</span></p>
+            <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500"> {new Date(request.leave_date).toLocaleDateString()} (
+              {new Date(request.leave_date).toLocaleDateString("en-US", { weekday: "long" })}) {"-"} {request.leave_type}</span></p>
             <p> {request.description}</p>
             <p className="text-gray-700"> {request.full_name}</p>
             {/* <p> 

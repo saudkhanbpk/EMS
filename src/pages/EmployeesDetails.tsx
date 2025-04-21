@@ -709,9 +709,10 @@ const EmployeesDetails = ({ selectedTab }) => {
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="flex items-center gap-2">
                           <div className={`w-3 h-3 rounded-full ${
-                            entry.TotalKPI <= 20 ? "bg-red-500" :
-                            entry.TotalKPI <= 70 ? "bg-amber-500" :
-                            entry.TotalKPI <= 120 ? "bg-green-500" :
+                            entry.TotalKPI <= 50 ? "bg-red-500" :
+                            entry.TotalKPI <= 100 ? "bg-amber-500" :
+                            entry.TotalKPI <= 150 ? "bg-green-500" :
+                            entry.TotalKPI > 150 ? "bg-purple-500" :
                             "bg-blue-500"
                           }`}></div>
                           <span className="text-sm font-medium">
@@ -721,12 +722,13 @@ const EmployeesDetails = ({ selectedTab }) => {
                         <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
                           <div 
                             className={`h-1.5 rounded-full ${
-                              entry.TotalKPI <= 20 ? "bg-red-500" :
-                              entry.TotalKPI <= 70 ? "bg-amber-500" :
-                              entry.TotalKPI <= 120 ? "bg-green-500" :
+                              entry.TotalKPI <= 50 ? "bg-red-500" :
+                              entry.TotalKPI <= 100 ? "bg-amber-500" :
+                              entry.TotalKPI <= 150 ? "bg-green-500" :
+                              entry.TotalKPI > 150 ? "bg-purple-500" :
                               "bg-blue-500"
                             }`} 
-                            style={{ width: `${Math.min(entry.TotalKPI, 100)}%` }}
+                            style={{ width: `${Math.min(entry.TotalKPI, 150)}%` }}
                           ></div>
                         </div>
                       </td>

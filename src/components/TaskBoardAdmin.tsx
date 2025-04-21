@@ -309,7 +309,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       await supabase
         .from("comments")
         .delete()
-        .eq("task_id", DeletedTask.id); 
+        .eq("task_id", DeletedTask.id);
 
       const { error } = await supabase
         .from('tasks_of_projects')
@@ -375,14 +375,26 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             </div>
 
             {/* Devops Info + Comments */}
-            {task.devops?.length > 0 && (
+            {task.devops && (
               <div className="flex justify-between items-center mt-1">
                 <div className="flex items-center gap-2">
                   <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-medium font-semibold flex items-center justify-center">
-                    {task.devops.map((dev) => dev.name[0].toUpperCase()).join("")}
+                    {Array.isArray(task.devops)
+                      ? task.devops
+                        .filter(dev => dev?.name) // Filter out items without name
+                        .map(dev => dev.name[0].toUpperCase())
+                        .join("")
+                      : task.devops?.name?.[0]?.toUpperCase() || ""}
                   </div>
                   <span className="text-[13px] text-[#404142]">
-                    {task.devops.map((dev) => dev.name.charAt(0).toUpperCase() + dev.name.slice(1)).join(", ")}
+                    {Array.isArray(task.devops)
+                      ? task.devops
+                        .filter(dev => dev?.name) // Filter out items without name
+                        .map(dev => dev.name.charAt(0).toUpperCase() + dev.name.slice(1))
+                        .join(", ")
+                      : task.devops?.name
+                        ? task.devops.name.charAt(0).toUpperCase() + task.devops.name.slice(1)
+                        : ""}
                   </span>
                 </div>
                 {task.commentCount > 0 && (
