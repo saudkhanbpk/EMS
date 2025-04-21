@@ -34,12 +34,14 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
     const file = e.target.files[0];
     if (file) {
       setFormData((prev) => ({ ...prev, profile_image: file }));
+    }else{
+      setFormData((prev) => ({ ...prev, profile_image: null }));
     }
   };
   
   
 
-  useEffect(() => {
+
     const fetchEmployee = async () => {
       try {
         setLoading(true);
@@ -86,6 +88,8 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
       }
     };
 
+
+    useEffect(() => {
     if (employeeid) fetchEmployee();
   }, [employeeid]);
 
@@ -127,6 +131,10 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
         })
         .eq("id", employeeid)
         .select();
+
+        if(!error){
+          fetchEmployee();
+        }
   
       if (error) throw error;
   

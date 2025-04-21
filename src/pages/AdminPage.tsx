@@ -647,11 +647,11 @@ const AdminPage: React.FC = () => {
               {/* <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div> */}
 
               {/* Menu Button (For Small Screens) */}
-              <button
+              {/* <button
                 className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white shadow-md rounded-md"
               >
                 <Menu size={24} />
-              </button>
+              </button> */}
 
               {/* Overlay (Only for Small Screens when Sidebar is Open) */}
              

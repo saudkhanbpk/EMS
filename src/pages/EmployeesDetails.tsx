@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
 import { FaTrash, FaEdit  } from "react-icons/fa";
-import { FiPlus, FiTrash2, FiUserPlus ,FiX , FiFolderPlus , } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiUserPlus ,FiX  , FiPlusCircle ,FiPlusSquare } from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
 import TaskBoardAdmin from "../components/TaskBoardAdmin";
 
@@ -628,7 +628,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Employee
                     </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th scope="col" className="px-2 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Joined
                     </th>
                     <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
@@ -658,22 +658,22 @@ const EmployeesDetails = ({ selectedTab }) => {
                           className="flex items-center gap-3 group"
                         >
                           <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
-                            {entry.full_name.split(' ').map(n => n[0]).join('')}
+                            {entry.full_name.split(' ')[0].charAt(0).toUpperCase()}
                           </div>
                           <div className="text-left">
                             <div className="text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors">
-                              {entry.full_name}
+                              {entry.full_name.split(' ')[0]} 
                             </div>
                             {/* <div className="text-xs text-gray-500">ID: {entry.id}</div> */}
                           </div>
                         </button>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(entry.joining_date).toLocaleDateString('en-US', {
+                      <td className="px-2 py-4 whitespace-nowrap text-sm text-gray-500">
+                        {entry.joining_date? new Date(entry.joining_date).toLocaleDateString('en-US', {
                           year: 'numeric',
                           month: 'short',
                           day: 'numeric'
-                        })}
+                        }) : 'N/A'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
                         <div className="text-sm text-gray-900">{entry.email}</div>
@@ -682,7 +682,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                       <td className="px-6 py-4">
                         {entry.projects?.length > 0 ? (
                           <div className="flex flex-wrap gap-1.5">
-                            {entry.projects.slice(0, 3).map((project: any) => (
+                            {entry.projects.map((project: any) => (
                          <button
                          key={project.id}
                          onClick={() => {
@@ -696,11 +696,11 @@ const EmployeesDetails = ({ selectedTab }) => {
                          {project.title}
                        </button>
                       ))}
-                            {entry.projects.length > 3 && (
+                            {/* {entry.projects.length > 3 && (
                               <span className="px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
                                 +{entry.projects.length - 3}
                               </span>
-                            )}
+                            )} */}
                           </div>
                         ) : (
                           <span className="text-sm text-gray-400">Not assigned</span>
@@ -737,7 +737,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                             className="p-2 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                             title="Assign Task"
                           >
-                            <FiFolderPlus className="w-4 h-4" />
+                            <FiPlusSquare className="w-4 h-4" />
                           </button>
                           <button
                             onClick={() => handleDelete(entry.id)}
