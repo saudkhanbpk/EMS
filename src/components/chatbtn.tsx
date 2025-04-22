@@ -66,6 +66,7 @@ function Chatbutton() {
           transition-transform 
           duration-300 
           w-16 
+          z-50
           h-16 
           border-2 
           border-white">

@@ -687,7 +687,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                       className="flex items-center bg-white space-x-2 border px-4 py-2 rounded-lg shadow-md"
                     >
                       <CalendarIcon className="w-5 h-5" />
-                      <span>Select Date Range</span>
+                      <span>Select Date</span>
                     </button>
 
                     <Dialog open={isDateDialogOpen} onClose={() => setIsDateDialogOpen(false)} className="relative z-50">

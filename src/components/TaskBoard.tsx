@@ -383,7 +383,7 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
-            {/* In Progress Column */}
+        
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>
