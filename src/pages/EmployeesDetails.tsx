@@ -1,7 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
-import { FaTrash, FaEdit  } from "react-icons/fa";
 import { FiPlus, FiTrash2, FiUserPlus ,FiX} from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
 
@@ -605,148 +604,257 @@ const EmployeesDetails = ({ selectedTab }) => {
             </div>
   
             {/* Employee Table */}
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Employee
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Joined
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Contact
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Projects
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Workload
-                    </th>
-                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Actions
-                    </th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {employees.map((entry) => (
-                    <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <button
-                          onClick={() => {
-                            setEmployee(entry);
-                            setEmployeeId(entry.id);
-                            setEmployeeView("detailview");
-                          }}
-                          className="flex items-center gap-3 group"
-                        >
-                          <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
-                            {entry.full_name.split(' ').map(n => n[0]).join('')}
-                          </div>
-                          <div className="text-left">
-                            <div className="text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors">
-                              {entry.full_name}
-                            </div>
-                            {/* <div className="text-xs text-gray-500">ID: {entry.id}</div> */}
-                          </div>
-                        </button>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {new Date(entry.joining_date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'short',
-                          day: 'numeric'
-                        })}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="text-sm text-gray-900">{entry.email}</div>
-                        <div className="text-xs text-gray-500">{entry.phone || 'No phone'}</div>
-                      </td>
-                      <td className="px-6 py-4">
-                        {entry.projects?.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {/* {entry.projects.slice(0, 3).map((project) => (
-                              <button>                              
-                                <span 
-                                key={project}
-                                onClick={() => {
-                                  setprojectIdd(entry.projectid)
-                                  setdevopsss(entry.id)
-                                  setselectedTABB("tasks")}}
-                                className="px-2.5 py-1 text-xs rounded-full bg-indigo-50 text-indigo-700"
-                              >
-                                {project}
-                              </span>
-                              </button>
+            
+            <div className="w-full">
+  {/* Desktop table - hidden on small screens, with improved responsiveness */}
+  
+<div className="hidden md:block w-full">
+  <div className="w-full inline-block align-middle">
+    <div className="overflow-x-auto">
+      <table className="w-full divide-y divide-gray-200 table-auto">
+        <thead className="bg-gray-50">
+          <tr>
+            <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Employee
+            </th>
+            <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Joined
+            </th>
+            <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Contact
+            </th>
+            <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Projects
+            </th>
+            <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Workload
+            </th>
+            <th scope="col" className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+              Actions
+            </th>
+          </tr>
+        </thead>
+        <tbody className="bg-white divide-y divide-gray-200">
+          {employees.map((entry) => (
+            <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
+              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                <button
+                  onClick={() => {
+                    setEmployee(entry);
+                    setEmployeeId(entry.id);
+                    setEmployeeView("detailview");
+                  }}
+                  className="flex items-center gap-2 lg:gap-3 group"
+                >
+                  <div className="flex-shrink-0 h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs lg:text-sm">
+                    {entry.full_name.split(' ').map(n => n[0]).join('')}
+                  </div>
+                  <div className="text-left">
+                    <div className="text-xs lg:text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors truncate max-w-[120px] lg:max-w-full">
+                      {entry.full_name}
+                    </div>
+                  </div>
+                </button>
+              </td>
+              <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
+                {new Date(entry.joining_date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </td>
+              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                <div className="text-xs lg:text-sm text-gray-900 truncate max-w-[120px] lg:max-w-[240px] xl:max-w-full">{entry.email}</div>
+                <div className="text-xs text-gray-500 truncate max-w-[120px] lg:max-w-[240px] xl:max-w-full">{entry.phone || 'No phone'}</div>
+              </td>
+              <td className="px-4 lg:px-6 py-4">
+                {entry.projects?.length > 0 ? (
+                  <div className="flex flex-wrap gap-1 lg:gap-1.5">
+                    {entry.projects.slice(0, 2).map((project: any) => (
+                      <button
+                        key={project.id}
+                        onClick={() => openTaskBoard(project.id, project.devops)}
+                        className="px-2 py-0.5 lg:px-2.5 lg:py-1 text-xs rounded-full bg-indigo-50 text-indigo-700 truncate max-w-[80px] lg:max-w-[120px] xl:max-w-full"
+                      >
+                        {project}
+                      </button>
+                    ))}
+                    {entry.projects.length > 2 && (
+                      <span className="px-2 py-0.5 lg:px-2.5 lg:py-1 text-xs rounded-full bg-gray-100 text-gray-600">
+                        +{entry.projects.length - 2}
+                      </span>
+                    )}
+                  </div>
+                ) : (
+                  <span className="text-xs lg:text-sm text-gray-400">Not assigned</span>
+                )}
+              </td>
+              <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                <div className="flex items-center gap-2">
+                  <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full ${
+                    entry.TotalKPI <= 20 ? "bg-red-500" :
+                    entry.TotalKPI <= 70 ? "bg-amber-500" :
+                    entry.TotalKPI <= 120 ? "bg-green-500" :
+                    "bg-blue-500"
+                  }`}></div>
+                  <span className="text-xs lg:text-sm font-medium">
+                    {entry.TotalKPI ?? 0}
+                  </span>
+                </div>
+                <div className="mt-1 w-full bg-gray-200 rounded-full h-1 lg:h-1.5">
+                  <div 
+                    className={`h-1 lg:h-1.5 rounded-full ${
+                      entry.TotalKPI <= 20 ? "bg-red-500" :
+                      entry.TotalKPI <= 70 ? "bg-amber-500" :
+                      entry.TotalKPI <= 120 ? "bg-green-500" :
+                      "bg-blue-500"
+                    }`} 
+                    style={{ width: `${Math.min(entry.TotalKPI, 100)}%` }}
+                  ></div>
+                </div>
+              </td>
+              <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                <div className="flex justify-end items-center gap-1 lg:gap-2">
+                  <button
+                    onClick={() => handleAssignClick(entry)}
+                    className="p-1.5 lg:p-2 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
+                    title="Assign Task"
+                  >
+                    <FiUserPlus className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(entry.id)}
+                    className="p-1.5 lg:p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                    title="Delete"
+                  >
+                    <FiTrash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                  </button>
+                </div>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
 
-                            ))} */}
-                            {entry.projects.slice(0, 3).map((project: any) => (
-                        <button
-                          key={project.id}
-                          onClick={() => openTaskBoard(project.id, project.devops)}
-                          className="px-2.5 py-1 text-sm rounded-full bg-indigo-50 text-indigo-700"
-                        >
-                          {project}
-                        </button>
-                      ))}
-                            {entry.projects.length > 3 && (
-                              <span className="px-2.5 py-1 text-xs rounded-full bg-gray-100 text-gray-600">
-                                +{entry.projects.length - 3}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-sm text-gray-400">Not assigned</span>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center gap-2">
-                          <div className={`w-3 h-3 rounded-full ${
-                            entry.TotalKPI <= 20 ? "bg-red-500" :
-                            entry.TotalKPI <= 70 ? "bg-amber-500" :
-                            entry.TotalKPI <= 120 ? "bg-green-500" :
-                            "bg-blue-500"
-                          }`}></div>
-                          <span className="text-sm font-medium">
-                            {entry.TotalKPI ?? 0}
-                          </span>
-                        </div>
-                        <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
-                          <div 
-                            className={`h-1.5 rounded-full ${
-                              entry.TotalKPI <= 20 ? "bg-red-500" :
-                              entry.TotalKPI <= 70 ? "bg-amber-500" :
-                              entry.TotalKPI <= 120 ? "bg-green-500" :
-                              "bg-blue-500"
-                            }`} 
-                            style={{ width: `${Math.min(entry.TotalKPI, 100)}%` }}
-                          ></div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex justify-end items-center gap-2">
-                          <button
-                            onClick={() => handleAssignClick(entry)}
-                            className="p-2 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
-                            title="Assign Task"
-                          >
-                            <FiUserPlus className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(entry.id)}
-                            className="p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                            title="Delete"
-                          >
-                            <FiTrash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+
+  {/* Mobile card view - shown only on small screens */}
+  <div className="md:hidden">
+    {employees.map((entry) => (
+      <div key={entry.id} className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden border border-gray-200">
+        <div className="p-4">
+          <div className="flex items-center justify-between mb-3">
+            <button
+              onClick={() => {
+                setEmployee(entry);
+                setEmployeeId(entry.id);
+                setEmployeeView("detailview");
+              }}
+              className="flex items-center gap-3 group"
+            >
+              <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
+                {entry.full_name.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div className="text-left">
+                <div className="text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors">
+                  {entry.full_name}
+                </div>
+              </div>
+            </button>
+            
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => handleAssignClick(entry)}
+                className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
+                title="Assign Task"
+              >
+                <FiUserPlus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => handleDelete(entry.id)}
+                className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                title="Delete"
+              >
+                <FiTrash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
+          </div>
+          
+          <div className="grid grid-cols-2 gap-2 text-xs">
+            <div className="space-y-0.5">
+              <p className="text-gray-500 font-medium">Joined</p>
+              <p className="text-gray-700">
+                {new Date(entry.joining_date).toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric'
+                })}
+              </p>
+            </div>
+            
+            <div className="space-y-0.5">
+              <p className="text-gray-500 font-medium">Contact</p>
+              <p className="text-gray-700 truncate max-w-[120px]">{entry.email}</p>
+              <p className="text-gray-500">{entry.phone || 'No phone'}</p>
+            </div>
+          </div>
+          
+          <div className="mt-3 space-y-0.5">
+            <p className="text-gray-500 font-medium text-xs">Projects</p>
+            {entry.projects?.length > 0 ? (
+              <div className="flex flex-wrap gap-1.5 mt-1">
+                {entry.projects.slice(0, 2).map((project: any) => (
+                  <button
+                    key={project.id}
+                    onClick={() => openTaskBoard(project.id, project.devops)}
+                    className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
+                  >
+                    {project}
+                  </button>
+                ))}
+                {entry.projects.length > 2 && (
+                  <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+                    +{entry.projects.length - 2}
+                  </span>
+                )}
+              </div>
+            ) : (
+              <span className="text-xs text-gray-400">Not assigned</span>
+            )}
+          </div>
+          
+          <div className="mt-3 space-y-0.5">
+            <p className="text-gray-500 font-medium text-xs">Workload</p>
+            <div className="flex items-center gap-2">
+              <div className={`w-2.5 h-2.5 rounded-full ${
+                entry.TotalKPI <= 20 ? "bg-red-500" :
+                entry.TotalKPI <= 70 ? "bg-amber-500" :
+                entry.TotalKPI <= 120 ? "bg-green-500" :
+                "bg-blue-500"
+              }`}></div>
+              <span className="text-xs font-medium">
+                {entry.TotalKPI ?? 0}
+              </span>
+            </div>
+            <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
+              <div 
+                className={`h-1.5 rounded-full ${
+                  entry.TotalKPI <= 20 ? "bg-red-500" :
+                  entry.TotalKPI <= 70 ? "bg-amber-500" :
+                  entry.TotalKPI <= 120 ? "bg-green-500" :
+                  "bg-blue-500"
+                }`} 
+                style={{ width: `${Math.min(entry.TotalKPI, 100)}%` }}
+              ></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    ))}
+  </div>
+</div>
           </div>
         )}
       </div>

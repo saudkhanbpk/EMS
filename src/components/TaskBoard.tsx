@@ -42,22 +42,39 @@ function TaskBoard({ setSelectedTAB }) {
         .select("*") // Include related devops data if needed
         .eq("project_id", id)
         .order('created_at', { ascending: true });
-
+    
       if (data && data.length) {
         const userId = localStorage.getItem("user_id");
         console.log("User_Id:", userId);
-
+    
         const filteredTasks = data.filter(task => {
           // Check if devops array includes the current user by ID or if it's null/empty
           return (Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId)) || !task.devops || task.devops.length === 0 || task.devops === null;
-          ;
         });
-
-        setTasks(filteredTasks);
+    
+        // Sort tasks by priority: high first, medium second, then low, then others
+        const sortedTasks = filteredTasks.sort((a, b) => {
+          // Define priority order with explicit handling
+          const getPriorityValue = (priority) => {
+            if (!priority) return 4; // No priority is lowest
+            
+            const lowerPriority = priority.toLowerCase();
+            if (lowerPriority === 'high') return 1;
+            if (lowerPriority === 'medium') return 2;
+            if (lowerPriority === 'low') return 3;
+            return 4; // Any other value comes after low
+          };
+          
+          return getPriorityValue(a.priority) - getPriorityValue(b.priority);
+        });
+    
+        console.log("The filtered and sorted tasks are:", sortedTasks);
+        setTasks(sortedTasks);
       } else {
         console.log("No tasks found");
       }
     };
+    
     fetchtasks();
   }, []);
 
@@ -268,7 +285,7 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
-            {/* In Progress Column */}
+        
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>

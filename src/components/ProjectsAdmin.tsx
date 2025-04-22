@@ -189,10 +189,10 @@ function ProjectsAdmin() {
         {selectedTAB == "Projects" && (
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-              <h1 className="text-[26px] font-bold">Your Projects</h1>
+              <h1 className="xs:text-[26px] text-[18px] font-bold">Your Projects</h1>
               <button
                 onClick={openAddModal}
-                className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center"
+                className="bg-[#9A00FF] xs:text-xl text-[13px] text-white px-4 py-2 rounded-lg flex items-center"
               >
                 <PlusCircle size={20} className="mr-2" /> New Project
               </button>

@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
 import {
   User,
-  MessageCircle,
+  
   Search,
   MoreVertical,
   PinIcon,
   LayoutDashboard,
+  X,
 } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuthStore } from "../lib/store";
 import { useUserContext } from "../lib/userprovider";
 import { getonecountmsg, getUnseenMessageCount } from "./chatlib/supabasefunc";
@@ -26,6 +27,7 @@ const ChatUserItem: React.FC<ChatUserItemProps> = ({
   onMessageCountChange,
 }) => {
   const [messageCount, setMessageCount] = useState(0);
+ 
 
   // Function to fetch message count - memoized to prevent recreating on each render
   const fetchMessageCount = useCallback(async () => {
@@ -160,6 +162,7 @@ const ChatSidebar = () => {
   const [isOpen, setIsOpen] = useState(false);
   const currentUser = useAuthStore((state) => state.user);
   const [totalUnseenCount, setTotalUnseenCount] = useState(0);
+  const navigate =useNavigate()
   // Track message counts for each user to use in sorting
   const [userMessageCounts, setUserMessageCounts] = useState<
     Record<string, number>
@@ -305,7 +308,8 @@ const ChatSidebar = () => {
             </Link>
           )}
           <div className="relative">
-            <MessageCircle className="w-6 h-6 text-white" />
+            <button onClick={()=>navigate(-1)} >
+            <X className="text-white hover:text-blue-400 transition-colors text-xl" /></button>
             {totalUnseenCount > 0 && (
               <div className="absolute -top-1 -right-1">
                 <div className="flex items-center justify-center w-5 h-5 bg-red-500 text-white text-xs font-bold rounded-full">

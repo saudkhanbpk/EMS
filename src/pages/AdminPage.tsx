@@ -36,6 +36,8 @@ import{
   Coffee
 } from 'lucide-react';
 import { error } from 'console';
+import AdminDashboard from '../components/AdminDashboard';
+import AdminHoliday from './adminHoliday';
 
 interface AttendanceRecord {
   id: string;
@@ -704,7 +706,7 @@ const AdminPage: React.FC = () => {
                         // setShowEmployeeList(!showEmployeeList);
                         handleClose()
                       }}
-                      className={`w-full text-left p-2 rounded ${selectedTab === "Employees"
+                      className={`w-full text-left p-2 rounded ${selectedTab === "EmployeesDetails"
                         ? "bg-[#9A00FF] text-White"
                         : "text-white hover:bg-[#9A00FF]"
                         }`}
@@ -784,6 +786,21 @@ const AdminPage: React.FC = () => {
                         }`}
                     >
                       Software Complaints
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        setSelectedTab("Holidays");
+                        handleSoftwareComplaintsClick();
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "Holidays"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Holidays
+
+
                     </button>
 
                     <button
@@ -876,7 +893,7 @@ const AdminPage: React.FC = () => {
 
         {/* Main Content */}
         {selectedTab === "ListView" && (
-          <div className={`flex-1 py-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1  transition-all duration-300 p-4 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <EmployeeAttendanceTable />
           </div>
         )}
@@ -894,6 +911,12 @@ const AdminPage: React.FC = () => {
           <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <Updates />
+          </div>
+        )}
+          {selectedTab === "Holidays" && (
+          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
+            <AdminHoliday/>
           </div>
         )}
         {selectedTab === 'Employees' && (
@@ -1146,12 +1169,12 @@ const AdminPage: React.FC = () => {
 
 
         {selectedTab === 'SoftwareComplaints' && (
-          <div className={`flex-1 px-10 py-8 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 py-8 px-3 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
 
-            <div className="bg-white shadow-lg rounded-2xl p-6">
+            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Software Complaints</h2>
               {softwareComplaints.length === 0 ? (
                 <p className="text-gray-600 text-center">No complaints found.</p>
@@ -1188,12 +1211,12 @@ const AdminPage: React.FC = () => {
 
 
         {selectedTab === 'OfficeComplaints' && (
-          <div className={`flex-1 px-10 py-8 transition-all duration-300 ease-in-out ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
 
-            <div className="bg-white shadow-lg rounded-2xl p-6">
+            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Office Complaints</h2>
               {officeComplaints.length === 0 ? (
                 <p className="text-gray-600 text-center">No complaints found.</p>
@@ -1233,7 +1256,7 @@ const AdminPage: React.FC = () => {
               Admin Dashboard
             </h1>
 
-            <div className="bg-white shadow-lg rounded-2xl p-6">
+            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
             </div>
           </div>

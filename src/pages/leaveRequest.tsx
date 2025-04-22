@@ -178,6 +178,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
                   <option value="Full Day">Full Day</option>
                   <option value="Half Day">Half Day</option>
                   <option value="Sick Leave">Sick Leave</option>
+                  <option value="Emergency Leave">Emergency Leave</option>
                 </select>
               </div>
             </div>

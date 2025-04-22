@@ -89,7 +89,7 @@ function Task() {
           ) : (
             <>
               <div className="flex justify-between items-center mb-8">
-                <h1 className="text-[26px] font-bold">Your Project</h1>
+                <h1 className="xs:text-[26px] text-sm font-bold">Your Project</h1>
               </div>
               {projects.length === 0 && (
                 <div className="flex items-center justify-center h-full">

@@ -82,6 +82,7 @@ const EmployeeAttendanceTable = () => {
   const [absent, setAbsent] = useState(0);
   const [present, setPresent] = useState(0);
   
+  
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
   const [remote, setRemote] = useState(0); // State for remote employees count
@@ -1688,16 +1689,16 @@ const EmployeeAttendanceTable = () => {
 
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 ">
+    <div className="flex flex-col  justify-center items-center min-h-full min-w-full bg-gray-100 ">
       {/* Heading */}
-      <div className=" w-full max-w-5xl justify-between items-center flex">
+      <div className=" w-full px-3 max-w-5xl justify-between items-center flex">
         {maintab === "TableView" && (
-          <h1 className="sm:text-2xl text-xl  font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
+          <h1 className="sm:text-2xl text-xl lg:ml-[34px] font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
             Employee Attendance
           </h1>
         )}
         {maintab === "DetailedView" && (
-          <h1 className="text-2xl font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
+          <h1 className="sm:text-2xl  font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
             Employee Details
           </h1>
         )}
@@ -1807,7 +1808,7 @@ const EmployeeAttendanceTable = () => {
         </>
           
         )}
-        <div className="flex flex-row gap-5 lg:flex-nowrap flex-wrap justify-cente md:mx-0 mx-auto">
+        <div className="flex flex-row sm:gap-5  lg:flex-nowrap flex-wrap justify-cente md:mx-0 mx-auto">
           {/* Date Navigation */}
           {maintab === "DetailedView" && (
             <div className="flex items-center space-x-4">
@@ -1815,16 +1816,16 @@ const EmployeeAttendanceTable = () => {
                 onClick={() => handleDayChange("prev")}
                 className="p-2 hover:bg-gray-200 rounded-full transition-all"
               >
-                <ChevronLeft className="w-5 h-5" />
+                <ChevronLeft className="w-3 h-3" />
               </button>
-              <span className="md:text-xl  font-semibold">
+              <span className="md:text-xl ml-0 text-sm font-semibold">
                 {format(selectedDate, "MMMM d, yyyy")}
               </span>
               <button
                 onClick={() => handleDayChange("next")}
                 className="p-2 hover:bg-gray-200 rounded-full transition-all"
               >
-                <ChevronRight className="w-5 h-5" />
+                <ChevronRight className="w-3 h-3" />
               </button>
             </div>
           )}
@@ -1893,7 +1894,7 @@ const EmployeeAttendanceTable = () => {
           {maintab === "TableView" && selectedTab === "Filter" && (
             <>
             {/* Mobile: Button to open modal */}
-            <div className="sml:hidden flex justify-center mb-4">
+            <div className="smi:hidden flex justify-center mb-4">
               <button
                 onClick={() => setIsDateModalOpen(true)}
                 className="bg-blue-600 text-white px-4 py-2 rounded-lg"
@@ -2572,295 +2573,302 @@ const EmployeeAttendanceTable = () => {
           <div className="flex-1">
             <div className='flex flex-row justify-between'>
               <div></div>
-              {/* <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-            Admin Dashboard
-          </h1> */}
-              {/* <div className='flex gap-1'>
-          <button className='bg-white rounded-lg px-3 py-2 hover:bg-gray-200'
-          onClick={() => {setgraphicview(true)}}>Graphic View</button>
-          <button className='bg-white rounded-lg px-3 py-2 hover:bg-gray-200'
-          onClick={() => {setgraphicview(false)}}>General View</button>
-          </div> */}
+            
             </div>
 
-            <div className="grid grid-cols-4 gap-1">
-              {/* Employee List Disktop*/}
-              {!isSmallScreen && (
-                // <div className="col-span-1 ">
-                //   {/* <h2 className="text-xl font-semibold mb-4">Employee List</h2> */}
-                //   <input 
-                //      type="search" 
-                //      name="search" 
-                //      placeholder="Search Employee..." 
-                //      aria-label="Search"
-                //      className ="w-full max-w-sm px-4 py-1 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200"
-                //    />
-                //   <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
-                //     {employees.map((employee) => (
-                //       <li
-                //       key={employee.id}
-                //       onClick={() =>{
-                //         setDataEmployee(employee.id)
-                //         handleEmployeeClick(employee.id)
+            <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4">
+  {/* Employee List for small screens - initially hidden, shows when button is clicked */}
+  <div className="sm:hidden w-full mb-4">
+    {!showEmployeeList ? (
+      <button 
+        onClick={() => setShowEmployeeList(true)}
+        className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition-all flex items-center justify-center"
+      >
+        <SearchIcon className="w-4 h-4 mr-2" />
+        Search Employees
+      </button>
+    ) : (
+      <div className="bg-white rounded-lg shadow-md p-3">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="font-medium">Employee Search</h3>
+          <button 
+            onClick={() => setShowEmployeeList(false)}
+            className="text-gray-500 hover:text-gray-700"
+            aria-label="Close employee list"
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+            </svg>
+          </button>
+        </div>
+        
+        <input
+          type="search"
+          name="search"
+          placeholder="Search Employee..."
+          aria-label="Search"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-3 text-sm"
+          autoFocus
+        />
+        
+        <ul className="space-y-2 max-h-[40vh] overflow-y-auto rounded-lg pr-1 custom-scrollbar">
+          {filteredEmployees.map((employee) => (
+            <li
+              key={employee.id}
+              onClick={() => {
+                setDataEmployeesearch(employee);
+                handleEmployeeClick(employee.id);
+                setShowEmployeeList(false); // Hide list after selection on mobile
+              }}
+              className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${
+                selectedEmployeesearch?.id === employee.id
+                  ? "bg-blue-100 text-blue-600"
+                  : "hover:bg-gray-100"
+              } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
+            >
+              <span className="truncate mr-2 text-sm">{employee.full_name}</span>
+              <button
+                className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 rounded-xl"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  handleEmployeeDelete(employee.id);
+                }}
+                aria-label="Delete employee"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </div>
 
-                //       } }
-                //       className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                //         selectedEmployee?.id === employee.id
-                //           ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                //           : "hover:bg-gray-100"
-                //       } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`} // Apply red color if hours < 7
-                //     >
-                //       <div className='flex justify-between'>
-                //       {employee.full_name}
-                //       <button className='hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl' onClick={(e) => {
-                //         e.stopPropagation();
-                //         handleEmployeeDelete(employee.id)}}>
-                //       <Trash2/>
-                //       </button>
-                //       </div>
-                //     </li>
-                //     ))}
-                //   </ul>
-                // </div>
-                <div className="col-span-1">
-                  <input
-                    type="search"
-                    name="search"
-                    placeholder="Search Employee..."
-                    aria-label="Search"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    className="w-full max-w-sm px-4 py-1 rounded-2xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-4"
-                  />
+  {/* Employee List for desktop - always visible */}
+  <div className="hidden sm:block col-span-1 w-full">
+    <input
+      type="search"
+      name="search"
+      placeholder="Search Employee..."
+      aria-label="Search"
+      value={searchTerm}
+      onChange={(e) => setSearchTerm(e.target.value)}
+      className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-3 text-sm sm:text-base"
+    />
 
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
-                    {filteredEmployees.map((employee) => (
-                      <li
-                        key={employee.id}
-                        onClick={() => {
-                          setDataEmployeesearch(employee);
-                          handleEmployeeClick(employee.id);
-                        }}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors ${selectedEmployeesearch?.id === employee.id
-                          ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                          : "hover:bg-gray-100"
-                          } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
-                      >
-                        <div className='flex justify-between items-center'>
-                          {employee.full_name}
-                          <button
-                            className='hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl'
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEmployeeDelete(employee.id);
-                            }}
-                          >
-                            <Trash2 />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+    <ul className="space-y-2 max-h-[40vh] sm:max-h-[50vh] md:max-h-[60vh] lg:max-h-[500px] overflow-y-auto rounded-lg pr-1 sm:pr-2.5 custom-scrollbar">
+      {filteredEmployees.map((employee) => (
+        <li
+          key={employee.id}
+          onClick={() => {
+            setDataEmployeesearch(employee);
+            handleEmployeeClick(employee.id);
+          }}
+          className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${
+            selectedEmployeesearch?.id === employee.id
+              ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+              : "hover:bg-gray-100"
+          } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
+        >
+          <span className="truncate mr-2 text-xs sm:text-base">{employee.full_name}</span>
+          <button
+            className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 sm:px-3 sm:py-1 rounded-xl flex-shrink-0"
+            onClick={(e) => {
+              e.stopPropagation();
+              handleEmployeeDelete(employee.id);
+            }}
+            aria-label="Delete employee"
+          >
+            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+          </button>
+        </li>
+      ))}
+    </ul>
+  </div>
+
+  {/* Employee Dashboard */}
+  {selectedEmployee && !graphicview && (
+    <div className="col-span-1 sm:col-span-3 w-full mt-4 sm:mt-0">
+      <div className="bg-gray-100 rounded-lg shadow-md p-2 sm:p-4">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+          <h2 className="text-lg sm:text-2xl font-bold mb-2 sm:mb-0">
+            {selectedEmployee.full_name}'s Dashboard
+          </h2>
+        </div>
+
+        {loading ? (
+          <div className="flex items-center justify-center h-40 sm:h-64">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          </div>
+        ) : (
+          <>
+            {/* Today's Status & Breaks */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 mb-4 sm:mb-6">
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Today's Status</h3>
+                {attendanceLogs[0] ? (
+                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                    <div className="flex justify-between">
+                      <span>Check-in:</span>
+                      <span>{format(new Date(attendanceLogs[0].check_in), 'h:mm a')}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Check-out:</span>
+                      <span>
+                        {attendanceLogs[0].check_out
+                          ? format(new Date(attendanceLogs[0].check_out), 'h:mm a')
+                          : 'Not checked out'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Work Mode:</span>
+                      <span className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === 'on_site'
+                        ? 'bg-blue-100 text-blue-800'
+                        : 'bg-purple-100 text-purple-800'
+                        }`}>
+                        {attendanceLogs[0].work_mode}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span>Duration:</span>
+                      <span>
+                        {calculateDuration(attendanceLogs[0].check_in, attendanceLogs[0].check_out)}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-500 text-xs sm:text-base">No attendance record for today</p>
+                )}
+              </div>
+
+              {/* Break Summary */}
+              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Break Records</h3>
+                {todayBreak.length > 0 ? (
+                  todayBreak.map((breakItem, index) => (
+                    <div key={index} className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                      <div className="flex justify-between">
+                        <span>Start:</span>
+                        <span>{format(new Date(breakItem.start_time), 'hh:mm a')}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>End:</span>
+                        <span>{breakItem.end_time ? format(new Date(breakItem.end_time), 'hh:mm a') : 'Ongoing'}</span>
+                      </div>
+                      <div className="flex justify-between">
+                        <span>Status:</span>
+                        <span>{breakItem.status || 'N/A'}</span>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <p className="text-gray-500 text-xs sm:text-base">No break records for today</p>
+                )}
+              </div>
+            </div>
+
+            {/* Monthly Overview */}
+            <div className="mt-4 sm:mt-6">
+              <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
+                <div className="flex items-center mb-4 sm:mb-6">
+                  <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
+                  <h2 className="text-base sm:text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
                 </div>
-              )}
 
-
-
-
-
-              {/* Employee Dashboard */}
-              {selectedEmployee && !graphicview && (
-                <div className=" col-span-12 sm:col-span-4 md:col-span-3 lg:col-span-3">
-                  <div className="bg-gray-100 rounded-lg shadow-md p-3">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-bold">
-                        {selectedEmployee.full_name}'s Dashboard
-                      </h2>
-                      {/* <div > 
-                       <p className="text-gray-600">
-                        {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
-                       </p>
-  
-                  </div> */}
+                {monthlyStats ? (
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Attendance Summary</h3>
+                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Expected Working Days:</span>
+                          <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Days Attended:</span>
+                          <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Present Days:</span>
+                          <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Late Days:</span>
+                          <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Absentees:</span>
+                          <span className="text-red-600">{absentees || 0}</span>
+                        </div>
+                        <div className="flex justify-between text-gray-600">
+                          <span>Leaves:</span>
+                          <span className="text-green-600">{leaves || 0}</span>
+                        </div>
+                      </div>
                     </div>
 
-                    {loading ? (
-                      <div className="flex items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Mode Distribution</h3>
+                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">On-site Days:</span>
+                          <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Remote Days:</span>
+                          <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
+                        </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Attendance Rate:</span>
+                          <span className="font-medium">
+                            {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
+                          </span>
+                        </div>
                       </div>
-                    ) : (
-                      <>
-                        {/* Today's Status */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold mb-3">Today's Status</h3>
-                            {attendanceLogs[0] ? (
-                              <div className="space-y-3">
-                                <div className="flex justify-between">
-                                  <span>Check-in:</span>
-                                  <span>{format(new Date(attendanceLogs[0].check_in), 'h:mm a')}</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Check-out:</span>
-                                  <span>
-                                    {attendanceLogs[0].check_out
-                                      ? format(new Date(attendanceLogs[0].check_out), 'h:mm a')
-                                      : 'Not checked out'}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Work Mode:</span>
-                                  <span className={`px-2 py-1 rounded-full text-sm ${attendanceLogs[0].work_mode === 'on_site'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-purple-100 text-purple-800'
-                                    }`}>
-                                    {attendanceLogs[0].work_mode}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Duration:</span>
-                                  <span>
-                                    {calculateDuration(attendanceLogs[0].check_in, attendanceLogs[0].check_out)}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-gray-500">No attendance record for today</p>
-                            )}
-                          </div>
+                    </div>
 
-                          {/* Break Summary */}
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold mb-3">Break Records</h3>
-                            {todayBreak.length > 0 ? (
-                              todayBreak.map((breakItem, index) => {
-                                console.log("==>", breakItem)
-                                return (
-                                  <div key={index} className="space-y-3">
-                                    <div className="flex justify-between">
-                                      <span>Start:</span>
-                                      <span>{format(new Date(breakItem.start_time), 'hh:mm a')}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span>End:</span>
-                                      <span>{breakItem.end_time ? format(new Date(breakItem.end_time), 'hh:mm a') : 'Ongoing'}</span>
-                                    </div>
-                                    <div className="flex justify-between">
-                                      <span>Status:</span>
-                                      <span>{breakItem.status || 'N/A'}</span>
-                                    </div>
-                                  </div>
-                                )
-                              })
-                            ) : (
-                              <p className="text-gray-500">No break records for today</p>
-                            )}
-
-
-                          </div>
+                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                      <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Hours</h3>
+                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Average Daily Hours:</span>
+                          <span className="font-medium">
+                            {monthlyStats.averageWorkHours.toFixed(1)}h
+                          </span>
                         </div>
-
-
-                        {/* Optional: Additional Tasks or Overview */}
-                        <div className="mt-6">
-                          <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-                            <div className="flex items-center mb-6">
-                              <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                              <h2 className="text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
-                            </div>
-
-                            {monthlyStats ? (
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                  <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Expected Working Days:</span>
-                                      <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Days Attended:</span>
-                                      <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Present Days:</span>
-                                      <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Late Days:</span>
-                                      <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                      <span>Absentees:</span>
-                                      <span className="text-red-600">{absentees || 0}</span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                      <span>Leaves:</span>
-                                      <span className="text-green-600">{leaves || 0}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                  <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">On-site Days:</span>
-                                      <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Remote Days:</span>
-                                      <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Attendance Rate:</span>
-                                      <span className="font-medium">
-                                        {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                  <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Average Daily Hours:</span>
-                                      <span className="font-medium">
-                                        {monthlyStats.averageWorkHours.toFixed(1)}h
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Total Hours:</span>
-                                      <span className="font-medium">
-                                        {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Expected Hours:</span>
-                                      <span className="font-medium">
-                                        {(6 * monthlyStats.expectedWorkingDays)}h
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-                            ) : (
-                              <div className="text-center py-8 text-gray-500">
-                                No attendance records found for this month
-                              </div>
-                            )}
-                          </div>
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Total Hours:</span>
+                          <span className="font-medium">
+                            {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                          </span>
                         </div>
-                        <div className='mt-5'>
-                          {/* <AbsenteeComponentAdmin userID={userID} /> */}
+                        <div className="flex items-center justify-between">
+                          <span className="text-gray-600">Expected Hours:</span>
+                          <span className="font-medium">
+                            {(6 * monthlyStats.expectedWorkingDays)}h
+                          </span>
                         </div>
-                      </>
-                    )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              )}
+                ) : (
+                  <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-base">
+                    No attendance records found for this month
+                  </div>
+                )}
+              </div>
             </div>
+            <div className="mt-4 sm:mt-5">
+              {/* <AbsenteeComponentAdmin userID={userID} /> */}
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  )}
+</div>
           </div>
         </>
       )}
