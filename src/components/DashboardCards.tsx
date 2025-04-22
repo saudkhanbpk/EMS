@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+
+import { useState, useEffect } from "react";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
 import { startOfYear, endOfYear } from "date-fns";
@@ -7,8 +8,8 @@ import { useAuthStore } from "../lib/store";
 
 // Define leave types with initial values and limits
 const initialLeaveData = [
-  { type: "Casual Leave", used: 0, total: 22, color: "#3498db" },
   { type: "Sick Leave", used: 0, total: 22, color: "#24B12B" },
+  { type: "Casual Leave", used: 0, total: 22, color: "#3498db" },
   { type: "Unpaid Leave", used: 0, total: 22, color: "#FF355C" },
   { type: "Remote Work", used: 0, total: 22, color: "#C78E2C" },
   { type: "Emergency Leave", used: 0, total: 22, color: "#9A00FF" },
@@ -25,6 +26,40 @@ export default function DashboardCards() {
   // Get start and end of the current year
   const yearStart = startOfYear(selectedDate);
   const yearEnd = endOfYear(selectedDate);
+
+  async function fetchremote() {
+    const { data, error } = await supabase
+      .from('attendance_logs')
+      .select('*')
+      .eq('user_id', currentUser?.id || localStorage.getItem('user_id'))
+      .eq("work_mode", "remote")
+      .gte('created_at', yearStart.toISOString())
+      .lte('created_at', yearEnd.toISOString());
+
+    if (error) {
+      console.error("Error fetching remote work data:", error);
+    }
+    else {
+      console.log("the workfrom home details", data);
+      
+      // Process remote work data
+      if (data) {
+        // Update the leaveData state to include remote work count
+        setLeaveData(prevLeaveData => {
+          const newLeaveData = [...prevLeaveData];
+          const remoteWorkIndex = newLeaveData.findIndex(item => item.type === "Remote Work");
+          
+          if (remoteWorkIndex !== -1) {
+            // Count the number of remote work days
+            const remoteWorkCount = data.length;
+            newLeaveData[remoteWorkIndex].used = remoteWorkCount;
+          }
+          
+          return newLeaveData;
+        });
+      }
+    }
+  }
 
   async function fetchAbsentees() {
     try {
@@ -60,7 +95,9 @@ export default function DashboardCards() {
     let sickLeaveCount = 0;
     let emergencyLeaveCount = 0;
     let halfDayCount = 0;
-    let remoteWorkCount = 0;
+    
+    // Preserve the remote work count from the current state
+    const currentRemoteWorkCount = leaveData.find(item => item.type === "Remote Work")?.used || 0;
     
     // Process each absentee record
     absenteeData.forEach(record => {
@@ -76,9 +113,6 @@ export default function DashboardCards() {
           break;
         case "Emergency Leave":
           emergencyLeaveCount++;
-          break;
-        case "Remote Work":
-          remoteWorkCount++;
           break;
         default:
           // Handle any other types if needed
@@ -127,7 +161,7 @@ export default function DashboardCards() {
     // Update remote work count (not part of the shared pool)
     const remoteWorkIndex = updatedLeaveData.findIndex(item => item.type === "Remote Work");
     if (remoteWorkIndex !== -1) {
-      updatedLeaveData[remoteWorkIndex].used = remoteWorkCount;
+      updatedLeaveData[remoteWorkIndex].used = currentRemoteWorkCount;
     }
     
     // Update unpaid leave count
@@ -150,6 +184,7 @@ export default function DashboardCards() {
   useEffect(() => {
     if (currentUser) {
       fetchAbsentees();
+      fetchremote();
     }
   }, [currentUser, selectedDate]);
 
