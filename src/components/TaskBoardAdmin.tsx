@@ -12,17 +12,6 @@ import { AttendanceContext } from '../pages/AttendanceContext';
 import { useContext } from 'react';
 import Comments from '../pages/Comments';
 import { title } from 'process';
-interface Task {
-  id: string;
-  title: string;
-  created_at: string;
-  status: 'todo' | 'inProgress' | 'review' | 'done';
-  score: number;
-  devops?: Developer[];
-  description?: string;
-  priority?: string;
-}
-
 
 interface Developer {
   id: string;
@@ -38,6 +27,7 @@ interface Task {
   devops?: Developer[];
   description?: string;
   priority?: string;
+  deadline?: string; // Changed from Date to string
 }
 
 const COLUMN_IDS = {
@@ -63,6 +53,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deadline, setDeadline] = useState<string>('');
   const selectedTABB = useContext(AttendanceContext).selectedTAB;
   const devopsss = useContext(AttendanceContext).devopss;
   const ProjectIdd = useContext(AttendanceContext).projectId;
@@ -78,27 +69,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const totalTasks = tasks.length;
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
-  // Current useEffect
-  useEffect(() => {
-    fetchTasks();
-  }, [ProjectIdd]); // Only watches prop ProjectId, not context value
-
-  // useEffect(() => {
-  //   const fetchTasks = async () => {
-  //     const { data, error } = await supabase
-  //       .from("tasks_of_projects")
-  //       .select("*")
-  //       .eq("project_id", ProjectId);
-
-  //     if (!error) {
-  //       setTasks(data);
-  //       console.log("All tasks",data);
-
-  //     }
-  //   };
-  //   fetchTasks();
-  // }, [ProjectId]);
-
 
   const fetchTasks = async () => {
     const { data, error } = await supabase
@@ -106,8 +76,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       .select("*")
       .eq("project_id", ProjectId);
 
-    if (!error) {
-      // Fetch comments
+    {
+      // No need for image URL processing since URLs are already in the table
+      const tasksWithImages = data.map(task => ({
+        ...task,
+        // Keep the existing imageurl as is
+        image_url: task.imageurl,
+        // You can add thumbnail_url here if you want to implement thumbnails later
+        thumbnail_url: task.imageurl
+      }));
+
+      // Rest of your existing code for comments and scores
       const { data: comments, error: commentserror } = await supabase
         .from("comments")
         .select("*");
@@ -134,7 +113,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           setcomments(enrichedComments);
 
           // Map comments to each task
-          const tasksWithComments = data.map((task) => {
+          const tasksWithComments = tasksWithImages.map((task) => {
             const taskComments = enrichedComments.filter(
               (comment) => comment.task_id === task.id
             );
@@ -188,9 +167,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   };
 
 
+
+  // Current useEffect
   useEffect(() => {
     fetchTasks();
-  }, [ProjectId]); // Add devopss to dependencies
+  }, [ProjectIdd, ProjectId]); // Only watches prop ProjectId, not context value
 
 
   const handleDragEnd = async (result: DropResult) => {
@@ -248,6 +229,8 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
   const handleEditClick = (task: Task) => {
     setCurrentTask(task);
+    console.log("Current Task:", task);
+    
     setIsEditModalOpen(true);
   };
 
@@ -286,7 +269,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           status: updatedTask.status,
           priority: updatedTask.priority,
           devops: updatedTask.devops,
-
+          deadline: updatedTask.deadline,
           imageurl: imageUrl
         })
 
@@ -353,6 +336,22 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               setDescriptionOpen(true);
             }}
           >
+            {/* Image Preview - Only show if image_url exists */}
+            {task.image_url && (
+              <div className="mb-2 overflow-hidden rounded-lg h-24 relative">
+                <img
+                  src={task.image_url}
+                  alt="Task preview"
+                  className="w-full h-full object-cover hover:scale-105 transition-transform duration-200"
+                  loading="lazy"
+                  onError={(e) => {
+                    e.target.onerror = null;
+                    e.target.style.display = 'none'; // Hide if image fails to load
+                  }}
+                />
+              </div>
+            )}
+
             {/* Title */}
             <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
 
@@ -402,6 +401,15 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
                   </span>
                 )}
+
+              </div>
+
+            )}
+            {task.deadline && (
+              <div className="flex items-center gap-2 mt-1">
+                <span className="text-[12px] text-[#404142]">
+                  <strong>Deadline:</strong> {new Date(task.deadline).toLocaleDateString()}
+                </span>
               </div>
             )}
 
@@ -491,6 +499,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     </>
                   )}
 
+
                   {/* Description */}
                   <p className="text-sm text-gray-700 leading-relaxed mb-4">{openedTask?.description}</p>
 
@@ -516,6 +525,8 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                       </span>
                     </div>
                   </div>
+
+
 
                   {/* Comments */}
                   <div className="flex flex-col gap-4">
@@ -857,6 +868,18 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                       <option value="review">Review</option>
                       <option value="done">Done</option>
                     </select>
+                  </div>
+
+                  <div>
+                    <label className='block text-sm font-medium text-gray-700 mb-1'>Deadline</label>
+                    <input
+                      type="date"
+                      value= { (new Date (currentTask.deadline).toISOString().split('T')[0]) || ''}
+                      onChange={(e) => {
+                        setCurrentTask({ ...currentTask, deadline: e.target.value });
+                      }}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md"
+                    />
                   </div>
 
                   {/* Developers Section */}

@@ -33,6 +33,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deadline , setdeadline] = useState<string | null>(null);
   useEffect(() => {
     if (devopss) {
       setDevelopers(devopss);
@@ -129,6 +130,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
           priority: priority || "Low",
           created_at: new Date().toISOString(),
           imageurl : imageUrl, 
+          deadline : deadline || null,
         }])
         .select();
 
@@ -144,6 +146,8 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
       refreshTasks(); // Call the refresh function to update the task list
       setImageFile(null);
       setImagePreview(null);
+      setdeadline(null);
+      setselectedtab("tasks")
     } catch (err) {
       console.error("Error creating task:", err);
       setError(err.message || "Failed to create task");
@@ -188,7 +192,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
 
           {/* Description Input */}
           <div className="mb-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block  text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
             <textarea
@@ -202,7 +206,8 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
           </div>
 
           {/* Score Input */}
-          <div className="mb-4">
+          <div className=" w-[100%] flex justify-between ">
+          <div className="mb-4 w-[49%]" >
             <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-1">
               Task Score
             </label>
@@ -216,8 +221,10 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
             />
           </div>
 
+
+        
           {/* Score Input */}
-          <div className="mb-4">
+          <div className="mb-4 w-[49%]">
             <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
               Task Priority
             </label>
@@ -233,9 +240,25 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
               <option value="Low">Low</option>
             </select>
           </div>
+          </div>
+
+
+          <div className="flex w-full justify-between">
+          <div className="w-[49%]">
+            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
+              Deadline
+            </label>
+            <input
+              type="date"
+              id="deadline"
+              value={deadline || ""}
+              onChange={(e) => setdeadline(e.target.value)}
+              className="w-full mb-4 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />    
+          </div>
           
           {/* Image Upload */}
-          <div className="mb-4">
+          <div className="mb-4 w-[49%]">
             <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
               Task Image (Optional)
             </label>
@@ -263,6 +286,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNew
                 </button>
               </div>
             )}
+          </div>
           </div>
 
           {/* Developers Selection */}
