@@ -26,6 +26,7 @@ interface Project {
 const EmployeesDetails = ({ selectedTab }) => {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employee , setEmployee] = useState<Employee | null>(null);
   const [employeeview, setEmployeeView] = useState<"generalview" | "detailview">("generalview");
   const [employeeId, setEmployeeId] = useState<string>('');
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);

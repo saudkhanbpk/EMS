@@ -2962,4 +2962,4 @@ const EmployeeAttendanceTable = () => {
 }
 // );
 
-export default EmployeeAttendanceTable;
+export default EmployeeAttendanceTable; 
