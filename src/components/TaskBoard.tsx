@@ -26,6 +26,7 @@ const COLUMN_IDS = {
 };
 
 function TaskBoard({ setSelectedTAB }) {
+  const { projectIdd, devopsss, selectedTABB } = useContext(AttendanceContext);
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<task[]>([]);
@@ -41,22 +42,39 @@ function TaskBoard({ setSelectedTAB }) {
         .select("*") // Include related devops data if needed
         .eq("project_id", id)
         .order('created_at', { ascending: true });
-
+    
       if (data && data.length) {
         const userId = localStorage.getItem("user_id");
         console.log("User_Id:", userId);
-
+    
         const filteredTasks = data.filter(task => {
           // Check if devops array includes the current user by ID or if it's null/empty
           return (Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId)) || !task.devops || task.devops.length === 0 || task.devops === null;
-          ;
         });
-
-        setTasks(filteredTasks);
+    
+        // Sort tasks by priority: high first, medium second, then low, then others
+        const sortedTasks = filteredTasks.sort((a, b) => {
+          // Define priority order with explicit handling
+          const getPriorityValue = (priority) => {
+            if (!priority) return 4; // No priority is lowest
+            
+            const lowerPriority = priority.toLowerCase();
+            if (lowerPriority === 'high') return 1;
+            if (lowerPriority === 'medium') return 2;
+            if (lowerPriority === 'low') return 3;
+            return 4; // Any other value comes after low
+          };
+          
+          return getPriorityValue(a.priority) - getPriorityValue(b.priority);
+        });
+    
+        console.log("The filtered and sorted tasks are:", sortedTasks);
+        setTasks(sortedTasks);
       } else {
         console.log("No tasks found");
       }
     };
+    
     fetchtasks();
   }, []);
 
@@ -178,7 +196,7 @@ function TaskBoard({ setSelectedTAB }) {
 
           <div className="flex-1 flex justify-between items-center">
             <h1 className="text-2xl font-bold">Work Planner</h1>
-            <div className="text-sm text-gray-600">
+            <div className="text-sm text-gray-600 flex flex-wrap">
               <span className='font-semibold text-[13px] text-red-500 mr-2 '>Total Tasks: <strong>{totalTasks}</strong></span>
               <span className='font-semibold text-[13px] text-yellow-600'>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
               <span className="mx-3 font-semibold text-[13px] text-green-500">Completed Tasks: <strong>{completedTasks}</strong></span>
@@ -188,7 +206,7 @@ function TaskBoard({ setSelectedTAB }) {
         </div>
 
         <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-4 gap-6">
+          <div className="grid grid-cols-[repeat(auto-fit,_minmax(200px,_1fr))] gap-6">
             {/* Todo Column */}
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
@@ -267,7 +285,7 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
-            {/* In Progress Column */}
+        
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>
@@ -401,8 +419,4 @@ function TaskCard({ task, index }: { task: task; index: number }) {
 
 
 export default TaskBoard;
-{/* {task.devops && (
-                <span className="text-[11px]">
-                  {task.devops.map(dev => dev.name).join(", ")}
-                </span>
-              )}*/}
+

@@ -10,7 +10,7 @@ import { UserProvider } from './lib/userprovider';
 createRoot(document.getElementById('root')!).render(
 
   <AuthProvider>
-         <UserProvider>
+    <UserProvider>
       <App />
     </UserProvider>
   </AuthProvider>

@@ -453,15 +453,15 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
       {/* Filter Div */}
       {!loading && (
         <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
-          <div className="flex justify-between items-center text-lg font-medium">
+          <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
             <button
               onClick={() => handleFilterChange('all')}
               className={`flex items-center space-x-2 ${
                 currentFilter === 'all' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-gray-600 rounded-full"></span>
-              <h2 className="text-gray-600">
+              <span className="sm:block hidden h-4 bg-gray-600 rounded-full"></span>
+              <h2 className="text-gray-600 sm:text-xl text-sm">
                 Total: <span className="font-bold">{totalEmployees}</span>
               </h2>
             </button>
@@ -471,8 +471,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                 currentFilter === 'poor' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-red-500 rounded-full"></span>
-              <h2 className="text-red-600">
+              <span className="sm:block hidden w-4 h-4 bg-red-500 rounded-full"></span>
+              <h2 className="text-red-600 sm:text-xl text-sm">
                 Bad : <span className="font-bold">{badCount}</span>
               </h2>
             </button>
@@ -482,8 +482,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                 currentFilter === 'good' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-yellow-500 rounded-full"></span>
-              <h2 className="text-yellow-600">
+              <span className="sm:block hidden w-4 h-4 bg-yellow-500 rounded-full"></span>
+              <h2 className="text-yellow-600 sm:text-xl text-sm">
                 Fair: <span className="font-bold">{betterCount}</span>
               </h2>
             </button>
@@ -493,8 +493,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                 currentFilter === 'excellent' ? 'font-bold' : ''
               }`}
             >
-              <span className="w-4 h-4 bg-green-500 rounded-full"></span>
-              <h2 className="text-green-600">
+              <span className="sm:block hidden  w-4 h-4 bg-green-500 rounded-full"></span>
+              <h2 className="text-green-600 sm:text-xl text-sm">
                 Good: <span className="font-bold">{bestCount}</span>
               </h2>
             </button>
@@ -506,65 +506,132 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
       {!loading && (
         <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
           {error && <p className="text-red-500 text-center">{error}</p>}
-          <div className="overflow-x-auto">
-            <table className="min-w-full bg-white">
-              <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
-                <tr>
-                  <th className="py-3 px-6 text-left">Employee Name</th>
-                  <th className="py-3 px-6 text-left">Present Days</th>
-                  <th className="py-3 px-6 text-left">Absent Days</th>
-                  <th className="py-3 px-6 text-left">Total Hours Worked</th>
-                  <th className="py-3 px-6 text-left">Working Hours %</th>
-                </tr>
-              </thead>
-              <tbody className="text-md font-normal">
-                {filteredData.map((entry, index) => {
-                  const percentageColor =
-                    entry.workingHoursPercentage < 70
-                      ? 'bg-red-500 text-white'
-                      : entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80
-                      ? 'bg-yellow-500 text-white'
-                      : 'bg-green-500 text-white';
+          <div className="w-full">
+  {/* Desktop view - only visible on md screens and above */}
+  <div className="hidden md:block overflow-x-auto">
+    <table className="min-w-full bg-white">
+      <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
+        <tr>
+          <th className="py-3 px-6 text-left">Employee Name</th>
+          <th className="py-3 px-6 text-left">Present Days</th>
+          <th className="py-3 px-6 text-left">Absent Days</th>
+          <th className="py-3 px-6 text-left">Total Hours Worked</th>
+          <th className="py-3 px-6 text-left">Working Hours %</th>
+          <th className="py-3 px-6 text-left">Actions</th>
+        </tr>
+      </thead>
+      <tbody className="text-md font-normal">
+        {filteredData.map((entry, index) => {
+          const percentageColor =
+            entry.workingHoursPercentage < 70
+              ? 'bg-red-500 text-white'
+              : entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80
+              ? 'bg-yellow-500 text-white'
+              : 'bg-green-500 text-white';
 
-                  const nameColor =
-                    entry.workingHoursPercentage < 70
-                      ? 'text-red-500'
-                      : 'text-gray-800';
+          const nameColor =
+            entry.workingHoursPercentage < 70
+              ? 'text-red-500'
+              : 'text-gray-800';
 
-                  return (
-                    <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
-                      <td className={`py-4 px-6 ${nameColor}`}>{entry.user.full_name}</td>
-                      <td className="py-4 px-6">{entry.presentDays}</td>
-                      <td className="py-4 px-6">{entry.absentDays}</td>
-                      <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
-                      <td className="py-4 px-6">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${percentageColor}`}
-                        >
-                          {entry.workingHoursPercentage.toFixed(2)}%
-                        </span>
-                      </td>
-                      <td className="py-3 pl-10">
-                        <button
-                          onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
-                          className="p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500"
-                        >
-                          <DownloadIcon />
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-                {filteredData.length === 0 && (
-                  <tr>
-                    <td colSpan="6" className="text-center py-4 text-gray-500">
-                      No attendance records found for this week.
-                    </td>
-                  </tr>
-                )}
-              </tbody>
-            </table>
-          </div>
+          return (
+            <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+              <td className={`py-4 px-6 ${nameColor}`}>{entry.user.full_name}</td>
+              <td className="py-4 px-6">{entry.presentDays}</td>
+              <td className="py-4 px-6">{entry.absentDays}</td>
+              <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
+              <td className="py-4 px-6">
+                <span
+                  className={`px-3 py-1 rounded-full text-sm font-semibold ${percentageColor}`}
+                >
+                  {entry.workingHoursPercentage.toFixed(2)}%
+                </span>
+              </td>
+              <td className="py-3 pl-10">
+                <button
+                  onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
+                  className="p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500"
+                >
+                  <DownloadIcon />
+                </button>
+              </td>
+            </tr>
+          );
+        })}
+        {filteredData.length === 0 && (
+          <tr>
+            <td colSpan="6" className="text-center py-4 text-gray-500">
+              No attendance records found for this week.
+            </td>
+          </tr>
+        )}
+      </tbody>
+    </table>
+  </div>
+
+  {/* Mobile view - only visible on smaller than md screens */}
+  <div className="md:hidden">
+    {filteredData.length === 0 ? (
+      <div className="text-center py-4 text-gray-500 bg-white rounded-lg shadow-sm">
+        No attendance records found for this week.
+      </div>
+    ) : (
+      <div className="grid grid-cols-1 gap-4">
+        {filteredData.map((entry, index) => {
+          const percentageColor =
+            entry.workingHoursPercentage < 70
+              ? 'bg-red-500 text-white'
+              : entry.workingHoursPercentage >= 70 && entry.workingHoursPercentage < 80
+              ? 'bg-yellow-500 text-white'
+              : 'bg-green-500 text-white';
+
+          const nameColor =
+            entry.workingHoursPercentage < 70
+              ? 'text-red-500'
+              : 'text-gray-800';
+
+          return (
+            <div key={index} className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex justify-between items-center mb-3">
+                <h3 className={`font-medium text-lg ${nameColor}`}>{entry.user.full_name}</h3>
+                <button
+                  onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
+                  className="p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500"
+                >
+                  <DownloadIcon />
+                </button>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div className="py-1">
+                  <span className="text-gray-500">Present Days:</span>
+                  <p className="font-medium">{entry.presentDays}</p>
+                </div>
+                <div className="py-1">
+                  <span className="text-gray-500">Absent Days:</span>
+                  <p className="font-medium">{entry.absentDays}</p>
+                </div>
+                <div className="py-1">
+                  <span className="text-gray-500">Total Hours:</span>
+                  <p className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</p>
+                </div>
+                <div className="py-1">
+                  <span className="text-gray-500">Working Hours:</span>
+                  <p className="mt-1">
+                    <span
+                      className={`px-2 py-1 rounded-full text-xs font-semibold ${percentageColor}`}
+                    >
+                      {entry.workingHoursPercentage.toFixed(2)}%
+                    </span>
+                  </p>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+  </div>
+</div>
         </div>
       )}
     </div>

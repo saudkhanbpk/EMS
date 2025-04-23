@@ -85,9 +85,7 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Tasks', href: '/tasks', icon: ListTodo },
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
-    {
-      name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote
-    },
+    { name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote},
     // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
 

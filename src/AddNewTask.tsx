@@ -15,9 +15,12 @@ interface AddNewTaskProps {
   setselectedtab: (tab: string) => void;
   ProjectId: string;
   mockDevelopers: Developer[];
+  devopss : any[];
+  refreshTasks: () => void;  // Add this prop
+
 }
 
-const AddNewTask = ({ setselectedtab, ProjectId, devopss }: AddNewTaskProps) => {
+const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNewTaskProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
@@ -75,13 +78,14 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss }: AddNewTaskProps) => 
       setSelectedDevs([]);
       setScore("");
       setError("");
+      refreshTasks(); // Call the refresh function to update the task list
     } catch (err) {
       console.error("Error creating task:", err);
       setError(err.message || "Failed to create task");
     } finally {
       setIsLoading(false);
     }
-  };
+  }; 
 
   return (
     <div className="min-h-screen bg-gray-50 p-3">

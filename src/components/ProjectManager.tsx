@@ -26,7 +26,7 @@ interface devopss {
   full_name : string;
 }
 
-function ProjectsAdmin() {
+function ProjectManager() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ProjectId , setProjectId] = useState("");
@@ -60,19 +60,29 @@ function ProjectsAdmin() {
     fetchDevs();
   }, []);
 
-  
-  // Fetch projects
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
+      const userId = localStorage.getItem("user_id");
+  
       const { data, error } = await supabase
         .from("projects")
         .select("*");
-      if (!error) setProjects(data);
+  
+      if (!error) {
+        const filteredProjects = data.filter((project) => 
+          project.created_by === userId || 
+          project.devops.some((dev) => dev.id === userId)
+        );
+        setProjects(filteredProjects);
+      }
+  
       setLoading(false);
     };
+  
     fetchProjects();
   }, []);
+  
 
   const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
     if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
@@ -159,6 +169,8 @@ function ProjectsAdmin() {
             type: newProject.type,
             devops: selectedDevs,
             created_at: new Date().toISOString(),
+            created_by : localStorage.getItem("user_id"),
+
           }])
           .select();
 
@@ -166,8 +178,16 @@ function ProjectsAdmin() {
       }
 
       // Refresh projects list
+      const userId = localStorage.getItem("user_id");
+
       const { data, error } = await supabase.from("projects").select("*");
-      if (!error) setProjects(data);
+      if (!error) {
+        const filteredProjects = data.filter((project) => 
+          project.created_by === userId || 
+          project.devops.some((dev) => dev.id === userId)
+        );
+        setProjects(filteredProjects);
+      }
       
       closeModal();
     } catch (err) {
@@ -189,10 +209,10 @@ function ProjectsAdmin() {
         {selectedTAB == "Projects" && (
           <div className="max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
-              <h1 className="xs:text-[26px] text-[18px] font-bold">Your Projects</h1>
+              <h1 className="xs:text-[26px] text-[15px] font-bold">Your Projects</h1>
               <button
                 onClick={openAddModal}
-                className="bg-[#9A00FF] xs:text-xl text-[13px] text-white px-4 py-2 rounded-lg flex items-center"
+                className="bg-[#9A00FF] text-white  px-4 py-2 rounded-lg flex items-center"
               >
                 <PlusCircle size={20} className="mr-2" /> New Project
               </button>
@@ -353,6 +373,7 @@ function ProjectsAdmin() {
                         <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
                           {formatDistanceToNow(new Date(project.created_at))} ago
                         </span>
+                        
                    
                       </div>
                       {/* <div>
@@ -374,4 +395,4 @@ function ProjectsAdmin() {
   );
 }
 
-export default ProjectsAdmin;
+export default ProjectManager;
