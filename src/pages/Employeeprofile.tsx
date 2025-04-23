@@ -308,19 +308,19 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           <h2 className="text-xl font-bold">Employee Details</h2>
         </div>
 
-       <div className="flex gap-2 items-center">
-        <button
-              onClick={() => setIncrementModel(true)}
-              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
-            >
-              Add Increment
-            </button>
-        <button
-          onClick={handleEditClick}
-          className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
-        >
-          <FaEdit className="mr-2" /> Edit
-        </button>
+        <div className="flex gap-2 items-center">
+          <button
+            onClick={() => setIncrementModel(true)}
+            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
+          >
+            Add Increment
+          </button>
+          <button
+            onClick={handleEditClick}
+            className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
+          >
+            <FaEdit className="mr-2" /> Edit
+          </button>
         </div>
       </div>
 
@@ -558,8 +558,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
 
 
-      <div className="bg-white rounded-2xl shadow-md p-6 md:p-10 max-w-4xl w-full">
-        <div className="flex justify-between items-center mb-4">
+      {/* <div className="bg-white rounded-2xl shadow-md p-6 md:p-10 max-w-4xl w-full"> */}
+        {/* <div className="flex justify-between items-center mb-4">
           <button
             onClick={() => setemployeeview("generalview")}
             className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
@@ -581,7 +581,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               <FaEdit className="mr-2" /> Edit
             </button>
           </div>
-        </div>
+        </div> */}
 
         {incrementModel && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -637,7 +637,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           </div>
         )}
 
-        <div className="flex flex-col items-center mt-2">
+        {/* <div className="flex flex-col items-center mt-2">
           <img
             src={
               formData.profile_image
@@ -649,9 +649,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           />
           <h2 className="text-xl font-bold">{employeeData.full_name}</h2>
           <p className="text-gray-600 capitalize">{employeeData.role || "employee"}</p>
-        </div>
+        </div> */}
 
-        {isEditMode ? (
+        {isEditMode && (
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 text-sm">
             <div>
               <label className="text-gray-700">Full Name</label>
@@ -778,67 +778,67 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               </button>
             </div>
           </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 text-sm">
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Mail className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.email}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Phone className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.phone_number || "N/A"}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Mail className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.personal_email}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Slack className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.slack_id || "N/A"}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <MapPin className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.location || "Unknown"}</span>
-            </div>
+        // ) : (
+        //   <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mt-8 text-sm">
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Mail className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.email}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Phone className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.phone_number || "N/A"}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Mail className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.personal_email}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Slack className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.slack_id || "N/A"}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <MapPin className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.location || "Unknown"}</span>
+        //     </div>
 
 
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Briefcase className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.profession || "N/A"}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <CreditCard className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.salary || "N/A"}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <CreditCard className="w-5 h-5" />
-              <span className="text-gray-700">{employeeData.per_hour_pay || "N/A"}</span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Building2 className="w-5 h-5" />
-              <span className="text-gray-700">
-                {getEmploymentDuration(employeeData.created_at) || "N/A"}
-              </span>
-            </div>
-            <div className="flex items-center space-x-2 text-purple-600">
-              <Briefcase className="w-5 h-5" />
-              <span className="text-gray-700 capitalize">
-                {employeeData.role || "employee"}
-              </span>
-            </div>
-            {/* Display last increment if available */}
-            {lastIncrement && (
-              <div className="flex items-center space-x-2 text-purple-600">
-                <CreditCard className="w-5 h-5" />
-                <span className="text-gray-700">
-                  Last Increment: PKR : {lastIncrement.increment_amount} on {new Date(lastIncrement.increment_date).toLocaleDateString()}
-                </span>
-              </div>
-            )}
-          </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Briefcase className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.profession || "N/A"}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <CreditCard className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.salary || "N/A"}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <CreditCard className="w-5 h-5" />
+        //       <span className="text-gray-700">{employeeData.per_hour_pay || "N/A"}</span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Building2 className="w-5 h-5" />
+        //       <span className="text-gray-700">
+        //         {getEmploymentDuration(employeeData.created_at) || "N/A"}
+        //       </span>
+        //     </div>
+        //     <div className="flex items-center space-x-2 text-purple-600">
+        //       <Briefcase className="w-5 h-5" />
+        //       <span className="text-gray-700 capitalize">
+        //         {employeeData.role || "employee"}
+        //       </span>
+        //     </div>
+        //     {/* Display last increment if available */}
+        //     {lastIncrement && (
+        //       <div className="flex items-center space-x-2 text-purple-600">
+        //         <CreditCard className="w-5 h-5" />
+        //         <span className="text-gray-700">
+        //           Last Increment: PKR : {lastIncrement.increment_amount} on {new Date(lastIncrement.increment_date).toLocaleDateString()}
+        //         </span>
+        //       </div>
+        //     )}
+        //   </div>
         )}
 
-      </div>
+      {/* </div> */}
     </div>
   );
 };

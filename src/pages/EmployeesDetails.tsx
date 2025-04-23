@@ -114,7 +114,7 @@ const EmployeesDetails = ({ selectedTab }) => {
           task.status?.toLowerCase() == "done"
         );
 
-      
+
         const completedKPI = employeeTaskscompleted.reduce((sum, task) => {
           return sum + (Number(task.score) || 0);
         }, 0);
@@ -594,13 +594,13 @@ const EmployeesDetails = ({ selectedTab }) => {
               employeeview={employeeview}
               employee={currentEmployee}
               setemployeeview={setEmployeeView}
-              
+
             />
           )
-           : (
-            <div className="max-w-7xl mx-auto">
-              <div className="">
-                {/* <form className="p-6 border-b border-gray-200">
+            : (
+              <div className="max-w-7xl mx-auto">
+                <div className="">
+                  {/* <form className="p-6 border-b border-gray-200">
                   <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
                     <div>
                       <h1 className="text-2xl font-bold text-gray-800">Team Management</h1>
@@ -636,87 +636,87 @@ const EmployeesDetails = ({ selectedTab }) => {
                 </form> */}
 
 
-                {/* Step 2: Employee Info Form */}
-                {step === 2 && (
-                  <form onSubmit={handleSubmitEmployeeInfo} className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {[
-                        'full_name', 'role', 'phone', 'email',
-                        'personal_email', 'location', 'profession',
-                        'per_hour_pay', 'salary', 'slack_id', 'joining_date'
-                      ].map((field) => (
-                        <div key={field}>
-                          <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
-                            {field.replace(/_/g, ' ')}
-                          </label>
-                          {field === 'role' ? (
-                            <select
-                              name="role"
-                              value={formData.role}
-                              onChange={handleInputChange}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
-                            >
-                              <option value="employee">Employee</option>
-                              <option value="manager">Manager</option>
-                              <option value="admin">Admin</option>
-                            </select>
-                          ) : (
-                            <input
-                              type={field === 'joining_date' ? 'date' : 'text'}
-                              name={field}
-                              value={field === 'email' ? signupData.email : formData[field]}
-                              onChange={handleInputChange}
-                              disabled={field === 'email'}
-                              className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent disabled:bg-gray-100"
-                            />
-                          )}
-                        </div>
-                      ))}
-                      <div className="md:col-span-2">
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Profile Image
-                        </label>
-                        <div className="flex items-center gap-4">
-                          <label className="flex-1 cursor-pointer">
-                            <div className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
-                              <span className="text-sm text-gray-700">Choose file</span>
+                  {/* Step 2: Employee Info Form */}
+                  {step === 2 && (
+                    <form onSubmit={handleSubmitEmployeeInfo} className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {[
+                          'full_name', 'role', 'phone', 'email',
+                          'personal_email', 'location', 'profession',
+                          'per_hour_pay', 'salary', 'slack_id', 'joining_date'
+                        ].map((field) => (
+                          <div key={field}>
+                            <label className="block text-sm font-medium text-gray-700 mb-1 capitalize">
+                              {field.replace(/_/g, ' ')}
+                            </label>
+                            {field === 'role' ? (
+                              <select
+                                name="role"
+                                value={formData.role}
+                                onChange={handleInputChange}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
+                              >
+                                <option value="employee">Employee</option>
+                                <option value="manager">Manager</option>
+                                <option value="admin">Admin</option>
+                              </select>
+                            ) : (
                               <input
-                                type="file"
-                                name="profile_image"
-                                onChange={(e) => setFormData(prev => ({ ...prev, profile_image: e.target.files[0] }))}
-                                className="hidden"
+                                type={field === 'joining_date' ? 'date' : 'text'}
+                                name={field}
+                                value={field === 'email' ? signupData.email : formData[field]}
+                                onChange={handleInputChange}
+                                disabled={field === 'email'}
+                                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent disabled:bg-gray-100"
                               />
-                            </div>
+                            )}
+                          </div>
+                        ))}
+                        <div className="md:col-span-2">
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Profile Image
                           </label>
-                          {formData.profile_image && (
-                            <span className="text-sm text-gray-500 truncate">
-                              {formData.profile_image.name}
-                            </span>
-                          )}
+                          <div className="flex items-center gap-4">
+                            <label className="flex-1 cursor-pointer">
+                              <div className="px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                                <span className="text-sm text-gray-700">Choose file</span>
+                                <input
+                                  type="file"
+                                  name="profile_image"
+                                  onChange={(e) => setFormData(prev => ({ ...prev, profile_image: e.target.files[0] }))}
+                                  className="hidden"
+                                />
+                              </div>
+                            </label>
+                            {formData.profile_image && (
+                              <span className="text-sm text-gray-500 truncate">
+                                {formData.profile_image.name}
+                              </span>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
-                    <div className="flex justify-end space-x-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setStep(1)}
-                        className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                      >
-                        Back
-                      </button>
-                      <button
-                        type="submit"
-                        className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[#9A00FF] text-white hover:bg-[#8a00e6] transition-colors shadow-sm"
-                      >
-                        Save Employee
-                      </button>
-                    </div>
-                  </form>
-                )}
+                      <div className="flex justify-end space-x-3 pt-4">
+                        <button
+                          type="button"
+                          onClick={() => setStep(1)}
+                          className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
+                        >
+                          Back
+                        </button>
+                        <button
+                          type="submit"
+                          className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[#9A00FF] text-white hover:bg-[#8a00e6] transition-colors shadow-sm"
+                        >
+                          Save Employee
+                        </button>
+                      </div>
+                    </form>
+                  )}
+                </div>
               </div>
-            </div>
-            // </div>
-          )}
+              // </div>
+            )}
 
           {/* Assign Task Modal */}
           {showModal && (
@@ -813,7 +813,7 @@ const EmployeesDetails = ({ selectedTab }) => {
           {/* Main Content */}
           <div className="max-w-7xl mx-auto">
 
-           
+
 
             {/* General Employee View */}
             {employeeview === "generalview" && (
@@ -860,14 +860,15 @@ const EmployeesDetails = ({ selectedTab }) => {
                               <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Joined
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Completed KPIs
-                              </th>
+
                               <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Projects
                               </th>
                               <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Workload
+                              </th>
+                              <th scope="col" className="px-4 lg:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Completed Points
                               </th>
                               <th scope="col" className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
@@ -887,11 +888,11 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     className="flex items-center gap-2 lg:gap-3 group"
                                   >
                                     <div className="flex-shrink-0 h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs lg:text-sm">
-                                    {entry.full_name.toLocaleUpperCase().split(' ')[0][0]}
+                                      {entry.full_name.toLocaleUpperCase().split(' ')[0][0]}
                                     </div>
                                     <div className="text-left">
                                       <div className="text-xs lg:text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors truncate max-w-[120px] lg:max-w-full">
-                                      {entry.full_name.split(' ')[0].charAt(0).toUpperCase() + entry.full_name.split(' ')[0].slice(1)}
+                                        {entry.full_name.split(' ')[0].charAt(0).toUpperCase() + entry.full_name.split(' ')[0].slice(1)}
 
                                       </div>
                                     </div>
@@ -904,9 +905,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     day: 'numeric'
                                   })}
                                 </td>
-                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                  <div className="text-xs lg:text-sm text-gray-900 truncate max-w-[120px] lg:max-w-[240px] xl:max-w-full">{entry.completedKPI}</div>
-                                </td>
+
                                 <td className="px-4 lg:px-6 py-4">
                                   {/* {entry.projects?.length > 0 ? (
                                 <div className="flex flex-wrap gap-1 lg:gap-1.5">
@@ -989,6 +988,24 @@ const EmployeesDetails = ({ selectedTab }) => {
                                         }`}
                                       style={{ width: `${Math.min(entry.TotalKPI || 0, 150)}%` }}
                                     ></div>
+                                  </div>
+                                </td>
+                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                  <div
+                                    className={`text-md lg:text-md truncate text-center font-semibold  max-w-[120px] lg:max-w-[240px] xl:max-w-full
+    ${(() => {
+                                        const total = entry.totalKPIs || 1; // prevent division by 0
+                                        const completed = entry.completedKPI || 0;
+                                        const percent = (completed / total) * 100;
+
+                                        if (percent <= 20) return 'text-red-600';
+                                        if (percent <= 55) return 'text-yellow-600';
+                                        if (percent <= 75) return 'text-green-600';
+                                        return 'text-purple-700';
+                                      })()}
+  `}
+                                  >
+                                    {entry.completedKPI}
                                   </div>
                                 </td>
                                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
@@ -1075,8 +1092,8 @@ const EmployeesDetails = ({ selectedTab }) => {
                             </div>
 
                             <div className="space-y-0.5">
-                              <p className="text-gray-500 font-medium">Completed KPIs</p>
-                              <p className="text-gray-700 truncate text-semibold  max-w-[120px]">{entry.completedKPI}</p>
+                              <p className="text-gray-500 font-medium">Completed Points</p>
+                              <p className="text-gray-700 truncate font-semibold  max-w-[120px]">{entry.completedKPI}</p>
                             </div>
                           </div>
 
