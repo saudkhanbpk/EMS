@@ -2,12 +2,14 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Mail, Phone, MapPin, CreditCard, Globe, Building2, Slack, Briefcase, X, ArrowLeft } from "lucide-react";
 import { FaEdit } from "react-icons/fa";
-import {CheckCircle, PieChart, Users, CalendarClock, Moon, AlarmClockOff, Watch, Info,  Landmark, 
-  Clock, DollarSign, FileMinusIcon , TrendingDown , TrendingUp
+import {
+  CheckCircle, PieChart, Users, CalendarClock, Moon, AlarmClockOff, Watch, Info, Landmark,
+  Clock, DollarSign, FileMinusIcon, TrendingDown, TrendingUp
 } from 'lucide-react';
 
 
-const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
+const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }) => {
+
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -47,11 +49,10 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
       setFormData((prev) => ({ ...prev, profile_image: file }));
     }
   };
-
   const fetchEmployee = async () => {
     try {
       setLoading(true);
-      // Fetch the user
+
       const { data: userData, error: userError } = await supabase
         .from("users")
         .select("*")
@@ -60,7 +61,6 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
 
       if (userError) throw userError;
 
-      // Fetch the last salary increment for that user
       const { data: increments, error: incrementError } = await supabase
         .from("sallery_increment")
         .select("increment_date, increment_amount")
@@ -69,25 +69,107 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
         .limit(1);
 
       if (incrementError) console.error("Error fetching increments:", incrementError);
+      if (increments?.length) setLastIncrement(increments[0]);
 
-      if (increments && increments.length > 0) {
-        setLastIncrement(increments[0]);
-      }
+      const { data: projectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select("id, title, devops");
+
+      if (projectsError) throw projectsError;
+
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*");
+
+      if (tasksError) throw tasksError;
+
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from("attendance_logs")
+        .select("id, check_in, check_out")
+        .eq("user_id", employeeid);
+
+      if (attendanceError) throw attendanceError;
+
+      const { data: breakData, error: breakError } = await supabase
+        .from("breaks")
+        .select("start_time, end_time, attendance_id")
+        .in("attendance_id", attendanceData.map(a => a.id));
+
+      if (breakError) throw breakError;
+
+      // Group breaks by attendance_id
+      const breaksByAttendance: Record<string, { start_time: string; end_time: string | null }[]> = {};
+      breakData.forEach(b => {
+        if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+        breaksByAttendance[b.attendance_id].push(b);
+      });
+
+      let totalWorkHours = 0;
+
+      attendanceData.forEach(log => {
+        const checkIn = new Date(log.check_in);
+        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime()); // fallback to check_in time
+
+        let hoursWorked = (checkOut - checkIn) / (1000 * 60 * 60);
+
+        // Subtract breaks
+        const breaks = breaksByAttendance[log.id] || [];
+        let breakHours = 0;
+
+        breaks.forEach(b => {
+          const breakStart = new Date(b.start_time);
+          const breakEnd = b.end_time ? new Date(b.end_time) : new Date(breakStart.getTime() + 60 * 60 * 1000);
+          breakHours += (breakEnd - breakStart) / (1000 * 60 * 60);
+        });
+
+        totalWorkHours += Math.max(0, hoursWorked - breakHours);
+      });
+
+      const totalAttendance = attendanceData.length;
+
+      const { data: absenteeData, error: absenteeError } = await supabase
+        .from("absentees")
+        .select("absentee_type")
+        .eq("user_id", employeeid);
+
+      if (absenteeError) throw absenteeError;
+
+      const totalAbsents = absenteeData.filter(a => a.absentee_type === "Absent").length;
+      const totalLeaves = absenteeData.filter(a => a.absentee_type === "leave").length;
+
+      const employeeProjects = projectsData.filter(project =>
+        project.devops?.some((dev: any) => dev.id === userData.id)
+      );
+
+      const employeeTasks = tasksData.filter(task =>
+        task.devops?.some((dev: any) => dev.id === userData.id) &&
+        task.status?.toLowerCase() !== "done"
+      );
+
+      const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
       let profileImageUrl = null;
       if (userData.profile_image) {
-        if (userData.profile_image.startsWith("http")) {
-          profileImageUrl = userData.profile_image;
-        } else {
-          const { data: { publicUrl } } = supabase
-            .storage
-            .from("profilepics")
-            .getPublicUrl(userData.profile_image);
-          profileImageUrl = publicUrl;
-        }
+        profileImageUrl = userData.profile_image.startsWith("http")
+          ? userData.profile_image
+          : supabase.storage.from("profilepics").getPublicUrl(userData.profile_image).data.publicUrl;
       }
 
-      setEmployeeData({ ...userData, profile_image_url: profileImageUrl });
+      const enrichedEmployee = {
+        ...userData,
+        profile_image_url: profileImageUrl,
+        projects: employeeProjects.map(p => p.title),
+        projectid: employeeProjects.map(p => p.id),
+        TotalKPI: totalKPI,
+        activeTaskCount: employeeTasks.length,
+        totalWorkingHours: totalWorkHours.toFixed(2),
+        totalAttendance,
+        totalAbsents,
+        totalLeaves
+      };
+
+      setEmployeeData(enrichedEmployee);
+
       setFormData({
         full_name: userData.full_name,
         email: userData.email,
@@ -104,10 +186,14 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
 
     } catch (err) {
       setError(err.message);
+      console.error("Error:", err.message);
     } finally {
       setLoading(false);
     }
   };
+
+
+
 
   useEffect(() => {
     if (employeeid) fetchEmployee();
@@ -199,6 +285,9 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
     }
   };
 
+  console.log("Employee : ", employee);
+
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevState) => ({
@@ -219,12 +308,20 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
           <h2 className="text-xl font-bold">Employee Details</h2>
         </div>
 
+       <div className="flex gap-2 items-center">
+        <button
+              onClick={() => setIncrementModel(true)}
+              className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
+            >
+              Add Increment
+            </button>
         <button
           onClick={handleEditClick}
           className="flex items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500"
         >
           <FaEdit className="mr-2" /> Edit
         </button>
+        </div>
       </div>
 
       <div className="bg-white flex justify-between items-center rounded-2xl shadow-md p-3 md:p-6 max-w-4xl mb-5 w-full">
@@ -253,7 +350,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-6 max-w-4xl w-full">
         <div className="bg-white rounded-2xl shadow-md pb-4 flex flex-col items-center justify-center text-center">
-          <p className="text-[140px] text-gray-500">6</p>
+          <p className="text-[140px] text-gray-500">{employeeData ? employeeData.projects.length : " "}</p>
           <p className="text-xl font-semibold">Total Projects</p>
           <button className="bg-purple-600 rounded-2xl px-3 py-1 mt-2 text-sm text-white">View Details</button>
         </div>
@@ -261,7 +358,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">452</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">{employeeData.TotalKPI}</h2>
               <Users className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">KPI Score</div>
@@ -270,7 +367,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">62</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">{employeeData.totalAttendance}</h2>
               <Moon className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Normal Days</div>
@@ -280,7 +377,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">360</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">{employeeData.totalWorkingHours}</h2>
               <Clock className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Total Working Hours</div>
@@ -289,7 +386,7 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">6</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">{employeeData.totalAbsents}</h2>
               <AlarmClockOff className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Absent Days</div>
@@ -308,122 +405,136 @@ const Employeeprofile = ({ employeeid, employeeview, setemployeeview }) => {
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">42</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">{employeeData.totalLeaves}</h2>
               <CalendarClock className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Leave Days</div>
           </div>
-        </div> 
+        </div>
 
       </div>
 
       <div className="flex flex-wrap gap-4 p-4 bg-gray-50">
-          {/* Personal Information Card */}
-          <div className="bg-white rounded-lg shadow-md p-6 w-72">
-            <div className="flex items-center mb-4">
-              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-                <Info className="text-purple-600 h-4 w-4" />
-              </div>
-              <h2 className="text-gray-800 font-medium">Personal Information</h2>
+        {/* Personal Information Card */}
+        <div className="bg-white rounded-lg shadow-md p-6 w-72">
+          <div className="flex items-center mb-4">
+            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+              <Info className="text-purple-600 h-4 w-4" />
             </div>
-
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Email</span>
-                <span className="text-gray-600 text-sm">{employeeData.email || "N/A"}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Phone Number</span>
-                <span className="text-gray-600 text-sm">{employeeData.phone_number || "N/A"}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Slack id</span>
-                <span className="text-gray-600 text-sm">{employeeData.slack_id || "N/A"}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">CNIC Number</span>
-                <span className="text-gray-600 text-sm">{employeeData.CNIC || "N/A"}</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Bank Account No</span>
-                <span className="text-gray-600 text-sm">{employeeData.bank_account || "N/A"}</span>
-              </div>
-            </div>
+            <h2 className="text-gray-800 font-medium">Personal Information</h2>
           </div>
 
-          {/* Earnings Card */}
-          <div className="bg-white rounded-lg shadow-md p-6 w-72">
-            <div className="flex items-center mb-4">
-              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-                <DollarSign className="text-purple-600 h-4 w-4" />
-              </div>
-              <h2 className="text-gray-800 font-medium">Earnings</h2>
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Email</span>
+              <span className="text-gray-600 text-sm">{employeeData.email || "N/A"}</span>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Basic Pay</span>
-                <span className="text-gray-600 text-sm">40,000</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total Hours</span>
-                <span className="text-gray-600 text-sm">1200</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Pay Per Hour</span>
-                <span className="text-gray-600 text-sm">1200</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Overtime</span>
-                <span className="text-gray-600 text-sm">00</span>
-              </div>
-
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total Earning</span>
-                <span className="text-gray-600 text-sm">45,000</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Deductions Card */}
-          <div className="bg-white rounded-lg shadow-md p-6 w-72">
-            <div className="flex items-center mb-4">
-              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-                <FileMinusIcon className="text-purple-600 h-4 w-4" />
-              </div>
-              <h2 className="text-gray-800 font-medium">Deductions</h2>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Phone Number</span>
+              <span className="text-gray-600 text-sm">{employeeData.phone_number || "N/A"}</span>
             </div>
 
-            <div className="space-y-4">
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Extra Leaves</span>
-                <span className="text-gray-600 text-sm">5000</span>
-              </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Slack id</span>
+              <span className="text-gray-600 text-sm">{employeeData.slack_id || "N/A"}</span>
+            </div>
 
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Check-in Late</span>
-                <span className="text-gray-600 text-sm">1200</span>
-              </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">CNIC Number</span>
+              <span className="text-gray-600 text-sm">{employeeData.CNIC || "N/A"}</span>
+            </div>
 
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Advance Pay</span>
-                <span className="text-gray-600 text-sm">1500</span>
-              </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Bank Account No</span>
+              <span className="text-gray-600 text-sm">{employeeData.bank_account || "N/A"}</span>
+            </div>
 
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Total Deduction</span>
-                <span className="text-gray-600 text-sm">1500</span>
-              </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Employement Duration</span>
+              <span className="text-gray-600 text-sm">{getEmploymentDuration(employeeData.created_at) || "N/A"}</span>
             </div>
           </div>
         </div>
+
+        {/* Earnings Card */}
+        <div className="bg-white rounded-lg shadow-md p-6 w-72">
+          <div className="flex items-center mb-4">
+            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+              <DollarSign className="text-purple-600 h-4 w-4" />
+            </div>
+            <h2 className="text-gray-800 font-medium">Earnings</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Basic Pay</span>
+              <span className="text-gray-600 text-sm">40,000</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Total Hours</span>
+              <span className="text-gray-600 text-sm">1200</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Pay Per Hour</span>
+              <span className="text-gray-600 text-sm">1200</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Overtime</span>
+              <span className="text-gray-600 text-sm">00</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Total Earning</span>
+              <span className="text-gray-600 text-sm">45,000</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Last Increment</span>
+              <span className="text-gray-600 text-sm">
+                {lastIncrement
+                  ? `${lastIncrement.increment_amount} on ${new Date(lastIncrement.increment_date).toLocaleDateString()}`
+                  : "N/A"}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Deductions Card */}
+        <div className="bg-white rounded-lg shadow-md p-6 w-72">
+          <div className="flex items-center mb-4">
+            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+              <FileMinusIcon className="text-purple-600 h-4 w-4" />
+            </div>
+            <h2 className="text-gray-800 font-medium">Deductions</h2>
+          </div>
+
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Extra Leaves</span>
+              <span className="text-gray-600 text-sm">5000</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Check-in Late</span>
+              <span className="text-gray-600 text-sm">1200</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Advance Pay</span>
+              <span className="text-gray-600 text-sm">1500</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Total Deduction</span>
+              <span className="text-gray-600 text-sm">1500</span>
+            </div>
+          </div>
+        </div>
+      </div>
 
 
 

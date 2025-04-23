@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
 import { supabase } from "../lib/supabase";
 import Employeeprofile from "./Employeeprofile";
-import { FiPlus, FiTrash2, FiX, FiPlusSquare , FiUserPlus } from "react-icons/fi";
+import { FiPlus, FiTrash2, FiX, FiPlusSquare, FiUserPlus } from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
 import TaskBoardAdmin from "../components/TaskBoardAdmin";
 
@@ -26,6 +26,7 @@ interface Project {
 const EmployeesDetails = ({ selectedTab }) => {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [employeeview, setEmployeeView] = useState<"generalview" | "detailview">("generalview");
   const [employeeId, setEmployeeId] = useState<string>('');
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
@@ -108,12 +109,23 @@ const EmployeesDetails = ({ selectedTab }) => {
           return sum + (Number(task.score) || 0);
         }, 0);
 
+        const employeeTaskscompleted = tasksData.filter(task =>
+          task.devops?.some(dev => dev.id === employee.id) &&
+          task.status?.toLowerCase() == "done"
+        );
+
+      
+        const completedKPI = employeeTaskscompleted.reduce((sum, task) => {
+          return sum + (Number(task.score) || 0);
+        }, 0);
+
         return {
           ...employee,
           projects: employeeProjects,
           projectid: employeeProjects.map(project => project.id),
           TotalKPI: totalKPI,
-          activeTaskCount: employeeTasks.length
+          activeTaskCount: employeeTasks.length,
+          completedKPI: completedKPI
         };
       });
 
@@ -582,8 +594,10 @@ const EmployeesDetails = ({ selectedTab }) => {
               employeeview={employeeview}
               employee={currentEmployee}
               setemployeeview={setEmployeeView}
+              
             />
-          ) : (
+          )
+           : (
             <div className="max-w-7xl mx-auto">
               <div className="">
                 {/* <form className="p-6 border-b border-gray-200">
@@ -798,15 +812,8 @@ const EmployeesDetails = ({ selectedTab }) => {
 
           {/* Main Content */}
           <div className="max-w-7xl mx-auto">
-            {/* Employee Profile View */}
-            {employeeview === "detailview" && (
-              <Employeeprofile
-                employeeid={employeeId}
-                employeeview={employeeview}
-                employee={employee}
-                setemployeeview={setEmployeeView}
-              />
-            )}
+
+           
 
             {/* General Employee View */}
             {employeeview === "generalview" && (
@@ -854,7 +861,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                 Joined
                               </th>
                               <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Contact
+                                Completed KPIs
                               </th>
                               <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Projects
@@ -870,7 +877,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                           <tbody className="bg-white divide-y divide-gray-200">
                             {employees.map((entry) => (
                               <tr key={entry.id} className="hover:bg-gray-50 transition-colors">
-                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                <td className="px-4 lg:px-2 py-4 whitespace-nowrap">
                                   <button
                                     onClick={() => {
                                       setEmployee(entry);
@@ -880,11 +887,12 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     className="flex items-center gap-2 lg:gap-3 group"
                                   >
                                     <div className="flex-shrink-0 h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs lg:text-sm">
-                                      {entry.full_name.split(' ').map(n => n[0]).join('')}
+                                    {entry.full_name.toLocaleUpperCase().split(' ')[0][0]}
                                     </div>
                                     <div className="text-left">
                                       <div className="text-xs lg:text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors truncate max-w-[120px] lg:max-w-full">
-                                        {entry.full_name}
+                                      {entry.full_name.split(' ')[0].charAt(0).toUpperCase() + entry.full_name.split(' ')[0].slice(1)}
+
                                       </div>
                                     </div>
                                   </button>
@@ -897,8 +905,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                   })}
                                 </td>
                                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
-                                  <div className="text-xs lg:text-sm text-gray-900 truncate max-w-[120px] lg:max-w-[240px] xl:max-w-full">{entry.email}</div>
-                                  <div className="text-xs text-gray-500 truncate max-w-[120px] lg:max-w-[240px] xl:max-w-full">{entry.phone || 'No phone'}</div>
+                                  <div className="text-xs lg:text-sm text-gray-900 truncate max-w-[120px] lg:max-w-[240px] xl:max-w-full">{entry.completedKPI}</div>
                                 </td>
                                 <td className="px-4 lg:px-6 py-4">
                                   {/* {entry.projects?.length > 0 ? (
@@ -991,7 +998,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                       className="p-1.5 lg:p-2 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                                       title="Assign Task"
                                     >
-                                      <FiUserPlus className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
+                                      <FiPlusSquare className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
                                     </button>
                                     <button
                                       onClick={() => handleDelete(entry.id)}
@@ -1026,13 +1033,15 @@ const EmployeesDetails = ({ selectedTab }) => {
                               className="flex items-center gap-3 group"
                             >
                               <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
-                                {entry.full_name.split(' ').map(n => n[0]).join('')}
+                                {entry.full_name.split(' ')[0][0]}
                               </div>
                               <div className="text-left">
                                 <div className="text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors">
-                                  {entry.full_name}
+                                  {entry.full_name.split(' ')[0]}
                                 </div>
                               </div>
+
+
                             </button>
 
                             <div className="flex items-center gap-1">
@@ -1041,7 +1050,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                 className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                                 title="Assign Task"
                               >
-                                <FiUserPlus className="w-3.5 h-3.5" />
+                                <FiPlusSquare className="w-3.5 h-3.5" />
                               </button>
                               <button
                                 onClick={() => handleDelete(entry.id)}
@@ -1066,9 +1075,8 @@ const EmployeesDetails = ({ selectedTab }) => {
                             </div>
 
                             <div className="space-y-0.5">
-                              <p className="text-gray-500 font-medium">Contact</p>
-                              <p className="text-gray-700 truncate max-w-[120px]">{entry.email}</p>
-                              <p className="text-gray-500">{entry.phone || 'No phone'}</p>
+                              <p className="text-gray-500 font-medium">Completed KPIs</p>
+                              <p className="text-gray-700 truncate text-semibold  max-w-[120px]">{entry.completedKPI}</p>
                             </div>
                           </div>
 
