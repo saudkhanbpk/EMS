@@ -297,7 +297,7 @@ const ChatSidebar = () => {
         </div>
         <div className="flex items-center space-x-3">
           {/* Admin Dashboard Button - Only visible to admins */}
-          {currentUser?.email === "techcreator@admin.com" && (
+          {currentUser?.email?.endsWith('@admin.com') && (
             <Link
               to="/admin"
               className="text-white hover:text-blue-400 transition-colors"
