@@ -1,26 +1,27 @@
 import React, { useState, useEffect } from "react";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft , X } from "lucide-react";
 import { supabase } from "./lib/supabase";
+import { useRef } from "react";
 
 interface Developer {
   id: string;
   full_name: string;
 }
-interface Developer { 
-    id : string;
-    full_name : string;
-  }
+interface Developer {
+  id: string;
+  full_name: string;
+}
 
 interface AddNewTaskProps {
   setselectedtab: (tab: string) => void;
   ProjectId: string;
   mockDevelopers: Developer[];
-  devopss : any[];
+  devopss: any[];
   refreshTasks: () => void;  // Add this prop
 
 }
 
-const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNewTaskProps) => {
+const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNewTaskProps) => {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
@@ -28,12 +29,16 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNew
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   const [score, setScore] = useState("");
-
+  const [priority, setPriority] = useState("");
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [deadline , setdeadline] = useState<string | null>(null);
   useEffect(() => {
     if (devopss) {
       setDevelopers(devopss);
-      console.log("Devops" , devopss);
-      
+      console.log("Devops", devopss);
+
     }
   }, [devopss]);
 
@@ -46,27 +51,86 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNew
 
   const removeDeveloper = (id: string) => {
     setSelectedDevs(selectedDevs.filter(devId => devId !== id));
+  }; 
+
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      // Create preview
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+  
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+    
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `task-images/${fileName}`;
+  
+      // Upload file
+      const { error: uploadError } = await supabase
+        .storage
+        .from('newtaskimage')
+        .upload(filePath, imageFile);
+  
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+  
+      // Get public URL
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('newtaskimage')
+        .getPublicUrl(filePath);
+  
+      return publicUrl;
+    } catch (err) {
+      console.error("Image upload error:", err);
+      throw err; // Re-throw to be caught in handleSubmit
+    }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => { 
-    e.preventDefault();   
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     if (!title.trim()) {
       setError("Title is required");
       return;
     }
-
     try {
       setIsLoading(true);
+         // Upload image first if exists
+         let imageUrl = null;
+         if (imageFile) {
+           imageUrl = await uploadImage();
+         }
       const { data, error } = await supabase
         .from("tasks_of_projects")
-        .insert([{  
+        .insert([{
           project_id: ProjectId,
           title: title,
           description: description,
           devops: selectedDevs.map(id => developers.find(d => d.id === id)),
           status: "todo",
           score: score,
-          created_at: new Date().toISOString()
+          priority: priority || "Low",
+          created_at: new Date().toISOString(),
+          imageurl : imageUrl, 
+          deadline : deadline || null,
         }])
         .select();
 
@@ -77,27 +141,32 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNew
       setDescription("");
       setSelectedDevs([]);
       setScore("");
+      setPriority("");
       setError("");
       refreshTasks(); // Call the refresh function to update the task list
+      setImageFile(null);
+      setImagePreview(null);
+      setdeadline(null);
+      setselectedtab("tasks")
     } catch (err) {
       console.error("Error creating task:", err);
       setError(err.message || "Failed to create task");
     } finally {
       setIsLoading(false);
     }
-  }; 
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 p-3">
-      <ArrowLeft 
-        className='hover:bg-gray-300 ml-6 rounded-2xl cursor-pointer' 
-        size={24} 
+      <ArrowLeft
+        className='hover:bg-gray-300 ml-6 rounded-2xl cursor-pointer'
+        size={24}
         onClick={() => setselectedtab("tasks")}
       />
 
       <div className="max-w-3xl mx-auto bg-white rounded-lg shadow-md p-6">
         <h2 className="text-2xl font-bold text-gray-800 mb-6">Add New Task</h2>
-        
+
         {error && (
           <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
             {error}
@@ -123,7 +192,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNew
 
           {/* Description Input */}
           <div className="mb-4">
-            <label htmlFor="description" className="block text-sm font-medium text-gray-700 mb-1">
+            <label htmlFor="description" className="block  text-sm font-medium text-gray-700 mb-1">
               Description
             </label>
             <textarea
@@ -137,7 +206,8 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNew
           </div>
 
           {/* Score Input */}
-          <div className="mb-4">
+          <div className=" w-[100%] flex justify-between ">
+          <div className="mb-4 w-[49%]" >
             <label htmlFor="score" className="block text-sm font-medium text-gray-700 mb-1">
               Task Score
             </label>
@@ -149,6 +219,74 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss , refreshTasks}: AddNew
               className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               placeholder="Enter task Score"
             />
+          </div>
+
+
+        
+          {/* Score Input */}
+          <div className="mb-4 w-[49%]">
+            <label htmlFor="priority" className="block text-sm font-medium text-gray-700 mb-1">
+              Task Priority
+            </label>
+            <select
+              id="priority"
+              value={priority}
+              onChange={(e) => setPriority(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            >
+              <option value="">Select</option>
+              <option value="High">High</option>
+              <option value="Medium">Medium</option>
+              <option value="Low">Low</option>
+            </select>
+          </div>
+          </div>
+
+
+          <div className="flex w-full justify-between">
+          <div className="w-[49%]">
+            <label htmlFor="deadline" className="block text-sm font-medium text-gray-700 mb-1">
+              Deadline
+            </label>
+            <input
+              type="date"
+              id="deadline"
+              value={deadline || ""}
+              onChange={(e) => setdeadline(e.target.value)}
+              className="w-full mb-4 px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />    
+          </div>
+          
+          {/* Image Upload */}
+          <div className="mb-4 w-[49%]">
+            <label htmlFor="image" className="block text-sm font-medium text-gray-700 mb-1">
+              Task Image (Optional)
+            </label>
+            <input
+              ref={fileInputRef}
+              type="file"
+              id="image"
+              accept="image/*"
+              onChange={handleImageChange}
+              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {imagePreview && (
+              <div className="mt-2 relative">
+                <img 
+                  src={imagePreview} 
+                  alt="Preview" 
+                  className="h-32 object-cover rounded-md"
+                />
+                <button
+                  type="button"
+                  onClick={removeImage}
+                  className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                >
+                  <X size={16} />
+                </button>
+              </div>
+            )}
+          </div>
           </div>
 
           {/* Developers Selection */}

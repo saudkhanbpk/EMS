@@ -197,7 +197,7 @@ function ProjectsAdmin() {
                 <PlusCircle size={20} className="mr-2" /> New Project
               </button>
             </div>
-  
+   
             {isModalOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -341,7 +341,7 @@ function ProjectsAdmin() {
                     <div className="flex flex-col items-start justify-between">
                       <div className="mb-2">
                         <span className='leading-7 text-[#686a6d]'>
-                          <label className='font-semibold'>DevOps: </label>
+                          <label className='font-semibold'>Developers: </label>
                           <ul className='ml-2 list-disc list-inside'>
                             {project.devops.map((dev) => (
                               <li key={dev.id}>{dev.name}</li>

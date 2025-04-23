@@ -33,7 +33,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     setLoading(true);
     const { data, error } = await supabase
     .from("leave_requests") 
-    .select("*, users:users!leave_requests_user_id_fkey(email, full_name , slack_id, fcm_token)")
+    .select("*, users:users!leave_requests_user_id_fkey(personal_email, full_name , slack_id, fcm_token)")
     .eq("status", "approved");
     if (!error) setApprovedRequests(data);
     setLoading(false);
@@ -44,7 +44,7 @@ const LeaveRequestsAdmin = ({fetchPendingCount}) => {
     setLoading(true);
     const { data, error } = await supabase
     .from("leave_requests")
-    .select("*, users:users!leave_requests_user_id_fkey(email, full_name , slack_id , fcm_token)")
+    .select("*, users:users!leave_requests_user_id_fkey(personal_email, full_name , slack_id , fcm_token)")
     .eq("status", "rejected");
     if (!error) {
       setRejectedRequests(data);
@@ -399,7 +399,8 @@ sendAdminResponsereject();
       ) : (
         requests.map((request) => (
           <div key={request.id} className="p-4 mb-4  text-sm text-gray=400 bg-gray-100 break-words rounded-lg shadow">
-            <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500">{request.leave_date} {"-"} {request.leave_type}</span></p>
+            <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500"> {new Date(request.leave_date).toLocaleDateString()} (
+              {new Date(request.leave_date).toLocaleDateString("en-US", { weekday: "long" })}) {"-"} {request.leave_type}</span></p>
             <p> {request.description}</p>
             <p className="text-gray-700"> {request.full_name}</p>
             {/* <p> 
@@ -429,7 +430,7 @@ sendAdminResponsereject();
               <div className="mt-3 flex justify-end gap-4">
                 {(selectedTab === "Rejected" || selectedTab === "Pending") && (               
                    <button disabled={isloading}
-                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type , request.user_email , request.leave_date , request.full_name , request.users.slack_id , request.users.fcm_token)}
+                  onClick={() => handleActionAccept(request.id, "approved" ,request.user_id , request.leave_type , request.personal_email , request.leave_date , request.full_name , request.users.slack_id , request.users.fcm_token)}
                   className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
                 >
                   Approve
@@ -437,7 +438,7 @@ sendAdminResponsereject();
                 )}
                  {(selectedTab === "Approved" || selectedTab === "Pending") && (        
                 <button disabled={isrejectloading}
-                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type ,   request.user_email , request.leave_date, request.full_name, request.users.slack_id, request.users.fcm_token)}
+                  onClick={() => handleActionReject(request.id, "rejected", request.user_id , request.leave_type ,   request.personal_email , request.leave_date, request.full_name, request.users.slack_id, request.users.fcm_token)}
                   className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
                 >
                   Reject

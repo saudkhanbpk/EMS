@@ -1,4 +1,4 @@
-import React, { useContext, useEffect, useState,Fragment } from "react";
+import React, { useContext, useEffect, useState, Fragment } from "react";
 import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import { useAuthStore } from '../lib/store';
@@ -81,8 +81,8 @@ const EmployeeAttendanceTable = () => {
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
   const [present, setPresent] = useState(0);
-  
-  
+
+
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
   const [remote, setRemote] = useState(0); // State for remote employees count
@@ -1722,7 +1722,7 @@ const EmployeeAttendanceTable = () => {
             }
           }}
         >
-          <option value="TableView"  className="mt-4">Table View</option>
+          <option value="TableView" className="mt-4">Table View</option>
           <option value="DetailedView">Detailed View</option>
           <option value="GraphicView">Graphic View</option>
         </select>
@@ -1736,9 +1736,9 @@ const EmployeeAttendanceTable = () => {
           <div></div>
         )}
         {maintab === "TableView" && (
-          <> 
-          <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto sm:ml-5 md:flex justify-center md:space-x-4 space-x-2 "> 
-            {/* <button
+          <>
+            <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto sm:ml-5 md:flex justify-center md:space-x-4 space-x-2 ">
+              {/* <button
             onClick={() => handlenotification()}
             className={`px-4 py-2 rounded-lg transition-all ${
               selectedTab === "Daily"
@@ -1749,64 +1749,64 @@ const EmployeeAttendanceTable = () => {
             notify
           </button> */}
 
-             <button
-              onClick={() => setSelectedTab("Daily")}
-              className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Daily"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100"
-                }`}
-            >
-              Daily
-            </button>
-            <button
-              onClick={() => setSelectedTab("Weekly")}
-              className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Weekly"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              Weekly
-            </button>
-            <button
-              onClick={() => setSelectedTab("Monthly")}
-              className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Monthly"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              Monthly
-            </button>
-            <button
-              onClick={() => setSelectedTab("Filter")}
-              className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Filter"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
-            >
-              Filter
-            </button>
-          </div>
-         
-          <div className="md:hidden block mx-auto">
-  <select
-    className="p-2 mb-3 border border-gray-300 transition-all ease-in-out rounded-md focus:outline-none focus:ring-2 focus:ring-[#9A00FF] w-full sm:w-auto"
-    value={selectedTab}
-    onChange={(e) => setSelectedTab(e.target.value)}
-  >
-    <option value="Daily">Daily</option>
-    <option value="Weekly">Weekly</option>
-    <option value="Monthly">Monthly</option>
-    <option value="Filter">Filter</option>
-  </select>
-</div>
+              <button
+                onClick={() => setSelectedTab("Daily")}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Daily"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100"
+                  }`}
+              >
+                Daily
+              </button>
+              <button
+                onClick={() => setSelectedTab("Weekly")}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Weekly"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-200"
+                  }`}
+              >
+                Weekly
+              </button>
+              <button
+                onClick={() => setSelectedTab("Monthly")}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Monthly"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-200"
+                  }`}
+              >
+                Monthly
+              </button>
+              <button
+                onClick={() => setSelectedTab("Filter")}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Filter"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-200"
+                  }`}
+              >
+                Filter
+              </button>
+            </div>
+
+            <div className="md:hidden block mx-auto">
+              <select
+                className="p-2 mb-3 border border-gray-300 transition-all ease-in-out rounded-md focus:outline-none focus:ring-2 focus:ring-[#9A00FF] w-full sm:w-auto"
+                value={selectedTab}
+                onChange={(e) => setSelectedTab(e.target.value)}
+              >
+                <option value="Daily">Daily</option>
+                <option value="Weekly">Weekly</option>
+                <option value="Monthly">Monthly</option>
+                <option value="Filter">Filter</option>
+              </select>
+            </div>
 
 
-          
-         
-          
-          
-        </>
-          
+
+
+
+
+          </>
+
         )}
         <div className="flex flex-row sm:gap-5  lg:flex-nowrap flex-wrap justify-cente md:mx-0 mx-auto">
           {/* Date Navigation */}
@@ -1893,82 +1893,82 @@ const EmployeeAttendanceTable = () => {
           )}
           {maintab === "TableView" && selectedTab === "Filter" && (
             <>
-            {/* Mobile: Button to open modal */}
-            <div className="smi:hidden flex justify-center mb-4">
-              <button
-                onClick={() => setIsDateModalOpen(true)}
-                className="bg-blue-600 text-white px-4 py-2 rounded-lg"
-              >
-                Filter Dates
-              </button>
-            </div>
-      
-            {/* Desktop: Inline layout */}
-            <div className="hidden smi:flex md:flex-nowrap flex-wrap items-center justify-center space-x-4">
-              <input
-                type="date"
-                value={startdate}
-                onChange={(e) => setStartdate(e.target.value)}
-                className="p-2 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <span className="mx-2 text-xl font-semibold">to</span>
-              <input
-                type="date"
-                value={enddate}
-                onChange={(e) => setEnddate(e.target.value)}
-                className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-              />
-              <button
-                onClick={handleDateFilter}
-                className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
-              >
-                <SearchIcon className="w-5 h-5" />
-              </button>
-            </div>
-      
-            {/* Modal for small screens */}
-            <Transition appear show={isDateModalOpen} as={Fragment}>
-              <Dialog as="div" className="relative z-10 smi:hidden" onClose={() => setIsDateModalOpen(false)}>
-                <Transition.Child
-                  as={Fragment}
-                  enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100"
-                  leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"
+              {/* Mobile: Button to open modal */}
+              <div className="smi:hidden flex justify-center mb-4">
+                <button
+                  onClick={() => setIsDateModalOpen(true)}
+                  className="bg-blue-600 text-white px-4 py-2 rounded-lg"
                 >
-                  <div className="fixed inset-0 bg-black bg-opacity-25" />
-                </Transition.Child>
-      
-                <div className="fixed inset-0 overflow-y-auto flex items-center justify-center">
-                  <Dialog.Panel className="w-full max-w-md p-6 bg-white rounded-xl shadow-xl">
-                    <Dialog.Title className="text-lg font-semibold mb-4">Select Date Range</Dialog.Title>
-                    <div className="space-y-4">
-                      <input
-                        type="date"
-                        value={startdate}
-                        onChange={(e) => setStartdate(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <input
-                        type="date"
-                        value={enddate}
-                        onChange={(e) => setEnddate(e.target.value)}
-                        className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      />
-                      <button
-                        onClick={() => {
-                          handleDateFilter()
-                          setIsDateModalOpen(false)
-                        }}
-                        className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
-                      >
-                        <SearchIcon className="inline-block w-5 h-5 mr-2" />
-                        Search
-                      </button>
-                    </div>
-                  </Dialog.Panel>
-                </div>
-              </Dialog>
-            </Transition>
-          </>
+                  Filter Dates
+                </button>
+              </div>
+
+              {/* Desktop: Inline layout */}
+              <div className="hidden smi:flex md:flex-nowrap flex-wrap items-center justify-center space-x-4">
+                <input
+                  type="date"
+                  value={startdate}
+                  onChange={(e) => setStartdate(e.target.value)}
+                  className="p-2 border ml-10 border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <span className="mx-2 text-xl font-semibold">to</span>
+                <input
+                  type="date"
+                  value={enddate}
+                  onChange={(e) => setEnddate(e.target.value)}
+                  className="p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <button
+                  onClick={handleDateFilter}
+                  className="p-2 hover:bg-gray-300 rounded-2xl px-5 py-3 transition-all"
+                >
+                  <SearchIcon className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Modal for small screens */}
+              <Transition appear show={isDateModalOpen} as={Fragment}>
+                <Dialog as="div" className="relative z-10 smi:hidden" onClose={() => setIsDateModalOpen(false)}>
+                  <Transition.Child
+                    as={Fragment}
+                    enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100"
+                    leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"
+                  >
+                    <div className="fixed inset-0 bg-black bg-opacity-25" />
+                  </Transition.Child>
+
+                  <div className="fixed inset-0 overflow-y-auto flex items-center justify-center">
+                    <Dialog.Panel className="w-full max-w-md p-6 bg-white rounded-xl shadow-xl">
+                      <Dialog.Title className="text-lg font-semibold mb-4">Select Date Range</Dialog.Title>
+                      <div className="space-y-4">
+                        <input
+                          type="date"
+                          value={startdate}
+                          onChange={(e) => setStartdate(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <input
+                          type="date"
+                          value={enddate}
+                          onChange={(e) => setEnddate(e.target.value)}
+                          className="w-full p-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                        />
+                        <button
+                          onClick={() => {
+                            handleDateFilter()
+                            setIsDateModalOpen(false)
+                          }}
+                          className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
+                        >
+                          <SearchIcon className="inline-block w-5 h-5 mr-2" />
+                          Search
+                        </button>
+                      </div>
+                    </Dialog.Panel>
+                  </div>
+                </Dialog>
+              </Transition>
+            </>
           )}
           {maintab === "TableView" && selectedTab === "Daily" && (
             <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
@@ -2083,10 +2083,10 @@ const EmployeeAttendanceTable = () => {
                           <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
                             <span
                               className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${entry.status === "present"
-                                  ? "text-green-600"
-                                  : entry.status === "late"
-                                    ? "text-yellow-600"
-                                    : "text-red-600"
+                                ? "text-green-600"
+                                : entry.status === "late"
+                                  ? "text-yellow-600"
+                                  : "text-red-600"
                                 }`}
                               title={entry.full_name}
                             >
@@ -2122,10 +2122,10 @@ const EmployeeAttendanceTable = () => {
                             <button
                               onClick={() => handleModeOpen(entry)}
                               className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === "on_site"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : entry.work_mode === "remote"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-white text-black"
+                                ? "bg-blue-100 text-blue-800"
+                                : entry.work_mode === "remote"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-white text-black"
                                 }`}
                             >
                               {entry.work_mode === "on_site"
@@ -2138,10 +2138,10 @@ const EmployeeAttendanceTable = () => {
                           <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                             <span
                               className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === "present"
-                                  ? "bg-green-100 text-green-800"
-                                  : entry.status === "late"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : "bg-red-100 text-red-800"
+                                ? "bg-green-100 text-green-800"
+                                : entry.status === "late"
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
                                 }`}
                             >
                               {entry.status}
@@ -2160,10 +2160,10 @@ const EmployeeAttendanceTable = () => {
                       <div className="flex justify-between items-center mb-2 border-b pb-2">
                         <span
                           className={`font-medium text-[12px] xs:text-[13px] ${entry.status === "present"
-                              ? "text-green-600"
-                              : entry.status === "late"
-                                ? "text-yellow-600"
-                                : "text-red-600"
+                            ? "text-green-600"
+                            : entry.status === "late"
+                              ? "text-yellow-600"
+                              : "text-red-600"
                             }`}
                           title={entry.full_name}
                         >
@@ -2171,10 +2171,10 @@ const EmployeeAttendanceTable = () => {
                         </span>
                         <span
                           className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
-                              ? "bg-green-100 text-green-800"
-                              : entry.status === "late"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
+                            ? "bg-green-100 text-green-800"
+                            : entry.status === "late"
+                              ? "bg-yellow-100 text-yellow-800"
+                              : "bg-red-100 text-red-800"
                             }`}
                         >
                           {entry.status}
@@ -2213,10 +2213,10 @@ const EmployeeAttendanceTable = () => {
                             <button
                               onClick={() => handleModeOpen(entry)}
                               className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === "on_site"
-                                  ? "bg-blue-100 text-blue-800"
-                                  : entry.work_mode === "remote"
-                                    ? "bg-purple-100 text-purple-800"
-                                    : "bg-gray-100 text-gray-800"
+                                ? "bg-blue-100 text-blue-800"
+                                : entry.work_mode === "remote"
+                                  ? "bg-purple-100 text-purple-800"
+                                  : "bg-gray-100 text-gray-800"
                                 }`}
                             >
                               {entry.work_mode === "on_site"
@@ -2573,302 +2573,387 @@ const EmployeeAttendanceTable = () => {
           <div className="flex-1">
             <div className='flex flex-row justify-between'>
               <div></div>
-            
+
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4">
-  {/* Employee List for small screens - initially hidden, shows when button is clicked */}
-  <div className="sm:hidden w-full mb-4">
-    {!showEmployeeList ? (
-      <button 
-        onClick={() => setShowEmployeeList(true)}
-        className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition-all flex items-center justify-center"
-      >
-        <SearchIcon className="w-4 h-4 mr-2" />
-        Search Employees
-      </button>
-    ) : (
-      <div className="bg-white rounded-lg shadow-md p-3">
-        <div className="flex items-center justify-between mb-3">
-          <h3 className="font-medium">Employee Search</h3>
-          <button 
-            onClick={() => setShowEmployeeList(false)}
-            className="text-gray-500 hover:text-gray-700"
-            aria-label="Close employee list"
-          >
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-              <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-            </svg>
-          </button>
-        </div>
-        
-        <input
-          type="search"
-          name="search"
-          placeholder="Search Employee..."
-          aria-label="Search"
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-3 text-sm"
-          autoFocus
-        />
-        
-        <ul className="space-y-2 max-h-[40vh] overflow-y-auto rounded-lg pr-1 custom-scrollbar">
-          {filteredEmployees.map((employee) => (
-            <li
-              key={employee.id}
-              onClick={() => {
-                setDataEmployeesearch(employee);
-                handleEmployeeClick(employee.id);
-                setShowEmployeeList(false); // Hide list after selection on mobile
-              }}
-              className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${
-                selectedEmployeesearch?.id === employee.id
-                  ? "bg-blue-100 text-blue-600"
-                  : "hover:bg-gray-100"
-              } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
-            >
-              <span className="truncate mr-2 text-sm">{employee.full_name}</span>
-              <button
-                className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 rounded-xl"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  handleEmployeeDelete(employee.id);
-                }}
-                aria-label="Delete employee"
-              >
-                <Trash2 className="w-4 h-4" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
-  </div>
-
-  {/* Employee List for desktop - always visible */}
-  <div className="hidden sm:block col-span-1 w-full">
-    <input
-      type="search"
-      name="search"
-      placeholder="Search Employee..."
-      aria-label="Search"
-      value={searchTerm}
-      onChange={(e) => setSearchTerm(e.target.value)}
-      className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-3 text-sm sm:text-base"
-    />
-
-    <ul className="space-y-2 max-h-[40vh] sm:max-h-[50vh] md:max-h-[60vh] lg:max-h-[500px] overflow-y-auto rounded-lg pr-1 sm:pr-2.5 custom-scrollbar">
-      {filteredEmployees.map((employee) => (
-        <li
-          key={employee.id}
-          onClick={() => {
-            setDataEmployeesearch(employee);
-            handleEmployeeClick(employee.id);
-          }}
-          className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${
-            selectedEmployeesearch?.id === employee.id
-              ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-              : "hover:bg-gray-100"
-          } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
-        >
-          <span className="truncate mr-2 text-xs sm:text-base">{employee.full_name}</span>
-          <button
-            className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 sm:px-3 sm:py-1 rounded-xl flex-shrink-0"
-            onClick={(e) => {
-              e.stopPropagation();
-              handleEmployeeDelete(employee.id);
-            }}
-            aria-label="Delete employee"
-          >
-            <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
-          </button>
-        </li>
-      ))}
-    </ul>
-  </div>
-
-  {/* Employee Dashboard */}
-  {selectedEmployee && !graphicview && (
-    <div className="col-span-1 sm:col-span-3 w-full mt-4 sm:mt-0">
-      <div className="bg-gray-100 rounded-lg shadow-md p-2 sm:p-4">
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
-          <h2 className="text-lg sm:text-2xl font-bold mb-2 sm:mb-0">
-            {selectedEmployee.full_name}'s Dashboard
-          </h2>
-        </div>
-
-        {loading ? (
-          <div className="flex items-center justify-center h-40 sm:h-64">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-          </div>
-        ) : (
-          <>
-            {/* Today's Status & Breaks */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 mb-4 sm:mb-6">
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Today's Status</h3>
-                {attendanceLogs[0] ? (
-                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
-                    <div className="flex justify-between">
-                      <span>Check-in:</span>
-                      <span>{format(new Date(attendanceLogs[0].check_in), 'h:mm a')}</span>
+              {/* Employee List for small screens - initially hidden, shows when button is clicked */}
+              <div className="sm:hidden w-full mb-4">
+                {!showEmployeeList ? (
+                  <button
+                    onClick={() => setShowEmployeeList(true)}
+                    className="w-full bg-blue-500 text-white py-2 px-4 rounded-lg shadow-md hover:bg-blue-600 transition-all flex items-center justify-center"
+                  >
+                    <SearchIcon className="w-4 h-4 mr-2" />
+                    Search Employees
+                  </button>
+                ) : (
+                  <div className="bg-white rounded-lg shadow-md p-3">
+                    <div className="flex items-center justify-between mb-3">
+                      <h3 className="font-medium">Employee Search</h3>
+                      <button
+                        onClick={() => setShowEmployeeList(false)}
+                        className="text-gray-500 hover:text-gray-700"
+                        aria-label="Close employee list"
+                      >
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
+                      </button>
                     </div>
-                    <div className="flex justify-between">
-                      <span>Check-out:</span>
-                      <span>
-                        {attendanceLogs[0].check_out
-                          ? format(new Date(attendanceLogs[0].check_out), 'h:mm a')
-                          : 'Not checked out'}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Work Mode:</span>
-                      <span className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === 'on_site'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-purple-100 text-purple-800'
-                        }`}>
-                        {attendanceLogs[0].work_mode}
-                      </span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Duration:</span>
-                      <span>
-                        {calculateDuration(attendanceLogs[0].check_in, attendanceLogs[0].check_out)}
-                      </span>
-                    </div>
+
+                    <input
+                      type="search"
+                      name="search"
+                      placeholder="Search Employee..."
+                      aria-label="Search"
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="w-full px-3 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-3 text-sm"
+                      autoFocus
+                    />
+
+                    <ul className="space-y-2 max-h-[40vh] overflow-y-auto rounded-lg pr-1 custom-scrollbar">
+                      {filteredEmployees.map((employee) => (
+                        <li
+                          key={employee.id}
+                          onClick={() => {
+                            setDataEmployeesearch(employee);
+                            handleEmployeeClick(employee.id);
+                            setShowEmployeeList(false); // Hide list after selection on mobile
+                          }}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
+                              ? "bg-blue-100 text-blue-600"
+                              : "hover:bg-gray-100"
+                            } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
+                        >
+                          <span className="truncate mr-2 text-sm">{employee.full_name}</span>
+                          <button
+                            className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 rounded-xl"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEmployeeDelete(employee.id);
+                            }}
+                            aria-label="Delete employee"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </li>
+                      ))}
+                    </ul>
                   </div>
-                ) : (
-                  <p className="text-gray-500 text-xs sm:text-base">No attendance record for today</p>
                 )}
               </div>
 
-              {/* Break Summary */}
-              <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Break Records</h3>
-                {todayBreak.length > 0 ? (
-                  todayBreak.map((breakItem, index) => (
-                    <div key={index} className="space-y-2 sm:space-y-3 text-xs sm:text-base">
-                      <div className="flex justify-between">
-                        <span>Start:</span>
-                        <span>{format(new Date(breakItem.start_time), 'hh:mm a')}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>End:</span>
-                        <span>{breakItem.end_time ? format(new Date(breakItem.end_time), 'hh:mm a') : 'Ongoing'}</span>
-                      </div>
-                      <div className="flex justify-between">
-                        <span>Status:</span>
-                        <span>{breakItem.status || 'N/A'}</span>
-                      </div>
+              {/* Employee List for desktop - always visible */}
+              <div className="hidden sm:block col-span-1 w-full">
+                <input
+                  type="search"
+                  name="search"
+                  placeholder="Search Employee..."
+                  aria-label="Search"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 shadow-sm transition duration-200 mb-3 text-sm sm:text-base"
+                />
+
+                <ul className="space-y-2 max-h-[40vh] sm:max-h-[50vh] md:max-h-[60vh] lg:max-h-[500px] overflow-y-auto rounded-lg pr-1 sm:pr-2.5 custom-scrollbar">
+                  {filteredEmployees.map((employee) => (
+                    <li
+                      key={employee.id}
+                      onClick={() => {
+                        setDataEmployeesearch(employee);
+                        handleEmployeeClick(employee.id);
+                      }}
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
+                          ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                          : "hover:bg-gray-100"
+                        } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
+                    >
+                      <span className="truncate mr-2 text-xs sm:text-base">{employee.full_name}</span>
+                      <button
+                        className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 sm:px-3 sm:py-1 rounded-xl flex-shrink-0"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleEmployeeDelete(employee.id);
+                        }}
+                        aria-label="Delete employee"
+                      >
+                        <Trash2 className="w-4 h-4 sm:w-5 sm:h-5" />
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+
+              {/* Employee Dashboard */}
+              {selectedEmployee && !graphicview && (
+                <div className="col-span-1 sm:col-span-3 w-full mt-4 sm:mt-0">
+                  <div className="bg-gray-100 rounded-lg shadow-md p-2 sm:p-4">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-4">
+                      <h2 className="text-lg sm:text-2xl font-bold mb-2 sm:mb-0">
+                        {selectedEmployee.full_name}'s Dashboard
+                      </h2>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-gray-500 text-xs sm:text-base">No break records for today</p>
-                )}
-              </div>
-            </div>
 
-            {/* Monthly Overview */}
-            <div className="mt-4 sm:mt-6">
-              <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
-                <div className="flex items-center mb-4 sm:mb-6">
-                  <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
-                  <h2 className="text-base sm:text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
+                    {loading ? (
+                      <div className="flex items-center justify-center h-40 sm:h-64">
+                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                      </div>
+                    ) : (
+                      <>
+                        {/* Today's Status & Breaks */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 mb-4 sm:mb-6">
+                          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Today's Status</h3>
+                            {attendanceLogs[0] ? (
+                              <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                <div className="flex justify-between">
+                                  <span>Check-in:</span>
+                                  <span>{format(new Date(attendanceLogs[0].check_in), 'h:mm a')}</span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Check-out:</span>
+                                  <span>
+                                    {attendanceLogs[0].check_out
+                                      ? format(new Date(attendanceLogs[0].check_out), 'h:mm a')
+                                      : 'Not checked out'}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Work Mode:</span>
+                                  <span className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === 'on_site'
+                                    ? 'bg-blue-100 text-blue-800'
+                                    : 'bg-purple-100 text-purple-800'
+                                    }`}>
+                                    {attendanceLogs[0].work_mode}
+                                  </span>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span>Duration:</span>
+                                  <span>
+                                    {calculateDuration(attendanceLogs[0].check_in, attendanceLogs[0].check_out)}
+                                  </span>
+                                </div>
+                              </div>
+                            ) : (
+                              <p className="text-gray-500 text-xs sm:text-base">No attendance record for today</p>
+                            )}
+                          </div>
+
+                          {/* Break Summary */}
+                          <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Break Records</h3>
+                            {todayBreak.length > 0 ? (
+                              todayBreak.map((breakItem, index) => (
+                                <div key={index} className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                  <div className="flex justify-between">
+                                    <span>Start:</span>
+                                    <span>{format(new Date(breakItem.start_time), 'hh:mm a')}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>End:</span>
+                                    <span>{breakItem.end_time ? format(new Date(breakItem.end_time), 'hh:mm a') : 'Ongoing'}</span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Status:</span>
+                                    <span>{breakItem.status || 'N/A'}</span>
+                                  </div>
+                                </div>
+                              ))
+                            ) : (
+                              <p className="text-gray-500 text-xs sm:text-base">No break records for today</p>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Monthly Overview */}
+                        <div className="mt-4 sm:mt-6">
+                          <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
+                            <div className="flex items-center mb-4 sm:mb-6">
+                              <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
+                              <h2 className="text-base sm:text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
+                            </div>
+
+                            {monthlyStats ? (
+                              <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
+                                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Attendance Summary</h3>
+                                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Expected Working Days:</span>
+                                      <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Days Attended:</span>
+                                      <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Present Days:</span>
+                                      <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Late Days:</span>
+                                      <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                                    </div>
+                                    <div className="flex justify-between text-gray-600">
+                                      <span>Absentees:</span>
+                                      <span className="text-red-600">{absentees || 0}</span>
+                                    </div>
+                                    <div className="flex justify-between text-gray-600">
+                                      <span>Leaves:</span>
+                                      <span className="text-green-600">{leaves || 0}</span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Mode Distribution</h3>
+                                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">On-site Days:</span>
+                                      <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Remote Days:</span>
+                                      <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Attendance Rate:</span>
+                                      <span className="font-medium">
+                                        {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Hours</h3>
+                                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Average Daily Hours:</span>
+                                      <span className="font-medium">
+                                        {monthlyStats.averageWorkHours.toFixed(1)}h
+                                      </span>
+                                    </div>
+
+
+                                    {/* Optional: Additional Tasks or Overview */}
+                                    <div className="mt-6">
+                                      <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+                                        <div className="flex items-center mb-6">
+                                          <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+                                          <h2 className="text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
+                                        </div>
+
+                                        {monthlyStats ? (
+                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                            <div className="bg-gray-50 rounded-lg p-4">
+                                              <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
+                                              <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Expected Working Days:</span>
+                                                  <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Days Attended:</span>
+                                                  <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Present Days:</span>
+                                                  <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Late Days:</span>
+                                                  <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                                                </div>
+                                                <div className="flex justify-between text-gray-600">
+                                                  <span>Absentees:</span>
+                                                  <span className="text-red-600">{absentees || 0}</span>
+                                                </div>
+                                                <div className="flex justify-between text-gray-600">
+                                                  <span>Leaves:</span>
+                                                  <span className="text-green-600">{leaves || 0}</span>
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            <div className="bg-gray-50 rounded-lg p-4">
+                                              <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
+                                              <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">On-site Days:</span>
+                                                  <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Remote Days:</span>
+                                                  <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Attendance Rate:</span>
+                                                  <span className="font-medium">
+                                                    {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+
+                                            <div className="bg-gray-50 rounded-lg p-4">
+                                              <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
+                                              <div className="space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Average Daily Hours:</span>
+                                                  <span className="font-medium">
+                                                    {monthlyStats.averageWorkHours.toFixed(1)}h
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Total Hours:</span>
+                                                  <span className="font-medium">
+                                                    {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                                                  </span>
+                                                </div>
+                                                <div className="flex items-center justify-between">
+                                                  <span className="text-gray-600">Expected Hours:</span>
+                                                  <span className="font-medium">
+                                                    {(7 * monthlyStats.expectedWorkingDays)}h
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="text-center py-8 text-gray-500">
+                                            No attendance records found for this month
+                                          </div>
+                                        )}
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Expected Hours:</span>
+                                      <span className="font-medium">
+                                        {(6 * monthlyStats.expectedWorkingDays)}h
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+                              </div>
+                            ) : (
+                              <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-base">
+                                No attendance records found for this month
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        <div className="mt-4 sm:mt-5">
+                          {/* <AbsenteeComponentAdmin userID={userID} /> */}
+                        </div>
+                      </>
+                    )}
+                  </div>
                 </div>
-
-                {monthlyStats ? (
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
-                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                      <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Attendance Summary</h3>
-                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Expected Working Days:</span>
-                          <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Days Attended:</span>
-                          <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Present Days:</span>
-                          <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Late Days:</span>
-                          <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Absentees:</span>
-                          <span className="text-red-600">{absentees || 0}</span>
-                        </div>
-                        <div className="flex justify-between text-gray-600">
-                          <span>Leaves:</span>
-                          <span className="text-green-600">{leaves || 0}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                      <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Mode Distribution</h3>
-                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">On-site Days:</span>
-                          <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Remote Days:</span>
-                          <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Attendance Rate:</span>
-                          <span className="font-medium">
-                            {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                      <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Hours</h3>
-                      <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Average Daily Hours:</span>
-                          <span className="font-medium">
-                            {monthlyStats.averageWorkHours.toFixed(1)}h
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Total Hours:</span>
-                          <span className="font-medium">
-                            {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-600">Expected Hours:</span>
-                          <span className="font-medium">
-                            {(6 * monthlyStats.expectedWorkingDays)}h
-                          </span>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                ) : (
-                  <div className="text-center py-6 sm:py-8 text-gray-500 text-xs sm:text-base">
-                    No attendance records found for this month
-                  </div>
-                )}
-              </div>
+              )}
             </div>
-            <div className="mt-4 sm:mt-5">
-              {/* <AbsenteeComponentAdmin userID={userID} /> */}
-            </div>
-          </>
-        )}
-      </div>
-    </div>
-  )}
-</div>
           </div>
         </>
       )}

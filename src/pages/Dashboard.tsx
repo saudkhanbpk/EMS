@@ -1157,7 +1157,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Expected Hours:</span>
                         <span className="font-medium">
-                          {(6 * monthlyStats.expectedWorkingDays)}h
+                          {(7 * monthlyStats.expectedWorkingDays)}h
                         </span>
                       </div>
                     </div>

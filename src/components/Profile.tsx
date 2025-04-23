@@ -77,6 +77,8 @@ const ProfileCard: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFormData(prev => ({ ...prev, profile_image: e.target.files![0] }));
+    }else{
+      setFormData(prev => ({ ...prev, profile_image: null }));
     }
   };
 
@@ -106,7 +108,7 @@ const ProfileCard: React.FC = () => {
               .getPublicUrl(data.profile_image);
             profileImageUrl = publicUrl;
           }
-        }
+        } 
 
         setUser({ ...data, profile_image_url: profileImageUrl });
         setFormData({

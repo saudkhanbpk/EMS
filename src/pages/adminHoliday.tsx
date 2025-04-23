@@ -344,7 +344,7 @@ else{
   
 
   return (
-    <div className="max-w-4xl mx-auto p-4 md:p-6 bg-white rounded-lg shadow-lg sm:w-[90%]">
+    <div className="max-w-7xl mx-auto p-4 md:p-6 bg-white rounded-lg shadow-lg sm:w-[90%]">
       <style>{calendarStyles}</style>
       <h1 className="text-2xl md:text-3xl font-bold text-gray-800 mb-6">
         Holiday Management
@@ -401,16 +401,51 @@ else{
             Select Dates
           </label>
           <div className="rounded-lg overflow-hidden shadow-lg">
-            <DatePicker
-              selected={null}
-              onChange={handleDateChange}
-              inline
-              highlightDates={selectedDates}
-              calendarClassName="custom-datepicker"
-              renderCustomHeader={CustomHeader}
-              renderDayContents={renderDayContents}
-              showPopperArrow={false}
-            />
+         
+<DatePicker
+  selected={null}
+  onChange={handleDateChange}
+  inline
+  highlightDates={selectedDates}
+  calendarClassName="custom-datepicker"
+  renderCustomHeader={CustomHeader}
+  renderDayContents={renderDayContents}
+  showPopperArrow={false}
+  minDate={(() => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // If current time is after 9 PM (21:00), set minimum date to tomorrow
+    if (currentHour >= 21) {
+      const tomorrow = new Date();
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      tomorrow.setHours(0, 0, 0, 0);
+      return tomorrow;
+    }
+    
+    // Before 9 PM, today is still selectable
+    return now;
+  })()}
+  filterDate={date => {
+    const now = new Date();
+    const currentHour = now.getHours();
+    
+    // Check if the date is today
+    const isToday = date.getDate() === now.getDate() &&
+                    date.getMonth() === now.getMonth() &&
+                    date.getFullYear() === now.getFullYear();
+    
+    // If it's today and after 9 PM, disable today
+    if (isToday && currentHour >= 21) {
+      return false;
+    }
+    
+    // For any other date (future dates), they're always selectable
+    // Past dates will be filtered by the minDate property
+    return true;
+  }}
+/>
+
           </div>
         </div>
 <div className=" " >

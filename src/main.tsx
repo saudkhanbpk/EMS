@@ -16,16 +16,16 @@ createRoot(document.getElementById('root')!).render(
   </AuthProvider>
 
 );
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker
-    .register("/firebase-messaging-sw.js")
-    .then((registration) => {
-      console.log("Service Worker registered:", registration);
-    })
-    .catch((error) => {
-      console.error("Service Worker registration failed:", error);
-    });
-}
+// if ("serviceWorker" in navigator) {
+//   navigator.serviceWorker
+//     .register("/firebase-messaging-sw.js")
+//     .then((registration) => {
+//       console.log("Service Worker registered:", registration);
+//     })
+//     .catch((error) => {
+//       console.error("Service Worker registration failed:", error);
+//     });
+// }
 // // Firebase Configuration
 // const firebaseConfig = {
 //   apiKey: "AIzaSyAAUF5qzZrljXJjb96NmesXBydmn9Hmjss",
@@ -53,20 +53,20 @@ if ("serviceWorker" in navigator) {
 // }
 
 // Listen for messages when the app is open
-onMessage(messaging, (payload) => {
-  console.log("Foreground message received", payload);
-  new Notification(payload.notification.title, {
-    body: payload.notification.body,
-    icon: "/firebase-logo.png",
-  });
-});
+// onMessage(messaging, (payload) => {
+//   console.log("Foreground message received", payload);
+//   new Notification(payload.notification.title, {
+//     body: payload.notification.body,
+//     icon: "/firebase-logo.png",
+//   });
+// });
 
-// Register service worker
-if ("serviceWorker" in navigator) {
-  navigator.serviceWorker.register("/firebase-messaging-sw.js").then((registration) => {
-    console.log("Service Worker registered:", registration);
-  });
-}
+// // Register service worker
+// if ("serviceWorker" in navigator) {
+//   navigator.serviceWorker.register("/firebase-messaging-sw.js").then((registration) => {
+//     console.log("Service Worker registered:", registration);
+//   });
+// }
 
 // Call function to ask for permission
 // requestNotificationPermission();
