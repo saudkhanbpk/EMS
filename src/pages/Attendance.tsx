@@ -76,6 +76,7 @@ const Attendance: React.FC = () => {
   const [isDisabled, setIsDisabled] = useState(false);
   const [isButtonLoading, setisButtonLoading] = useState(false);
   const [alreadycheckedin, setalreadycheckedin] = useState(false)
+  const [isbreak,setisbreak]=useState<boolean>(false);
 
 
 
@@ -313,6 +314,7 @@ const Attendance: React.FC = () => {
         }
 
         setBreakRecords(breakData);
+        setisbreak(false)
       } else {
         // No attendance records found for the period
         setAttendanceRecords([]);
@@ -910,7 +912,7 @@ const Attendance: React.FC = () => {
 
               <button
                 onClick={handleBreak}
-                disabled={loading}
+                disabled={loading || isbreak}
                 className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnBreak
                   ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
                   : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'
