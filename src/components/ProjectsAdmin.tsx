@@ -381,10 +381,11 @@ function ProjectsAdmin() {
                     }}
                   >
                     <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center px-4 py-1
+                      <div className="flex items-center pl-2 pr-4 py-1
                        bg-[#f7eaff] rounded-full">
 
                         <span className="text-sm font-semibold ml-2">
+                          <label>Story Points : </label>
                           <span className="text-green-600">{project.completedScore}</span>
                           <span className="text-gray-500"> / </span>
                           <span className="text-red-500">{project.totalScore}</span>

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, addWeeks, addMonths, startOfMonth, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
+import { format, addWeeks, addMonths, startOfMonth,startOfWeek,isAfter, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut, CalendarIcon } from 'lucide-react';
@@ -454,8 +454,15 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const handleDayNext = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + 1);
-    setSelectedDate(newDate);
-    // loadTodayData2(newDate);
+  
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Normalize to midnight
+    newDate.setHours(0, 0, 0, 0); // Normalize to midnight
+  
+    if (newDate <= today) {
+      setSelectedDate(newDate);
+      // loadTodayData2(newDate);
+    }
   };
 
   const handleDayPrev = () => {
@@ -467,16 +474,36 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
 
   // Handle week change (previous/next)
   const handleWeekChange = (direction) => {
-    setSelectedDate((prevDate) =>
-      direction === "prev" ? addWeeks(prevDate, -1) : addWeeks(prevDate, 1)
-    );
+    setSelectedDate((prevDate) => {
+      if (direction === "prev") {
+        return addWeeks(prevDate, -1);
+      } else if (direction === "next") {
+        const newDate = addWeeks(prevDate, 1);
+        const currentWeekStart = startOfWeek(new Date());
+        const newWeekStart = startOfWeek(newDate);
+        return isAfter(newWeekStart, currentWeekStart) ? prevDate : newDate;
+      }
+      return prevDate; // Default case, though direction is typically "prev" or "next"
+    });
   };
 
   // Handle Month change (previous/next)
   const handleMonthChange = (direction) => {
-    setSelectedDate((prevDate) =>
-      direction === "prev" ? addMonths(prevDate, -1) : addMonths(prevDate, 1)
-    );
+    setSelectedDate((prevDate) => {
+      if (direction === "prev") {
+        return addMonths(prevDate, -1);
+      } else if (direction === "next") {
+        const newDate = addMonths(prevDate, 1);
+        const currentMonthStart = startOfMonth(new Date());
+        const newMonthStart = startOfMonth(newDate);
+        if (isAfter(newMonthStart, currentMonthStart)) {
+          return prevDate;
+        } else {
+          return newDate;
+        }
+      }
+      return prevDate;
+    });
   };
 
   const handleDateFilter = () => {

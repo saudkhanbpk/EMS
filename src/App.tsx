@@ -303,6 +303,7 @@ import Chatbutton from './components/chatbtn';
 import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
+import Adminroute from './components/adminroute';
 
 function App() {
   const user = useAuthStore((state) => state.user);
@@ -377,8 +378,8 @@ function App() {
 
          {/* Widget Demo Route */}
          <Route path="/widget-demo" element={<WidgetDemo />} />
-         <Route path='/chat-admin' element={<ChatSidebar/>}></Route>
-         <Route path="chat-admin/:id" element={<Chat />} />
+         <Route path='/chat-admin' element={<Adminroute> <ChatSidebar/></Adminroute>}></Route>
+         <Route path="chat-admin/:id" element={ <Adminroute> <Chat/></Adminroute>}></Route>
 
          {/* Admin Route (Protected) */}
          <Route

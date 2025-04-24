@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from "react";
+
+import React, { useState, useEffect, forwardRef } from "react";
 import DatePicker from "react-datepicker";
 import "react-datepicker/dist/react-datepicker.css";
-import { Calendar, X, Trash2, Check, ChevronLeft, ChevronRight, Edit, AlertCircle } from "lucide-react";
+import { Calendar, X, Trash2, Check, ChevronLeft, ChevronRight, Edit, AlertCircle, Search } from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 // Add this CSS to your global styles or component-specific styles
@@ -123,6 +124,44 @@ const calendarStyles = `
     transform: translateY(-2px);
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.1);
   }
+  
+  .date-navigation-input {
+    padding: 8px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    background-color: rgba(255, 255, 255, 0.1);
+    color: white;
+    border-radius: 6px;
+    font-size: 14px;
+    width: 120px;
+    outline: none;
+    transition: all 0.2s ease;
+  }
+  
+  .date-navigation-input:focus {
+    background-color: rgba(255, 255, 255, 0.2);
+    border-color: rgba(255, 255, 255, 0.5);
+  }
+  
+  .date-navigation-input::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+  }
+  
+  .date-navigation-button {
+    background-color: rgba(255, 255, 255, 0.2);
+    border: none;
+    color: white;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-left: 8px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+  }
+  
+  .date-navigation-button:hover {
+    background-color: rgba(255, 255, 255, 0.3);
+  }
 `;
 
 // Holiday type definition
@@ -147,27 +186,27 @@ function AdminHoliday() {
   const [currentHoliday, setCurrentHoliday] = useState<Holiday | null>(null);
   // State for delete confirmation
   const [showDeleteConfirm, setShowDeleteConfirm] = useState<number | null>(null);
+  // State for the month displayed in the calendar
+  const [calendarDate, setCalendarDate] = useState<Date>(new Date());
+  // State for the date navigation input
+  const [navigationDate, setNavigationDate] = useState<string>("");
 
-async function fetchholiday() {
-  const { data, error } = await supabase
-  .from('holidays')           // table name
-  .select('*')    
-  if (error) {
-    console.error(error);
+  async function fetchholiday() {
+    const { data, error } = await supabase
+    .from('holidays')           // table name
+    .select('*')    
+    if (error) {
+      console.error(error);
+    }
+    else{
+      console.log("the all holidays is the ", data);
+      setHolidays(data)
+    } 
   }
-  else{
-    console.log("the all holidays is the ", data);
-    setHolidays(data)
-  } 
-}
 
   // Load dummy data on component mount
   useEffect(() => {
-    // Dummy holiday data
-
-    
     fetchholiday()
-   
   }, []);
 
   // Handle date selection
@@ -196,41 +235,37 @@ async function fetchholiday() {
     e.preventDefault();
     
     if (editMode && currentHoliday) {
-
-
       const { data, error } = await supabase
-  .from('holidays')
-  .update({ dates: currentHoliday.dates, name: currentHoliday.name}) 
-  .eq('id', currentHoliday.id);  
+        .from('holidays')
+        .update({ dates: currentHoliday.dates, name: currentHoliday.name}) 
+        .eq('id', currentHoliday.id);  
 
-if (error) {
-  console.log(error)
-}else{
-
-      // Update existing holiday
-      const updatedHolidays = holidays.map(holiday => 
-        holiday.id === currentHoliday.id 
-          ? { ...holiday, name: holidayName, dates: selectedDates }
-          : holiday
-      );
-      
-      setHolidays(updatedHolidays);
-      setEditMode(false);
-      setCurrentHoliday(null);
-    }
+      if (error) {
+        console.log(error)
+      } else {
+        // Update existing holiday
+        const updatedHolidays = holidays.map(holiday => 
+          holiday.id === currentHoliday.id 
+            ? { ...holiday, name: holidayName, dates: selectedDates }
+            : holiday
+        );
+        
+        setHolidays(updatedHolidays);
+        setEditMode(false);
+        setCurrentHoliday(null);
+      }
     } else {
       // Add new holiday
       const { data, error } = await supabase.from('holidays')
-  .insert([
-    { dates: selectedDates, name: holidayName }
-  ]).select("*")
+        .insert([
+          { dates: selectedDates, name: holidayName }
+        ]).select("*")
 
-if (error) console.error(error)
-else{
-  console.log(data)
-  setHolidays([...holidays,data[0]])
-}
-
+      if (error) console.error(error)
+      else {
+        console.log(data)
+        setHolidays([...holidays, data[0]])
+      }
     }
     
     // Show success message
@@ -238,8 +273,6 @@ else{
     setSubmitted(false);
     setHolidayName("");
     setSelectedDates([]);
-    // Reset form after 3 seconds
-   
   };
 
   // Clear all selected dates
@@ -261,17 +294,16 @@ else{
   // Handle delete button click
   const handleDelete = async(id: string) => {
     const { data, error } = await supabase
-  .from('holidays')
-  .delete()
-  .eq('id', id) 
-if (error) {
-  console.error(error)
-}
-else{
-  setHolidays(holidays.filter(holiday => holiday.id !== id));
-}
+      .from('holidays')
+      .delete()
+      .eq('id', id) 
+    if (error) {
+      console.error(error)
+    }
+    else {
+      setHolidays(holidays.filter(holiday => holiday.id !== id));
+    }
     
-
     setShowDeleteConfirm(null);
   };
 
@@ -283,6 +315,28 @@ else{
     setSelectedDates([]);
   };
 
+  // Handle navigation date input change
+  const handleNavigationDateChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNavigationDate(e.target.value);
+  };
+
+  // Navigate to the specified date
+  const navigateToDate = () => {
+    const date = new Date(navigationDate);
+    if (!isNaN(date.getTime())) {
+      setCalendarDate(date);
+    } else {
+      alert("Please enter a valid date");
+    }
+  };
+
+  // Handle key press in navigation input
+  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Enter') {
+      navigateToDate();
+    }
+  };
+
   // Custom header for the DatePicker
   const CustomHeader = ({
     date,
@@ -291,26 +345,45 @@ else{
     prevMonthButtonDisabled,
     nextMonthButtonDisabled,
   }: any) => (
-    <div className="flex items-center justify-between px-4 py-2">
-      <button
-        onClick={decreaseMonth}
-        disabled={prevMonthButtonDisabled}
-        type="button"
-        className="p-1 rounded-full hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <ChevronLeft className="h-5 w-5 text-white" />
-      </button>
-      <h2 className="text-white font-semibold text-lg">
-        {date.toLocaleString('default', { month: 'long', year: 'numeric' })}
-      </h2>
-      <button
-        onClick={increaseMonth}
-        disabled={nextMonthButtonDisabled}
-        type="button"
-        className="p-1 rounded-full hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
-      >
-        <ChevronRight className="h-5 w-5 text-white" />
-      </button>
+    <div className="flex flex-col space-y-2">
+      <div className="flex items-center justify-between px-4 py-2">
+        <button
+          onClick={decreaseMonth}
+          disabled={prevMonthButtonDisabled}
+          type="button"
+          className="p-1 rounded-full hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ChevronLeft className="h-5 w-5 text-white" />
+        </button>
+        <h2 className="text-white font-semibold text-lg">
+          {date.toLocaleString('default', { month: 'long', year: 'numeric' })}
+        </h2>
+        <button
+          onClick={increaseMonth}
+          disabled={nextMonthButtonDisabled}
+          type="button"
+          className="p-1 rounded-full hover:bg-indigo-100 disabled:opacity-50 disabled:cursor-not-allowed"
+        >
+          <ChevronRight className="h-5 w-5 text-white" />
+        </button>
+      </div>
+      <div className="flex items-center justify-center px-4 pb-2">
+        <input
+          type="text"
+          placeholder="MM/DD/YYYY"
+          value={navigationDate}
+          onChange={handleNavigationDateChange}
+          onKeyPress={handleKeyPress}
+          className="date-navigation-input"
+        />
+        <button 
+          onClick={navigateToDate}
+          className="date-navigation-button"
+        >
+          <Search className="h-4 w-4 mr-1" />
+          Go
+        </button>
+      </div>
     </div>
   );
 
@@ -342,6 +415,17 @@ else{
     });
   };
   
+  // Custom input component for the DatePicker
+  const CustomInput = forwardRef(({ value, onClick }: any, ref: any) => (
+    <button
+      className="w-full px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 flex items-center"
+      onClick={onClick}
+      ref={ref}
+    >
+      <Calendar className="h-5 w-5 text-gray-400 mr-2" />
+      {value || "Select a date"}
+    </button>
+  ));
 
   return (
     <div className="max-w-7xl mx-auto p-4 md:p-6 bg-white rounded-lg shadow-lg sm:w-[90%]">
@@ -401,111 +485,110 @@ else{
             Select Dates
           </label>
           <div className="rounded-lg overflow-hidden shadow-lg">
-         
-<DatePicker
-  selected={null}
-  onChange={handleDateChange}
-  inline
-  highlightDates={selectedDates}
-  calendarClassName="custom-datepicker"
-  renderCustomHeader={CustomHeader}
-  renderDayContents={renderDayContents}
-  showPopperArrow={false}
-  minDate={(() => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // If current time is after 9 PM (21:00), set minimum date to tomorrow
-    if (currentHour >= 21) {
-      const tomorrow = new Date();
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      tomorrow.setHours(0, 0, 0, 0);
-      return tomorrow;
-    }
-    
-    // Before 9 PM, today is still selectable
-    return now;
-  })()}
-  filterDate={date => {
-    const now = new Date();
-    const currentHour = now.getHours();
-    
-    // Check if the date is today
-    const isToday = date.getDate() === now.getDate() &&
-                    date.getMonth() === now.getMonth() &&
-                    date.getFullYear() === now.getFullYear();
-    
-    // If it's today and after 9 PM, disable today
-    if (isToday && currentHour >= 21) {
-      return false;
-    }
-    
-    // For any other date (future dates), they're always selectable
-    // Past dates will be filtered by the minDate property
-    return true;
-  }}
-/>
-
+            <DatePicker
+              selected={calendarDate}
+              onChange={handleDateChange}
+              onMonthChange={setCalendarDate}
+              inline
+              highlightDates={selectedDates}
+              calendarClassName="custom-datepicker"
+              renderCustomHeader={CustomHeader}
+              renderDayContents={renderDayContents}
+              showPopperArrow={false}
+              minDate={(() => {
+                const now = new Date();
+                const currentHour = now.getHours();
+                
+                // If current time is after 9 PM (21:00), set minimum date to tomorrow
+                if (currentHour >= 21) {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  tomorrow.setHours(0, 0, 0, 0);
+                  return tomorrow;
+                }
+                
+                // Before 9 PM, today is still selectable
+                return now;
+              })()}
+              filterDate={date => {
+                const now = new Date();
+                const currentHour = now.getHours();
+                
+                // Check if the date is today
+                const isToday = date.getDate() === now.getDate() &&
+                                date.getMonth() === now.getMonth() &&
+                                date.getFullYear() === now.getFullYear();
+                
+                // If it's today and after 9 PM, disable today
+                if (isToday && currentHour >= 21) {
+                  return false;
+                }
+                
+                // For any other date (future dates), they're always selectable
+                // Past dates will be filtered by the minDate property
+                return true;
+              }}
+            />
           </div>
         </div>
-<div className=" " >
         <div>
-          <h3 className="text-md font-medium text-gray-700 mb-2">
-            Selected Dates ({selectedDates.length})
-          </h3>
-          <div className="flex flex-wrap gap-2 mb-4">
-            {selectedDates.length > 0 ? (
-              selectedDates.map((date, index) => (
-                <div 
-                  key={index} 
-                  className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm flex items-center shadow-sm"
-                >
-                  {formatDate(date)}
-                  <button
-                    type="button"
-                    onClick={() => handleDateChange(date)}
-                    className="ml-2 text-indigo-600 hover:text-indigo-800 focus:outline-none"
+          <div>
+            <h3 className="text-md font-medium text-gray-700 mb-2">
+              Selected Dates ({selectedDates.length})
+            </h3>
+            <div className="flex flex-wrap gap-2 mb-4">
+              {selectedDates.length > 0 ? (
+                selectedDates.map((date, index) => (
+                  <div 
+                    key={index} 
+                    className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm flex items-center shadow-sm"
                   >
-                    <X className="h-4 w-4" />
-                  </button>
-                </div>
-              ))
-            ) : (
-              <p className="text-gray-500 italic">No dates selected</p>
+                    {formatDate(date)}
+                    <button
+                      type="button"
+                      onClick={() => handleDateChange(date)}
+                      className="ml-2 text-indigo-600 hover:text-indigo-800 focus:outline-none"
+                    >
+                      <X className="h-4 w-4" />
+                    </button>
+                  </div>
+                ))
+              ) : (
+                <p className="text-gray-500 italic">No dates selected</p>
+              )}
+            </div>
+            {selectedDates.length > 0 && (
+              <button
+                type="button"
+                onClick={clearDates}
+                className="text-sm text-red-600 hover:text-red-800 flex items-center"
+              >
+                <Trash2 className="h-4 w-4 mr-1" />
+                Clear all dates
+              </button>
             )}
           </div>
-          {selectedDates.length > 0 && (
+
+          <div className="flex justify-end space-x-4 mt-6">
             <button
               type="button"
-              onClick={clearDates}
-              className="text-sm text-red-600 hover:text-red-800 flex items-center"
+              onClick={() => {
+                setHolidayName("");
+                setSelectedDates([]);
+                setEditMode(false)
+              }}
+              className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
             >
-              <Trash2 className="h-4 w-4 mr-1" />
-              Clear all dates
+              Reset
             </button>
-          )}
-        </div>
-
-        <div className="flex justify-end space-x-4">
-          <button
-            type="button"
-            onClick={() => {
-              setHolidayName("");
-              setSelectedDates([]);
-              setEditMode(false)
-            }}
-            className="px-4 py-2 border border-gray-300 rounded-md text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 transition-colors"
-          >
-            Reset
-          </button>
-          <button
-            type="submit"
-            className="px-4 py-2  bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors shadow-md"
-            disabled={selectedDates.length === 0 || !holidayName}
-          >
-            {editMode ? "Update Holiday" : "Save Holiday"}
-          </button>
-        </div>
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors shadow-md"
+              disabled={selectedDates.length === 0 || !holidayName}
+            >
+              {editMode ? "Update Holiday" : "Save Holiday"}
+            </button>
+          </div>
         </div>
       </form>
 

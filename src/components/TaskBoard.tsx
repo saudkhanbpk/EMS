@@ -136,6 +136,176 @@ function TaskBoard({ setSelectedTAB }) {
   };
 
   useEffect(() => {
+    // const fetchTasks = async () => {
+    //   const { data: taskData, error: taskError } = await supabase
+    //     .from("tasks_of_projects")
+    //     .select("*")
+    //     .eq("project_id", id || projectIdd[0])
+    //     .order("created_at", { ascending: true });
+
+    //   if (taskData && !taskError) {
+    //     const userId = localStorage.getItem("user_id");
+
+    //     // Filter tasks based on devops condition
+    //     const filteredTasks = taskData.filter((task) => {
+    //       return (
+    //         (Array.isArray(task.devops) &&
+    //           task.devops.some((dev) => dev.id === userId)) ||
+    //         !task.devops ||
+    //         task.devops.length === 0
+    //       );
+    //     });
+
+    //     // Fetch comments
+    //     const { data: commentsData, error: commentsError } = await supabase
+    //       .from("comments")
+    //       .select("*");
+
+    //     if (commentsData && !commentsError) {
+    //       // Fetch users for commentor names
+    //       const { data: usersData, error: usersError } = await supabase
+    //         .from("users")
+    //         .select("id, full_name");
+
+    //       if (usersData && !usersError) {
+    //         // Create user map
+    //         const userMap = {};
+    //         usersData.forEach((user) => {
+    //           userMap[user.id] = user.full_name;
+    //         });
+
+    //         // Add commentor_name to each comment
+    //         const enrichedComments = commentsData.map((comment) => ({
+    //           ...comment,
+    //           commentor_name: userMap[comment.user_id] || "Unknown User",
+    //         }));
+
+    //         setComments(enrichedComments);
+
+    //         // Map comments to each task
+    //         const tasksWithComments = filteredTasks.map((task) => {
+    //           const taskComments = enrichedComments.filter(
+    //             (comment) => comment.task_id === task.id
+    //           );
+    //           return {
+    //             ...task,
+    //             comments: taskComments,
+    //             commentCount: taskComments.length,
+    //           };
+    //         });
+
+    //         setTasks(tasksWithComments);
+
+    //         // Group comments by task_id
+    //         const commentsByTask = enrichedComments.reduce((acc, comment) => {
+    //           if (!acc[comment.task_id]) acc[comment.task_id] = [];
+    //           acc[comment.task_id].push(comment);
+    //           return acc;
+    //         }, {});
+
+    //         setCommentByTaskID(commentsByTask);
+    //       }
+    //     }
+    //   }
+    // };
+
+
+    const fetchTasks = async () => {
+      try {
+        const userId = localStorage.getItem("user_id");
+    
+        // Step 1: Fetch all tasks in the selected project
+        const { data: taskData, error: taskError } = await supabase
+          .from("tasks_of_projects")
+          .select("*")
+          .eq("project_id", id || projectIdd[0])
+          .order("created_at", { ascending: true });
+    
+        if (taskError) throw taskError;
+    
+        // Step 2: Filter tasks based on devops array (manually, not joined)
+        const filteredTasks = taskData.filter((task) => {
+          return (
+            (Array.isArray(task.devops) &&
+              task.devops.some((dev) => dev.id === userId)) ||
+            !task.devops ||
+            task.devops.length === 0
+          );
+        });
+    
+        // Step 3: Fetch all comments
+        const { data: commentsData, error: commentsError } = await supabase
+          .from("comments")
+          .select("*");
+    
+        if (commentsError) throw commentsError;
+    
+        // Step 4: Fetch all users
+        const { data: usersData, error: usersError } = await supabase
+          .from("users")
+          .select("id, full_name");
+    
+        if (usersError) throw usersError;
+    
+        // Step 5: Create user map
+        const userMap = usersData.reduce((acc, user) => {
+          acc[user.id] = user.full_name;
+          return acc;
+        }, {});
+    
+        // Step 6: Enrich comments with user names
+        const enrichedComments = commentsData.map((comment) => ({
+          ...comment,
+          commentor_name: userMap[comment.user_id] || "Unknown User",
+        }));
+    
+        setComments(enrichedComments); // For global comment list if needed
+    
+        // Step 7: Attach comments and images to tasks
+        const processedTasks = filteredTasks.map((task) => {
+          const taskComments = enrichedComments.filter(
+            (comment) => comment.task_id === task.id
+          );
+    
+          const imageData = task.imageurl
+            ? {
+                image_url: task.imageurl,
+                thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
+              }
+            : {};
+    
+          return {
+            ...task,
+            comments: taskComments,
+            commentCount: taskComments.length,
+            ...imageData,
+          };
+        });
+
+        processedTasks.sort((a, b) => {
+          const priorityOrder = { High: 0, Medium: 1, Low: 2 };
+          const aPriority = a.priority || 'Other';
+          const bPriority = b.priority || 'Other';
+          return (priorityOrder[aPriority] ?? 3) - (priorityOrder[bPriority] ?? 3);
+        });
+        console.log("the task is",processedTasks)
+    
+        setTasks(processedTasks);
+    
+        // Step 8: Group comments by task ID
+        const commentsByTask = enrichedComments.reduce((acc, comment) => {
+          if (!acc[comment.task_id]) acc[comment.task_id] = [];
+          acc[comment.task_id].push(comment);
+          return acc;
+        }, {});
+    
+        setCommentByTaskID(commentsByTask);
+      } catch (error) {
+        console.error("Error fetching tasks:", error);
+        // Show toast, alert, etc. if needed
+      }
+    };
+    
     fetchTasks();
   }, [id, projectIdd]);
 
@@ -237,7 +407,7 @@ function TaskBoard({ setSelectedTAB }) {
   };
 
   return (
-    <div className="min-h-screen p-8">
+    <div className="min-h-screen ">
       <div className="max-w-7xl mx-auto">
         <div className="flex items-center ml-6 mb-8">
           <Link
