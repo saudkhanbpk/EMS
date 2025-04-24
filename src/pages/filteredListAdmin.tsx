@@ -225,7 +225,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
         const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
         const leavesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'leave').length;
         const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
-
+        const remoteDays = uniqueAttendance.filter(a => a.work_mode === 'remote').length;
         const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
         const absentDays = leavesCount + absenteesCount;
 
@@ -236,6 +236,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
           user: { id, full_name },
           presentDays,
           absentDays,
+          remoteDays,
           totalHoursWorked: totalHours,
           workingHoursPercentage,
         };
@@ -524,6 +525,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
           <th className="py-3 px-6 text-left">Employee Name</th>
           <th className="py-3 px-6 text-left">Present Days</th>
           <th className="py-3 px-6 text-left">Absent Days</th>
+          <th className="py-3 px-6 text-left">Remote Work</th>
           <th className="py-3 px-6 text-left">Total Hours Worked</th>
           <th className="py-3 px-6 text-left">Working Hours %</th>
           <th className="py-3 px-6 text-left">Actions</th>
@@ -548,6 +550,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
               <td className={`py-4 px-6 ${nameColor}`}>{entry.user.full_name}</td>
               <td className="py-4 px-6">{entry.presentDays}</td>
               <td className="py-4 px-6">{entry.absentDays}</td>
+              <td className="py-4 px-6">{entry.remoteDays}</td>
               <td className="py-4 px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
               <td className="py-4 px-6">
                 <span

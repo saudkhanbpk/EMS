@@ -138,7 +138,7 @@ const EmployeeAttendanceTable = () => {
   const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
   const [graphicview, setgraphicview] = useState(false);
   const [tableData, setTableData] = useState('');
-  const [breaks, setbreak] = useState('');
+  
   const [isDateModalOpen, setIsDateModalOpen] = useState(false)
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
@@ -937,6 +937,7 @@ function formatToTimeString(isoString:string) {
 
 let getuserbreakdate=(id:string)=>{
 let secondcheckin=todayBreak.filter((breaks)=>breaks.attendance_id===id)
+
 let autoend=secondcheckin[0]?.ending==='auto'
 if(secondcheckin && !autoend){
 let oneattendce=secondcheckin[0];

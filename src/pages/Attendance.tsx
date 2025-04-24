@@ -76,7 +76,8 @@ const Attendance: React.FC = () => {
   const [isDisabled, setIsDisabled] = useState(false);
   const [isButtonLoading, setisButtonLoading] = useState(false);
   const [alreadycheckedin, setalreadycheckedin] = useState(false)
-  const [isbreak,setisbreak]=useState<boolean>(false);
+  const [alreadybreak,setalreadybreak]=useState<boolean>(false)
+  const [isbreak,setisbreak]=useState<boolean>(true);
 
 
 
@@ -292,6 +293,7 @@ const Attendance: React.FC = () => {
 
           // Check the last break for this attendance record
           const previousBreak = breaks[breaks.length - 1];
+          
           if (previousBreak) {
             if (!previousBreak.end_time) {
               // If the last break has no end_time, user is still on break.
@@ -301,6 +303,7 @@ const Attendance: React.FC = () => {
               // Otherwise, user is not on break.
               setIsOnBreak(false);
               setBreakTime(null);
+              setalreadybreak(true)
             }
           } else {
             // If no breaks exist for this attendance record, user is not on break.
@@ -912,7 +915,7 @@ const Attendance: React.FC = () => {
 
               <button
                 onClick={handleBreak}
-                disabled={loading || isbreak}
+                disabled={loading || isbreak || alreadybreak }
                 className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnBreak
                   ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
                   : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'
