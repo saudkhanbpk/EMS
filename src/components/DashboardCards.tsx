@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from "react";
 import { CircularProgressbar, buildStyles } from "react-circular-progressbar";
 import "react-circular-progressbar/dist/styles.css";
@@ -10,8 +9,8 @@ import { useAuthStore } from "../lib/store";
 const initialLeaveData = [
   { type: "Sick Leave", used: 0, total: 22, color: "#24B12B" },
   { type: "Casual Leave", used: 0, total: 22, color: "#3498db" },
-  { type: "Unpaid Leave", used: 0, total: 22, color: "#FF355C" },
-  { type: "Remote Work", used: 0, total: 22, color: "#C78E2C" },
+  { type: "Unpaid Leave", used: 0, total: 22, color: "#FF355C", countOnly: true },
+  { type: "Remote Work", used: 0, total: 22, color: "#C78E2C", countOnly: true },
   { type: "Emergency Leave", used: 0, total: 22, color: "#9A00FF" },
 ];
 
@@ -21,6 +20,8 @@ const TOTAL_SHARED_LEAVE = 22;
 export default function DashboardCards() {
   const [selectedDate] = useState(new Date());
   const [leaveData, setLeaveData] = useState(initialLeaveData);
+  const [totalUsedLeave, setTotalUsedLeave] = useState(0);
+  const [availableLeave, setAvailableLeave] = useState(TOTAL_SHARED_LEAVE);
   const currentUser = useAuthStore((state) => state.user);
   
   // Get start and end of the current year
@@ -57,6 +58,10 @@ export default function DashboardCards() {
           
           return newLeaveData;
         });
+        
+        // After updating remote work count, recalculate total leave
+        // This ensures that remote work is included in the total
+        fetchAbsentees();
       }
     }
   }
@@ -127,14 +132,16 @@ export default function DashboardCards() {
     // Remaining half day (if odd number of half days)
     const remainingHalfDay = halfDayCount % 2;
     
-    // Calculate total leave days used (excluding Remote Work)
-    const totalLeaveUsed = casualLeaveCount + sickLeaveCount + emergencyLeaveCount;
-    
-    // Calculate how many days are available in the shared pool
-    const availableLeave = Math.max(0, TOTAL_SHARED_LEAVE - totalLeaveUsed);
+    // Calculate total leave days used (now INCLUDING Remote Work)
+    const totalLeaveUsed = casualLeaveCount + sickLeaveCount + emergencyLeaveCount + currentRemoteWorkCount;
+    setTotalUsedLeave(totalLeaveUsed);
     
     // Calculate how many days exceed the shared pool (going to unpaid)
     const unpaidLeaveCount = Math.max(0, totalLeaveUsed - TOTAL_SHARED_LEAVE);
+    
+    // Calculate how many days are available in the shared pool
+    const available = Math.max(0, TOTAL_SHARED_LEAVE - totalLeaveUsed);
+    setAvailableLeave(available);
     
     // Update casual leave count
     const casualLeaveIndex = updatedLeaveData.findIndex(item => item.type === "Casual Leave");
@@ -158,7 +165,7 @@ export default function DashboardCards() {
       updatedLeaveData[emergencyLeaveIndex].used = emergencyLeaveCount;
     }
     
-    // Update remote work count (not part of the shared pool)
+    // Update remote work count
     const remoteWorkIndex = updatedLeaveData.findIndex(item => item.type === "Remote Work");
     if (remoteWorkIndex !== -1) {
       updatedLeaveData[remoteWorkIndex].used = currentRemoteWorkCount;
@@ -170,21 +177,15 @@ export default function DashboardCards() {
       updatedLeaveData[unpaidLeaveIndex].used = unpaidLeaveCount;
     }
     
-    // Update the shared available count for all leave types (except Remote Work and Unpaid)
-    updatedLeaveData.forEach(item => {
-      if (item.type !== "Remote Work" && item.type !== "Unpaid Leave") {
-        item.available = availableLeave;
-      }
-    });
-    
     // Update the state with the new leave data
     setLeaveData(updatedLeaveData);
   }
   
   useEffect(() => {
     if (currentUser) {
-      fetchAbsentees();
       fetchremote();
+      // fetchAbsentees is called after fetchremote completes to ensure
+      // remote work count is included in the total calculation
     }
   }, [currentUser, selectedDate]);
 
@@ -205,8 +206,8 @@ export default function DashboardCards() {
             <div className="w-12 sm:w-14 md:w-16">
               <CircularProgressbar
                 counterClockwise
-                value={(leave.used / leave.total) * 100}
-                text={leave.type === "Unpaid Leave" ? `${leave.used}` : `${leave.used}/${leave.total}`}
+                value={leave.countOnly ? 100 : (leave.used / TOTAL_SHARED_LEAVE) * 100}
+                text={leave.countOnly ? `${leave.used}` : `${leave.used}/${availableLeave}`}
                 styles={buildStyles({
                   textColor: leave.color,
                   pathColor: leave.color,
@@ -216,17 +217,15 @@ export default function DashboardCards() {
               />
             </div>
             <div className="font-medium text-[#344054] text-[8px] sm:text-[10px]">
-              {leave.type !== "Unpaid Leave" ? (
+              {leave.countOnly ? (
+                <p>Used: {leave.used}</p>
+              ) : (
                 <>
                   <p className="mb-1">
-                    Available: {leave.type !== "Remote Work" ? 
-                      (leave.available !== undefined ? leave.available : TOTAL_SHARED_LEAVE - leave.used) : 
-                      (leave.total - leave.used)}
+                    Available: {availableLeave}
                   </p>
                   <p>Used: {leave.used} {leave.note && <span>({leave.note})</span>}</p>
                 </>
-              ) : (
-                <p>Total: {leave.used}</p>
               )}
             </div>
           </div>

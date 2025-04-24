@@ -77,6 +77,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       .eq("project_id", ProjectId);
 
     {
+      console.log("the all task is" ,data)
       // No need for image URL processing since URLs are already in the table
       const tasksWithImages = data.map(task => ({
         ...task,
@@ -123,8 +124,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               commentCount: taskComments.length,
             };
           });
+          const sortedTasks = [...tasksWithComments].sort((a, b) => {
+            // Define the priority order
+            const priorityOrder = { high: 3, medium: 2, low: 1 };
+            // Get priority values (convert to lowercase for consistency)
+            const aPriority = priorityOrder[a.priority?.toLowerCase()] || 0;
+            const bPriority = priorityOrder[b.priority?.toLowerCase()] || 0;
+            // Sort in descending order
+            return bPriority - aPriority;
+          });
 
-          setTasks(tasksWithComments);
+          setTasks(sortedTasks);
 
           // Calculate scores for all developers
           const devopsScores = devopss.map((developer) => {
