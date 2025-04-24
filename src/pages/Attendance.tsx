@@ -371,7 +371,7 @@ const Attendance: React.FC = () => {
     const hours = pktTime.getHours();
     const minutes = pktTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    const startOfWorkDay = 8 * 60 + 0; // 8:00 AM in minutes
+    const startOfWorkDay = 6 * 60 + 0; // 6:00 AM in minutes
     const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
     if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
       return;

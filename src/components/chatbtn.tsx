@@ -48,7 +48,7 @@ function Chatbutton() {
   }, [currentuser]);
 
   return (
-    <Link to="/chat" className="no-underline">
+    <Link to= {`${localStorage.getItem('user_email')?.endsWith('@admin.com') ? "/chat-admin" : '/chat'}`} className="no-underline">
       <div className="
           fixed 
           bottom-4 

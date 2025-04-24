@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-
+import Chatlayout from './chatlayout';
+import Chatbutton from './chatbtn';
 import {
   LayoutDashboard,
   Clock,
@@ -198,6 +199,7 @@ const EmployeeLayout: React.FC = () => {
           </div>
         </div>
       </div>
+      <Chatlayout> <Chatbutton></Chatbutton> </Chatlayout>
       {/* Add TimeTrackerWidget */}
       {/* <TimeTrackerWidget /> */}
     </div>
