@@ -2121,7 +2121,8 @@ useEffect(() => {
             <div className="overflow-x-auto">
 
 
-              <div className="w-full shadow-sm rounded-lg">
+              
+            <div className="w-full shadow-sm rounded-lg">
                 {/* Table view for medium and larger screens */}
                 <div className="hidden sm:block overflow-x-auto">
                   <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
@@ -2178,7 +2179,6 @@ useEffect(() => {
                           </td>
                           <td
                             className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
-                            
                           >
                             <div className="flex items-center">
                               <span className="truncate">{getuserbreakdate(entry?.attendance_id)}</span>
@@ -2285,7 +2285,22 @@ useEffect(() => {
                           </div>
                         </div>
 
-                        <div className="flex flex-col col-span-2">
+                        {/* Added 2nd Check-in for mobile view */}
+                        <div className="flex flex-col">
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">2nd Check-in</span>
+                          <div
+                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
+                          >
+                            <span className="truncate mr-1">{getuserbreakdate(entry?.attendance_id) || "---"}</span>
+                            {entry.break_in ? (
+                              <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
+                                Auto
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col">
                           <span className="text-gray-500 text-[10px] xs:text-[11px]">Mode</span>
                           <div className="mt-1">
                             <button

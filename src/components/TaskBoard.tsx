@@ -192,6 +192,14 @@ function TaskBoard({ setSelectedTAB }) {
             ...imageData,
           };
         });
+
+        processedTasks.sort((a, b) => {
+          const priorityOrder = { High: 0, Medium: 1, Low: 2 };
+          const aPriority = a.priority || 'Other';
+          const bPriority = b.priority || 'Other';
+          return (priorityOrder[aPriority] ?? 3) - (priorityOrder[bPriority] ?? 3);
+        });
+        console.log("the task is",processedTasks)
     
         setTasks(processedTasks);
     
