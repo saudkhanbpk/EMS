@@ -22,6 +22,8 @@ interface AddNewTaskProps {
 }
 
 const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks }: AddNewTaskProps) => {
+  console.log("devopss:" ,devopss);
+  
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);

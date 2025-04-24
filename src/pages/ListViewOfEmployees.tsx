@@ -612,7 +612,7 @@ const EmployeeAttendanceTable = () => {
 
 
   useEffect(() => {
-    if (selectedTab === "Employees") {
+    if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchleaves = async () => {
         const { count, error } = await supabase
           .from("absentees")
@@ -627,6 +627,8 @@ const EmployeeAttendanceTable = () => {
         } else {
           console.log("absentees Count :", count);
           setleaves(count || 0)
+          console.log("leaves" , count);
+          
         }
       }
       fetchleaves();
@@ -635,7 +637,9 @@ const EmployeeAttendanceTable = () => {
 
 
   useEffect(() => {
-    if (selectedTab === "Employees") {
+    console.log("selected tab on Leaves Fetching :" , selectedTab);
+    
+    if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchabsentees = async () => {
         const { count, error } = await supabase
           .from("absentees")
@@ -649,6 +653,8 @@ const EmployeeAttendanceTable = () => {
         } else {
           console.log("absentees Count :", count);
           setabsentees(count || 0)
+          console.log("Absentees" , count);
+
         }
       }
       fetchabsentees();

@@ -8,22 +8,26 @@ import Select from "react-select";
 
 
 
-interface Project { 
+interface Project {
   id: string;
   title: string;
   type: 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer';
   devops: { id: string; full_name: string }[];
   created_at: string;
   start_date?: string;
-} 
- 
+  completedScore: number;
+  pendingScore: number;
+  totalScore: number;
+}
+
 interface Dev {
   id: string;
   full_name: string;
 }
 interface devopss {
-  id : string;
-  full_name : string;
+  id: string;
+  name?: string;
+  full_name: string;
 }
 
 function ProjectsAdmin() {
@@ -38,13 +42,13 @@ function ProjectsAdmin() {
   const [devopss , setdevops] = useState<devopss[]>([]);
   const [newProject, setNewProject] = useState({
     title: '',
-    type: 'Front-End Developer' as const
+    type: 'Front-End Developer' as 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer'
   });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployeesearch, setDataEmployeesearch] = useState(null);
 
-  
+
     const filteredEmployees = Devs.filter(Dev =>
       Dev.full_name.toLowerCase().includes(searchTerm.toLowerCase())
     );
@@ -60,17 +64,66 @@ function ProjectsAdmin() {
     fetchDevs();
   }, []);
 
-  
+
   // Fetch projects
   useEffect(() => {
     const fetchProjects = async () => {
       setLoading(true);
-      const { data, error } = await supabase
+
+      // Fetch all projects
+      const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
         .select("*");
-      if (!error) setProjects(data);
+
+      if (projectsError) {
+        console.error("Error fetching projects:", projectsError);
+        setLoading(false);
+        return;
+      }
+
+      // Fetch all tasks for these projects
+      const projectsWithScores = await Promise.all(
+        projectsData.map(async (project) => {
+          // Fetch tasks for this project
+          const { data: tasksData, error: tasksError } = await supabase
+            .from("tasks_of_projects")
+            .select("score, status")
+            .eq("project_id", project.id);
+
+          if (tasksError) {
+            console.error(`Error fetching tasks for project ${project.id}:`, tasksError);
+            return {
+              ...project,
+              completedScore: 0,
+              pendingScore: 0,
+              totalScore: 0
+            };
+          }
+
+          // Calculate scores
+          const completedScore = tasksData
+            .filter(task => task.status === "done")
+            .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+          const pendingScore = tasksData
+            .filter(task => task.status !== "done")
+            .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+          const totalScore = completedScore + pendingScore;
+
+          return {
+            ...project,
+            completedScore,
+            pendingScore,
+            totalScore
+          };
+        })
+      );
+
+      setProjects(projectsWithScores);
       setLoading(false);
     };
+
     fetchProjects();
   }, []);
 
@@ -85,7 +138,7 @@ function ProjectsAdmin() {
       ]);
     }
   };
-  
+
 
   const handleRemove = (id: string) => {
     setSelectedDevs(selectedDevs.filter(dev => dev.id !== id));
@@ -93,10 +146,10 @@ function ProjectsAdmin() {
 
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-  
+
     const confirmed = window.confirm("Are you sure you want to delete this project?");
     if (!confirmed) return;
-  
+
     try {
       const { error } = await supabase.from("projects").delete().eq("id", id);
       if (error) throw error;
@@ -111,10 +164,10 @@ function ProjectsAdmin() {
     .eq("project_id", id);
     if (error) throw error;
   };
-  
+
 
   const openAddModal = () => {
-    setNewProject({ title: '', type: 'Front-End Developer' });
+    setNewProject({ title: '', type: 'Front-End Developer' as 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer' });
     setSelectedDevs([]);
     setEditingProject(null);
     setIsModalOpen(true);
@@ -124,7 +177,14 @@ function ProjectsAdmin() {
     e.stopPropagation();
     setEditingProject(project);
     setNewProject({ title: project.title, type: project.type });
-    setSelectedDevs(project.devops || []);
+
+    // Convert devops format from {id, full_name} to {id, name}
+    const formattedDevs = (project.devops || []).map(dev => ({
+      id: dev.id,
+      name: dev.full_name
+
+    }));
+    setSelectedDevs(formattedDevs);
     setIsModalOpen(true);
   };
 
@@ -152,15 +212,14 @@ function ProjectsAdmin() {
         if (error) throw error;
       } else {
         // Create new project
-        const { data, error } = await supabase
+        const { error } = await supabase
           .from("projects")
           .insert([{
             title: newProject.title,
             type: newProject.type,
             devops: selectedDevs,
             created_at: new Date().toISOString(),
-          }])
-          .select();
+          }]);
 
         if (error) throw error;
       }
@@ -168,7 +227,7 @@ function ProjectsAdmin() {
       // Refresh projects list
       const { data, error } = await supabase.from("projects").select("*");
       if (!error) setProjects(data);
-      
+
       closeModal();
     } catch (err) {
       console.error("Failed to save project:", err);
@@ -183,7 +242,12 @@ function ProjectsAdmin() {
       ) : (
         <>
         {selectedTAB === "taskBoard" && (
-          <TaskBoardAdmin setSelectedTAB={setSelectedTAB} ProjectId={ProjectId} devopss={devopss} />
+          <TaskBoardAdmin
+            setSelectedTAB={setSelectedTAB}
+            selectedTAB={selectedTAB}
+            ProjectId={ProjectId}
+            devopss={devopss}
+          />
         )}
 
         {selectedTAB == "Projects" && (
@@ -197,7 +261,7 @@ function ProjectsAdmin() {
                 <PlusCircle size={20} className="mr-2" /> New Project
               </button>
             </div>
-   
+
             {isModalOpen && (
               <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
                 <div className="bg-white rounded-lg p-6 w-full max-w-md">
@@ -256,13 +320,13 @@ function ProjectsAdmin() {
                                 }
                               }}
                               placeholder="Search or select DevOps..."
-                              isSearchable                            
+                              isSearchable
                               className="w-full"
                               classNamePrefix="react-select"
                             />
 
                        </div>
-                      
+
                       <div className="mt-3 flex flex-wrap gap-2">
                         {selectedDevs.map((dev) => (
                           <div key={dev.id} className="flex items-center bg-gray-200 px-3 py-1 rounded-md">
@@ -300,7 +364,7 @@ function ProjectsAdmin() {
                 </div>
               </div>
             )}
-  
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {projects.length === 0 ? (
                 <p className="text-gray-500">No projects yet. Create one!</p>
@@ -309,17 +373,21 @@ function ProjectsAdmin() {
                   <div
                     key={project.id}
                     className="bg-white rounded-[20px] w-[316px] min-h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {setSelectedTAB("taskBoard")
-                                   setdevops(project.devops)
-                                   console.log(project.devops);
-                                   setProjectId(project.id)
-                                 }}
-                  > 
+                    onClick={() => {
+                      setSelectedTAB("taskBoard");
+                      setdevops(project.devops);
+                      console.log(project.devops);
+                      setProjectId(project.id);
+                    }}
+                  >
                     <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center px-4 py-1 bg-[#F4F6FC] rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-[#9A00FF]"></span>
-                        <span className="text-sm font-semibold text-[#9A00FF] ml-2">
-                          {project.type}
+                      <div className="flex items-center px-4 py-1
+                       bg-[#f7eaff] rounded-full">
+
+                        <span className="text-sm font-semibold ml-2">
+                          <span className="text-green-600">{project.completedScore}</span>
+                          <span className="text-gray-500"> / </span>
+                          <span className="text-red-500">{project.totalScore}</span>
                         </span>
                       </div>
                       <div className="flex space-x-2">
@@ -349,18 +417,21 @@ function ProjectsAdmin() {
                           </ul>
                         </span>
                       </div>
+                      {/* <div className="mb-2">
+                        <span className='leading-7 text-[#686a6d]'>
+                          <label className='font-semibold'>Project Scores: </label>
+                          <div className="ml-2 flex items-center gap-3">
+                            <span className="text-green-600 font-semibold">{project.completedScore}</span>
+                            <span className="text-gray-500">/</span>
+                            <span className="text-red-500 font-semibold">{project.totalScore}</span>
+                          </div>
+                        </span>
+                      </div> */}
                       <div>
                         <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
                           {formatDistanceToNow(new Date(project.created_at))} ago
                         </span>
-                   
                       </div>
-                      {/* <div>
-                      <span className='text-base leading-7 text-[#7e7e80]'>
-                          RSI : {}
-                        </span>
-                   
-                      </div> */}
                     </div>
                   </div>
                 ))
