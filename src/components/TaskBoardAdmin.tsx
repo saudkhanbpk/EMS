@@ -66,6 +66,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const getStatusCount = (status: task['status']) =>
     tasks.filter(task => task.status === status).length;
 
+  const getScoreByStatus = (status: Task['status']) =>
+    tasks
+      .filter(task => task.status === status)
+      .reduce((sum, task) => sum + task.score, 0);
+
   const totalTasks = tasks.length;
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
@@ -153,9 +158,12 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               )
               .reduce((sum, task) => sum + (task.score || 0), 0);
 
+            // Get the developer name from either full_name or name property
+            const developerName = developer.full_name || developer.name;
+
             return {
               id: developer.id,
-              name: developer.name,
+              name: developerName,
               score: totalScore,
               completed: completed,
               tasksWithComments: tasksWithComments,
@@ -240,7 +248,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const handleEditClick = (task: Task) => {
     setCurrentTask(task);
     console.log("Current Task:", task);
-    
+
     setIsEditModalOpen(true);
   };
 
@@ -390,19 +398,23 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                   <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-medium font-semibold flex items-center justify-center">
                     {Array.isArray(task.devops)
                       ? task.devops
-                        .filter(dev => dev?.name) // Filter out items without name
-                        .map(dev => dev.name[0].toUpperCase())
+                        .filter(dev => dev?.name || dev?.full_name) // Filter out items without name or full_name
+                        .map(dev => (dev.name || dev.full_name)[0].toUpperCase())
                         .join("")
-                      : task.devops?.name?.[0]?.toUpperCase() || ""}
+                      : (task.devops?.name || task.devops?.full_name)?.[0]?.toUpperCase() || ""}
                   </div>
                   <span className="text-[13px] text-[#404142]">
                     {Array.isArray(task.devops)
                       ? task.devops
-                        .filter(dev => dev?.name) // Filter out items without name
-                        .map(dev => dev.name.charAt(0).toUpperCase() + dev.name.slice(1))
+                        .filter(dev => dev?.name || dev?.full_name) // Filter out items without name or full_name
+                        .map(dev => {
+                          const displayName = dev.name || dev.full_name;
+                          return displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                        })
                         .join(", ")
-                      : task.devops?.name
-                        ? task.devops.name.charAt(0).toUpperCase() + task.devops.name.slice(1)
+                      : (task.devops?.name || task.devops?.full_name)
+                        ? (task.devops.name || task.devops.full_name).charAt(0).toUpperCase() +
+                          (task.devops.name || task.devops.full_name).slice(1)
                         : ""}
                   </span>
                 </div>
@@ -450,7 +462,10 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
             {/* Comments Section */}
             <div>
-              <Comments taskid={task.id} />
+              <Comments
+                taskid={task.id}
+                onCommentAdded={fetchTasks}
+              />
             </div>
 
             {/* Modal Description View */}
@@ -517,7 +532,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600 mb-6">
                     <div><span className="font-semibold">KPIs : </span> {openedTask?.score}</div>
                     <div>
-                      <span className="font-semibold">Developer : </span> {openedTask?.devops?.map((dev) => dev.name).join(", ")}
+                      <span className="font-semibold">Developer : </span> {openedTask?.devops?.map((dev) => dev.name || dev.full_name).join(", ")}
                     </div>
                     <div>
                       <span className="font-semibold">Priority : </span>
@@ -540,7 +555,10 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                   {/* Comments */}
                   <div className="flex flex-col gap-4">
-                    <Comments />
+                    <Comments
+                      taskid={task.id}
+                      onCommentAdded={fetchTasks}
+                    />
                     {commentsByTaskId[openedTask?.id]?.length > 0 && (
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                         {commentsByTaskId[openedTask?.id].map((comment) => (
@@ -675,10 +693,10 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                 {/* Status Box */}
                 <div className="bg-white w-full lg:w-[60%] p-3 rounded-2xl flex flex-wrap justify-between gap-4 font-semibold">
-                  <h1 className="text-[#9A00FF]">TO DO: {getStatusCount('todo')}</h1>
-                  <h1 className="text-orange-600">In Progress: {getStatusCount('inProgress')}</h1>
-                  <h1 className="text-yellow-600">Review: {getStatusCount('review')}</h1>
-                  <h1 className="text-[#05C815]">Done: {getStatusCount('done')}</h1>
+                  <h1 className="text-[#9A00FF]">TO DO: {getScoreByStatus('todo')}</h1>
+                  <h1 className="text-orange-600">In Progress: {getScoreByStatus('inProgress')}</h1>
+                  <h1 className="text-yellow-600">Review: {getScoreByStatus('review')}</h1>
+                  <h1 className="text-[#05C815]">Done: {getScoreByStatus('done')}</h1>
                 </div>
 
                 {/* New Task Button */}

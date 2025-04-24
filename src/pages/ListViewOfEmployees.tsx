@@ -613,7 +613,7 @@ const EmployeeAttendanceTable = () => {
 
 
   useEffect(() => {
-    if (selectedTab === "Employees") {
+    if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchleaves = async () => {
         const { count, error } = await supabase
           .from("absentees")
@@ -628,6 +628,8 @@ const EmployeeAttendanceTable = () => {
         } else {
           console.log("absentees Count :", count);
           setleaves(count || 0)
+          console.log("leaves" , count);
+          
         }
       }
       fetchleaves();
@@ -638,7 +640,9 @@ const EmployeeAttendanceTable = () => {
 
 
   useEffect(() => {
-    if (selectedTab === "Employees") {
+    console.log("selected tab on Leaves Fetching :" , selectedTab);
+    
+    if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchabsentees = async () => {
         const { count, error } = await supabase
           .from("absentees")
@@ -652,6 +656,8 @@ const EmployeeAttendanceTable = () => {
         } else {
           console.log("absentees Count :", count);
           setabsentees(count || 0)
+          console.log("Absentees" , count);
+
         }
       }
       fetchabsentees();
@@ -937,9 +943,12 @@ function formatToTimeString(isoString:string) {
 
 let getuserbreakdate=(id:string)=>{
 let secondcheckin=todayBreak.filter((breaks)=>breaks.attendance_id===id)
+console.log("Second Check in : ",  secondcheckin);
+let second = secondcheckin[0]?.end_time != null
 
+// let secondcheckinlength = secondcheckin.end_time != null ;
 let autoend=secondcheckin[0]?.ending==='auto'
-if(secondcheckin && !autoend){
+if(second && !autoend){
 let oneattendce=secondcheckin[0];
 const formateddate=formatToTimeString(oneattendce?.end_time)
 if(formateddate=="Invalid Date"){
@@ -2930,6 +2939,12 @@ useEffect(() => {
                                         {monthlyStats.averageWorkHours.toFixed(1)}h
                                       </span>
                                     </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Total Hours:</span>
+                                      <span className="font-medium">
+                                      {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                                      </span>
+                                    </div>
 
 
                                     {/* Optional: Additional Tasks or Overview */}
@@ -3040,7 +3055,7 @@ useEffect(() => {
                           </div>
                         </div>
                         <div className="mt-4 sm:mt-5">
-                          {/* <AbsenteeComponentAdmin userID={userID} /> */}
+                          <AbsenteeComponentAdmin userID={userID} />
                         </div>
                       </>
                     )}

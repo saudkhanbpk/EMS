@@ -46,6 +46,95 @@ function TaskBoard({ setSelectedTAB }) {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
 
 
+  // Define fetchTasks at the component level so it can be called from anywhere
+  const fetchTasks = async () => {
+    try {
+      const userId = localStorage.getItem("user_id");
+
+      // Step 1: Fetch all tasks in the selected project
+      const { data: taskData, error: taskError } = await supabase
+        .from("tasks_of_projects")
+        .select("*")
+        .eq("project_id", id || projectIdd[0])
+        .order("created_at", { ascending: true });
+
+      if (taskError) throw taskError;
+
+      // Step 2: Filter tasks based on devops array (manually, not joined)
+      const filteredTasks = taskData.filter((task) => {
+        return (
+          (Array.isArray(task.devops) &&
+            task.devops.some((dev) => dev.id === userId)) ||
+          !task.devops ||
+          task.devops.length === 0
+        );
+      });
+
+      // Step 3: Fetch all comments
+      const { data: commentsData, error: commentsError } = await supabase
+        .from("comments")
+        .select("*");
+
+      if (commentsError) throw commentsError;
+
+      // Step 4: Fetch all users
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, full_name");
+
+      if (usersError) throw usersError;
+
+      // Step 5: Create user map
+      const userMap = usersData.reduce((acc, user) => {
+        acc[user.id] = user.full_name;
+        return acc;
+      }, {});
+
+      // Step 6: Enrich comments with user names
+      const enrichedComments = commentsData.map((comment) => ({
+        ...comment,
+        commentor_name: userMap[comment.user_id] || "Unknown User",
+      }));
+
+      setComments(enrichedComments); // For global comment list if needed
+
+      // Step 7: Attach comments and images to tasks
+      const processedTasks = filteredTasks.map((task) => {
+        const taskComments = enrichedComments.filter(
+          (comment) => comment.task_id === task.id
+        );
+
+        const imageData = task.imageurl
+          ? {
+              image_url: task.imageurl,
+              thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
+            }
+          : {};
+
+        return {
+          ...task,
+          comments: taskComments,
+          commentCount: taskComments.length,
+          ...imageData,
+        };
+      });
+
+      setTasks(processedTasks);
+
+      // Step 8: Group comments by task ID
+      const commentsByTask = enrichedComments.reduce((acc, comment) => {
+        if (!acc[comment.task_id]) acc[comment.task_id] = [];
+        acc[comment.task_id].push(comment);
+        return acc;
+      }, {});
+
+      setCommentByTaskID(commentsByTask);
+    } catch (error) {
+      console.error("Error fetching tasks:", error);
+      // Show toast, alert, etc. if needed
+    }
+  };
+
   useEffect(() => {
     // const fetchTasks = async () => {
     //   const { data: taskData, error: taskError } = await supabase
@@ -378,6 +467,7 @@ function TaskBoard({ setSelectedTAB }) {
                           commentByTaskID={commentByTaskID}
                           descriptionOpen={descriptionOpen}
                           setDescriptionOpen={setDescriptionOpen}
+                          fetchTasks={fetchTasks}
                         />
                       ))
                     ) : (
@@ -391,7 +481,7 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
-        
+
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>
@@ -413,6 +503,7 @@ function TaskBoard({ setSelectedTAB }) {
                           commentByTaskID={commentByTaskID}
                           descriptionOpen={descriptionOpen}
                           setDescriptionOpen={setDescriptionOpen}
+                          fetchTasks={fetchTasks}
                         />
                       ))
                     ) : (
@@ -448,6 +539,7 @@ function TaskBoard({ setSelectedTAB }) {
                           commentByTaskID={commentByTaskID}
                           descriptionOpen={descriptionOpen}
                           setDescriptionOpen={setDescriptionOpen}
+                          fetchTasks={fetchTasks}
                         />
                       ))
                     ) : (
@@ -470,11 +562,11 @@ function TaskBoard({ setSelectedTAB }) {
 
   <div className="space-y-4 min-h-[100px]">
     <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
-    
+
     {getTasksByStatus('done').length > 0 ? (
       getTasksByStatus('done').map((task, index) => (
         // Render a simplified version of TaskCard without Draggable
-        <div 
+        <div
           key={task.id}
           className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
           onClick={() => {
@@ -524,7 +616,10 @@ function TaskBoard({ setSelectedTAB }) {
 
           {/* Comments Section */}
           <div>
-            <Comments taskid={task.id} />
+            <Comments
+              taskid={task.id}
+              onCommentAdded={fetchTasks}
+            />
           </div>
         </div>
       ))
@@ -554,9 +649,10 @@ interface TaskCardProps {
   commentByTaskID: Record<string, any[]>;
   descriptionOpen: boolean;
   setDescriptionOpen: (open: boolean) => void;
+  fetchTasks: () => Promise<void>;
 }
 
-const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptionOpen }: TaskCardProps) => {
+const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptionOpen, fetchTasks }: TaskCardProps) => {
   const [openedTask, setOpenedTask] = useState<Task | null>(null);
   const [isFullImageOpen, setIsFullImageOpen] = useState(false);
   const [fullImageUrl, setFullImageUrl] = useState("");
@@ -640,7 +736,100 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
 
           {/* Comments Section */}
           <div>
-            <Comments taskid={task.id} />
+            <Comments
+              taskid={task.id}
+              onCommentAdded={() => {
+                // Define fetchTasks function in the outer scope
+                const fetchTasks = async () => {
+                  try {
+                    const userId = localStorage.getItem("user_id");
+
+                    // Step 1: Fetch all tasks in the selected project
+                    const { data: taskData, error: taskError } = await supabase
+                      .from("tasks_of_projects")
+                      .select("*")
+                      .eq("project_id", id || projectIdd[0])
+                      .order("created_at", { ascending: true });
+
+                    if (taskError) throw taskError;
+
+                    // Step 2: Filter tasks based on devops array
+                    const filteredTasks = taskData.filter((task) => {
+                      return (
+                        (Array.isArray(task.devops) &&
+                          task.devops.some((dev) => dev.id === userId)) ||
+                        !task.devops ||
+                        task.devops.length === 0
+                      );
+                    });
+
+                    // Step 3: Fetch all comments
+                    const { data: commentsData, error: commentsError } = await supabase
+                      .from("comments")
+                      .select("*");
+
+                    if (commentsError) throw commentsError;
+
+                    // Step 4: Fetch all users
+                    const { data: usersData, error: usersError } = await supabase
+                      .from("users")
+                      .select("id, full_name");
+
+                    if (usersError) throw usersError;
+
+                    // Step 5: Create user map
+                    const userMap = usersData.reduce((acc, user) => {
+                      acc[user.id] = user.full_name;
+                      return acc;
+                    }, {});
+
+                    // Step 6: Enrich comments with user names
+                    const enrichedComments = commentsData.map((comment) => ({
+                      ...comment,
+                      commentor_name: userMap[comment.user_id] || "Unknown User",
+                    }));
+
+                    setComments(enrichedComments);
+
+                    // Step 7: Attach comments and images to tasks
+                    const processedTasks = filteredTasks.map((task) => {
+                      const taskComments = enrichedComments.filter(
+                        (comment) => comment.task_id === task.id
+                      );
+
+                      const imageData = task.imageurl
+                        ? {
+                            image_url: task.imageurl,
+                            thumbnail_url: task.imageurl,
+                          }
+                        : {};
+
+                      return {
+                        ...task,
+                        comments: taskComments,
+                        commentCount: taskComments.length,
+                        ...imageData,
+                      };
+                    });
+
+                    setTasks(processedTasks);
+
+                    // Step 8: Group comments by task ID
+                    const commentsByTask = enrichedComments.reduce((acc, comment) => {
+                      if (!acc[comment.task_id]) acc[comment.task_id] = [];
+                      acc[comment.task_id].push(comment);
+                      return acc;
+                    }, {});
+
+                    setCommentByTaskID(commentsByTask);
+                  } catch (error) {
+                    console.error("Error fetching tasks:", error);
+                  }
+                };
+
+                fetchTasks();
+              }}
+            />
           </div>
 
           {/* Modal Description View */}
@@ -730,7 +919,10 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
 
                 {/* Comments */}
                 <div className="flex flex-col gap-4">
-                  <Comments taskid={openedTask.id} />
+                  <Comments
+                    taskid={openedTask.id}
+                    onCommentAdded={fetchTasks}
+                  />
                   {commentByTaskID[openedTask.id]?.length > 0 && (
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                       {commentByTaskID[openedTask.id].map((comment) => (
