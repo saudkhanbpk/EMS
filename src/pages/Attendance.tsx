@@ -76,6 +76,8 @@ const Attendance: React.FC = () => {
   const [isDisabled, setIsDisabled] = useState(false);
   const [isButtonLoading, setisButtonLoading] = useState(false);
   const [alreadycheckedin, setalreadycheckedin] = useState(false)
+  const [alreadybreak,setalreadybreak]=useState<boolean>(false)
+  const [isbreak,setisbreak]=useState<boolean>(true);
 
 
 
@@ -291,6 +293,7 @@ const Attendance: React.FC = () => {
 
           // Check the last break for this attendance record
           const previousBreak = breaks[breaks.length - 1];
+          
           if (previousBreak) {
             if (!previousBreak.end_time) {
               // If the last break has no end_time, user is still on break.
@@ -300,6 +303,7 @@ const Attendance: React.FC = () => {
               // Otherwise, user is not on break.
               setIsOnBreak(false);
               setBreakTime(null);
+              setalreadybreak(true)
             }
           } else {
             // If no breaks exist for this attendance record, user is not on break.
@@ -313,6 +317,7 @@ const Attendance: React.FC = () => {
         }
 
         setBreakRecords(breakData);
+        setisbreak(false)
       } else {
         // No attendance records found for the period
         setAttendanceRecords([]);
@@ -371,9 +376,10 @@ const Attendance: React.FC = () => {
     const hours = pktTime.getHours();
     const minutes = pktTime.getMinutes();
     const totalMinutes = hours * 60 + minutes;
-    const startOfWorkDay = 8 * 60 + 0; // 8:00 AM in minutes
+    const startOfWorkDay = 6 * 60 + 0; // 6:00 AM in minutes
     const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
     if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
+      alert("Please Do Checkin After 6:00 AM");
       return;
     } else {
 
@@ -486,7 +492,9 @@ const Attendance: React.FC = () => {
             .from('breaks')
             .update({
               end_time: now.toISOString(),
-              status: 'on_time'
+              status: 'on_time',
+
+              ending:"auto"
             })
             .eq('attendance_id', attendanceId)
             .is('end_time', null)
@@ -908,7 +916,7 @@ const Attendance: React.FC = () => {
 
               <button
                 onClick={handleBreak}
-                disabled={loading}
+                disabled={loading || isbreak || alreadybreak }
                 className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnBreak
                   ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
                   : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'

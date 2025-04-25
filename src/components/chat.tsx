@@ -109,7 +109,7 @@ const ChatUserItem: React.FC<ChatUserItemProps> = ({
   ]);
 
   return (
-    <Link to={`/chat/${chatUser.id}`}>
+    <Link to={`${localStorage.getItem('user_email')?.endsWith('@admin.com') ? `/chat-admin/${chatUser.id}` : `/chat/${chatUser.id}`}`} className="no-underline">
       <div className="flex items-center p-4 hover:bg-gray-900 cursor-pointer transition-colors duration-200 relative">
         {/* If the user is an admin, display the pin icon */}
         {chatUser.role === "admin" && (
@@ -297,7 +297,7 @@ const ChatSidebar = () => {
         </div>
         <div className="flex items-center space-x-3">
           {/* Admin Dashboard Button - Only visible to admins */}
-          {currentUser?.email === "techcreator@admin.com" && (
+          {currentUser?.email?.endsWith('@admin.com') && (
             <Link
               to="/admin"
               className="text-white hover:text-blue-400 transition-colors"

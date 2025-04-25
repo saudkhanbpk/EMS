@@ -5,7 +5,7 @@ import { useEffect } from 'react';
 dotenv.config();
 
 // Create a connection to the Supabase database
-const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
 const holidaydates=[]
 
@@ -40,10 +40,9 @@ async function fetchholidays() {
   }
  
 }
-
 useEffect(() => {
-  fetchholidays()
-, []);
+  fetchholidays();
+}, []); 
 
 const fetchUsers = async () => {
   let dateStr = new Date().toISOString().split('T')[0];

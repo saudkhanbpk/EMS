@@ -4,7 +4,7 @@ import { SendHorizonalIcon} from "lucide-react";
 import { supabase } from "../lib/supabase";
 
 
-const Comments = ({taskid}) => {
+const Comments = ({taskid, onCommentAdded}) => {
     const [comment , setcomment] = useState('')
     var userID = localStorage.getItem('user_id')
 
@@ -25,19 +25,23 @@ const Comments = ({taskid}) => {
         else{
             console.log("Comment Inserted Successfully:" , data);
             setcomment('')
+            // Notify parent component that a comment was added
+            if (onCommentAdded) {
+                onCommentAdded(taskid);
             }
+        }
     }
 
     return(
         <div className="flex flex-row justify-between items-center bg-white rounded-lg p-0 gap-1 shadow-2xl mt-2 mb-0">
-         <input type="text" 
+         <input type="text"
          className="border-none w-full text-sm p-2 rounded-lg shadow-2xl"
          onClick={(e) => {e.stopPropagation()}}
-         value={comment} 
+         value={comment}
          placeholder="Add Comment..."
          onChange={(e) => setcomment(e.target.value)}/>
          <button className="hover:bg-gray-200 rounded-lg p-2">
-         <SendHorizonalIcon 
+         <SendHorizonalIcon
          className="text-gray-500"
          onClick={(e) => {
             putcomment()

@@ -81,6 +81,7 @@ const EmployeeAttendanceTable = () => {
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
   const [present, setPresent] = useState(0);
+  const [todaybreak,settodaybreak]=useState<unknown>(null)
 
 
   const [DataEmployee, setDataEmployee] = useState(null);
@@ -137,7 +138,7 @@ const EmployeeAttendanceTable = () => {
   const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
   const [graphicview, setgraphicview] = useState(false);
   const [tableData, setTableData] = useState('');
-  const [breaks, setbreak] = useState('');
+  
   const [isDateModalOpen, setIsDateModalOpen] = useState(false)
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
@@ -612,7 +613,7 @@ const EmployeeAttendanceTable = () => {
 
 
   useEffect(() => {
-    if (selectedTab === "Employees") {
+    if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchleaves = async () => {
         const { count, error } = await supabase
           .from("absentees")
@@ -627,15 +628,21 @@ const EmployeeAttendanceTable = () => {
         } else {
           console.log("absentees Count :", count);
           setleaves(count || 0)
+          console.log("leaves" , count);
+          
         }
       }
       fetchleaves();
     }
+
+  
   }, [userID])
 
 
   useEffect(() => {
-    if (selectedTab === "Employees") {
+    console.log("selected tab on Leaves Fetching :" , selectedTab);
+    
+    if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchabsentees = async () => {
         const { count, error } = await supabase
           .from("absentees")
@@ -649,6 +656,8 @@ const EmployeeAttendanceTable = () => {
         } else {
           console.log("absentees Count :", count);
           setabsentees(count || 0)
+          console.log("Absentees" , count);
+
         }
       }
       fetchabsentees();
@@ -903,6 +912,62 @@ const EmployeeAttendanceTable = () => {
   useEffect(() => {
     FetchSelectedAttendance(fetchingid);
   }, [selectedDate])
+
+
+
+const fetchtodaybreak=async()=>{
+  const today = selectedDate.toISOString().split('T')[0] // 'YYYY-MM-DD'
+
+  const { data: breaks, error: breaksError } = await supabase
+    .from("breaks")
+    .select("*")
+    .gte("created_at", `${today}T00:00:00`)
+    .lte("created_at", `${today}T23:59:59`)
+    if(breaksError){
+      console.error(breaksError);
+    }
+    else{
+      
+      setTodayBreak(breaks);
+    }
+}
+
+function formatToTimeString(isoString:string) {
+  const date = new Date(isoString);
+  return date.toLocaleTimeString('en-US', {
+    hour: '2-digit',
+    minute: '2-digit',
+    hour12: true,
+  });
+}
+
+let getuserbreakdate=(id:string)=>{
+let secondcheckin=todayBreak.filter((breaks)=>breaks.attendance_id===id)
+console.log("Second Check in : ",  secondcheckin);
+let second = secondcheckin[0]?.end_time != null
+
+// let secondcheckinlength = secondcheckin.end_time != null ;
+let autoend=secondcheckin[0]?.ending==='auto'
+if(second && !autoend){
+let oneattendce=secondcheckin[0];
+const formateddate=formatToTimeString(oneattendce?.end_time)
+if(formateddate=="Invalid Date"){
+  return "N/A"
+}
+return formateddate;
+}
+else{
+  return "N/A";
+}
+
+}
+
+// const breakone=getuserbreakdate("191c5732-20a9-48ef-92d8-2c593656bf98")
+// console.log("the break one is", breakone)
+
+useEffect(() => {
+  fetchtodaybreak();
+}, [selectedDate])
 
 
   const FetchSelectedAttendance = async (id) => {
@@ -1528,7 +1593,7 @@ const EmployeeAttendanceTable = () => {
       // Fetch attendance logs for the selected date
       const { data: attendanceLogs, error: attendanceError } = await supabase
         .from("attendance_logs")
-        .select("user_id, check_in, check_out, work_mode, status, created_at , autocheckout")
+        .select("user_id, check_in, check_out, work_mode, status, created_at , autocheckout,id")
         .gte("check_in", `${formattedDate}T00:00:00`)
         .lte("check_in", `${formattedDate}T23:59:59`);
 
@@ -1540,6 +1605,7 @@ const EmployeeAttendanceTable = () => {
       // Build final list with text colors
       const finalAttendanceData = users.map((user) => {
         const log = attendanceMap.get(user.id);
+        console.log(log)
         const formatTime = (dateString) => {
           if (!dateString || dateString === "N/A") return "N/A";
 
@@ -1570,6 +1636,7 @@ const EmployeeAttendanceTable = () => {
         return {
           id: user.id,
           full_name: user.full_name,
+          attendance_id: log.id,
           check_in2: log.check_in ? log.check_in : "N/A",
           check_out2: log.check_out ? log.check_out : "",
           created_at: log.created_at ? log.created_at : "N/A",
@@ -2064,7 +2131,8 @@ const EmployeeAttendanceTable = () => {
             <div className="overflow-x-auto">
 
 
-              <div className="w-full shadow-sm rounded-lg">
+              
+            <div className="w-full shadow-sm rounded-lg">
                 {/* Table view for medium and larger screens */}
                 <div className="hidden sm:block overflow-x-auto">
                   <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
@@ -2073,6 +2141,7 @@ const EmployeeAttendanceTable = () => {
                         <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Name</th>
                         <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Check-in</th>
                         <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Check-out</th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">2nd Check-in</th>
                         <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Mode</th>
                         <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Status</th>
                       </tr>
@@ -2118,6 +2187,25 @@ const EmployeeAttendanceTable = () => {
                               ) : null}
                             </div>
                           </td>
+                          <td
+                            className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                          >
+                            <div className="flex items-center">
+                              <span className="truncate">{getuserbreakdate(entry?.attendance_id)}</span>
+                              {entry.break_in ? (
+                                <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
+                                  <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
+                                    Auto
+                                  </span>
+                                  {/* Tooltip */}
+                                  <div className="hidden group-hover:block absolute bg-gray-400 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                    Change CheckOut Time
+                                  </div>
+                                </div>
+                              ) : null}
+                            </div>
+                          </td>
+                         
                           <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                             <button
                               onClick={() => handleModeOpen(entry)}
@@ -2207,7 +2295,22 @@ const EmployeeAttendanceTable = () => {
                           </div>
                         </div>
 
-                        <div className="flex flex-col col-span-2">
+                        {/* Added 2nd Check-in for mobile view */}
+                        <div className="flex flex-col">
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">2nd Check-in</span>
+                          <div
+                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
+                          >
+                            <span className="truncate mr-1">{getuserbreakdate(entry?.attendance_id) || "---"}</span>
+                            {entry.break_in ? (
+                              <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
+                                Auto
+                              </span>
+                            ) : null}
+                          </div>
+                        </div>
+
+                        <div className="flex flex-col">
                           <span className="text-gray-500 text-[10px] xs:text-[11px]">Mode</span>
                           <div className="mt-1">
                             <button
@@ -2836,10 +2939,16 @@ const EmployeeAttendanceTable = () => {
                                         {monthlyStats.averageWorkHours.toFixed(1)}h
                                       </span>
                                     </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Total Hours:</span>
+                                      <span className="font-medium">
+                                      {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                                      </span>
+                                    </div>
 
 
                                     {/* Optional: Additional Tasks or Overview */}
-                                    <div className="mt-6">
+                                    {/* <div className="mt-6">
                                       <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
                                         <div className="flex items-center mb-6">
                                           <BarChart className="w-6 h-6 text-blue-600 mr-2" />
@@ -2847,7 +2956,7 @@ const EmployeeAttendanceTable = () => {
                                         </div>
 
                                         {monthlyStats ? (
-                                          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                          <div className="grid grid-cols-1 gap-6">
                                             <div className="bg-gray-50 rounded-lg p-4">
                                               <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
                                               <div className="space-y-3">
@@ -2928,7 +3037,7 @@ const EmployeeAttendanceTable = () => {
                                           </div>
                                         )}
                                       </div>
-                                    </div>
+                                    </div> */}
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">Expected Hours:</span>
                                       <span className="font-medium">
@@ -2946,7 +3055,7 @@ const EmployeeAttendanceTable = () => {
                           </div>
                         </div>
                         <div className="mt-4 sm:mt-5">
-                          {/* <AbsenteeComponentAdmin userID={userID} /> */}
+                          <AbsenteeComponentAdmin userID={userID} />
                         </div>
                       </>
                     )}
