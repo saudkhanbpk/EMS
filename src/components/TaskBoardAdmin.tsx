@@ -82,7 +82,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       .eq("project_id", ProjectId);
 
     {
-      console.log("the all task is" ,data)
+      console.log("the all task is", data)
       // No need for image URL processing since URLs are already in the table
       const tasksWithImages = data.map(task => ({
         ...task,
@@ -414,7 +414,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                         .join(", ")
                       : (task.devops?.name || task.devops?.full_name)
                         ? (task.devops.name || task.devops.full_name).charAt(0).toUpperCase() +
-                          (task.devops.name || task.devops.full_name).slice(1)
+                        (task.devops.name || task.devops.full_name).slice(1)
                         : ""}
                   </span>
                 </div>
@@ -902,7 +902,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     <label className='block text-sm font-medium text-gray-700 mb-1'>Deadline</label>
                     <input
                       type="date"
-                      value= { (new Date (currentTask.deadline).toISOString().split('T')[0]) || ''}
+                      value={currentTask.deadline ? new Date(currentTask.deadline).toISOString().split('T')[0] : ''}
                       onChange={(e) => {
                         setCurrentTask({ ...currentTask, deadline: e.target.value });
                       }}

@@ -194,8 +194,6 @@ const Attendance: React.FC = () => {
           .lte('check_in', endOfDay.toISOString())
           .is('check_out', null)
           .order('check_in', { ascending: false })
-        // .limit(1)
-        // .single()
       );
 
       if (error) {
@@ -205,30 +203,27 @@ const Attendance: React.FC = () => {
         return;
       }
 
-      // If user has checked in today but not checked out, disable remote check-in
-      if (data.check_in && data.check_out === null) {
+      // If there are any active sessions (check_out is null), disable the check-in button
+      if (data && data.length > 0) {
+        console.log('Active extrahours session found. Disabling check-in button.');
         setIsDisabled(true);
       } else {
         setIsDisabled(false);
       }
-      // fetchAttendanceStatus();
-      // checkAbsenteeStatus();
     } catch (error) {
-      console.log(error);
-
+      console.log('Error checking extrahours status:', error);
     }
   }
 
 
   useEffect(() => {
     const runSequentialChecks = async () => {
-      // await fetchAttendanceStatus();  // Run the second function first
-      fetchAttendanceStatus();
-      await checkAbsenteeStatus();    // Run the first function after it completes
+      await fetchAttendanceStatus();  // Check for active extrahours sessions
+      await checkAbsenteeStatus();    // Check for leave status
     };
 
     runSequentialChecks();
-  }, []);
+  }, [user]);
 
 
 
@@ -293,7 +288,7 @@ const Attendance: React.FC = () => {
 
           // Check the last break for this attendance record
           const previousBreak = breaks[breaks.length - 1];
-          
+
           if (previousBreak) {
             if (!previousBreak.end_time) {
               // If the last break has no end_time, user is still on break.
@@ -472,19 +467,19 @@ const Attendance: React.FC = () => {
       setError('No active attendance record found');
       return;
     }
-  
+
     try {
       const userConfirmed = confirm("You are about to check out. Please confirm your action.");
       if (!userConfirmed) {
         console.log("User canceled the action.");
         return; // User canceled, exit the function early
       }
-  
+
       setLoading(true);
       setError(null);
-  
+
       const now = new Date();
-      
+
       // First, end any ongoing breaks
       if (isOnBreak) {
         const { error: breakError } = await withRetry(() =>
@@ -499,17 +494,17 @@ const Attendance: React.FC = () => {
             .eq('attendance_id', attendanceId)
             .is('end_time', null)
         );
-  
+
         if (breakError) throw breakError;
-  
+
         setIsOnBreak(false);
         setBreakTime(null);
       }
-  
+
       // Checking the Total Time in Office; If it is less than 6 hrs then put half-day in absentees database
       const today = new Date();
       const todayDate = today.toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
-  
+
       // 1️⃣ Check if there is already an attendance record for the user today
       const { data: attendanceData, error: attendanceError } = await withRetry(() =>
         supabase
@@ -519,16 +514,16 @@ const Attendance: React.FC = () => {
           .filter('created_at', 'gte', `${todayDate}T00:00:00+00`) // Filter records from the start of today
           .filter('created_at', 'lte', `${todayDate}T23:59:59+00`) // Filter records until the end of today
       );
-  
+
       if (attendanceError) throw attendanceError;
-  
+
       // If both check_in and check_out exist for today, skip further actions
       if (attendanceData.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
         console.log("Both check-in and check-out available for today. No further action needed.");
         setLoading(false);
         return;
       }
-  
+
       // Then update the attendance record with check-out time
       const { error: dbError } = await withRetry(() =>
         supabase
@@ -539,18 +534,18 @@ const Attendance: React.FC = () => {
           .eq('id', attendanceId)
           .is('check_out', null)
       );
-  
+
       if (dbError) throw dbError;
-  
+
       // Reset all states
       setIsCheckedIn(false);
       setCheckIn(null);
       setWorkMode(null);
       setAttendanceId(null);
-  
+
       console.log("Today's Date:", todayDate);
       console.log("Attendance Data:", attendanceData);
-  
+
       // 2️⃣ Calculate total attendance duration (in hours)
       const { data: checkInData, error: checkInError } = await withRetry(() =>
         supabase
@@ -562,40 +557,40 @@ const Attendance: React.FC = () => {
           .limit(1)
           .single()
       );
-  
+
       if (checkInError) throw checkInError;
-  
+
       const checkInTime = new Date(checkInData.check_in);
       const checkOutTime = new Date(now.toISOString());
-  
+
       // Calculate total attendance duration (in hours)
       const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
       console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
-  
+
       // If attendance duration is sufficient, skip further actions
       if (attendanceDuration >= 4) {
         console.log("Attendance is sufficient. No further action needed.");
         return;
       }
-  
+
       // 3️⃣ Check if the user has a leave record for today
       const { data: absenteeData, error: absenteeError } = await supabase
         .from('absentees')
         .select('id')
         .eq('user_id', localStorage.getItem('user_id'))
         .eq('absentee_date', todayDate);
-  
+
       if (absenteeError) {
         console.error("Error checking absentee records:", absenteeError);
         return;
       }
-  
+
       // If a leave record exists, skip further actions
       if (absenteeData.length > 0) {
         console.log("User is on leave today. No action needed.");
         return;
       }
-  
+
       // 4️⃣ If no leave record exists, mark as "Half-Day Absent"
       const { error: insertError } = await supabase
         .from('absentees')
@@ -605,13 +600,13 @@ const Attendance: React.FC = () => {
           absentee_type: 'Absent',
           absentee_Timing: 'Half Day',
         }]);
-  
+
       if (insertError) {
         console.error("Error inserting half-day absent record:", insertError);
       } else {
         console.log("Half-day absent record added successfully.");
       }
-  
+
       // Reload attendance records to show the updated data
       await loadAttendanceRecords();
     } catch (err) {
@@ -620,7 +615,7 @@ const Attendance: React.FC = () => {
       setLoading(false);
     }
   };
-  
+
 
   const handleBreak = async () => {
     if (!attendanceId) {
@@ -870,12 +865,25 @@ const Attendance: React.FC = () => {
           )}
 
 
-          {/* {isDisabled && <span className="text-red-600 p-2 ">You are on Leave Today</span>} */}
-
+          {isDisabled && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+              <div className="flex">
+                <div className="flex-shrink-0">
+                  <svg className="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                    <path fillRule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clipRule="evenodd" />
+                  </svg>
+                </div>
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    You have an active extra hours session. Please check out from there before checking in.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isCheckedIn ? (
             <div className="space-y-4">
-
               <button
                 onClick={handleCheckOut}
                 disabled={loading}

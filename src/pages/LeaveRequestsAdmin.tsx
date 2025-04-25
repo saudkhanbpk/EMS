@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase"; // Import supabase instance
+import { Trash2 } from "lucide-react";
 
 const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
@@ -26,7 +27,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
     setLoading(false);
     console.log(" Pending data", data);
     console.log(data);
-    
+
   };
 
   // Fetch Approved Requests
@@ -56,13 +57,21 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
 
   };
 
-
+  const handleDelete = async (id) => {
+    if (!confirm("Are you sure you want to delete this request?")) return;
+    const { error } = await supabase.from("leave_requests").delete().eq("id", id);
+    if (!error) {
+      if (selectedTab === "Pending") handlePendingRequests();
+      else if (selectedTab === "Approved") handleApprovedRequests();
+      else handleRejectedRequests();
+    }
+  };
 
   const handleActionAccept = async (id, newStatus, userId, leavetype, useremail, leavedate, fullname, slackid, fcmtoken) => {
     setuserEmail(useremail)
     console.log(useremail);
     console.log(userEmail);
-    
+
     console.log("slack Id", slackid);
     setIsLoading(true);
     console.log("full Name", fullname);
@@ -412,8 +421,18 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
       ) : (
         requests.map((request) => (
           <div key={request.id} className="p-4 mb-4  text-sm text-gray=400 bg-gray-100 break-words rounded-lg shadow">
-            <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500"> {new Date(request.leave_date).toLocaleDateString()} (
-              {new Date(request.leave_date).toLocaleDateString("en-US", { weekday: "long" })}) {"-"} {request.leave_type}</span></p>
+            <div className="flex justify-between items-center">
+              <div>
+                <p><span className="text-gray-700">Request For : </span> <span className="text-sm text-gray-500"> {new Date(request.leave_date).toLocaleDateString()} (
+                  {new Date(request.leave_date).toLocaleDateString("en-US", { weekday: "long" })}) {"-"} {request.leave_type}</span></p>
+              </div>
+
+              <div>
+                <Trash2 size={25} className=" hover:text-red-600 text-red-400 cursor-pointer" onClick={() => handleDelete(request.id)} />
+              </div>
+            </div>
+
+
             <p> {request.description}</p>
             <p className="text-gray-700"> {request.full_name}</p>
             {/* <p> 
@@ -474,8 +493,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
       <div className="flex flex-col xs:flex-row justify-center gap-2 xs:gap-4 sm:gap-8 mb-4 sm:mb-6">
         <button
           className={`px-3 py-2 text-sm sm:text-base sm:px-6 rounded-lg font-semibold transition ${selectedTab === "Pending"
-              ? "bg-yellow-500 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            ? "bg-yellow-500 text-white"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
           onClick={() => { setSelectedTab("Pending"); handlePendingRequests(); }}
         >
@@ -483,8 +502,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         </button>
         <button
           className={`px-3 py-2 text-sm sm:text-base sm:px-6 rounded-lg font-semibold transition ${selectedTab === "Approved"
-              ? "bg-green-500 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            ? "bg-green-500 text-white"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
           onClick={() => { setSelectedTab("Approved"); handleApprovedRequests(); }}
         >
@@ -492,8 +511,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         </button>
         <button
           className={`px-3 py-2 text-sm sm:text-base sm:px-6 rounded-lg font-semibold transition ${selectedTab === "Rejected"
-              ? "bg-red-500 text-white"
-              : "bg-gray-200 text-gray-700 hover:bg-gray-300"
+            ? "bg-red-500 text-white"
+            : "bg-gray-200 text-gray-700 hover:bg-gray-300"
             }`}
           onClick={() => { setSelectedTab("Rejected"); handleRejectedRequests(); }}
         >

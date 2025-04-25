@@ -73,57 +73,65 @@ const ExtraHours: React.FC = () => {
 
 
 
-  useEffect(() => {
-    const fetchAttendanceStatus = async () => {
-      setIsDisabled(true)
-      if (!user) return;
+  // Check if user has an active regular attendance session
+  const checkRegularAttendance = async () => {
+    if (!user) return;
 
-      try {
-        const today = new Date();
-        const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
-        const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+    try {
+      setIsDisabled(true);
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 0, 0, 0);
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-        // Checking whether the user has already checked in today
-        const { data, error } = await withRetry(() =>
-          supabase
-            .from('attendance_logs')
-            .select('id, check_in, check_out')
-            .eq('user_id', localStorage.getItem('user_id'))
-            .gte('check_in', startOfDay.toISOString())
-            .lte('check_in', endOfDay.toISOString())
-            .is('check_out', null)
-            .order('check_in', { ascending: false })
-        );
+      // Checking whether the user has already checked in today
+      const { data, error } = await withRetry(() =>
+        supabase
+          .from('attendance_logs')
+          .select('id, check_in, check_out')
+          .eq('user_id', localStorage.getItem('user_id'))
+          .gte('check_in', startOfDay.toISOString())
+          .lte('check_in', endOfDay.toISOString())
+          .is('check_out', null)
+          .order('check_in', { ascending: false })
+      );
 
-        if (error) {
-          if (error.code !== 'PGRST116') { // Ignore "no record found" errors
-            console.error('Error loading current attendance:', error);
-          }
-          return;
+      if (error) {
+        if (error.code !== 'PGRST116') { // Ignore "no record found" errors
+          console.error('Error checking regular attendance:', error);
         }
-
-        // If user has checked in today but not checked out, disable remote check-in
-        // if (data && data.check_in && data.check_out===null) {
-        //   setIsRemoteDisabled(true);
-        // } else {
-        //   setIsRemoteDisabled(false);
-        //   // loadCurrentAttendance();
-        // }
-        if (data.length > 0) {
-          setIsRemoteDisabled(true)
-        } else {
-          setIsRemoteDisabled(false)
-        }
-
-      } catch (err) {
-        console.error('Unexpected error fetching attendance status:', err);
+        return;
       }
+
+      console.log("Regular attendance check result:", data);
+
+      // If user has an active regular attendance session, disable overtime check-in
+      if (data && data.length > 0) {
+        console.log("User has an active regular attendance session. Disabling overtime check-in.");
+        setIsRemoteDisabled(true);
+      } else {
+        setIsRemoteDisabled(false);
+      }
+    } catch (err) {
+      console.error('Unexpected error checking regular attendance:', err);
+    }
+  };
+
+  // Initialize component state on mount and when user changes
+  useEffect(() => {
+    const initializeComponent = async () => {
+      console.log("Initializing ExtraHours component...");
+
+      // First check if user has an active regular attendance session
+      await checkRegularAttendance();
+
+      // Then load any active overtime session
+      await loadCurrentAttendance();
+
+      console.log("ExtraHours component initialized.");
     };
 
-    fetchAttendanceStatus();
-    loadCurrentAttendance();
-
-  }, []);
+    initializeComponent();
+  }, [user]);
 
 
 
@@ -132,16 +140,14 @@ const ExtraHours: React.FC = () => {
 
   const loadCurrentAttendance = async () => {
     if (!user) return;
-    // || !isRemoteCheckedIn
+
     try {
+      console.log("Loading current attendance for user:", localStorage.getItem('user_id'));
       const today = new Date();
       const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
       const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
 
-
-
-
-      // Updated query to get the most recent unchecked-out attendance
+      // Query to get the most recent unchecked-out attendance
       const { data, error } = await withRetry(() =>
         supabase
           .from('extrahours')
@@ -151,8 +157,6 @@ const ExtraHours: React.FC = () => {
           .lte('check_in', endOfDay.toISOString())
           .is('check_out', null)
           .order('check_in', { ascending: false })
-        // .limit(1)
-        // .single()
       );
 
       if (error) {
@@ -162,24 +166,54 @@ const ExtraHours: React.FC = () => {
         return;
       }
 
+      console.log("Retrieved extrahours data:", data);
 
-      if (data) {
+      if (data && data.length > 0) {
+        // User has an active session (not checked out)
+        const activeSession = data[0]; // Get the most recent active session
+        console.log("Active session found:", activeSession);
 
-        if (data.length > 0) {
-          // User has an active session (not checked out)
-          setIsRemoteCheckedIn(true);
-          setRemoteAttendanceId(data.id);
-          setRemoteCheckIn(data.check_in)
+        setIsRemoteCheckedIn(true);
+        setRemoteAttendanceId(activeSession.id);
+        setRemoteCheckIn(activeSession.check_in);
+
+        // Also retrieve the work mode for this session
+        const { data: sessionData, error: sessionError } = await supabase
+          .from('extrahours')
+          .select('work_mode')
+          .eq('id', activeSession.id)
+          .single();
+
+        if (!sessionError && sessionData) {
+          setRemoteWorkMode(sessionData.work_mode);
+        }
+
+        // Check if there are any active breaks for this session
+        const { data: breakData, error: breakError } = await supabase
+          .from('Remote_Breaks')
+          .select('*')
+          .eq('Remote_Id', activeSession.id)
+          .is('end_time', null)
+          .order('start_time', { ascending: false })
+          .limit(1);
+
+        if (!breakError && breakData && breakData.length > 0) {
+          setIsOnRemoteBreak(true);
+          setRemoteBreakTime(breakData[0].start_time);
         } else {
-          // User has checked out
-          setIsDisabled(false)
-          setIsRemoteCheckedIn(false);
+          setIsOnRemoteBreak(false);
+          setRemoteBreakTime(null);
         }
       } else {
-        // No record found means user is not checked in
+        // No active session found
+        console.log('No active extrahours session found');
         setIsRemoteCheckedIn(false);
-        setIsDisabled(false)
-        console.log('No attendance record found');
+        setRemoteAttendanceId(null);
+        setRemoteCheckIn(null);
+        setRemoteWorkMode(null);
+        setIsOnRemoteBreak(false);
+        setRemoteBreakTime(null);
+        setIsDisabled(false);
       }
     } catch (err) {
       console.error('Error in loadCurrentAttendance:', err);
@@ -421,27 +455,58 @@ const ExtraHours: React.FC = () => {
   };
 
   const handleCheckOut = async () => {
-    if (!user || !RemoteattendanceId) {
-      setError('No active attendance record found');
+    if (!user) {
+      setError('User not authenticated');
       return;
+    }
+
+    if (!RemoteattendanceId) {
+      console.error('No active attendance ID found for checkout');
+
+      // Try to find the active session again
+      const today = new Date();
+      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+
+      const { data, error } = await supabase
+        .from('extrahours')
+        .select('id')
+        .eq('user_id', localStorage.getItem('user_id'))
+        .gte('check_in', startOfDay.toISOString())
+        .lte('check_in', endOfDay.toISOString())
+        .is('check_out', null)
+        .order('check_in', { ascending: false })
+        .limit(1);
+
+      if (error || !data || data.length === 0) {
+        setError('No active attendance record found. Please refresh the page and try again.');
+        return;
+      }
+
+      // Use the found session ID
+      setRemoteAttendanceId(data[0].id);
+      console.log("Found active session ID:", data[0].id);
     }
 
     try {
       setLoading(true);
       setError(null);
 
+      const sessionId = RemoteattendanceId;
+      console.log("Checking out session:", sessionId);
       const now = new Date();
 
       // First, end any ongoing breaks
       if (isOnRemoteBreak) {
-        const { error: breakError }: { error: any } = await withRetry(() =>
+        console.log("Ending active break for session:", sessionId);
+        const { error: breakError } = await withRetry(() =>
           supabase
             .from('Remote_Breaks')
             .update({
               end_time: now.toISOString(),
               status: 'on_time'
             })
-            .eq('Remote_Id', RemoteattendanceId)
+            .eq('Remote_Id', sessionId)
             .is('end_time', null)
         );
 
@@ -452,13 +517,14 @@ const ExtraHours: React.FC = () => {
       }
 
       // Then update the attendance record with check-out time
-      const { error: dbError }: { error: any } = await withRetry(() =>
+      console.log("Updating extrahours record with checkout time:", now.toISOString());
+      const { error: dbError } = await withRetry(() =>
         supabase
           .from('extrahours')
           .update({
             check_out: now.toISOString()
           })
-          .eq('id', RemoteattendanceId)
+          .eq('id', sessionId)
           .is('check_out', null)
       );
 
@@ -472,7 +538,10 @@ const ExtraHours: React.FC = () => {
 
       // Reload attendance records to show the updated data
       await loadRemoteAttendanceRecords();
+
+      console.log("Successfully checked out of overtime session");
     } catch (err) {
+      console.error("Error during checkout:", err);
       setError(handleSupabaseError(err));
     } finally {
       setLoading(false);
@@ -556,7 +625,7 @@ const ExtraHours: React.FC = () => {
             <div>
   {/* For small and medium screens - Select dropdown */}
   <div className="block sm:hidden">
-    <select 
+    <select
       value={Remoteview}
       onChange={(e) => setRemoteView(e.target.value as ViewType)}
       className="w-full px-3 py-2 bg-white border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -566,7 +635,7 @@ const ExtraHours: React.FC = () => {
       <option value="monthly">Monthly</option>
     </select>
   </div>
-  
+
   {/* For large screens - Button group */}
   <div className="hidden sm:flex items-center space-x-4">
     <button
@@ -730,15 +799,31 @@ const ExtraHours: React.FC = () => {
             </div>
           )}
 
-
-          {/* {isRemoteDisabled && <span className="text-red-600 p-2 ">You are on Leave Today</span>} */}
-
+          {isRemoteDisabled && (
+            <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
+              <div className="flex">
+                <div className="ml-3">
+                  <p className="text-sm text-yellow-700">
+                    You have an active regular attendance session. Please check out from there before starting overtime.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
 
           {isRemoteCheckedIn ? (
             <div className="space-y-4">
-              <p className="text-gray-600">
-                Checked in at: {RemotecheckInTime && format(new Date(RemotecheckInTime), 'hh:mm a')}
-              </p>
+              {RemotecheckInTime ? (
+                <p className="text-gray-600">
+                  Checked in at: {format(new Date(RemotecheckInTime), 'hh:mm a')}
+                </p>
+              ) : (
+                <div className="bg-blue-50 border-l-4 border-blue-400 p-4 mb-4">
+                  <p className="text-sm text-blue-700">
+                    You have an active overtime session. You can check out when you're done.
+                  </p>
+                </div>
+              )}
               <button
                 onClick={handleCheckOut}
                 disabled={loading}

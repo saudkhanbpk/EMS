@@ -19,7 +19,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   const [incrementData, setIncrementData] = useState({
     user_id: employeeid,
     increment_amount: "",
-    increment_date: new Date().toISOString().split('T')[0] // Default to today's date
+    increment_date: new Date().toISOString().split('T')[0], // Default to today's date
+    basic_salary: "",
+    after_increment: ""
   });
 
   const [formData, setFormData] = useState({
@@ -127,6 +129,64 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       const totalAttendance = attendanceData.length;
 
+      // Fetch overtime hours from extrahours table
+      const { data: extrahoursData, error: extrahoursError } = await supabase
+        .from("extrahours")
+        .select("id, check_in, check_out")
+        .eq("user_id", employeeid);
+
+      if (extrahoursError) {
+        console.error("Error fetching extrahours:", extrahoursError);
+        throw extrahoursError;
+      }
+
+      // Fetch breaks for extrahours
+      const { data: remoteBreakData, error: remoteBreakError } = await supabase
+        .from("Remote_Breaks")
+        .select("start_time, end_time, Remote_Id")
+        .in("Remote_Id", extrahoursData.map(a => a.id));
+
+      if (remoteBreakError) {
+        console.error("Error fetching remote breaks:", remoteBreakError);
+      }
+
+      // Group remote breaks by Remote_Id
+      const remoteBreaksByAttendance: Record<string, { start_time: string; end_time: string | null }[]> = {};
+      if (remoteBreakData) {
+        remoteBreakData.forEach(b => {
+          if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+          remoteBreaksByAttendance[b.Remote_Id].push(b);
+        });
+      }
+
+      // Calculate total overtime hours
+      let totalOvertimeHours = 0;
+
+      extrahoursData.forEach(log => {
+        if (log.check_in && log.check_out) {
+          const checkIn = new Date(log.check_in);
+          const checkOut = new Date(log.check_out);
+
+          let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+
+          // Subtract remote breaks
+          const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
+          let remoteBreakHours = 0;
+
+          remoteBreaks.forEach(b => {
+            if (b.start_time && b.end_time) {
+              const breakStart = new Date(b.start_time);
+              const breakEnd = new Date(b.end_time);
+              remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            }
+          });
+
+          totalOvertimeHours += Math.max(0, hoursWorked - remoteBreakHours);
+        }
+      });
+
+      console.log("Total overtime hours:", totalOvertimeHours);
+
       const { data: absenteeData, error: absenteeError } = await supabase
         .from("absentees")
         .select("absentee_type")
@@ -155,6 +215,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           : supabase.storage.from("profilepics").getPublicUrl(userData.profile_image).data.publicUrl;
       }
 
+      // Calculate overtime pay
+      const overtimePay = userData.per_hour_pay ? (parseFloat(userData.per_hour_pay) * totalOvertimeHours).toFixed(2) : "0";
+
       const enrichedEmployee = {
         ...userData,
         profile_image_url: profileImageUrl,
@@ -163,6 +226,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         TotalKPI: totalKPI,
         activeTaskCount: employeeTasks.length,
         totalWorkingHours: totalWorkHours.toFixed(2),
+        totalOvertimeHours: totalOvertimeHours.toFixed(2),
+        overtimePay: overtimePay,
         totalAttendance,
         totalAbsents,
         totalLeaves
@@ -213,14 +278,31 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   const handleSubmitIncrement = async (e) => {
     e.preventDefault();
     try {
-      const { data, error } = await supabase
+      if (!employeeData) {
+        setError("Employee data not available");
+        return;
+      }
+
+      // Calculate the new salary
+      const currentSalary = Number(employeeData.salary);
+      const incrementAmount = Number(incrementData.increment_amount);
+      const newSalary = currentSalary + incrementAmount;
+
+      // Update the increment data with the current and new salary
+      const updatedIncrementData = {
+        ...incrementData,
+        basic_salary: currentSalary.toString(),
+        after_increment: newSalary.toString()
+      };
+
+      // Insert the increment record
+      const { error } = await supabase
         .from("sallery_increment")
-        .insert([incrementData]);
+        .insert([updatedIncrementData]);
 
       if (error) throw error;
 
       // Update the employee's salary in the users table
-      const newSalary = Number(employeeData.salary) + Number(incrementData.increment_amount);
       const { error: updateError } = await supabase
         .from("users")
         .update({ salary: newSalary })
@@ -228,16 +310,30 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       if (updateError) throw updateError;
 
+      // Update the lastIncrement state directly
+      setLastIncrement({
+        increment_amount: incrementData.increment_amount,
+        increment_date: incrementData.increment_date,
+        basic_salary: currentSalary.toString(),
+        after_increment: newSalary.toString()
+      });
+
       // Refresh the data
       await fetchEmployee();
       setIncrementModel(false);
       setIncrementData({
         user_id: employeeid,
         increment_amount: "",
-        increment_date: new Date().toISOString().split('T')[0]
+        increment_date: new Date().toISOString().split('T')[0],
+        basic_salary: "",
+        after_increment: ""
       });
     } catch (err) {
-      setError("Failed to save increment: " + err.message);
+      if (err instanceof Error) {
+        setError("Failed to save increment: " + err.message);
+      } else {
+        setError("Failed to save increment: Unknown error");
+      }
     }
   };
 
@@ -280,6 +376,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       setEmployeeData(data[0]);
       setIsEditMode(false);
+
+      fetchEmployee();
     } catch (err) {
       setError("Failed to save changes: " + err.message);
     }
@@ -350,7 +448,11 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         {/* Right Section: Earnings */}
         <div className="bg-purple-600 w-full md:w-auto h-fit flex justify-center items-center text-white px-6 py-4 rounded-lg text-base sm:text-lg font-medium">
           <span className="mr-2">Total Earning is</span>
-          <span className="font-bold text-3xl sm:text-4xl ml-2">45,000</span>
+          <span className="font-bold text-3xl sm:text-4xl ml-2">
+            {employeeData?.salary ?
+              (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
+              : "0"}
+          </span>
         </div>
       </div>
 
@@ -378,7 +480,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalAttendance || 0}</h2>
               <Moon className="text-purple-600 h-5 w-5" />
             </div>
-            <div className="text-gray-500 text-sm">Normal Days</div>
+            <div className="text-gray-500 text-sm">Present Days</div>
           </div>
         </div>
 
@@ -404,11 +506,11 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">30</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalOvertimeHours || 0}</h2>
               <Watch className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Overtime Hours</div>
-            <div className="text-gray-400 text-xs mt-1">5% increase over last workday</div>
+            <div className="text-gray-400 text-xs mt-1">Calculated from extrahours records</div>
           </div>
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
@@ -477,37 +579,50 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           <div className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Basic Pay</span>
-              <span className="text-gray-600 text-sm">40,000</span>
+              <span className="text-gray-600 text-sm">{employeeData?.salary || "0"}</span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Total Hours</span>
-              <span className="text-gray-600 text-sm">1200</span>
+              <span className="text-gray-600 text-sm">{employeeData?.totalWorkingHours || "0"}</span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Pay Per Hour</span>
-              <span className="text-gray-600 text-sm">1200</span>
+              <span className="text-gray-600 text-sm">{employeeData?.per_hour_pay || "0"}</span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Overtime</span>
-              <span className="text-gray-600 text-sm">00</span>
+              <span className="text-gray-600 text-sm">{employeeData?.overtimePay || "0"}</span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Total Earning</span>
-              <span className="text-gray-600 text-sm">45,000</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.salary ?
+                  (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
+                  : "0"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Last Increment</span>
               <span className="text-gray-600 text-sm">
                 {lastIncrement
-                  ? `${lastIncrement.increment_amount} on ${new Date(lastIncrement.increment_date).toLocaleDateString()}`
+                  ? `Rs. ${lastIncrement.increment_amount} on ${new Date(lastIncrement.increment_date).toLocaleDateString()}`
                   : "N/A"}
               </span>
             </div>
+
+            {lastIncrement && lastIncrement.basic_salary && lastIncrement.after_increment && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Increment Details</span>
+                <span className="text-gray-600 text-sm">
+                  {`Rs. ${lastIncrement.basic_salary} → Rs. ${lastIncrement.after_increment}`}
+                </span>
+              </div>
+            )}
           </div>
         </div>
 
@@ -547,49 +662,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-      {/* <div className="bg-white rounded-2xl shadow-md p-6 md:p-10 max-w-4xl w-full"> */}
-      {/* <div className="flex justify-between items-center mb-4">
-          <button
-            onClick={() => setemployeeview("generalview")}
-            className="px-4 py-2 bg-gray-200 rounded-lg hover:bg-gray-300"
-          >
-            Back to List
-          </button>
-
-          <div className="flex space-x-5 flex-row">
-            <button
-              onClick={() => setIncrementModel(true)}
-              className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              Add Increment
-            </button>
-            <button
-              onClick={handleEditClick}
-              className="flex items-center px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600"
-            >
-              <FaEdit className="mr-2" /> Edit
-            </button>
-          </div>
-        </div> */}
 
       {incrementModel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -645,19 +717,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         </div>
       )}
 
-      {/* <div className="flex flex-col items-center mt-2">
-          <img
-            src={
-              formData.profile_image
-                ? URL.createObjectURL(formData.profile_image)
-                : employeeData.profile_image_url || "https://via.placeholder.com/150"
-            }
-            alt="Profile"
-            className="w-32 h-32 rounded-full object-cover mb-4"
-          />
-          <h2 className="text-xl font-bold">{employeeData.full_name}</h2>
-          <p className="text-gray-600 capitalize">{employeeData.role || "employee"}</p>
-        </div> */}
+
 
       {isEditMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto">
@@ -834,7 +894,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             {/* Modal Footer */}
             <div className="flex justify-end gap-4 p-6 border-t">
               <button
-                onClick={() => setIsEditMode(false)}
+                onClick={() => {
+                  setIsEditMode(false)
+                }}
                 className="px-6 py-2.5 bg-gray-200 text-gray-800 font-medium rounded-xl hover:bg-gray-300 transition-colors"
               >
                 Cancel
@@ -850,7 +912,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         </div>
       )}
 
-      {/* </div> */}
+
     </div>
   );
 };
