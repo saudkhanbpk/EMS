@@ -305,6 +305,7 @@ import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
 import Adminroute from './components/adminroute';
 
+
 function App() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
@@ -416,6 +417,7 @@ function App() {
           <Route path="profile" element={<ProfileCard />} />
           <Route path='chat' element={<ChatSidebar/>}></Route>
           <Route path="chat/:id" element={<Chat />} />
+    
         </Route>
 
         {/* Redirect unknown routes to login */}

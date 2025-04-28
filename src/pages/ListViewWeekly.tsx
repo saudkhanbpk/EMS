@@ -454,7 +454,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
 
       {/* Filter Div */}
       {!loading && (
-        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
+        <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-lg mb-6">
           <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
             <button
               onClick={() => handleFilterChange('all')}
@@ -506,12 +506,12 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
 
       {/* Attendance Table */}
       {!loading && (
-        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
+        <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-lg">
           {error && <p className="text-red-500 text-center">{error}</p>}
-          <div className="w-full">
+          <div className="max-w-7xl">
   {/* Desktop view - only visible on md screens and above */}
   <div className="hidden md:block overflow-x-auto">
-    <table className="min-w-full bg-white">
+    <table className="min-w-full  bg-white">
       <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
         <tr>
           <th className="py-3 px-6 text-left">Employee Name</th>

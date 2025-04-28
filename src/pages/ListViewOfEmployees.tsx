@@ -4,7 +4,7 @@ import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import { useAuthStore } from '../lib/store';
 import EmployeeWeeklyAttendanceTable from "./ListViewWeekly";
 import { ChevronLeft, ChevronRight, SearchIcon } from "lucide-react"; // Assuming you're using Lucide icons
-import { format, parse, isAfter, addMonths, addWeeks } from "date-fns"; // Import the format function
+import { format, parse, isAfter, addMonths, addWeeks, set } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
 import "./style.css"
@@ -13,7 +13,8 @@ import { Trash2 } from 'lucide-react';
 import { forwardRef, useImperativeHandle } from "react";
 import "./style.css";
 import { useNavigate } from 'react-router-dom';
-import { Dialog, Transition } from '@headlessui/react'
+import { Dialog, Transition, RadioGroup  } from '@headlessui/react'
+
 import AbsenteeComponentAdmin from "./AbsenteeDataAdmin";
 import {
   startOfMonth,
@@ -77,11 +78,15 @@ const EmployeeAttendanceTable = () => {
 
 
   const [attendanceData, setAttendanceData] = useState([]);
+  const [absentid,setabsentid]=useState<null | number>(null)
+  const [selecteduser,setslecteduser]=useState<null | string>(null)
   const [filteredData, setFilteredData] = useState([]); // Filtered data for display
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
+  const [modalVisible, setModalVisible] = useState(false);
+  const [selectedMode, setSelectedMode] = useState('remote');;
   const [present, setPresent] = useState(0);
-  const [todaybreak,settodaybreak]=useState<unknown>(null)
+  
 
 
   const [DataEmployee, setDataEmployee] = useState(null);
@@ -151,6 +156,147 @@ const EmployeeAttendanceTable = () => {
   //   }
   // });
 
+  function handleabsentclosemodal() {
+    setabsentid(null)
+    setslecteduser(null)
+    setModalVisible(false);
+  }
+
+ async function handleopenabsentmodal(id:string,) {
+  setslecteduser(id)
+  setModalVisible(true);
+    console.log("absent id", id);
+    let selectdate=new Date(selectedDate)
+    const today = selectdate.toISOString().split('T')[0]
+    
+    const { data, error } = await supabase
+  .from('absentees') // your table name
+  .select('*')
+  .eq('user_id', id) // filter by user_id
+  .gte('created_at', `${today}T00:00:00`) // start of today
+  .lte('created_at', `${today}T23:59:59`) // end of today
+
+if (error) {
+  console.error('Error fetching attendance:', error)
+} else {
+  if(data.length) {
+let dataid=data[0].id
+setabsentid(dataid)
+
+  }
+  console.log('Today\'s attendance:', data)
+}
+    
+  }
+
+
+
+
+  async function handleSaveChanges() {
+    handleabsentclosemodal();
+    console.log("the absent id is", absentid)
+    console.log('Selected work mode:', selectedMode);
+
+    let updateSuccess = false;
+    let newAbsenteeData = null;
+
+    if (absentid){
+      const { data, error } = await supabase
+        .from("absentees")
+        .update({ absentee_Timing: selectedMode, absentee_type: selectedMode=="Absent"? "Absent" : "leave" })
+        .eq("id", absentid);
+
+      if (error) {
+        console.error("Error updating absentee type:", error);
+      } else {
+        alert("Absentee type updated successfully!");
+        updateSuccess = true;
+        // Sometimes Supabase returns an array, sometimes object, handle both
+        newAbsenteeData = Array.isArray(data) ? data[0] : data;
+      }
+    } else {
+      if (selecteduser) {
+        const { data, error } = await supabase
+          .from('absentees') // your table name
+          .insert([
+            {
+              user_id: selecteduser,
+              absentee_Timing : selectedMode,
+              absentee_type: selectedMode=="Absent"? "Full Day" : "leave",
+            }
+          ])
+          .select(); // So we get inserted row(s) back
+        if (!error) {
+          updateSuccess = true;
+          // Take the first inserted record (Supabase returns array)
+          newAbsenteeData = Array.isArray(data) ? data[0] : data;
+        }
+      }
+    }
+
+    // UI UPDATE LOGIC
+    // Try to update attendanceData and filteredData in local state so UI is refreshed instantly.
+    if (updateSuccess && newAbsenteeData) {
+      setAttendanceData(prev =>
+        prev.map(item =>
+          (item.id === (newAbsenteeData.user_id || selecteduser))
+            ? {
+                ...item,
+                status: newAbsenteeData.absentee_type,
+                textColor: newAbsenteeData.absentee_type === "Absent"
+                  ? "text-red-500"
+                  : "text-blue-500"
+              }
+            : item
+        )
+      );
+      setFilteredData(prev =>
+        prev.map(item =>
+          (item.id === (newAbsenteeData.user_id || selecteduser))
+            ? {
+                ...item,
+                status: newAbsenteeData.absentee_type,
+                textColor: newAbsenteeData.absentee_type === "Absent"
+                  ? "text-red-500"
+                  : "text-blue-500"
+              }
+            : item
+        )
+      );
+    } else if (updateSuccess && selecteduser) {
+      // If new absentee but Supabase did not return newAbsenteeData
+      setAttendanceData(prev =>
+        prev.map(item =>
+          item.id === selecteduser
+            ? {
+                ...item,
+                status: selectedMode=="Absent"? "Absent" : "leave",
+                textColor: selectedMode=="Absent"
+                  ? "text-red-500"
+                  : "text-blue-500"
+              }
+            : item
+        )
+      );
+      setFilteredData(prev =>
+        prev.map(item =>
+          item.id === selecteduser
+            ? {
+                ...item,
+                status: selectedMode=="Absent"? "Absent" : "leave",
+                textColor: selectedMode=="Absent"
+                  ? "text-red-500"
+                  : "text-blue-500"
+              }
+            : item
+        )
+      );
+    }
+    // Optionally: also re-compute absent/present counters
+    // (If user wants the summary widgets to update.)
+    // Optionally, if you maintain a query cache for absentee records, you might want to re-fetch here.
+  }
+  // ... (rest of the code remains unchanged below this)
 
 
   const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
@@ -212,10 +358,10 @@ const EmployeeAttendanceTable = () => {
     }
   };
   // Open modal and set the selected entry and default time
-  const handleCheckinOpenModal = (entry) => {
+  const handleCheckinOpenModal = async(entry) => {
     setSelectedEntry(entry);
     parseCheckInTime(entry.check_in)
-    // setNewCheckInTime(entry.check_in || ''); // Set default time
+   
     setisCheckinModalOpen(true);
 
   };
@@ -943,7 +1089,7 @@ function formatToTimeString(isoString:string) {
 
 let getuserbreakdate=(id:string)=>{
 let secondcheckin=todayBreak.filter((breaks)=>breaks.attendance_id===id)
-console.log("Second Check in : ",  secondcheckin);
+
 let second = secondcheckin[0]?.end_time != null
 
 // let secondcheckinlength = secondcheckin.end_time != null ;
@@ -1267,7 +1413,7 @@ useEffect(() => {
                       {/* Format Time */}
                       <td className="border p-2">{new Date(check_in).toLocaleTimeString()}</td>
                       <td className="border p-2">{check_out ? new Date(check_out).toLocaleTimeString() : "N/A"}</td>
-                      <td className="border p-2">{work_mode}</td>
+                      <td className="border p-2"  >{work_mode}</td>
                     </tr>
                   );
                 })
@@ -1282,6 +1428,8 @@ useEffect(() => {
 
           </table>
         </div>
+        
+    
       </div>
     );
   };
@@ -1580,44 +1728,57 @@ useEffect(() => {
   const fetchAttendanceData = async (date) => {
     setLoading(true);
     const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD format
-
+  
     try {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
         .neq("role", "admin");
-
+  
       if (usersError) throw usersError;
-
+  
       // Fetch attendance logs for the selected date
       const { data: attendanceLogs, error: attendanceError } = await supabase
         .from("attendance_logs")
-        .select("user_id, check_in, check_out, work_mode, status, created_at , autocheckout,id")
+        .select("user_id, check_in, check_out, work_mode, status, created_at, autocheckout, id")
         .gte("check_in", `${formattedDate}T00:00:00`)
         .lte("check_in", `${formattedDate}T23:59:59`);
-
+  
       if (attendanceError) throw attendanceError;
-
-      // Map attendance data by user_id
+  
+      // Fetch absentees for the selected date
+      const { data: absentees, error: absenteesError } = await supabase
+        .from("absentees")
+        .select("user_id, absentee_type")
+        .gte("created_at", `${formattedDate}T00:00:00`)
+        .lte("created_at", `${formattedDate}T23:59:59`)
+  
+      if (absenteesError) throw absenteesError;
+  
+      
+      // Create Maps
       const attendanceMap = new Map(attendanceLogs.map((log) => [log.user_id, log]));
-
-      // Build final list with text colors
+      const absenteesMap = new Map(absentees.map((absent) => [absent.user_id, absent.absentee_type]));
+  
+      // Build final list
       const finalAttendanceData = users.map((user) => {
         const log = attendanceMap.get(user.id);
-        console.log(log)
+  
         const formatTime = (dateString) => {
           if (!dateString || dateString === "N/A") return "N/A";
-
+  
           const date = new Date(dateString);
           return date.toLocaleTimeString("en-US", {
             hour: "2-digit",
             minute: "2-digit",
-            hour12: true, // Ensures AM/PM format
+            hour12: true,
           });
         };
-
+  
         if (!log) {
+          const absenteeType = absenteesMap.get(user.id); // Check if absentee record exists
+  
           return {
             id: user.id,
             full_name: user.full_name,
@@ -1628,11 +1789,11 @@ useEffect(() => {
             check_out: "N/A",
             autocheckout: "",
             work_mode: "N/A",
-            status: "Absent",
-            textColor: "text-red-500",
+            status: absenteeType || "Absent", // Use absentee type if available
+            textColor: absenteeType ? "text-blue-500" : "text-red-500", // Optional: different color for approved leaves
           };
         }
-
+  
         return {
           id: user.id,
           full_name: user.full_name,
@@ -1640,7 +1801,6 @@ useEffect(() => {
           check_in2: log.check_in ? log.check_in : "N/A",
           check_out2: log.check_out ? log.check_out : "",
           created_at: log.created_at ? log.created_at : "N/A",
-          // created_at: log.created_at ?  new Date(log.created_at).toISOString().split('.')[0] + "+00:00" : "N/A",
           check_in: log.check_in ? formatTime(log.check_in) : "N/A",
           check_out: log.check_out ? formatTime(log.check_out) : "N/A",
           autocheckout: log.autocheckout || "",
@@ -1654,10 +1814,10 @@ useEffect(() => {
                 : "text-red-500",
         };
       });
-
+  
       setAttendanceData(finalAttendanceData);
       setFilteredData(finalAttendanceData); // Initialize filtered data with all data
-
+  
       // Calculate counts
       const lateCount = finalAttendanceData.filter((entry) => entry.status.toLowerCase() === "late").length;
       setLate(lateCount);
@@ -1674,6 +1834,7 @@ useEffect(() => {
       setLoading(false);
     }
   };
+  
 
   const now = new Date();
   const [fetchingid, setfetchingid] = useState('')
@@ -1758,7 +1919,7 @@ useEffect(() => {
   return (
     <div className="flex flex-col  justify-center items-center min-h-full min-w-full bg-gray-100 ">
       {/* Heading */}
-      <div className=" w-full px-3 max-w-5xl justify-between items-center flex">
+      <div className=" w-full px-3 max-w-7xl justify-between items-center flex">
         {maintab === "TableView" && (
           <h1 className="sm:text-2xl text-xl lg:ml-[34px] font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
             Employee Attendance
@@ -1797,7 +1958,7 @@ useEffect(() => {
 
       </div>
       {/* Buttons and Date Navigation */}
-      <div className="w-full max-w-5xl flex flex-wrap justify-between items-center mb-6">
+      <div className="w-full max-w-7xl flex flex-wrap justify-between items-center mb-6">
         {/* Buttons Row */}
         {maintab === "DetailedView" && (
           <div></div>
@@ -2060,7 +2221,7 @@ useEffect(() => {
 
       {/* Loading Animation */}
       {loading && (
-        <div className="w-full max-w-5xl space-y-4">
+        <div className="w-full max-w-7xl space-y-4">
           {[...Array(5)].map((_, index) => (
             <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
           ))}
@@ -2070,7 +2231,7 @@ useEffect(() => {
       {/* Attendance Summary */}
       {!loading && maintab === "TableView" && selectedTab === "Daily" && (
         <>
-          <div className="w-full max-w-5xl  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6">
+          <div className="w-full max-w-7xl  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6">
             <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
               <button
                 onClick={() => handleFilterChange("all")}
@@ -2126,7 +2287,7 @@ useEffect(() => {
           </div>
 
           {/* Attendance Table */}
-          <div className="w-full overflow-x-auto max-w-5xl bg-white p-6 rounded-lg shadow-lg">
+          <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
             {error && <p className="text-red-500 text-center">{error}</p>}
             <div className="overflow-x-auto">
 
@@ -2223,18 +2384,22 @@ useEffect(() => {
                                   : "---"}
                             </button>
                           </td>
-                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
-                            <span
-                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === "present"
-                                ? "bg-green-100 text-green-800"
-                                : entry.status === "late"
-                                  ? "bg-yellow-100 text-yellow-800"
-                                  : "bg-red-100 text-red-800"
-                                }`}
-                            >
-                              {entry.status}
-                            </span>
-                          </td>
+                          <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
+  <button type="button" onClick={() => handleopenabsentmodal(entry.id)}>
+    <span
+      className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${
+        entry.status === "present"
+          ? "bg-green-100 text-green-800"
+          : entry.status === "late"
+            ? "bg-yellow-100 text-yellow-800"
+            : "bg-red-100 text-red-800"
+      }`}
+    >
+      {entry.status=="Full Day"?"Leave":entry.status}
+    </span>
+  </button>
+</td>
+
                         </tr>
                       ))}
                     </tbody>
@@ -2257,16 +2422,22 @@ useEffect(() => {
                         >
                           {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
                         </span>
-                        <span
-                          className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
-                            ? "bg-green-100 text-green-800"
-                            : entry.status === "late"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
-                            }`}
-                        >
-                          {entry.status}
-                        </span>
+                        <button
+  type="button"
+  onClick={() => handleopenabsentmodal(entry.id)}
+  className="focus:outline-none"
+>
+  <span
+    className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
+      ? "bg-green-100 text-green-800"
+      : entry.status === "late"
+        ? "bg-yellow-100 text-yellow-800"
+        : "bg-red-100 text-red-800"
+      }`}
+  >
+    {entry.status == "Full Day" ? "Leave" : entry.status}
+  </span>
+</button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -2333,6 +2504,108 @@ useEffect(() => {
                       </div>
                     </div>
                   ))}
+                      <Transition appear show={modalVisible} as={Fragment}>
+        <Dialog as="div" className="relative z-10" onClose={handleabsentclosemodal}>
+          <Transition.Child
+            as={Fragment}
+            enter="ease-out duration-300"
+            enterFrom="opacity-0"
+            enterTo="opacity-100"
+            leave="ease-in duration-200"
+            leaveFrom="opacity-100"
+            leaveTo="opacity-0"
+          >
+            <div className="fixed inset-0 bg-black bg-opacity-25" />
+          </Transition.Child>
+
+          <div className="fixed inset-0 overflow-y-auto">
+            <div className="flex min-h-full items-center justify-center p-4 text-center">
+              <Transition.Child
+                as={Fragment}
+                enter="ease-out duration-300"
+                enterFrom="opacity-0 scale-95"
+                enterTo="opacity-100 scale-100"
+                leave="ease-in duration-200"
+                leaveFrom="opacity-100 scale-100"
+                leaveTo="opacity-0 scale-95"
+              >
+                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all">
+                  <Dialog.Title
+                    as="h3"
+                    className="text-lg font-medium leading-6 text-gray-900 text-center mb-6"
+                  >
+                    Mark Him Leave
+                  </Dialog.Title>
+                  
+                  <div className="mt-4">
+                    <RadioGroup value={selectedMode} onChange={setSelectedMode} className="space-y-4">
+                      <RadioGroup.Option value="Absent">
+                        {({ checked }) => (
+                          <div className="flex items-center">
+                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                            <span className="ml-3 text-gray-800">Absent</span>
+                          </div>
+                        )}
+                      </RadioGroup.Option>
+                      <RadioGroup.Option value="Full Day">
+                        {({ checked }) => (
+                          <div className="flex items-center">
+                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                            <span className="ml-3 text-gray-800">Casual Leave</span>
+                          </div>
+                        )}
+                      </RadioGroup.Option>
+                      <RadioGroup.Option value="Half Day">
+                        {({ checked }) => (
+                          <div className="flex items-center">
+                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                            <span className="ml-3 text-gray-800">Half Day Leave</span>
+                          </div>
+                        )}
+                      </RadioGroup.Option>
+                      <RadioGroup.Option value="Sick Leave">
+                        {({ checked }) => (
+                          <div className="flex items-center">
+                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                            <span className="ml-3 text-gray-800">Sick Leave</span>
+                          </div>
+                        )}
+                      </RadioGroup.Option>
+                  
+                    
+                      <RadioGroup.Option value="Emergency Leave">
+                        {({ checked }) => (
+                          <div className="flex items-center">
+                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                            <span className="ml-3 text-gray-800">Emergency Leave</span>
+                          </div>
+                        )}
+                      </RadioGroup.Option>
+                    </RadioGroup>
+                  </div>
+
+                  <div className="mt-8 flex justify-end space-x-3">
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-gray-300 bg-gray-500 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none"
+                      onClick={handleabsentclosemodal}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="button"
+                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
+                      onClick={handleSaveChanges}
+                    >
+                      Save
+                    </button>
+                  </div>
+                </Dialog.Panel>
+              </Transition.Child>
+            </div>
+          </div>
+        </Dialog>
+      </Transition>
                 </div>
               </div>
 
@@ -2945,6 +3218,7 @@ useEffect(() => {
                                       {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
                                       </span>
                                     </div>
+
 
 
                                     {/* Optional: Additional Tasks or Overview */}

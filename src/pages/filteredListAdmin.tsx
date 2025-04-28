@@ -454,7 +454,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
     <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100 p-0">
       {/* Loading Animation */}
       {loading && (
-        <div className="w-full max-w-5xl space-y-6">
+        <div className="w-full max-w-7xl space-y-6">
           {[...Array(5)].map((_, index) => (
             <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
           ))}
@@ -463,7 +463,7 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
 
       {/* Filter Div */}
       {!loading && (
-        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
+        <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-lg mb-6">
           <div className="flex justify-between items-center text-lg font-medium">
             <button
               onClick={() => handleFilterChange('all')}
@@ -516,10 +516,10 @@ const FilteredDataAdmin: React.FC = ({ startdate,  enddate , search }) => {
       {/* Attendance Table */}
       {!loading && (
        
-<div className="w-full">
+<div className="max-w-7xl">
   {/* Table for larger screens (hidden on small screens) */}
   <div className="hidden sm:block overflow-x-auto">
-    <table className="max-w-5xl mx-auto bg-white">
+    <table className="max-w-7xl mx-auto bg-white">
       <thead className="bg-gray-50 text-gray-700 uppercase text-sm leading-normal">
         <tr>
           <th className="py-3 px-6 text-left">Employee Name</th>

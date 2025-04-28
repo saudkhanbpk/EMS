@@ -13,7 +13,7 @@ const AbsenteeComponentAdmin: React.FC<AbsenteeComponentAdminProps> = ({ userID 
   const [absenteeData, setAbsenteeData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const today = new Date();
-        
+
   const monthStart = startOfMonth(today);
   const monthEnd = endOfMonth(today);
 
@@ -31,6 +31,8 @@ const AbsenteeComponentAdmin: React.FC<AbsenteeComponentAdminProps> = ({ userID 
       if (error) throw error;
 
       setAbsenteeData(absenteeRecords || []);
+      console.log("Fetched absentee data:", absenteeRecords);
+
     } catch (error) {
       console.error("Error fetching absentee data:", error);
     } finally {
@@ -55,33 +57,38 @@ const AbsenteeComponentAdmin: React.FC<AbsenteeComponentAdminProps> = ({ userID 
         <p className="text-center text-gray-600">No Absentee Records Found</p>
       ) : (
         <div className="flex flex-col items-center justify-between">
-          <div className="grid grid-cols-3 gap-14 bg-gray-50 rounded-lg p-4 w-full">
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 text-left mb-3">Date</h3>
-              {absenteeData.map((absentee, index) => (
-                <p key={index} className="text-gray-700">
-                  {new Date(absentee.absentee_date).toLocaleDateString('en-us', {
-                    month: 'short',
-                    year: 'numeric',
-                    day: 'numeric',
-                  })}
-                </p>
-              ))}
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 text-left ml-4 mb-3">Type</h3>
-              {absenteeData.map((absentee, index) => (
-                <p key={index} className="text-gray-700 ml-4">{absentee.absentee_type}</p>
-              ))}
-            </div>
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 text-left ml-4 mb-3">Timing</h3>
-              {absenteeData.map((absentee, index) => (
-                <p key={index} className="text-gray-700 ml-4">{absentee.absentee_Timing}</p>
-              ))}
-            </div>
+        <div className="grid grid-cols-3 gap-14 bg-gray-50 rounded-lg p-4 w-full">
+          {/* Column 1: Date */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 text-left mb-3">Date</h3>
+            {absenteeData.map((absentee, index) => {
+              const [year, month, day] = absentee.absentee_date.split('-');
+              const formattedDate = `${day}-${month}-${year}`;
+      
+              return (
+                <p key={index} className="text-gray-700">{formattedDate}</p>
+              );
+            })}
+          </div>
+      
+          {/* Column 2: Type */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 text-left mb-3">Type</h3>
+            {absenteeData.map((absentee, index) => (
+              <p key={index} className="text-gray-700">{absentee.absentee_type}</p>
+            ))}
+          </div>
+      
+          {/* Column 3: Timing */}
+          <div>
+            <h3 className="text-sm font-medium text-gray-500 text-left mb-3">Timing</h3>
+            {absenteeData.map((absentee, index) => (
+              <p key={index} className="text-gray-700">{absentee.absentee_Timing}</p>
+            ))}
           </div>
         </div>
+      </div>
+      
       )}
     </div>
   );

@@ -332,7 +332,7 @@ const handleDownload = async (userId: string, fullName: string) => {
 
       {/* Filter Div */}
       {!loading && (
-        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg mb-6">
+        <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-lg mb-6">
           <div className="flex justify-between items-center text-lg font-medium">
             <button
               onClick={() => handleFilterChange('all')}
@@ -384,7 +384,7 @@ const handleDownload = async (userId: string, fullName: string) => {
 
       {/* Attendance Table */}
       {!loading && (
-        <div className="w-full max-w-5xl bg-white p-6 rounded-lg shadow-lg">
+        <div className="w-full max-w-7xl bg-white p-6 rounded-lg shadow-lg">
           {error && <p className="text-red-500 text-center">{error}</p>}
           <div className="w-full shadow-sm rounded-lg">
   {/* Table view for medium and larger screens */}
