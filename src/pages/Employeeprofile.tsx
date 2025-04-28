@@ -2,9 +2,10 @@ import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Mail, Phone, MapPin, CreditCard, Globe, Building2, Slack, Briefcase, X, ArrowLeft } from "lucide-react";
 import { FaEdit } from "react-icons/fa";
+import { startOfMonth } from "date-fns";
 import {
   CheckCircle, PieChart, Users, CalendarClock, Moon, AlarmClockOff, Watch, Info, Landmark,
-  Clock, DollarSign, FileMinusIcon, TrendingDown, TrendingUp
+  Clock, DollarSign, FileMinusIcon, TrendingDown, TrendingUp, FileText
 } from 'lucide-react';
 
 
@@ -16,6 +17,277 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   const [isEditMode, setIsEditMode] = useState(false);
   const [incrementModel, setIncrementModel] = useState(false);
   const [lastIncrement, setLastIncrement] = useState(null); // Changed from increment to lastIncrement for clarity
+  const [selectedmonth, setselectedmonth] = useState('');
+  const [startdate, setStartdate] = useState('');
+  const [enddate, setEnddate] = useState('');
+  const [monthlyData, setMonthlyData] = useState({
+    totalAttendance: 0,
+    totalAbsents: 0,
+    totalLeaves: 0,
+    totalWorkingHours: 0,
+    totalOvertimeHours: 0,
+    overtimePay: "0",
+    activeTaskCount: 0,
+    completedTaskCount: 0,
+    completedTasksScore: 0,
+    projectsCount: 0
+  });
+
+  // Function to fetch data for the selected month
+  const fetchMonthlyData = async (startDate, endDate) => {
+    try {
+      setLoading(true);
+      console.log("Fetching data for period:", startDate, "to", endDate);
+
+      // Fetch attendance data for the selected month
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from("attendance_logs")
+        .select("id, check_in, check_out")
+        .eq("user_id", employeeid)
+        .gte("check_in", startDate)
+        .lte("check_in", endDate);
+
+      if (attendanceError) {
+        console.error("Error fetching attendance:", attendanceError);
+        throw attendanceError;
+      }
+
+      // Fetch breaks for the attendance logs
+      const { data: breakData, error: breakError } = await supabase
+        .from("breaks")
+        .select("start_time, end_time, attendance_id")
+        .in("attendance_id", attendanceData.length > 0 ? attendanceData.map(a => a.id) : ['']);
+
+      if (breakError) {
+        console.error("Error fetching breaks:", breakError);
+      }
+
+      // Group breaks by attendance_id
+      const breaksByAttendance = {};
+      if (breakData) {
+        breakData.forEach(b => {
+          if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+          breaksByAttendance[b.attendance_id].push(b);
+        });
+      }
+
+      // Calculate total working hours
+      let totalWorkHours = 0;
+      attendanceData.forEach(log => {
+        const checkIn = new Date(log.check_in);
+        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
+
+        let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+
+        // Subtract breaks
+        const breaks = breaksByAttendance[log.id] || [];
+        let breakHours = 0;
+
+        breaks.forEach(b => {
+          if (b.start_time && b.end_time) {
+            const breakStart = new Date(b.start_time);
+            const breakEnd = new Date(b.end_time);
+            breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+          }
+        });
+
+        totalWorkHours += Math.max(0, hoursWorked - breakHours);
+      });
+
+      // Fetch overtime data for the selected month
+      const { data: extrahoursData, error: extrahoursError } = await supabase
+        .from("extrahours")
+        .select("id, check_in, check_out")
+        .eq("user_id", employeeid)
+        .gte("check_in", startDate)
+        .lte("check_in", endDate);
+
+      if (extrahoursError) {
+        console.error("Error fetching extrahours:", extrahoursError);
+        throw extrahoursError;
+      }
+
+      // Fetch breaks for extrahours
+      const { data: remoteBreakData, error: remoteBreakError } = await supabase
+        .from("Remote_Breaks")
+        .select("start_time, end_time, Remote_Id")
+        .in("Remote_Id", extrahoursData.length > 0 ? extrahoursData.map(a => a.id) : ['']);
+
+      if (remoteBreakError) {
+        console.error("Error fetching remote breaks:", remoteBreakError);
+      }
+
+      // Group remote breaks by Remote_Id
+      const remoteBreaksByAttendance = {};
+      if (remoteBreakData) {
+        remoteBreakData.forEach(b => {
+          if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+          remoteBreaksByAttendance[b.Remote_Id].push(b);
+        });
+      }
+
+      // Calculate total overtime hours
+      let totalOvertimeHours = 0;
+      extrahoursData.forEach(log => {
+        if (log.check_in && log.check_out) {
+          const checkIn = new Date(log.check_in);
+          const checkOut = new Date(log.check_out);
+
+          let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+
+          // Subtract remote breaks
+          const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
+          let remoteBreakHours = 0;
+
+          remoteBreaks.forEach(b => {
+            if (b.start_time && b.end_time) {
+              const breakStart = new Date(b.start_time);
+              const breakEnd = new Date(b.end_time);
+              remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            }
+          });
+
+          totalOvertimeHours += Math.max(0, hoursWorked - remoteBreakHours);
+        }
+      });
+
+      // Fetch absences and leaves for the selected month
+      const { data: absenteeData, error: absenteeError } = await supabase
+        .from("absentees")
+        .select("absentee_type, created_at")
+        .eq("user_id", employeeid)
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+
+      if (absenteeError) {
+        console.error("Error fetching absentees:", absenteeError);
+        throw absenteeError;
+      }
+
+      const totalAbsents = absenteeData.filter(a => a.absentee_type === "Absent").length;
+      const totalLeaves = absenteeData.filter(a => a.absentee_type === "leave").length;
+
+      // Calculate overtime pay
+      const overtimePay = employeeData?.per_hour_pay
+        ? (parseFloat(employeeData.per_hour_pay) * totalOvertimeHours).toFixed(2)
+        : "0";
+
+      // Fetch all tasks for the selected month
+      const { data: allTasksData, error: tasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*")
+        .gte("action_date", startDate)
+        .lte("action_date", endDate);
+
+      if (tasksError) {
+        console.error("Error fetching tasks:", tasksError);
+      }
+
+      // Filter tasks where the employee is in the devops array or is the user_id
+      const tasksData = allTasksData ? allTasksData.filter(task => {
+        // Check if task is directly assigned to the employee
+        if (task.user_id === employeeid) return true;
+
+        // Check if employee is in the devops array
+        if (task.devops && Array.isArray(task.devops)) {
+          return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === employeeid);
+        }
+
+        return false;
+      }) : [];
+
+      console.log("Monthly tasks found:", tasksData.length);
+
+      // Count active tasks
+      const activeTaskCount = tasksData.filter(task => task.status !== "done").length;
+
+      // Get completed tasks and calculate total score
+      const completedTasks = tasksData.filter(task => task.status === "done");
+      const completedTaskCount = completedTasks.length;
+      const completedTasksScore = completedTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      // Fetch all projects for the selected month
+      const { data: allProjectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select("*")
+        .gte("created_at", startDate)
+        .lte("created_at", endDate);
+
+      if (projectsError) {
+        console.error("Error fetching projects:", projectsError);
+      }
+
+      // Filter projects where the employee is in the devops array
+      const projectsData = allProjectsData ? allProjectsData.filter(project => {
+        if (!project.devops || !Array.isArray(project.devops)) return false;
+
+        // Check if any devops entry has the employee's ID
+        return project.devops.some(dev => dev && typeof dev === 'object' && dev.id === employeeid);
+      }) : [];
+
+      console.log("Monthly projects found:", projectsData.length);
+      const projectsCount = projectsData.length;
+
+      // Update the monthly data state
+      setMonthlyData({
+        totalAttendance: attendanceData.length,
+        totalAbsents,
+        totalLeaves,
+        totalWorkingHours: totalWorkHours.toFixed(2),
+        totalOvertimeHours: totalOvertimeHours.toFixed(2),
+        overtimePay,
+        activeTaskCount,
+        completedTaskCount,
+        completedTasksScore,
+        projectsCount
+      });
+
+      console.log("Monthly data updated:", {
+        totalAttendance: attendanceData.length,
+        totalAbsents,
+        totalLeaves,
+        totalWorkingHours: totalWorkHours.toFixed(2),
+        totalOvertimeHours: totalOvertimeHours.toFixed(2),
+        overtimePay,
+        activeTaskCount,
+        completedTaskCount,
+        completedTasksScore,
+        projectsCount
+      });
+
+    } catch (err) {
+      console.error("Error fetching monthly data:", err);
+      setError("Failed to fetch monthly data: " + (err.message || "Unknown error"));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle month selection
+  useEffect(() => {
+    if (selectedmonth) {
+      try {
+        // Calculate start and end dates for the selected month
+        const startOfMonthDate = startOfMonth(new Date(selectedmonth));
+        const endOfMonthDate = new Date(startOfMonthDate.getFullYear(), startOfMonthDate.getMonth() + 1, 0, 23, 59, 59, 999);
+
+        console.log("Selected month:", selectedmonth);
+        console.log("Start of Month:", startOfMonthDate.toISOString());
+        console.log("End of Month:", endOfMonthDate.toISOString());
+
+        // Set the start and end dates
+        setStartdate(startOfMonthDate.toISOString());
+        setEnddate(endOfMonthDate.toISOString());
+
+        // Fetch data for the selected month
+        fetchMonthlyData(startOfMonthDate.toISOString(), endOfMonthDate.toISOString());
+      } catch (err) {
+        console.error("Error processing dates:", err);
+      }
+    }
+  }, [selectedmonth, employeeid]);
+
+
   const [incrementData, setIncrementData] = useState({
     user_id: employeeid,
     increment_amount: "",
@@ -51,6 +323,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       setFormData((prev) => ({ ...prev, profile_image: file }));
     }
   };
+
   const fetchEmployee = async () => {
     try {
       setLoading(true);
@@ -197,14 +470,44 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       const totalAbsents = absenteeData.filter(a => a.absentee_type === "Absent").length;
       const totalLeaves = absenteeData.filter(a => a.absentee_type === "leave").length;
 
-      const employeeProjects = projectsData.filter(project =>
-        project.devops?.some((dev: any) => dev.id === userData.id)
-      );
+      // Filter projects where the employee is in the devops array
+      const employeeProjects = projectsData.filter(project => {
+        if (!project.devops || !Array.isArray(project.devops)) return false;
+        return project.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id);
+      });
 
-      const employeeTasks = tasksData.filter(task =>
-        task.devops?.some((dev: any) => dev.id === userData.id) &&
-        task.status?.toLowerCase() !== "done"
-      );
+      console.log("All-time projects found:", employeeProjects.length);
+
+      // Filter active tasks where the employee is in the devops array or is the user_id
+      const employeeTasks = tasksData.filter(task => {
+        // Check if task is directly assigned to the employee
+        if (task.user_id === userData.id) return true;
+
+        // Check if employee is in the devops array and task is not done
+        if (task.devops && Array.isArray(task.devops)) {
+          return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id) &&
+            task.status?.toLowerCase() == "done";
+        }
+
+        return false;
+      });
+
+      // Filter completed tasks where the employee is in the devops array or is the user_id
+      const completedTasks = tasksData.filter(task => {
+        // Check if task is directly assigned to the employee and is done
+        if (task.user_id === userData.id && task.status?.toLowerCase() === "done") return true;
+
+        // Check if employee is in the devops array and task is done
+        if (task.devops && Array.isArray(task.devops)) {
+          return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id) &&
+            task.status?.toLowerCase() === "done";
+        }
+
+        return false;
+      });
+
+      console.log("All-time active tasks found:", employeeTasks.length);
+      console.log("All-time completed tasks found:", completedTasks.length);
 
       const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -225,6 +528,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         projectid: employeeProjects.map(p => p.id),
         TotalKPI: totalKPI,
         activeTaskCount: employeeTasks.length,
+        completedTaskCount: completedTasks.length,
         totalWorkingHours: totalWorkHours.toFixed(2),
         totalOvertimeHours: totalOvertimeHours.toFixed(2),
         overtimePay: overtimePay,
@@ -256,6 +560,212 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       setLoading(false);
     }
   };
+
+  // const fetchEmployee2 = async () => {
+  //   try {
+  //     setLoading(true);
+
+  //     const { data: userData, error: userError } = await supabase
+  //       .from("users")
+  //       .select("*")
+  //       .eq("id", employeeid)
+  //       .single();
+
+  //     if (userError) throw userError;
+
+  //     const { data: increments, error: incrementError } = await supabase
+  //       .from("sallery_increment")
+  //       .select("increment_date, increment_amount")
+  //       .eq("user_id", employeeid)
+  //       .order("increment_date", { ascending: false })
+  //       .limit(1);
+
+  //     if (incrementError) console.error("Error fetching increments:", incrementError);
+  //     if (increments?.length) setLastIncrement(increments[0]);
+
+  //     const { data: projectsData, error: projectsError } = await supabase
+  //       .from("projects")
+  //       .select("id, title, devops");
+
+  //     if (projectsError) throw projectsError;
+
+  //     const { data: tasksData, error: tasksError } = await supabase
+  //       .from("tasks_of_projects")
+  //       .select("*");
+
+  //     if (tasksError) throw tasksError;
+
+  //     const { data: attendanceData, error: attendanceError } = await supabase
+  //       .from("attendance_logs")
+  //       .select("id, check_in, check_out")
+  //       .eq("user_id", employeeid);
+
+  //     if (attendanceError) throw attendanceError;
+
+  //     const { data: breakData, error: breakError } = await supabase
+  //       .from("breaks")
+  //       .select("start_time, end_time, attendance_id")
+  //       .in("attendance_id", attendanceData.map(a => a.id));
+
+  //     if (breakError) throw breakError;
+
+  //     // Group breaks by attendance_id
+  //     const breaksByAttendance: Record<string, { start_time: string; end_time: string | null }[]> = {};
+  //     breakData.forEach(b => {
+  //       if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+  //       breaksByAttendance[b.attendance_id].push(b);
+  //     });
+
+  //     let totalWorkHours = 0;
+
+  //     attendanceData.forEach(log => {
+  //       const checkIn = new Date(log.check_in);
+  //       const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime()); // fallback to check_in time
+
+  //       let hoursWorked = (checkOut - checkIn) / (1000 * 60 * 60);
+
+  //       // Subtract breaks
+  //       const breaks = breaksByAttendance[log.id] || [];
+  //       let breakHours = 0;
+
+  //       breaks.forEach(b => {
+  //         const breakStart = new Date(b.start_time);
+  //         const breakEnd = b.end_time ? new Date(b.end_time) : new Date(breakStart.getTime() + 60 * 60 * 1000);
+  //         breakHours += (breakEnd - breakStart) / (1000 * 60 * 60);
+  //       });
+
+  //       totalWorkHours += Math.max(0, hoursWorked - breakHours);
+  //     });
+
+  //     const totalAttendance = attendanceData.length;
+
+  //     // Fetch overtime hours from extrahours table
+  //     const { data: extrahoursData, error: extrahoursError } = await supabase
+  //       .from("extrahours")
+  //       .select("id, check_in, check_out")
+  //       .eq("user_id", employeeid);
+
+  //     if (extrahoursError) {
+  //       console.error("Error fetching extrahours:", extrahoursError);
+  //       throw extrahoursError;
+  //     }
+
+  //     // Fetch breaks for extrahours
+  //     const { data: remoteBreakData, error: remoteBreakError } = await supabase
+  //       .from("Remote_Breaks")
+  //       .select("start_time, end_time, Remote_Id")
+  //       .in("Remote_Id", extrahoursData.map(a => a.id));
+
+  //     if (remoteBreakError) {
+  //       console.error("Error fetching remote breaks:", remoteBreakError);
+  //     }
+
+  //     // Group remote breaks by Remote_Id
+  //     const remoteBreaksByAttendance: Record<string, { start_time: string; end_time: string | null }[]> = {};
+  //     if (remoteBreakData) {
+  //       remoteBreakData.forEach(b => {
+  //         if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+  //         remoteBreaksByAttendance[b.Remote_Id].push(b);
+  //       });
+  //     }
+
+  //     // Calculate total overtime hours
+  //     let totalOvertimeHours = 0;
+
+  //     extrahoursData.forEach(log => {
+  //       if (log.check_in && log.check_out) {
+  //         const checkIn = new Date(log.check_in);
+  //         const checkOut = new Date(log.check_out);
+
+  //         let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+
+  //         // Subtract remote breaks
+  //         const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
+  //         let remoteBreakHours = 0;
+
+  //         remoteBreaks.forEach(b => {
+  //           if (b.start_time && b.end_time) {
+  //             const breakStart = new Date(b.start_time);
+  //             const breakEnd = new Date(b.end_time);
+  //             remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+  //           }
+  //         });
+
+  //         totalOvertimeHours += Math.max(0, hoursWorked - remoteBreakHours);
+  //       }
+  //     });
+
+  //     console.log("Total overtime hours:", totalOvertimeHours);
+
+  //     const { data: absenteeData, error: absenteeError } = await supabase
+  //       .from("absentees")
+  //       .select("absentee_type")
+  //       .eq("user_id", employeeid);
+
+  //     if (absenteeError) throw absenteeError;
+
+  //     const totalAbsents = absenteeData.filter(a => a.absentee_type === "Absent").length;
+  //     const totalLeaves = absenteeData.filter(a => a.absentee_type === "leave").length;
+
+  //     const employeeProjects = projectsData.filter(project =>
+  //       project.devops?.some((dev: any) => dev.id === userData.id)
+  //     );
+
+  //     const employeeTasks = tasksData.filter(task =>
+  //       task.devops?.some((dev: any) => dev.id === userData.id) &&
+  //       task.status?.toLowerCase() !== "done"
+  //     );
+
+  //     const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+  //     let profileImageUrl = null;
+  //     if (userData.profile_image) {
+  //       profileImageUrl = userData.profile_image.startsWith("http")
+  //         ? userData.profile_image
+  //         : supabase.storage.from("profilepics").getPublicUrl(userData.profile_image).data.publicUrl;
+  //     }
+
+  //     // Calculate overtime pay
+  //     const overtimePay = userData.per_hour_pay ? (parseFloat(userData.per_hour_pay) * totalOvertimeHours).toFixed(2) : "0";
+
+  //     const enrichedEmployee = {
+  //       ...userData,
+  //       profile_image_url: profileImageUrl,
+  //       projects: employeeProjects.map(p => p.title),
+  //       projectid: employeeProjects.map(p => p.id),
+  //       TotalKPI: totalKPI,
+  //       activeTaskCount: employeeTasks.length,
+  //       totalWorkingHours: totalWorkHours.toFixed(2),
+  //       totalOvertimeHours: totalOvertimeHours.toFixed(2),
+  //       overtimePay: overtimePay,
+  //       totalAttendance,
+  //       totalAbsents,
+  //       totalLeaves
+  //     };
+
+  //     setEmployeeData(enrichedEmployee);
+
+  //     setFormData({
+  //       full_name: userData.full_name,
+  //       email: userData.email,
+  //       phone_number: userData.phone_number,
+  //       personal_email: userData.personal_email,
+  //       slack_id: userData.slack_id,
+  //       location: userData.location,
+  //       profession: userData.profession,
+  //       salary: userData.salary,
+  //       per_hour_pay: userData.per_hour_pay,
+  //       role: userData.role || "",
+  //       profile_image: null,
+  //     });
+
+  //   } catch (err) {
+  //     setError(err.message);
+  //     console.error("Error:", err.message);
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
 
 
@@ -398,13 +908,26 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   if (!employeeData) return <div className="p-4">No employee found</div>;
 
   return (
-    <div className="w-full flex flex-col justify-center items-center min-h-screen  bg-gray-50 p-6">
+    <div className="w-full flex flex-col justify-center  items-center min-h-screen  bg-gray-50 p-6">
       <div className="flex justify-between items-center w-full max-w-4xl mb-6">
-        <div className="flex gap-2 items-center mb-4">
-          <ArrowLeft onClick={() => setemployeeview("generalview")}
-          />
-          <h2 className="text-xl font-bold">Employee Details</h2>
-        </div>
+      <div className="flex flex-col sm:flex-row sm:items-center rounded-lg justify-between gap-4 p-3 bg-white shadow-sm border-b border-gray-100">
+      <div className="flex items-center gap-3">
+        <button
+          onClick={() => setemployeeview('generalview')}
+          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+          aria-label="Go back"
+        >
+          <ArrowLeft className="w-5 h-5 text-gray-600" />
+        </button>
+        <h2 className="text-xl font-semibold text-gray-800">Employee Details</h2>
+      </div>
+      <input
+        type="month"
+        value={selectedmonth}
+        onChange={(e) => setselectedmonth(e.target.value)}
+        className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700 bg-gray-50"
+      />
+    </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch sm:items-center w-full sm:w-auto">
           <button
@@ -446,13 +969,16 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         </div>
 
         {/* Right Section: Earnings */}
-        <div className="bg-purple-600 w-full md:w-auto h-fit flex justify-center items-center text-white px-6 py-4 rounded-lg text-base sm:text-lg font-medium">
+        <div className="bg-purple-600 w-full md:w-auto h-fit flex flex-col justify-center items-center text-white px-6 py-4 rounded-lg text-base sm:text-lg font-medium">
           <span className="mr-2">Total Earning is</span>
           <span className="font-bold text-3xl sm:text-4xl ml-2">
             {employeeData?.salary ?
-              (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
+              selectedmonth ?
+                (parseFloat(employeeData.salary) + parseFloat(monthlyData.overtimePay || "0")).toFixed(2)
+                : (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
               : "0"}
           </span>
+          {selectedmonth && <span className="text-xs mt-1"></span>}
         </div>
       </div>
 
@@ -460,65 +986,101 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-6 max-w-4xl w-full">
         <div className="bg-white rounded-2xl shadow-md pb-4 flex flex-col items-center justify-center text-center">
-          <p className="text-[140px] text-gray-500">{employeeData && employeeData.projects ? employeeData.projects.length : " "}</p>
-          <p className="text-xl font-semibold">Total Projects</p>
+          <p className="text-[140px] text-gray-500">
+            {selectedmonth
+              ? monthlyData.projectsCount
+              : (employeeData && employeeData.projects ? employeeData.projects.length : " ")}
+          </p>
+          <p className="text-xl font-semibold">
+            {selectedmonth ? "Monthly Projects" : "Total Projects"}
+          </p>
+          {selectedmonth && <p className="text-xs text-gray-400">For selected month</p>}
           <button className="bg-purple-600 rounded-2xl px-3 py-1 mt-2 text-sm text-white">View Details</button>
         </div>
 
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.TotalKPI || 0}</h2>
-              <Users className="text-purple-600 h-5 w-5" />
+              <h2 className="text-gray-800 text-2xl font-medium">
+                {selectedmonth ? monthlyData.completedTasksScore : (employeeData?.TotalKPI || 0)}
+              </h2>
+              <CheckCircle className="text-purple-600 h-5 w-5" />
             </div>
-            <div className="text-gray-500 text-sm">KPI Score</div>
-            <div className="text-gray-400 text-xs mt-1">25% improvement over last month</div>
+            <div className="text-gray-500 text-sm">Completed Story Points</div>
+            {selectedmonth && (
+              <div className="text-gray-400 text-xs mt-1">
+                {monthlyData.completedTaskCount > 0
+                  ? `${monthlyData.completedTaskCount} ${monthlyData.completedTaskCount === 1 ? 'task' : 'tasks'} completed this month`
+                  : "0 task completed this month"
+                }
+              </div>
+            )}
           </div>
 
-          <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
+
+          <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center mt-3">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalAttendance || 0}</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">
+                {selectedmonth ? monthlyData.totalAttendance : (employeeData?.totalAttendance || 0)}
+              </h2>
               <Moon className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Present Days</div>
+            {selectedmonth && <div className="text-gray-400 text-xs mt-1">For selected month</div>}
           </div>
         </div>
 
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalWorkingHours || 0}</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">
+                {selectedmonth ? monthlyData.totalWorkingHours : (employeeData?.totalWorkingHours || 0)}
+              </h2>
               <Clock className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Total Working Hours</div>
-            <div className="text-gray-400 text-xs mt-1">10% increase from previous week</div>
+            {selectedmonth ?
+              <div className="text-gray-400 text-xs mt-1">For selected month</div> :
+              <div className="text-gray-400 text-xs mt-1">All time total</div>
+            }
           </div>
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalAbsents || 0}</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">
+                {selectedmonth ? monthlyData.totalAbsents : (employeeData?.totalAbsents || 0)}
+              </h2>
               <AlarmClockOff className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Absent Days</div>
+            {selectedmonth && <div className="text-gray-400 text-xs mt-1">For selected month</div>}
           </div>
         </div>
 
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalOvertimeHours || 0}</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">
+                {selectedmonth ? monthlyData.totalOvertimeHours : (employeeData?.totalOvertimeHours || 0)}
+              </h2>
               <Watch className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Overtime Hours</div>
-            <div className="text-gray-400 text-xs mt-1">Calculated from extrahours records</div>
+            {selectedmonth ?
+              <div className="text-gray-400 text-xs mt-1">For selected month</div> :
+              <div className="text-gray-400 text-xs mt-1">Calculated from extrahours records</div>
+            }
           </div>
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
-              <h2 className="text-gray-800 text-2xl font-medium">{employeeData?.totalLeaves || 0}</h2>
+              <h2 className="text-gray-800 text-2xl font-medium">
+                {selectedmonth ? monthlyData.totalLeaves : (employeeData?.totalLeaves || 0)}
+              </h2>
               <CalendarClock className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Leave Days</div>
+            {selectedmonth && <div className="text-gray-400 text-xs mt-1">For selected month</div>}
           </div>
         </div>
 
@@ -584,7 +1146,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Total Hours</span>
-              <span className="text-gray-600 text-sm">{employeeData?.totalWorkingHours || "0"}</span>
+              <span className="text-gray-600 text-sm">{selectedmonth ? monthlyData.totalWorkingHours : (employeeData?.totalWorkingHours || 0)}</span>
             </div>
 
             <div className="flex justify-between">
@@ -594,14 +1156,20 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Overtime</span>
-              <span className="text-gray-600 text-sm">{employeeData?.overtimePay || "0"}</span>
+              <span className="text-gray-600 text-sm">
+                {selectedmonth ? monthlyData.overtimePay : (employeeData?.overtimePay || "0")}
+                {selectedmonth && <span className="text-xs text-gray-400 ml-1">(monthly)</span>}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Total Earning</span>
               <span className="text-gray-600 text-sm">
                 {employeeData?.salary ?
-                  (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
+                  selectedmonth ?
+                    (parseFloat(employeeData.salary) + parseFloat(monthlyData.overtimePay || "0")).toFixed(2) +
+                    (selectedmonth ? "" : "")
+                    : (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
                   : "0"}
               </span>
             </div>
@@ -641,10 +1209,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               <span className="text-gray-600 text-sm">5000</span>
             </div>
 
-            <div className="flex justify-between">
+            {/* <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Check-in Late</span>
               <span className="text-gray-600 text-sm">1200</span>
-            </div>
+            </div> */}
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Advance Pay</span>

@@ -1,6 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { PlusCircle, Pencil, Trash2, X } from 'lucide-react';
+import { FiX } from 'react-icons/fi';
 import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import TaskBoardAdmin from './TaskBoardAdmin';
@@ -54,11 +55,112 @@ function ProjectsAdmin() {
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployeesearch, setDataEmployeesearch] = useState(null);
-
+  const [employeeWorkloads, setEmployeeWorkloads] = useState<Record<string, number>>({});
+  const [showWorkloadModal, setShowWorkloadModal] = useState(false);
+  const [selectedWorkloadCategory, setSelectedWorkloadCategory] = useState<'free' | 'medium' | 'overloaded' | null>(null);
+  const [workloadEmployees, setWorkloadEmployees] = useState<any[]>([]);
 
   const filteredEmployees = Devs.filter(Dev =>
     Dev.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  // Function to handle opening the workload modal
+  const handleWorkloadCategoryClick = async (category: 'free' | 'medium' | 'overloaded') => {
+    setSelectedWorkloadCategory(category);
+
+    try {
+      // Get all employee IDs in this workload category
+      const employeeIds = Object.entries(employeeWorkloads)
+        .filter(([id, score]) => {
+          if (category === 'free') return score < 50;
+          if (category === 'medium') return score >= 50 && score < 100;
+          if (category === 'overloaded') return score >= 100;
+          return false;
+        })
+        .map(([id]) => id);
+
+      if (employeeIds.length === 0) {
+        setWorkloadEmployees([]);
+        setShowWorkloadModal(true);
+        return;
+      }
+
+      // Fetch employee details from the database
+      const { data: employeesData, error } = await supabase
+        .from("users")
+        .select("id, full_name, email, role, joining_date")
+        .in("id", employeeIds);
+
+      if (error) {
+        console.error("Error fetching employees:", error);
+        return;
+      }
+
+      // Fetch tasks for these employees to calculate KPIs
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*");
+
+      if (tasksError) {
+        console.error("Error fetching tasks:", tasksError);
+        return;
+      }
+
+      // Fetch projects for these employees
+      const { data: projectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select("id, title, devops");
+
+      if (projectsError) {
+        console.error("Error fetching projects:", projectsError);
+        return;
+      }
+
+      // Process employee data with projects and KPIs
+      const employeesWithDetails = employeesData.map(employee => {
+        // Find projects for this employee
+        const employeeProjects = projectsData.filter(project =>
+          project.devops?.some((dev: any) => dev.id === employee.id)
+        );
+
+        // Find active tasks for this employee
+        const activeTasks = tasksData.filter(task =>
+          task.devops?.some(dev => dev.id === employee.id) &&
+          task.status?.toLowerCase() !== "done"
+        );
+
+        // Calculate total KPI from active tasks
+        const totalKPI = activeTasks.reduce((sum, task) => {
+          return sum + (Number(task.score) || 0);
+        }, 0);
+
+        // Find completed tasks for this employee
+        const completedTasks = tasksData.filter(task =>
+          task.devops?.some(dev => dev.id === employee.id) &&
+          task.status?.toLowerCase() === "done"
+        );
+
+        // Calculate completed KPI
+        const completedKPI = completedTasks.reduce((sum, task) => {
+          return sum + (Number(task.score) || 0);
+        }, 0);
+
+        return {
+          ...employee,
+          projects: employeeProjects.map(project => project.title),
+          projectCount: employeeProjects.length,
+          TotalKPI: totalKPI,
+          activeTaskCount: activeTasks.length,
+          completedKPI: completedKPI
+        };
+      });
+
+      setWorkloadEmployees(employeesWithDetails);
+      setShowWorkloadModal(true);
+    } catch (error) {
+      console.error("Error processing workload data:", error);
+    }
+  };
 
   // Fetch developers
   useEffect(() => {
@@ -105,13 +207,16 @@ function ProjectsAdmin() {
         });
       }
 
+      // Initialize workload tracking
+      const workloads: Record<string, number> = {};
+
       // Fetch all tasks for these projects
       const projectsWithScores = await Promise.all(
         projectsData.map(async (project) => {
           // Fetch tasks for this project
           const { data: tasksData, error: tasksError } = await supabase
             .from("tasks_of_projects")
-            .select("score, status")
+            .select("score, status, devops")
             .eq("project_id", project.id);
 
           if (tasksError) {
@@ -165,6 +270,20 @@ function ProjectsAdmin() {
             return dev;
           }) : [];
 
+          // Track workload for each developer in this project
+          if (normalizedDevops && normalizedDevops.length > 0) {
+            normalizedDevops.forEach((dev: { id: string }) => {
+              if (dev.id) {
+                // Initialize if not exists
+                if (!workloads[dev.id]) {
+                  workloads[dev.id] = 0;
+                }
+                // Add this project's total score to the developer's workload
+                workloads[dev.id] += totalScore;
+              }
+            });
+          }
+
           console.log("Normalized devops for project", project.id, ":", normalizedDevops);
 
           return {
@@ -178,6 +297,8 @@ function ProjectsAdmin() {
         })
       );
 
+      // Update the employee workloads state
+      setEmployeeWorkloads(workloads);
       setProjects(projectsWithScores);
       setLoading(false);
     };
@@ -269,6 +390,153 @@ function ProjectsAdmin() {
   const closeModal = () => {
     setIsModalOpen(false);
     setEditingProject(null);
+  };
+
+  // Function to close the workload modal
+  const closeWorkloadModal = () => {
+    setShowWorkloadModal(false);
+    setSelectedWorkloadCategory(null);
+  };
+
+  // Render the workload employees modal
+  const renderWorkloadModal = () => {
+    const getCategoryTitle = () => {
+      switch (selectedWorkloadCategory) {
+        case 'free': return 'Free Developers (< 50 KPI)';
+        case 'medium': return 'Medium Workload Developers (50-100 KPI)';
+        case 'overloaded': return 'Overloaded Developers (> 100 KPI)';
+        default: return 'Developers';
+      }
+    };
+
+    const getCategoryColor = () => {
+      switch (selectedWorkloadCategory) {
+        case 'free': return 'bg-green-500';
+        case 'medium': return 'bg-yellow-500';
+        case 'overloaded': return 'bg-red-500';
+        default: return 'bg-gray-500';
+      }
+    };
+
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+        <div className="bg-white rounded-xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col">
+          {/* Header */}
+          <div className="p-6 border-b border-gray-200 flex justify-between items-center">
+            <div className="flex items-center gap-3">
+              <div className={`w-4 h-4 rounded-full ${getCategoryColor()}`}></div>
+              <h2 className="text-xl font-bold text-gray-800">{getCategoryTitle()}</h2>
+              <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-full text-sm font-medium">
+                {workloadEmployees.length} developers
+              </span>
+            </div>
+            <button onClick={closeWorkloadModal} className="text-gray-400 hover:text-gray-600 p-1">
+              <FiX className="w-5 h-5" />
+            </button>
+          </div>
+
+          {/* Content */}
+          <div className="flex-1 overflow-auto p-6">
+            {workloadEmployees.length === 0 ? (
+              <div className="text-center py-12">
+                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                  </svg>
+                </div>
+                <h3 className="text-lg font-medium text-gray-700 mb-1">No developers found</h3>
+                <p className="text-gray-500">There are no developers in this workload category.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
+                    <tr>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Developer
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Role
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Projects
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Workload
+                      </th>
+                      <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        Completed Points
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {workloadEmployees.map((employee) => (
+                      <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
+                              {employee.full_name.charAt(0).toUpperCase()}
+                            </div>
+                            <div className="ml-4">
+                              <div className="text-sm font-medium text-gray-900">{employee.full_name}</div>
+                              <div className="text-sm text-gray-500">{employee.email}</div>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
+                            {employee.role || 'Employee'}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="text-sm text-gray-900">{employee.projectCount} projects</div>
+                          <div className="text-xs text-gray-500 truncate max-w-[200px]">
+                            {employee.projects?.join(', ') || 'No projects'}
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap">
+                          <div className="flex items-center">
+                            <div className={`w-3 h-3 rounded-full ${
+                              (employee.TotalKPI || 0) < 50 ? "bg-green-500" :
+                              (employee.TotalKPI || 0) < 100 ? "bg-yellow-500" :
+                              "bg-red-500"
+                            } mr-2`}></div>
+                            <span className="text-sm font-medium">{employee.TotalKPI || 0} KPI</span>
+                          </div>
+                          <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
+                            <div
+                              className={`h-1.5 rounded-full ${
+                                (employee.TotalKPI || 0) < 50 ? "bg-green-500" :
+                                (employee.TotalKPI || 0) < 100 ? "bg-yellow-500" :
+                                "bg-red-500"
+                              }`}
+                              style={{ width: `${Math.min(((employee.TotalKPI || 0) / 150) * 100, 100)}%` }}
+                            ></div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 whitespace-nowrap text-center">
+                          <div className="text-sm font-medium">{employee.completedKPI || 0}</div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+
+          {/* Footer */}
+          <div className="p-4 border-t border-gray-200 bg-gray-50">
+            <button
+              onClick={closeWorkloadModal}
+              className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -441,6 +709,9 @@ function ProjectsAdmin() {
 
           {selectedTAB == "Projects" && (
             <div className="max-w-7xl mx-auto">
+              {/* Show workload modal when active */}
+              {showWorkloadModal && renderWorkloadModal()}
+
               <div className="flex justify-between items-center mb-8">
                 <h1 className="xs:text-[26px] text-[18px] font-bold">Your Projects</h1>
                 <button
@@ -448,6 +719,37 @@ function ProjectsAdmin() {
                   className="bg-[#9A00FF] xs:text-xl text-[13px] text-white px-4 py-2 rounded-lg flex items-center"
                 >
                   <PlusCircle size={20} className="mr-2" /> New Project
+                </button>
+              </div>
+
+              {/* Workload Stats */}
+              <div className="flex flex-wrap gap-4 mb-6">
+                <button
+                  onClick={() => handleWorkloadCategoryClick('free')}
+                  className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow border border-transparent hover:border-green-100"
+                >
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-sm font-medium">
+                    Free: {Object.values(employeeWorkloads).filter(score => score < 50).length} developers
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleWorkloadCategoryClick('medium')}
+                  className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow border border-transparent hover:border-yellow-100"
+                >
+                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                  <span className="text-sm font-medium">
+                    Medium: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
+                  </span>
+                </button>
+                <button
+                  onClick={() => handleWorkloadCategoryClick('overloaded')}
+                  className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow border border-transparent hover:border-red-100"
+                >
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-sm font-medium">
+                    Overloaded: {Object.values(employeeWorkloads).filter(score => score >= 100).length} developers
+                  </span>
                 </button>
               </div>
 
