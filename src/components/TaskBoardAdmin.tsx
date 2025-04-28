@@ -1,5 +1,5 @@
 
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2, Minus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -15,7 +15,8 @@ import { title } from 'process';
 
 interface Developer {
   id: string;
-  name: string;
+  name?: string;
+  full_name?: string;
 }
 
 interface Task {
@@ -28,6 +29,11 @@ interface Task {
   description?: string;
   priority?: string;
   deadline?: string; // Changed from Date to string
+  imageurl?: string;
+  image_url?: string;
+  thumbnail_url?: string;
+  commentCount?: number;
+  comments?: any[];
 }
 
 const COLUMN_IDS = {
@@ -59,19 +65,32 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const ProjectIdd = useContext(AttendanceContext).projectId;
   const [comments, setcomments] = useState([])
   const [commentsByTaskId, setCommentByTaskID] = useState({});
+  const [selectedDeveloper, setSelectedDeveloper] = useState<string>('all');
   // const [tasks, setTasks] = useState<task[]>([]);
-  const getTasksByStatus = (status: task['status']) =>
-    tasks.filter(task => task.status === status);
 
-  const getStatusCount = (status: task['status']) =>
-    tasks.filter(task => task.status === status).length;
+  // Filter tasks by selected developer
+  const filteredTasks = useMemo(() => {
+    if (selectedDeveloper === 'all') {
+      return tasks;
+    }
+
+    return tasks.filter(task =>
+      task.devops?.some(dev => dev.id === selectedDeveloper)
+    );
+  }, [tasks, selectedDeveloper]);
+
+  const getTasksByStatus = (status: Task['status']) =>
+    filteredTasks.filter(task => task.status === status);
+
+  const getStatusCount = (status: Task['status']) =>
+    filteredTasks.filter(task => task.status === status).length;
 
   const getScoreByStatus = (status: Task['status']) =>
-    tasks
+    filteredTasks
       .filter(task => task.status === status)
       .reduce((sum, task) => sum + task.score, 0);
 
-  const totalTasks = tasks.length;
+  const totalTasks = filteredTasks.length;
   const completedTasks = getTasksByStatus('done').length;
   const pendingTasks = totalTasks - completedTasks;
 
@@ -200,6 +219,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       return;
     }
 
+    // Update all tasks, not just filtered ones
     const newTasks = Array.from(tasks);
     const draggedTask = newTasks.find(task => task.id === draggableId);
     if (!draggedTask) return;
@@ -207,6 +227,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     newTasks.splice(newTasks.indexOf(draggedTask), 1);
     draggedTask.status = destination.droppableId as Task['status'];
 
+    // For insertion position, use filtered tasks if we're in filtered mode
     const destTasks = newTasks.filter(task => task.status === destination.droppableId);
     const insertAt = destination.index > destTasks.length ? destTasks.length : destination.index;
     newTasks.splice(insertAt, 0, draggedTask);
@@ -217,7 +238,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     try {
       const { error } = await supabase
         .from('tasks_of_projects')
-        .update({ status: destination.droppableId })
+        .update({ status: destination.droppableId, action_date: new Date().toISOString() })
         .eq('id', draggedTask.id);
 
       if (error) console.error('Error updating task status:', error.message);
@@ -609,7 +630,8 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
 
   const renderColumn = (status: keyof typeof COLUMN_IDS, title: string, color: string) => {
-    const tasksInColumn = tasks.filter(task => task.status === COLUMN_IDS[status]);
+    // Use filteredTasks instead of tasks
+    const tasksInColumn = filteredTasks.filter(task => task.status === COLUMN_IDS[status]);
 
     return (
       <div className="bg-white lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md">
@@ -649,11 +671,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
         {(selectedTab === "tasks" || selectedTABB === "tasks") && (
           <>
-            <div className="flex flex-col lg:flex-row items-start lg:items-center lg:ml-6 ml-0 mb-8 gap-4 flex-wrap">
-
+            <div className="flex flex-col gap-4 p-3 rounded-2xl mb-4  bg-white shadow-sm border-b border-gray-100">
               {/* Arrow + Heading Grouped */}
-              <div className="flex items-center gap-2 justify-between w-full lg:w-auto">
-                <div className='flex items-center gap-2'>
+              <div className="flex items-center justify-between w-full">
+                {/* <div></div> */}
+                <div className="flex items-center gap-3">
                   <Link
                     to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"}
                     className="text-gray-600 hover:text-gray-800"
@@ -664,51 +686,95 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     }}
                   >
                     <ArrowLeft
-                      className="hover:bg-gray-300 rounded-2xl"
-                      size={24}
+                      className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                      size={35}
                       onClick={() => {
                         if (selectedTAB === "TaskBoard") {
-                          setSelectedTAB("")
+                          setSelectedTAB("");
                         } else {
-                          setSelectedTAB("Projects")
+                          setSelectedTAB("Projects");
                         }
                       }}
                     />
                   </Link>
-                  <h1 className="md:text-2xl text-md font-bold">Work Planner</h1>
+                  <h1 className="text-md md:text-2xl font-bold text-gray-800">Work Planner</h1>
                 </div>
                 <div>
                   <button
-                    className="bg-[#9A00FF] lg:hidden md:block text-white px-4 py-2 rounded-lg flex items-center whitespace-nowrap"
+                    className=" bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
                     onClick={() => setSelectedTab("addtask")}
                   >
                     <PlusCircle size={20} className="mr-2" /> New Task
                   </button>
                 </div>
-
               </div>
 
-
-              <div className="flex-1 flex flex-col lg:ml-28 md:ml-18 lg:flex-row justify-between items-start lg:items-center gap-4 w-full">
-
+              {/* Main Content */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
                 {/* Status Box */}
-                <div className="bg-white w-full lg:w-[60%] p-3 rounded-2xl flex flex-wrap justify-between gap-4 font-semibold">
+                <div className="bg-white w-full lg:w-[60%] p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap justify-between gap-4 font-semibold text-sm">
                   <h1 className="text-[#9A00FF]">TO DO: {getScoreByStatus('todo')}</h1>
                   <h1 className="text-orange-600">In Progress: {getScoreByStatus('inProgress')}</h1>
                   <h1 className="text-yellow-600">Review: {getScoreByStatus('review')}</h1>
                   <h1 className="text-[#05C815]">Done: {getScoreByStatus('done')}</h1>
                 </div>
 
-                {/* New Task Button */}
-                <button
-                  className="bg-[#9A00FF] lg:block md:hidden sm:hidden hidden text-white px-4 py-2 rounded-lg flex items-center whitespace-nowrap"
-                  onClick={() => setSelectedTab("addtask")}
-                >
-                  <div className='flex items-center'>
-                    <PlusCircle size={20} className="mr-2" />
-                    <h1>New Task</h1>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  {/* Developer Filter Dropdown */}
+                  <div className="relative w-full sm:w-auto">
+                    <div className="flex items-center gap-2">
+                      <label className="mr-2 text-sm font-medium text-gray-700">Filter by Developer:</label>
+                      <div className="relative flex-1">
+                        <select
+                          value={selectedDeveloper}
+                          onChange={(e) => setSelectedDeveloper(e.target.value)}
+                          className={`w-full sm:w-48 bg-white border ${selectedDeveloper !== 'all' ? 'border-purple-500 ring-2 ring-purple-300' : 'border-gray-300'
+                            } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
+                        >
+                          <option value="all">All Developers</option>
+                          {devopss?.map((dev) => (
+                            <option key={dev.id} value={dev.id}>
+                              {dev.name || dev.full_name}
+                            </option>
+                          ))}
+                        </select>
+                        <div className="pointer-events-none absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center px-2 text-gray-700">
+                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                          </svg>
+                        </div>
+                      </div>
+                    </div>
+                    {selectedDeveloper !== 'all' && (
+                      <>
+                        {/* <button
+                          onClick={() => setSelectedDeveloper('all')}
+                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                        >
+                          <X size={16} />
+                        </button> */}
+                        <div className="mt-1 text-xs font-medium text-purple-700">
+                          {(() => {
+                            const selectedDevName =
+                              devopss?.find((dev) => dev.id === selectedDeveloper)?.name ||
+                              devopss?.find((dev) => dev.id === selectedDeveloper)?.full_name ||
+                              'Selected developer';
+                            return `Showing ${filteredTasks.length} of ${tasks.length} tasks for ${selectedDevName}`;
+                          })()}
+                        </div>
+                      </>
+                    )}
                   </div>
-                </button>
+
+                  {/* New Task Button */}
+                  {/* <button
+                    className="hidden lg:flex bg-[#9A00FF] text-white px-4 py-2 rounded-lg items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
+                    onClick={() => setSelectedTab("addtask")}
+                  >
+                    <PlusCircle size={20} className="mr-2" />
+                    <span>New Task</span>
+                  </button> */}
+                </div>
               </div>
             </div>
 
