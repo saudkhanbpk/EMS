@@ -35,7 +35,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "bad", "better", "best"
     const { setAttendanceDataMonthly } = useContext(AttendanceContext);
-  
+
 // Fetch data for the selected month
 // const fetchAllEmployeesStats = async (date) => {
 //   setLoading(true);
@@ -107,34 +107,69 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
 
       const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
 
-      // Calculate total working hours
-      let totalHours = 0;
+      // Calculate total working hours and break hours separately
+      let totalRawWorkHours = 0;
+      let totalBreakHours = 0;
+      let totalNetWorkHours = 0;
 
+      // First, calculate total raw hours without breaks
       uniqueAttendance.forEach(attendance => {
         const start = new Date(attendance.check_in);
         const end = attendance.check_out
           ? new Date(attendance.check_out)
-          : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
+          : new Date(start.getTime()); // If no check-out, use check-in time (0 hours)
 
-        const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-        totalHours += Math.min(hours, 12); // Cap at 12 hours per day
+        let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        // Handle negative values by using Math.max(0, hoursWorked)
+        hoursWorked = Math.max(0, hoursWorked);
+        // Cap at 12 hours per day
+        totalRawWorkHours += Math.min(hoursWorked, 12);
       });
 
-      // Calculate total break hours for the user
+      // Group breaks by attendance_id for more efficient processing
+      const breaksByAttendance = {};
       const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
-      let totalBreakHours = 0;
-
-      userBreaks.forEach(breakEntry => {
-        const breakStart = new Date(breakEntry.start_time);
-        const breakEnd = breakEntry.end_time
-          ? new Date(breakEntry.end_time)
-          : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
-
-        const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-        totalBreakHours += Math.min(breakHours, 12); // Cap at 12 hours per break
+      userBreaks.forEach(b => {
+        if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+        breaksByAttendance[b.attendance_id].push(b);
       });
 
-      totalHours -= totalBreakHours;
+      // Now calculate break hours and net working hours for each attendance record
+      uniqueAttendance.forEach(attendance => {
+        const start = new Date(attendance.check_in);
+        const end = attendance.check_out
+          ? new Date(attendance.check_out)
+          : new Date(start.getTime());
+
+        let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+        // Handle negative values by using Math.max(0, hoursWorked)
+        hoursWorked = Math.max(0, hoursWorked);
+
+        // Calculate breaks for this attendance record
+        const attendanceBreaks = breaksByAttendance[attendance.id] || [];
+        let breakHoursForThisLog = 0;
+
+        attendanceBreaks.forEach(b => {
+          if (b.start_time) {
+            const breakStart = new Date(b.start_time);
+            // If end_time is missing, calculate only 1 hour of break
+            const breakEnd = b.end_time
+              ? new Date(b.end_time)
+              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+            const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            breakHoursForThisLog += thisBreakHours;
+            totalBreakHours += thisBreakHours;
+          }
+        });
+
+        // Calculate net hours for this attendance record
+        const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
+        totalNetWorkHours += netHoursForThisLog;
+      });
+
+      // Use the net hours as the total work hours
+      let totalHours = totalNetWorkHours;
 
       // Calculate absent days
       const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
@@ -151,7 +186,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
         user: { id, full_name },
         presentDays,
         absentDays,
-        remoteDays, 
+        remoteDays,
         totalHoursWorked: totalHours,
         workingHoursPercentage,
       };
@@ -435,10 +470,10 @@ const handleDownload = async (userId: string, fullName: string) => {
               </span>
             </td>
             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
-              <button 
+              <button
                 className="p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500"
                 onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
-              > 
+              >
                 <DownloadIcon className="w-4 h-4 xs:w-5 xs:h-5" />
               </button>
             </td>
@@ -484,26 +519,26 @@ const handleDownload = async (userId: string, fullName: string) => {
               {entry.workingHoursPercentage.toFixed(2)}%
             </span>
           </div>
-          
+
           <div className="grid grid-cols-2 gap-2 mb-2">
             <div className="flex flex-col">
               <span className="text-gray-500 text-[10px] xs:text-[11px]">Present Days</span>
               <div className="font-medium">{entry.presentDays}</div>
             </div>
-            
+
             <div className="flex flex-col">
               <span className="text-gray-500 text-[10px] xs:text-[11px]">Absent Days</span>
               <div className="font-medium">{entry.absentDays}</div>
             </div>
-            
+
             <div className="flex flex-col col-span-2">
               <span className="text-gray-500 text-[10px] xs:text-[11px]">Total Hours Worked</span>
               <div className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</div>
             </div>
           </div>
-          
+
           <div className="flex justify-end mt-2 pt-2 border-t">
-            <button 
+            <button
               className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600 transition-all"
               onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
             >

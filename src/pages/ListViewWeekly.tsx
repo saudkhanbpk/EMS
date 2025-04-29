@@ -35,7 +35,7 @@ interface DailyAttendance {
 const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
   const [attendanceDataWeekly, setattendanceDataWeekly] = useState<EmployeeStats[]>([]);
   const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]);
- 
+
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState('all');
@@ -50,7 +50,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('*')
-        .neq("role", "admin"); 
+        .neq("role", "admin");
       if (usersError) throw usersError;
 
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });
@@ -91,15 +91,15 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
 
 
 
-      
+
       // Fetch all absentees
       const { data: absentees, error: absenteesError } = await supabase
         .from('absentees')
         .select('*')
         .gte('absentee_date', weekEndformate)
         .lte('absentee_date', weekStartformate)
-        // .eq("absentee_Timing" , "Full Day");        
-        
+        // .eq("absentee_Timing" , "Full Day");
+
 
       if (absenteesError) throw absenteesError;
 
@@ -124,34 +124,69 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
 
         const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
 
-        // Calculate total working hours
-        let totalHours = 0;
+        // Calculate total working hours and break hours separately
+        let totalRawWorkHours = 0;
+        let totalBreakHours = 0;
+        let totalNetWorkHours = 0;
 
+        // First, calculate total raw hours without breaks
         uniqueAttendance.forEach(attendance => {
           const start = new Date(attendance.check_in);
-          const end = attendance.check_out 
-            ? new Date(attendance.check_out) 
-            : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Default 4 hours if no checkout
+          const end = attendance.check_out
+            ? new Date(attendance.check_out)
+            : new Date(start.getTime()); // If no check-out, use check-in time (0 hours)
 
-          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 12); // Cap at 12 hours per day
+          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          // Handle negative values by using Math.max(0, hoursWorked)
+          hoursWorked = Math.max(0, hoursWorked);
+          // Cap at 12 hours per day
+          totalRawWorkHours += Math.min(hoursWorked, 12);
         });
 
-        // Calculate total break hours
+        // Group breaks by attendance_id for more efficient processing
+        const breaksByAttendance = {};
         const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
-        let totalBreakHours = 0;
-
-        userBreaks.forEach(breakEntry => {
-          const breakStart = new Date(breakEntry.start_time);
-          const breakEnd = breakEntry.end_time 
-            ? new Date(breakEntry.end_time) 
-            : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
-
-          const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-          totalBreakHours += Math.min(breakHours, 12); // Cap at 12 hours per break
+        userBreaks.forEach(b => {
+          if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+          breaksByAttendance[b.attendance_id].push(b);
         });
 
-        totalHours -= totalBreakHours;
+        // Now calculate break hours and net working hours for each attendance record
+        uniqueAttendance.forEach(attendance => {
+          const start = new Date(attendance.check_in);
+          const end = attendance.check_out
+            ? new Date(attendance.check_out)
+            : new Date(start.getTime());
+
+          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          // Handle negative values by using Math.max(0, hoursWorked)
+          hoursWorked = Math.max(0, hoursWorked);
+
+          // Calculate breaks for this attendance record
+          const attendanceBreaks = breaksByAttendance[attendance.id] || [];
+          let breakHoursForThisLog = 0;
+
+          attendanceBreaks.forEach(b => {
+            if (b.start_time) {
+              const breakStart = new Date(b.start_time);
+              // If end_time is missing, calculate only 1 hour of break
+              const breakEnd = b.end_time
+                ? new Date(b.end_time)
+                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+              const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+              breakHoursForThisLog += thisBreakHours;
+              totalBreakHours += thisBreakHours;
+            }
+          });
+
+          // Calculate net hours for this attendance record
+          const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
+          totalNetWorkHours += netHoursForThisLog;
+        });
+
+        // Use the net hours as the total work hours
+        let totalHours = totalNetWorkHours;
 
 
 
@@ -276,7 +311,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
     try {
       const weekStart = startOfWeek(selectedDateW, { weekStartsOn: 1 });
       const weekEnd = endOfWeek(selectedDateW, { weekStartsOn: 1 });
-  
+
       // Fetch attendance records
       const { data: weeklyAttendance, error: attendanceError } = await supabase
         .from("attendance_logs")
@@ -285,9 +320,9 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
         .gte("check_in", weekStart.toISOString())
         .lte("check_in", weekEnd.toISOString())
         .order("check_in", { ascending: true });
-  
+
       if (attendanceError) throw attendanceError;
-  
+
       // Fetch absentees with absentee_timing and absentee_type
       const { data: absentees, error: absenteesError } = await supabase
         .from("absentees")
@@ -295,31 +330,31 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
         .eq("user_id", userId)
         .gte("created_at", weekStart.toISOString())
         .lte("created_at", weekEnd.toISOString());
-  
+
       if (absenteesError) throw absenteesError;
-  
+
       // Get all days in the week
       const allDaysInWeek = eachDayOfInterval({ start: weekStart, end: weekEnd });
-  
+
       const dailyAttendance = allDaysInWeek.map((date) => {
         const dateStr = format(date, "yyyy-MM-dd");
-  
+
         // Find attendance record
         const attendance = weeklyAttendance.find(
           (a) => format(new Date(a.check_in), "yyyy-MM-dd") === dateStr
         );
-  
+
         // Find absentee record
         const absentee = absentees.find(
           (a) => format(new Date(a.created_at), "yyyy-MM-dd") === dateStr
         );
-  
+
         let status = "Null"; // Default to present
         let workmode = "Null"; // Default to On Site
         let workingHours = 0;
         let checkIn = null;
         let checkOut = null;
-  
+
         if (attendance) {
           status  = "Present"
           const formatDate = (date: Date) => {
@@ -332,17 +367,17 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
               hour12: true,
             }).format(date);
           };
-          
+
           // Example usage in your code
           workmode = attendance.work_mode
           checkIn = formatDate(new Date(attendance.check_in));
           checkOut = formatDate(new Date(attendance.check_out || new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000)));
           // workingHours = (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60);
           // workingHours = Math.min(workingHours, 12); // Cap at 12 hours
-          
-          console.log("Attendance" , attendance);  
+
+          console.log("Attendance" , attendance);
         }
-  
+
         if (absentee) {
           if (absentee && !attendance){workmode === "null"}
           if (absentee.absentee_Timing === "Full Day" && absentee.absentee_type === "Absent") {
@@ -355,9 +390,9 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
             status = "Sick Leave";
           }
         }
-  
+
         return {
-          date: dateStr, 
+          date: dateStr,
           status: status,
           Check_in: checkIn,
           Check_out: checkOut,
@@ -365,21 +400,21 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
           fullname : fullName,
         };
       });
-  
+
       console.log(`Weekly Attendance for ${fullName}:`, dailyAttendance);
-      
+
       // Filter out undefined values
       const filteredDailyAttendance = dailyAttendance.filter((entry) => entry);
-      
+
       downloadPDF(filteredDailyAttendance, fullName);
-  
+
     } catch (error) {
       console.error("Error fetching weekly data:", error);
       alert("Error fetching weekly data");
     }
   };
-  
-  const downloadPDF = async (filteredDailyAttendance, fullName) => {    
+
+  const downloadPDF = async (filteredDailyAttendance, fullName) => {
     try {
       const response = await fetch('http://localhost:4000/generate-pdfWeeklyOfEmployee', {
         method: 'POST',
@@ -388,21 +423,21 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
         },
         body: JSON.stringify({ data: filteredDailyAttendance }),
       });
-  
+
       if (!response.ok) {
         throw new Error('Failed to generate PDF');
       }
-  
+
       const blob = await response.blob();
-  
+
       if (blob.type !== "application/pdf") {
         throw new Error("Received incorrect file format");
       }
-  
+
       const url = window.URL.createObjectURL(blob);
       const currentDate = new Date().toISOString().split('T')[0];
       const fileName = `Weekly attendance_${currentDate} of ${fullName}.pdf`;
-  
+
       // Create and trigger download
       const a = document.createElement('a');
       a.href = url;
@@ -410,7 +445,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
       document.body.appendChild(a);
       a.click();
       a.remove();
-  
+
       // Open PDF manually
       window.open(url, '_blank');
     } catch (error) {

@@ -50,6 +50,8 @@ interface MonthlyStats {
   remoteDays: number;
   averageWorkHours: number;
   expectedWorkingDays: number;
+  totalHours: number;
+  totalOvertimeHours: number;
 }
 interface SoftwareComplaint {
   id: number;
@@ -68,7 +70,7 @@ interface SoftwareComplaint {
 //       console.log("id:", id);
 
 //       // Your existing employee click logic here
-//       handleEmployeeClick(id); 
+//       handleEmployeeClick(id);
 //       // onEmployeeSelect(id); // Update parent's state
 //     }
 //   })
@@ -86,7 +88,7 @@ const EmployeeAttendanceTable = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMode, setSelectedMode] = useState('remote');;
   const [present, setPresent] = useState(0);
-  
+
 
 
   const [DataEmployee, setDataEmployee] = useState(null);
@@ -143,7 +145,7 @@ const EmployeeAttendanceTable = () => {
   const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
   const [graphicview, setgraphicview] = useState(false);
   const [tableData, setTableData] = useState('');
-  
+
   const [isDateModalOpen, setIsDateModalOpen] = useState(false)
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
@@ -168,7 +170,7 @@ const EmployeeAttendanceTable = () => {
     console.log("absent id", id);
     let selectdate=new Date(selectedDate)
     const today = selectdate.toISOString().split('T')[0]
-    
+
     const { data, error } = await supabase
   .from('absentees') // your table name
   .select('*')
@@ -186,7 +188,7 @@ setabsentid(dataid)
   }
   console.log('Today\'s attendance:', data)
 }
-    
+
   }
 
 
@@ -361,7 +363,7 @@ setabsentid(dataid)
   const handleCheckinOpenModal = async(entry) => {
     setSelectedEntry(entry);
     parseCheckInTime(entry.check_in)
-   
+
     setisCheckinModalOpen(true);
 
   };
@@ -744,7 +746,7 @@ setabsentid(dataid)
     if (error) {
       console.error("Error fetching count:", error);
     } else {
-      setPendingLeaveRequests(count || 0); // Ensure count is not null     
+      setPendingLeaveRequests(count || 0); // Ensure count is not null
 
     }
   };
@@ -775,19 +777,19 @@ setabsentid(dataid)
           console.log("absentees Count :", count);
           setleaves(count || 0)
           console.log("leaves" , count);
-          
+
         }
       }
       fetchleaves();
     }
 
-  
+
   }, [userID])
 
 
   useEffect(() => {
     console.log("selected tab on Leaves Fetching :" , selectedTab);
-    
+
     if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchabsentees = async () => {
         const { count, error } = await supabase
@@ -980,7 +982,25 @@ setabsentid(dataid)
       // Process data to compute stats for each employee
       const employeeStats = {};
 
-      employees.forEach(employee => {
+      // Fetch all breaks for all attendance records in one query
+      const { data: allBreaksData, error: allBreaksError } = await supabase
+        .from("breaks")
+        .select("start_time, end_time, attendance_id");
+
+      if (allBreaksError) {
+        console.error("Error fetching all breaks:", allBreaksError);
+      }
+
+      // Group all breaks by attendance_id
+      const allBreaksByAttendance = {};
+      if (allBreaksData) {
+        allBreaksData.forEach(b => {
+          if (!allBreaksByAttendance[b.attendance_id]) allBreaksByAttendance[b.attendance_id] = [];
+          allBreaksByAttendance[b.attendance_id].push(b);
+        });
+      }
+
+      for (const employee of employees) {
         const employeeLogs = attendanceLogs.filter(log => log.user_id === employee.id);
 
         // Group attendance by date (earliest record per day)
@@ -995,18 +1015,37 @@ setabsentid(dataid)
         const uniqueAttendance = Object.values(attendanceByDate);
 
         let totalHours = 0;
+
         uniqueAttendance.forEach(attendance => {
           const start = new Date(attendance.check_in);
-          const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
-          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 12);
+          // Match the calculation in EmployeeProfile.tsx - use check_in time if no check_out
+          const end = attendance.check_out ? new Date(attendance.check_out) : new Date(start.getTime());
+          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+          // Subtract breaks
+          const breaks = allBreaksByAttendance[attendance.id] || [];
+          let breakHours = 0;
+
+          breaks.forEach(b => {
+            if (b.start_time) {
+              const breakStart = new Date(b.start_time);
+              // If end_time is missing, calculate only 1 hour of break
+              const breakEnd = b.end_time
+                ? new Date(b.end_time)
+                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+              breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            }
+          });
+
+          totalHours += Math.min(Math.max(0, hoursWorked - breakHours), 12);
         });
 
         // Store stats for each employee
         employeeStats[employee.id] = uniqueAttendance.length
           ? totalHours / uniqueAttendance.length
           : 0;
-      });
+      }
 
       setEmployeeStats(employeeStats);
       console.log("Employee Stats:", employeeStats);
@@ -1073,7 +1112,7 @@ const fetchtodaybreak=async()=>{
       console.error(breaksError);
     }
     else{
-      
+
       setTodayBreak(breaks);
     }
 }
@@ -1174,8 +1213,6 @@ useEffect(() => {
         .from('attendance_logs')
         .select('*')
         .eq('user_id', id)
-        // .gte('check_in', startOfDay.toISOString())
-        // .lte('check_in', endOfDay.toISOString())
         .gte('check_in', startOfDayFormat)
         .lte('check_in', endOfDayFormat)
         .order('check_in', { ascending: false })
@@ -1216,8 +1253,17 @@ useEffect(() => {
 
 
 
-      const monthStart = startOfMonth(today);
-      const monthEnd = endOfMonth(today);
+      // Get current year and month
+      const currentYear = today.getFullYear();
+      const currentMonth = today.getMonth(); // 0-based (0 = January, 11 = December)
+
+      // Create date objects for the first and last day of the month
+      // Set time to start of day (00:00:00) for the first day
+      const monthStart = new Date(Date.UTC(currentYear, currentMonth, 1, 0, 0, 0, 0));
+
+      // Get the last day of the month and set time to end of day (23:59:59.999)
+      const lastDay = new Date(Date.UTC(currentYear, currentMonth + 1, 0)).getDate(); // Last day of the month
+      const monthEnd = new Date(Date.UTC(currentYear, currentMonth, lastDay, 23, 59, 59, 999));
 
 
       const employeeid = id
@@ -1258,6 +1304,11 @@ useEffect(() => {
         .lte('check_in', monthEnd.toISOString())
         .order('check_in', { ascending: true });
 
+        console.log("Start of Month" , monthStart.toISOString());
+        console.log("End of Month" , monthEnd.toISOString());
+
+
+
       if (monthlyError) throw monthlyError;
 
       if (monthlyAttendance) {
@@ -1273,44 +1324,143 @@ useEffect(() => {
         const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
 
 
-        let totalHours = 0;
+        // Calculate total working hours and break hours separately
+        let totalRawWorkHours = 0;
+        let totalBreakHours = 0;
+        let totalNetWorkHours = 0;
 
         uniqueAttendance.forEach(attendance => {
           const start = new Date(attendance.check_in);
           const end = attendance.check_out
             ? new Date(attendance.check_out)
-            : new Date(start.getTime()); // Adds 4 hours
-          // If an employee has no CheckOut, assign 4 working hours
-          // const end = attendance.check_out 
-          //   ? new Date(attendance.check_out) 
-          //   : new Date(start.getTime() + 4 * 60 * 60 * 1000); // Adds 4 hours
+            : new Date(start.getTime()); // If no check-out, use check-in time (0 hours)
 
-          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          totalHours += Math.min(hours, 12);
+          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          totalRawWorkHours += Math.min(hoursWorked, 12); // Cap at 12 hours per day
         });
 
         // Fetch all breaks related to this attendance
         const { data: breaks, error: breaksError } = await supabase
           .from("breaks")
-          .select("start_time, end_time")
+          .select("start_time, end_time, attendance_id")
           .in("attendance_id", uniqueAttendance.map(a => a.id));
 
         if (breaksError) throw breaksError;
 
-        let totalBreakHours = 0;
-
-        breaks.forEach(breakEntry => {
-          const breakStart = new Date(breakEntry.start_time);
-          const breakEnd = breakEntry.end_time
-            ? new Date(breakEntry.end_time)
-            : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // Default 1-hour break
-
-          const breakHours = (breakEnd - breakStart) / (1000 * 60 * 60);
-          totalBreakHours += Math.min(breakHours, 12);
+        // Group breaks by attendance_id for more efficient processing
+        const breaksByAttendance = {};
+        breaks.forEach(b => {
+          if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+          breaksByAttendance[b.attendance_id].push(b);
         });
 
-        // Subtract break hours from total work hours
-        totalHours -= totalBreakHours;
+        // Calculate break hours and net working hours for each attendance record
+        uniqueAttendance.forEach(attendance => {
+          const start = new Date(attendance.check_in);
+          const end = attendance.check_out
+            ? new Date(attendance.check_out)
+            : new Date(start.getTime());
+
+          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          // Handle negative values by using Math.max(0, hoursWorked)
+          hoursWorked = Math.max(0, hoursWorked);
+
+          // Calculate breaks for this attendance record
+          const attendanceBreaks = breaksByAttendance[attendance.id] || [];
+          let breakHoursForThisLog = 0;
+
+          attendanceBreaks.forEach(b => {
+            if (b.start_time) {
+              const breakStart = new Date(b.start_time);
+              // If end_time is missing, calculate only 1 hour of break
+              const breakEnd = b.end_time
+                ? new Date(b.end_time)
+                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+              const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+              breakHoursForThisLog += thisBreakHours;
+              totalBreakHours += thisBreakHours;
+            }
+          });
+
+          // Calculate net hours for this attendance record
+          const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
+          totalNetWorkHours += netHoursForThisLog;
+
+          // Log details for each attendance record
+          console.log(`Attendance ID ${attendance.id}: Raw Hours = ${hoursWorked.toFixed(2)}h, Break Hours = ${breakHoursForThisLog.toFixed(2)}h, Net Hours = ${netHoursForThisLog.toFixed(2)}h`);
+        });
+
+        // Log the totals
+        console.log(`TOTAL: Raw Working Hours = ${totalRawWorkHours.toFixed(2)}h, Total Break Hours = ${totalBreakHours.toFixed(2)}h, Net Working Hours = ${totalNetWorkHours.toFixed(2)}h`);
+
+        // Fetch overtime data for the selected month
+        const { data: overtimeData, error: overtimeError } = await supabase
+          .from("extrahours")
+          .select("id, check_in, check_out")
+          .eq("user_id", id)
+          .gte("check_in", monthStart.toISOString())
+          .lte("check_in", monthEnd.toISOString());
+
+        if (overtimeError) {
+          console.error("Error fetching overtime data:", overtimeError);
+        }
+
+        // Calculate overtime hours
+        let totalOvertimeHours = 0;
+
+        if (overtimeData && overtimeData.length > 0) {
+          // Fetch breaks for overtime
+          const { data: remoteBreakData, error: remoteBreakError } = await supabase
+            .from("Remote_Breaks")
+            .select("start_time, end_time, Remote_Id")
+            .in("Remote_Id", overtimeData.map(a => a.id));
+
+          if (remoteBreakError) {
+            console.error("Error fetching remote breaks:", remoteBreakError);
+          }
+
+          // Group remote breaks by Remote_Id
+          const remoteBreaksByAttendance = {};
+          if (remoteBreakData) {
+            remoteBreakData.forEach(b => {
+              if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+              remoteBreaksByAttendance[b.Remote_Id].push(b);
+            });
+          }
+
+          // Calculate total overtime hours
+          overtimeData.forEach(log => {
+            if (log.check_in && log.check_out) {
+              const checkIn = new Date(log.check_in);
+              const checkOut = new Date(log.check_out);
+
+              let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+
+              // Subtract remote breaks
+              const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
+              let remoteBreakHours = 0;
+
+              remoteBreaks.forEach(b => {
+                if (b.start_time) {
+                  const breakStart = new Date(b.start_time);
+                  // If end_time is missing, calculate only 1 hour of break
+                  const breakEnd = b.end_time
+                    ? new Date(b.end_time)
+                    : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+                  remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+                }
+              });
+
+              totalOvertimeHours += Math.max(0, hoursWorked - remoteBreakHours);
+            }
+          });
+        }
+
+        console.log("Total Overtime Hours:", totalOvertimeHours.toFixed(2));
+
+
 
         setMonthlyStats({
           expectedWorkingDays: workingDaysInMonth,
@@ -1319,7 +1469,9 @@ useEffect(() => {
           lateDays: uniqueAttendance.filter((a) => a.status === 'late').length,
           onSiteDays: uniqueAttendance.filter(a => a.work_mode === 'on_site').length,
           remoteDays: uniqueAttendance.filter(a => a.work_mode === 'remote').length,
-          averageWorkHours: uniqueAttendance.length ? totalHours / uniqueAttendance.length : 0
+          averageWorkHours: uniqueAttendance.length ? totalNetWorkHours / uniqueAttendance.length : 0,
+          totalHours: totalNetWorkHours,
+          totalOvertimeHours: totalOvertimeHours
         });
 
       } else {
@@ -1428,8 +1580,8 @@ useEffect(() => {
 
           </table>
         </div>
-        
-    
+
+
       </div>
     );
   };
@@ -1508,11 +1660,11 @@ useEffect(() => {
 
 
 
-  // const downloadPDFFiltered = async () => {   
+  // const downloadPDFFiltered = async () => {
   //   // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
   //   //   console.error("No data available to generate PDF");
   //   //   return;
-  //   // } 
+  //   // }
   //   try {
   //     const response = await fetch('http://localhost:4000/generate-Filtered', {
   //       method: 'POST',
@@ -1571,7 +1723,7 @@ useEffect(() => {
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
     //   console.error("No data available to generate PDF");
     //   return;
-    // } 
+    // }
     try {
       const response = await fetch('http://localhost:4000/generate-Filtered', {
         method: 'POST',
@@ -1627,7 +1779,7 @@ useEffect(() => {
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
     //   console.error("No data available to generate PDF");
     //   return;
-    // } 
+    // }
     try {
       const response = await fetch('http://localhost:4000/generate-pdfWeekly', {
         method: 'POST',
@@ -1672,7 +1824,7 @@ useEffect(() => {
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
     //   console.error("No data available to generate PDF");
     //   return;
-    // } 
+    // }
     try {
       const response = await fetch('http://localhost:4000/generate-pdfMonthly', {
         method: 'POST',
@@ -1728,46 +1880,46 @@ useEffect(() => {
   const fetchAttendanceData = async (date) => {
     setLoading(true);
     const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD format
-  
+
     try {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
         .neq("role", "admin");
-  
+
       if (usersError) throw usersError;
-  
+
       // Fetch attendance logs for the selected date
       const { data: attendanceLogs, error: attendanceError } = await supabase
         .from("attendance_logs")
         .select("user_id, check_in, check_out, work_mode, status, created_at, autocheckout, id")
         .gte("check_in", `${formattedDate}T00:00:00`)
         .lte("check_in", `${formattedDate}T23:59:59`);
-  
+
       if (attendanceError) throw attendanceError;
-  
+
       // Fetch absentees for the selected date
       const { data: absentees, error: absenteesError } = await supabase
         .from("absentees")
         .select("user_id, absentee_type")
         .gte("created_at", `${formattedDate}T00:00:00`)
         .lte("created_at", `${formattedDate}T23:59:59`)
-  
+
       if (absenteesError) throw absenteesError;
-  
-      
+
+
       // Create Maps
       const attendanceMap = new Map(attendanceLogs.map((log) => [log.user_id, log]));
       const absenteesMap = new Map(absentees.map((absent) => [absent.user_id, absent.absentee_type]));
-  
+
       // Build final list
       const finalAttendanceData = users.map((user) => {
         const log = attendanceMap.get(user.id);
-  
+
         const formatTime = (dateString) => {
           if (!dateString || dateString === "N/A") return "N/A";
-  
+
           const date = new Date(dateString);
           return date.toLocaleTimeString("en-US", {
             hour: "2-digit",
@@ -1775,10 +1927,10 @@ useEffect(() => {
             hour12: true,
           });
         };
-  
+
         if (!log) {
           const absenteeType = absenteesMap.get(user.id); // Check if absentee record exists
-  
+
           return {
             id: user.id,
             full_name: user.full_name,
@@ -1793,7 +1945,7 @@ useEffect(() => {
             textColor: absenteeType ? "text-blue-500" : "text-red-500", // Optional: different color for approved leaves
           };
         }
-  
+
         return {
           id: user.id,
           full_name: user.full_name,
@@ -1814,10 +1966,10 @@ useEffect(() => {
                 : "text-red-500",
         };
       });
-  
+
       setAttendanceData(finalAttendanceData);
       setFilteredData(finalAttendanceData); // Initialize filtered data with all data
-  
+
       // Calculate counts
       const lateCount = finalAttendanceData.filter((entry) => entry.status.toLowerCase() === "late").length;
       setLate(lateCount);
@@ -1834,7 +1986,7 @@ useEffect(() => {
       setLoading(false);
     }
   };
-  
+
 
   const now = new Date();
   const [fetchingid, setfetchingid] = useState('')
@@ -2292,7 +2444,7 @@ useEffect(() => {
             <div className="overflow-x-auto">
 
 
-              
+
             <div className="w-full shadow-sm rounded-lg">
                 {/* Table view for medium and larger screens */}
                 <div className="hidden sm:block overflow-x-auto">
@@ -2366,7 +2518,7 @@ useEffect(() => {
                               ) : null}
                             </div>
                           </td>
-                         
+
                           <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                             <button
                               onClick={() => handleModeOpen(entry)}
@@ -2536,7 +2688,7 @@ useEffect(() => {
                   >
                     Mark Him Leave
                   </Dialog.Title>
-                  
+
                   <div className="mt-4">
                     <RadioGroup value={selectedMode} onChange={setSelectedMode} className="space-y-4">
                       <RadioGroup.Option value="Absent">
@@ -2571,8 +2723,8 @@ useEffect(() => {
                           </div>
                         )}
                       </RadioGroup.Option>
-                  
-                    
+
+
                       <RadioGroup.Option value="Emergency Leave">
                         {({ checked }) => (
                           <div className="flex items-center">
@@ -3215,107 +3367,21 @@ useEffect(() => {
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">Total Hours:</span>
                                       <span className="font-medium">
-                                      {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                                      {monthlyStats.totalHours.toFixed(1)}h
                                       </span>
                                     </div>
 
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">Overtime Hours:</span>
+                                      <span className="font-medium text-purple-600">
+                                        {monthlyStats.totalOvertimeHours.toFixed(1)}h
+                                      </span>
+                                    </div>
 
-
-                                    {/* Optional: Additional Tasks or Overview */}
-                                    {/* <div className="mt-6">
-                                      <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-                                        <div className="flex items-center mb-6">
-                                          <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                                          <h2 className="text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
-                                        </div>
-
-                                        {monthlyStats ? (
-                                          <div className="grid grid-cols-1 gap-6">
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                              <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
-                                              <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Expected Working Days:</span>
-                                                  <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Days Attended:</span>
-                                                  <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Present Days:</span>
-                                                  <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Late Days:</span>
-                                                  <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
-                                                </div>
-                                                <div className="flex justify-between text-gray-600">
-                                                  <span>Absentees:</span>
-                                                  <span className="text-red-600">{absentees || 0}</span>
-                                                </div>
-                                                <div className="flex justify-between text-gray-600">
-                                                  <span>Leaves:</span>
-                                                  <span className="text-green-600">{leaves || 0}</span>
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                              <h3 className="text-sm font-medium text-gray-500 mb-3">Work Mode Distribution</h3>
-                                              <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">On-site Days:</span>
-                                                  <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Remote Days:</span>
-                                                  <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Attendance Rate:</span>
-                                                  <span className="font-medium">
-                                                    {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            </div>
-
-                                            <div className="bg-gray-50 rounded-lg p-4">
-                                              <h3 className="text-sm font-medium text-gray-500 mb-3">Work Hours</h3>
-                                              <div className="space-y-3">
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Average Daily Hours:</span>
-                                                  <span className="font-medium">
-                                                    {monthlyStats.averageWorkHours.toFixed(1)}h
-                                                  </span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Total Hours:</span>
-                                                  <span className="font-medium">
-                                                    {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
-                                                  </span>
-                                                </div>
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-gray-600">Expected Hours:</span>
-                                                  <span className="font-medium">
-                                                    {(7 * monthlyStats.expectedWorkingDays)}h
-                                                  </span>
-                                                </div>
-                                              </div>
-                                            </div>
-                                          </div>
-                                        ) : (
-                                          <div className="text-center py-8 text-gray-500">
-                                            No attendance records found for this month
-                                          </div>
-                                        )}
-                                      </div>
-                                    </div> */}
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">Expected Hours:</span>
                                       <span className="font-medium">
-                                        {(6 * monthlyStats.expectedWorkingDays)}h
+                                        {(7 * monthlyStats.expectedWorkingDays)}h
                                       </span>
                                     </div>
                                   </div>
@@ -3345,4 +3411,4 @@ useEffect(() => {
 }
 // );
 
-export default EmployeeAttendanceTable; 
+export default EmployeeAttendanceTable;

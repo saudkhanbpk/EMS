@@ -47,6 +47,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         .gte("check_in", startDate)
         .lte("check_in", endDate);
 
+        // console.log("start Date" , startdate);
+        // console.log("end Date" , enddate);
+
+
       if (attendanceError) {
         console.error("Error fetching attendance:", attendanceError);
         throw attendanceError;
@@ -63,7 +67,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       }
 
       // Group breaks by attendance_id
-      const breaksByAttendance = {};
+      const breaksByAttendance: Record<string, Array<{ start_time: string; end_time: string | null }>> = {};
       if (breakData) {
         breakData.forEach(b => {
           if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
@@ -71,28 +75,79 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         });
       }
 
-      // Calculate total working hours
-      let totalWorkHours = 0;
+      // Group attendance by day (taking the earliest record for each day), just like in ListViewOfEmployees.tsx
+      const attendanceByDate = {};
       attendanceData.forEach(log => {
+        const date = new Date(log.check_in).toISOString().split('T')[0]; // Format: YYYY-MM-DD
+        if (!attendanceByDate[date] || new Date(log.check_in) < new Date(attendanceByDate[date].check_in)) {
+          attendanceByDate[date] = log;
+        }
+      });
+
+      // Convert to array of unique attendance records (one per day)
+      const uniqueAttendance = Object.values(attendanceByDate);
+      console.log(`Grouped ${attendanceData.length} attendance records into ${uniqueAttendance.length} unique days`);
+
+      // Calculate total working hours and break hours separately
+      let totalRawWorkHours = 0;
+      let totalBreakHours = 0;
+      let totalNetWorkHours = 0;
+
+      // First, calculate total raw hours without breaks
+      uniqueAttendance.forEach(log => {
         const checkIn = new Date(log.check_in);
         const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
 
         let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+        // Handle negative values by using Math.max(0, hoursWorked)
+        hoursWorked = Math.max(0, hoursWorked);
+        // Cap at 12 hours per day
+        totalRawWorkHours += Math.min(hoursWorked, 12);
+      });
 
-        // Subtract breaks
-        const breaks = breaksByAttendance[log.id] || [];
-        let breakHours = 0;
+      console.log("Total Raw Working Hours (before breaks):", totalRawWorkHours.toFixed(2));
 
-        breaks.forEach(b => {
-          if (b.start_time && b.end_time) {
+      // Now calculate break hours and net working hours for each attendance record
+      uniqueAttendance.forEach(log => {
+        const checkIn = new Date(log.check_in);
+        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
+
+        let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+        // Handle negative values by using Math.max(0, hoursWorked)
+        hoursWorked = Math.max(0, hoursWorked);
+
+        // Calculate breaks for this attendance record
+        const breaks = breaksByAttendance[log.id as string] || [];
+        let breakHoursForThisLog = 0;
+
+        breaks.forEach((b: { start_time: string; end_time: string | null }) => {
+          if (b.start_time) {
             const breakStart = new Date(b.start_time);
-            const breakEnd = new Date(b.end_time);
-            breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            // If end_time is missing, calculate only 1 hour of break
+            const breakEnd = b.end_time
+              ? new Date(b.end_time)
+              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+            const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            breakHoursForThisLog += thisBreakHours;
+            totalBreakHours += thisBreakHours;
           }
         });
 
-        totalWorkHours += Math.max(0, hoursWorked - breakHours);
+        // Calculate net hours for this log
+        // Handle negative values and cap at 12 hours per day
+        const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
+        totalNetWorkHours += netHoursForThisLog;
+
+        // Log details for each attendance record
+        console.log(`Attendance ID ${log.id}: Raw Hours = ${hoursWorked.toFixed(2)}h, Break Hours = ${breakHoursForThisLog.toFixed(2)}h, Net Hours = ${netHoursForThisLog.toFixed(2)}h`);
       });
+
+      // Log the totals
+      console.log(`TOTAL: Raw Working Hours = ${totalRawWorkHours.toFixed(2)}h, Total Break Hours = ${totalBreakHours.toFixed(2)}h, Net Working Hours = ${totalNetWorkHours.toFixed(2)}h`);
+
+      // Use the net hours as the total work hours
+      let totalWorkHours = totalNetWorkHours;
 
       // Fetch overtime data for the selected month
       const { data: extrahoursData, error: extrahoursError } = await supabase
@@ -140,9 +195,13 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           let remoteBreakHours = 0;
 
           remoteBreaks.forEach(b => {
-            if (b.start_time && b.end_time) {
+            if (b.start_time) {
               const breakStart = new Date(b.start_time);
-              const breakEnd = new Date(b.end_time);
+              // If end_time is missing, calculate only 1 hour of break
+              const breakEnd = b.end_time
+                ? new Date(b.end_time)
+                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
               remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
             }
           });
@@ -267,9 +326,16 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   useEffect(() => {
     if (selectedmonth) {
       try {
-        // Calculate start and end dates for the selected month
-        const startOfMonthDate = startOfMonth(new Date(selectedmonth));
-        const endOfMonthDate = new Date(startOfMonthDate.getFullYear(), startOfMonthDate.getMonth() + 1, 0, 23, 59, 59, 999);
+        // Parse the selected month (format: "YYYY-MM")
+        const [year, month] = selectedmonth.split('-').map(Number);
+
+        // Create date objects for the first and last day of the month
+        // Set time to start of day (00:00:00) for the first day
+        const startOfMonthDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+
+        // Get the last day of the month and set time to end of day (23:59:59.999)
+        const lastDay = new Date(Date.UTC(year, month, 0)).getDate(); // Last day of the month
+        const endOfMonthDate = new Date(Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999));
 
         console.log("Selected month:", selectedmonth);
         console.log("Start of Month:", startOfMonthDate.toISOString());
@@ -292,7 +358,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     user_id: employeeid,
     increment_amount: "",
     increment_date: new Date().toISOString().split('T')[0], // Default to today's date
-    basic_salary: "",
+    basic_sallery: "",
     after_increment: ""
   });
 
@@ -308,7 +374,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     per_hour_pay: "",
     role: "",
     profile_image: null,
+    joining_date: "",
   });
+
+  const [upcomingIncrementDate, setUpcomingIncrementDate] = useState("");
 
   const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
@@ -336,15 +405,17 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       if (userError) throw userError;
 
-      const { data: increments, error: incrementError } = await supabase
+      // Fetch past increments
+      const { data: pastIncrements, error: incrementError } = await supabase
         .from("sallery_increment")
         .select("increment_date, increment_amount")
         .eq("user_id", employeeid)
+        .lt("increment_date", new Date().toISOString())
         .order("increment_date", { ascending: false })
         .limit(1);
 
-      if (incrementError) console.error("Error fetching increments:", incrementError);
-      if (increments?.length) setLastIncrement(increments[0]);
+      if (incrementError) console.error("Error fetching past increments:", incrementError);
+      if (pastIncrements?.length) setLastIncrement(pastIncrements[0]);
 
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
@@ -392,9 +463,15 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         let breakHours = 0;
 
         breaks.forEach(b => {
-          const breakStart = new Date(b.start_time);
-          const breakEnd = b.end_time ? new Date(b.end_time) : new Date(breakStart.getTime() + 60 * 60 * 1000);
-          breakHours += (breakEnd - breakStart) / (1000 * 60 * 60);
+          if (b.start_time) {
+            const breakStart = new Date(b.start_time);
+            // If end_time is missing, calculate only 1 hour of break
+            const breakEnd = b.end_time
+              ? new Date(b.end_time)
+              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+
+            breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+          }
         });
 
         totalWorkHours += Math.max(0, hoursWorked - breakHours);
@@ -551,7 +628,23 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         per_hour_pay: userData.per_hour_pay,
         role: userData.role || "",
         profile_image: null,
+        joining_date: userData.joining_date || "",
       });
+
+      // Fetch upcoming increment from sallery_increment table
+      const { data: upcomingIncrements, error: upcomingIncrementError } = await supabase
+        .from("sallery_increment")
+        .select("increment_date")
+        .eq("user_id", employeeid)
+        .gte("increment_date", new Date().toISOString())
+        .order("increment_date", { ascending: true })
+        .limit(1);
+
+      if (upcomingIncrementError) {
+        console.error("Error fetching upcoming increments:", upcomingIncrementError);
+      } else if (upcomingIncrements?.length > 0) {
+        setUpcomingIncrementDate(upcomingIncrements[0].increment_date);
+      }
 
     } catch (err) {
       setError(err.message);
@@ -801,7 +894,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // Update the increment data with the current and new salary
       const updatedIncrementData = {
         ...incrementData,
-        basic_salary: currentSalary.toString(),
+        basic_sallery: currentSalary.toString(),
         after_increment: newSalary.toString()
       };
 
@@ -824,7 +917,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       setLastIncrement({
         increment_amount: incrementData.increment_amount,
         increment_date: incrementData.increment_date,
-        basic_salary: currentSalary.toString(),
+        basic_sallery: currentSalary.toString(),
         after_increment: newSalary.toString()
       });
 
@@ -835,7 +928,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         user_id: employeeid,
         increment_amount: "",
         increment_date: new Date().toISOString().split('T')[0],
-        basic_salary: "",
+        basic_sallery: "",
         after_increment: ""
       });
     } catch (err) {
@@ -864,6 +957,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         profileImagePath = filePath;
       }
 
+      // Update user data
       const { data, error } = await supabase
         .from("users")
         .update({
@@ -878,11 +972,55 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           per_hour_pay: formData.per_hour_pay,
           role: formData.role,
           profile_image: profileImagePath,
+          joining_date: formData.joining_date,
         })
         .eq("id", employeeid)
         .select();
 
       if (error) throw error;
+
+      // Handle upcoming increment date if it has changed
+      if (upcomingIncrementDate) {
+        // Check if there's an existing upcoming increment record
+        const { data: existingIncrements, error: fetchError } = await supabase
+          .from("sallery_increment")
+          .select("id")
+          .eq("user_id", employeeid)
+          .gte("increment_date", new Date().toISOString())
+          .order("increment_date", { ascending: true })
+          .limit(1);
+
+        if (fetchError) {
+          console.error("Error checking existing increments:", fetchError);
+        } else {
+          if (existingIncrements?.length > 0) {
+            // Update existing record
+            const { error: updateError } = await supabase
+              .from("sallery_increment")
+              .update({ increment_date: upcomingIncrementDate })
+              .eq("id", existingIncrements[0].id);
+
+            if (updateError) {
+              console.error("Error updating increment date:", updateError);
+            }
+          } else {
+            // Insert new record with default values
+            const { error: insertError } = await supabase
+              .from("sallery_increment")
+              .insert({
+                user_id: employeeid,
+                increment_date: upcomingIncrementDate,
+                increment_amount: "0", // Default value
+                basic_sallery: formData.salary || "0",
+                after_increment: formData.salary || "0"
+              });
+
+            if (insertError) {
+              console.error("Error inserting increment record:", insertError);
+            }
+          }
+        }
+      }
 
       setEmployeeData(data[0]);
       setIsEditMode(false);
@@ -1183,14 +1321,16 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               </span>
             </div>
 
-            {lastIncrement && lastIncrement.basic_salary && lastIncrement.after_increment && (
+            {lastIncrement && lastIncrement.basic_sallery && lastIncrement.after_increment && (
               <div className="flex justify-between">
                 <span className="text-gray-500 text-sm">Increment Details</span>
                 <span className="text-gray-600 text-sm">
-                  {`Rs. ${lastIncrement.basic_salary} → Rs. ${lastIncrement.after_increment}`}
+                  {`Rs. ${lastIncrement.basic_sallery} → Rs. ${lastIncrement.after_increment}`}
                 </span>
               </div>
             )}
+
+
           </div>
         </div>
 
@@ -1455,6 +1595,28 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                     <option value="employee">Employee</option>
                     <option value="project manager">Project Manager</option>
                   </select>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-gray-700 font-medium">Joining Date</label>
+                  <input
+                    type="date"
+                    name="joining_date"
+                    value={formData.joining_date}
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-gray-700 font-medium">Upcoming Increment Date</label>
+                  <input
+                    type="date"
+                    name="upcoming_increment"
+                    value={upcomingIncrementDate}
+                    onChange={(e) => setUpcomingIncrementDate(e.target.value)}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                  />
                 </div>
               </div>
             </div>

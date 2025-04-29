@@ -59,6 +59,7 @@ function ProjectsAdmin() {
   const [showWorkloadModal, setShowWorkloadModal] = useState(false);
   const [selectedWorkloadCategory, setSelectedWorkloadCategory] = useState<'free' | 'medium' | 'overloaded' | null>(null);
   const [workloadEmployees, setWorkloadEmployees] = useState<any[]>([]);
+  const [modalLoading, setModalLoading] = useState(false);
 
   const filteredEmployees = Devs.filter(Dev =>
     Dev.full_name.toLowerCase().includes(searchTerm.toLowerCase())
@@ -67,21 +68,24 @@ function ProjectsAdmin() {
   // Function to handle opening the workload modal
   const handleWorkloadCategoryClick = async (category: 'free' | 'medium' | 'overloaded') => {
     setSelectedWorkloadCategory(category);
+    setWorkloadEmployees([]);
+    setShowWorkloadModal(true);
+    setModalLoading(true);
 
     try {
       // Get all employee IDs in this workload category
       const employeeIds = Object.entries(employeeWorkloads)
         .filter(([id, score]) => {
-          if (category === 'free') return score < 50;
-          if (category === 'medium') return score >= 50 && score < 100;
-          if (category === 'overloaded') return score >= 100;
+          if (category === 'free') return score >= 0 && score < 75;
+          if (category === 'medium') return score >= 75 && score < 150;
+          if (category === 'overloaded') return score >= 150;
           return false;
         })
         .map(([id]) => id);
 
       if (employeeIds.length === 0) {
         setWorkloadEmployees([]);
-        setShowWorkloadModal(true);
+        setModalLoading(false);
         return;
       }
 
@@ -125,18 +129,17 @@ function ProjectsAdmin() {
 
         // Find active tasks for this employee
         const activeTasks = tasksData.filter(task =>
-          task.devops?.some(dev => dev.id === employee.id) &&
+          task.devops?.some((dev: any) => dev.id === employee.id) &&
           task.status?.toLowerCase() !== "done"
         );
 
-        // Calculate total KPI from active tasks
-        const totalKPI = activeTasks.reduce((sum, task) => {
-          return sum + (Number(task.score) || 0);
-        }, 0);
+        // Calculate total KPI from active tasks (pending tasks only)
+        // This should match the workload calculation we did earlier
+        const totalKPI = employeeWorkloads[employee.id] || 0;
 
         // Find completed tasks for this employee
         const completedTasks = tasksData.filter(task =>
-          task.devops?.some(dev => dev.id === employee.id) &&
+          task.devops?.some((dev: any) => dev.id === employee.id) &&
           task.status?.toLowerCase() === "done"
         );
 
@@ -156,9 +159,10 @@ function ProjectsAdmin() {
       });
 
       setWorkloadEmployees(employeesWithDetails);
-      setShowWorkloadModal(true);
+      setModalLoading(false);
     } catch (error) {
       console.error("Error processing workload data:", error);
+      setModalLoading(false);
     }
   };
 
@@ -209,6 +213,35 @@ function ProjectsAdmin() {
 
       // Initialize workload tracking
       const workloads: Record<string, number> = {};
+
+      // First, fetch all tasks across all projects to calculate individual developer workloads
+      const { data: allTasksData, error: allTasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*");
+
+      if (allTasksError) {
+        console.error("Error fetching all tasks:", allTasksError);
+      } else {
+        // Calculate workload for each developer based on their assigned tasks
+        allTasksData.forEach(task => {
+          // Only count tasks that are not done
+          if (task.status !== "done" && task.devops && Array.isArray(task.devops)) {
+            // For each developer assigned to this task
+            task.devops.forEach((dev: any) => {
+              if (dev && dev.id) {
+                // Initialize if not exists
+                if (!workloads[dev.id]) {
+                  workloads[dev.id] = 0;
+                }
+                // Add this task's score to the developer's workload
+                workloads[dev.id] += Number(task.score) || 0;
+              }
+            });
+          }
+        });
+      }
+
+      console.log("Developer workloads:", workloads);
 
       // Fetch all tasks for these projects
       const projectsWithScores = await Promise.all(
@@ -269,20 +302,6 @@ function ProjectsAdmin() {
             // Otherwise, return the developer as is
             return dev;
           }) : [];
-
-          // Track workload for each developer in this project
-          if (normalizedDevops && normalizedDevops.length > 0) {
-            normalizedDevops.forEach((dev: { id: string }) => {
-              if (dev.id) {
-                // Initialize if not exists
-                if (!workloads[dev.id]) {
-                  workloads[dev.id] = 0;
-                }
-                // Add this project's total score to the developer's workload
-                workloads[dev.id] += totalScore;
-              }
-            });
-          }
 
           console.log("Normalized devops for project", project.id, ":", normalizedDevops);
 
@@ -402,9 +421,9 @@ function ProjectsAdmin() {
   const renderWorkloadModal = () => {
     const getCategoryTitle = () => {
       switch (selectedWorkloadCategory) {
-        case 'free': return 'Free Developers (< 50 KPI)';
-        case 'medium': return 'Medium Workload Developers (50-100 KPI)';
-        case 'overloaded': return 'Overloaded Developers (> 100 KPI)';
+        case 'free': return 'Free Developers ';
+        case 'medium': return 'Medium Workload Developers ';
+        case 'overloaded': return 'Overloaded Developers ';
         default: return 'Developers';
       }
     };
@@ -456,21 +475,27 @@ function ProjectsAdmin() {
                         Developer
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Role
-                      </th>
-                      <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                         Projects
                       </th>
                       <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Workload
+                        Remaining KPIs
                       </th>
                       <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Completed Points
+                        Completed KPIs
                       </th>
                     </tr>
                   </thead>
                   <tbody className="bg-white divide-y divide-gray-200">
-                    {workloadEmployees.map((employee) => (
+                    {modalLoading ? (
+                      <tr>
+                        <td colSpan={4} className="px-6 py-12 text-center">
+                          <div className="flex flex-col items-center justify-center">
+                            <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500 mb-4"></div>
+                            <p className="text-gray-500">Loading developer data...</p>
+                          </div>
+                        </td>
+                      </tr>
+                    ) : workloadEmployees.map((employee) => (
                       <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -484,11 +509,6 @@ function ProjectsAdmin() {
                           </div>
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
-                          <span className="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">
-                            {employee.role || 'Employee'}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
                           <div className="text-sm text-gray-900">{employee.projectCount} projects</div>
                           <div className="text-xs text-gray-500 truncate max-w-[200px]">
                             {employee.projects?.join(', ') || 'No projects'}
@@ -497,8 +517,8 @@ function ProjectsAdmin() {
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
                             <div className={`w-3 h-3 rounded-full ${
-                              (employee.TotalKPI || 0) < 50 ? "bg-green-500" :
-                              (employee.TotalKPI || 0) < 100 ? "bg-yellow-500" :
+                              (employee.TotalKPI || 0) < 75 ? "bg-green-500" :
+                              (employee.TotalKPI || 0) < 150 ? "bg-yellow-500" :
                               "bg-red-500"
                             } mr-2`}></div>
                             <span className="text-sm font-medium">{employee.TotalKPI || 0} KPI</span>
@@ -506,11 +526,11 @@ function ProjectsAdmin() {
                           <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
                             <div
                               className={`h-1.5 rounded-full ${
-                                (employee.TotalKPI || 0) < 50 ? "bg-green-500" :
-                                (employee.TotalKPI || 0) < 100 ? "bg-yellow-500" :
+                                (employee.TotalKPI || 0) < 75 ? "bg-green-500" :
+                                (employee.TotalKPI || 0) < 150 ? "bg-yellow-500" :
                                 "bg-red-500"
                               }`}
-                              style={{ width: `${Math.min(((employee.TotalKPI || 0) / 150) * 100, 100)}%` }}
+                              style={{ width: `${Math.min(((employee.TotalKPI || 0) / 200) * 100, 100)}%` }}
                             ></div>
                           </div>
                         </td>
@@ -730,7 +750,7 @@ function ProjectsAdmin() {
                 >
                   <div className="w-3 h-3 rounded-full bg-green-500"></div>
                   <span className="text-sm font-medium">
-                    Free: {Object.values(employeeWorkloads).filter(score => score < 50).length} developers
+                    Free: {Object.values(employeeWorkloads).filter(score => score >= 0 && score < 75).length} developers
                   </span>
                 </button>
                 <button
@@ -739,7 +759,7 @@ function ProjectsAdmin() {
                 >
                   <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                   <span className="text-sm font-medium">
-                    Medium: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
+                    Medium: {Object.values(employeeWorkloads).filter(score => score >= 75 && score < 150).length} developers
                   </span>
                 </button>
                 <button
@@ -748,7 +768,7 @@ function ProjectsAdmin() {
                 >
                   <div className="w-3 h-3 rounded-full bg-red-500"></div>
                   <span className="text-sm font-medium">
-                    Overloaded: {Object.values(employeeWorkloads).filter(score => score >= 100).length} developers
+                    Overloaded: {Object.values(employeeWorkloads).filter(score => score >= 150).length} developers
                   </span>
                 </button>
               </div>

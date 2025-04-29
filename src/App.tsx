@@ -389,7 +389,8 @@ function App() {
           element={
             <PrivateRoute adminOnly>
               <AttendanceProvider>
-                <AdminPage />
+                
+               <Adminroute><AdminPage /></Adminroute>
               </AttendanceProvider>
             </PrivateRoute>
           }
