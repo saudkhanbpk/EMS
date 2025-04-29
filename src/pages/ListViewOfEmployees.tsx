@@ -13,7 +13,7 @@ import { Trash2 } from 'lucide-react';
 import { forwardRef, useImperativeHandle } from "react";
 import "./style.css";
 import { useNavigate } from 'react-router-dom';
-import { Dialog, Transition, RadioGroup  } from '@headlessui/react'
+import { Dialog, Transition, RadioGroup } from '@headlessui/react'
 
 import AbsenteeComponentAdmin from "./AbsenteeDataAdmin";
 import {
@@ -80,8 +80,8 @@ const EmployeeAttendanceTable = () => {
 
 
   const [attendanceData, setAttendanceData] = useState([]);
-  const [absentid,setabsentid]=useState<null | number>(null)
-  const [selecteduser,setslecteduser]=useState<null | string>(null)
+  const [absentid, setabsentid] = useState<null | number>(null)
+  const [selecteduser, setslecteduser] = useState<null | string>(null)
   const [filteredData, setFilteredData] = useState([]); // Filtered data for display
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
@@ -114,7 +114,7 @@ const EmployeeAttendanceTable = () => {
   const [isinAM, setIsinAM] = useState(true);  // AM/PM toggle
   const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [absentloading,setabsentloading]=useState(false)
+  const [absentloading, setabsentloading] = useState(false)
   // const [formattedDate2, setformattedDate2] = useState('');
   const [startdate, setStartdate] = useState('');
   const [enddate, setEnddate] = useState('');
@@ -165,31 +165,31 @@ const EmployeeAttendanceTable = () => {
     setModalVisible(false);
   }
 
- async function handleopenabsentmodal(id:string,) {
-  setabsentloading(true)
-  setslecteduser(id)
-  setModalVisible(true);
+  async function handleopenabsentmodal(id: string,) {
+    setabsentloading(true)
+    setslecteduser(id)
+    setModalVisible(true);
     console.log("absent id", id);
-    let selectdate=new Date(selectedDate)
+    let selectdate = new Date(selectedDate)
     const today = selectdate.toISOString().split('T')[0]
 
     const { data, error } = await supabase
-  .from('absentees') // your table name
-  .select('*')
-  .eq('user_id', id) // filter by user_id
-  .gte('created_at', `${today}T00:00:00`) // start of today
-  .lte('created_at', `${today}T23:59:59`) // end of today
+      .from('absentees') // your table name
+      .select('*')
+      .eq('user_id', id) // filter by user_id
+      .gte('created_at', `${today}T00:00:00`) // start of today
+      .lte('created_at', `${today}T23:59:59`) // end of today
 
-if (error) {
-  console.error('Error fetching attendance:', error)
-} else {
-  if(data.length) {
-let dataid=data[0].id
-setabsentid(dataid)
+    if (error) {
+      console.error('Error fetching attendance:', error)
+    } else {
+      if (data.length) {
+        let dataid = data[0].id
+        setabsentid(dataid)
 
-  }
-  console.log('Today\'s attendance:', data)
-}
+      }
+      console.log('Today\'s attendance:', data)
+    }
     setabsentloading(false)
   }
 
@@ -204,10 +204,10 @@ setabsentid(dataid)
     let updateSuccess = false;
     let newAbsenteeData = null;
 
-    if (absentid){
+    if (absentid) {
       const { data, error } = await supabase
         .from("absentees")
-        .update({ absentee_Timing: selectedMode, absentee_type: selectedMode=="Absent"? "Absent" : "leave" })
+        .update({ absentee_Timing: selectedMode, absentee_type: selectedMode == "Absent" ? "Absent" : "leave" })
         .eq("id", absentid);
 
       if (error) {
@@ -225,8 +225,8 @@ setabsentid(dataid)
           .insert([
             {
               user_id: selecteduser,
-              absentee_Timing : selectedMode,
-              absentee_type: selectedMode=="Absent"? "Full Day" : "leave",
+              absentee_Timing: selectedMode,
+              absentee_type: selectedMode == "Absent" ? "Full Day" : "leave",
             }
           ])
           .select(); // So we get inserted row(s) back
@@ -245,12 +245,12 @@ setabsentid(dataid)
         prev.map(item =>
           (item.id === (newAbsenteeData.user_id || selecteduser))
             ? {
-                ...item,
-                status: newAbsenteeData.absentee_type,
-                textColor: newAbsenteeData.absentee_type === "Absent"
-                  ? "text-red-500"
-                  : "text-blue-500"
-              }
+              ...item,
+              status: newAbsenteeData.absentee_type,
+              textColor: newAbsenteeData.absentee_type === "Absent"
+                ? "text-red-500"
+                : "text-blue-500"
+            }
             : item
         )
       );
@@ -258,12 +258,12 @@ setabsentid(dataid)
         prev.map(item =>
           (item.id === (newAbsenteeData.user_id || selecteduser))
             ? {
-                ...item,
-                status: newAbsenteeData.absentee_type,
-                textColor: newAbsenteeData.absentee_type === "Absent"
-                  ? "text-red-500"
-                  : "text-blue-500"
-              }
+              ...item,
+              status: newAbsenteeData.absentee_type,
+              textColor: newAbsenteeData.absentee_type === "Absent"
+                ? "text-red-500"
+                : "text-blue-500"
+            }
             : item
         )
       );
@@ -273,12 +273,12 @@ setabsentid(dataid)
         prev.map(item =>
           item.id === selecteduser
             ? {
-                ...item,
-                status: selectedMode=="Absent"? "Absent" : "leave",
-                textColor: selectedMode=="Absent"
-                  ? "text-red-500"
-                  : "text-blue-500"
-              }
+              ...item,
+              status: selectedMode == "Absent" ? "Absent" : "leave",
+              textColor: selectedMode == "Absent"
+                ? "text-red-500"
+                : "text-blue-500"
+            }
             : item
         )
       );
@@ -286,12 +286,12 @@ setabsentid(dataid)
         prev.map(item =>
           item.id === selecteduser
             ? {
-                ...item,
-                status: selectedMode=="Absent"? "Absent" : "leave",
-                textColor: selectedMode=="Absent"
-                  ? "text-red-500"
-                  : "text-blue-500"
-              }
+              ...item,
+              status: selectedMode == "Absent" ? "Absent" : "leave",
+              textColor: selectedMode == "Absent"
+                ? "text-red-500"
+                : "text-blue-500"
+            }
             : item
         )
       );
@@ -362,7 +362,7 @@ setabsentid(dataid)
     }
   };
   // Open modal and set the selected entry and default time
-  const handleCheckinOpenModal = async(entry) => {
+  const handleCheckinOpenModal = async (entry) => {
     setSelectedEntry(entry);
     parseCheckInTime(entry.check_in)
 
@@ -806,7 +806,7 @@ setabsentid(dataid)
         } else {
           console.log("absentees Count :", count);
           setabsentees(count || 0)
-          console.log("Absentees" , count);
+          console.log("Absentees", count);
 
         }
       }
@@ -1102,59 +1102,59 @@ setabsentid(dataid)
 
 
 
-const fetchtodaybreak=async()=>{
-  const today = selectedDate.toISOString().split('T')[0] // 'YYYY-MM-DD'
+  const fetchtodaybreak = async () => {
+    const today = selectedDate.toISOString().split('T')[0] // 'YYYY-MM-DD'
 
-  const { data: breaks, error: breaksError } = await supabase
-    .from("breaks")
-    .select("*")
-    .gte("created_at", `${today}T00:00:00`)
-    .lte("created_at", `${today}T23:59:59`)
-    if(breaksError){
+    const { data: breaks, error: breaksError } = await supabase
+      .from("breaks")
+      .select("*")
+      .gte("created_at", `${today}T00:00:00`)
+      .lte("created_at", `${today}T23:59:59`)
+    if (breaksError) {
       console.error(breaksError);
     }
     else{
 
       setTodayBreak(breaks);
     }
-}
+  }
 
-function formatToTimeString(isoString:string) {
-  const date = new Date(isoString);
-  return date.toLocaleTimeString('en-US', {
-    hour: '2-digit',
-    minute: '2-digit',
-    hour12: true,
-  });
-}
+  function formatToTimeString(isoString: string) {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      hour12: true,
+    });
+  }
 
-let getuserbreakdate=(id:string)=>{
-let secondcheckin=todayBreak.filter((breaks)=>breaks.attendance_id===id)
+  let getuserbreakdate = (id: string) => {
+    let secondcheckin = todayBreak.filter((breaks) => breaks.attendance_id === id)
 
-let second = secondcheckin[0]?.end_time != null
+    let second = secondcheckin[0]?.end_time != null
 
-// let secondcheckinlength = secondcheckin.end_time != null ;
-let autoend=secondcheckin[0]?.ending==='auto'
-if(second && !autoend){
-let oneattendce=secondcheckin[0];
-const formateddate=formatToTimeString(oneattendce?.end_time)
-if(formateddate=="Invalid Date"){
-  return "N/A"
-}
-return formateddate;
-}
-else{
-  return "N/A";
-}
+    // let secondcheckinlength = secondcheckin.end_time != null ;
+    let autoend = secondcheckin[0]?.ending === 'auto'
+    if (second && !autoend) {
+      let oneattendce = secondcheckin[0];
+      const formateddate = formatToTimeString(oneattendce?.end_time)
+      if (formateddate == "Invalid Date") {
+        return "N/A"
+      }
+      return formateddate;
+    }
+    else {
+      return "N/A";
+    }
 
-}
+  }
 
-// const breakone=getuserbreakdate("191c5732-20a9-48ef-92d8-2c593656bf98")
-// console.log("the break one is", breakone)
+  // const breakone=getuserbreakdate("191c5732-20a9-48ef-92d8-2c593656bf98")
+  // console.log("the break one is", breakone)
 
-useEffect(() => {
-  fetchtodaybreak();
-}, [selectedDate])
+  useEffect(() => {
+    fetchtodaybreak();
+  }, [selectedDate])
 
 
   const FetchSelectedAttendance = async (id) => {
@@ -2540,20 +2540,19 @@ useEffect(() => {
                             </button>
                           </td>
                           <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
-  <button type="button" onClick={() => handleopenabsentmodal(entry.id)}>
-    <span
-      className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${
-        entry.status === "present"
-          ? "bg-green-100 text-green-800"
-          : entry.status === "late"
-            ? "bg-yellow-100 text-yellow-800"
-            : "bg-red-100 text-red-800"
-      }`}
-    >
-      {entry.status=="Full Day"?"Leave":entry.status}
-    </span>
-  </button>
-</td>
+                            <button type="button" onClick={() => handleopenabsentmodal(entry.id)}>
+                              <span
+                                className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === "present"
+                                  ? "bg-green-100 text-green-800"
+                                  : entry.status === "late"
+                                    ? "bg-yellow-100 text-yellow-800"
+                                    : entry.status === "leave" ? "text-purple-900 bg-purple-300" : "bg-red-100 text-red-800"
+                                  }`}
+                              >
+                                {entry.status == "Full Day" ? "Leave" : entry.status}
+                              </span>
+                            </button>
+                          </td>
 
                         </tr>
                       ))}
@@ -2578,21 +2577,21 @@ useEffect(() => {
                           {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
                         </span>
                         <button
-  type="button"
-  onClick={() => handleopenabsentmodal(entry.id)}
-  className="focus:outline-none"
->
-  <span
-    className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
-      ? "bg-green-100 text-green-800"
-      : entry.status === "late"
-        ? "bg-yellow-100 text-yellow-800"
-        : "bg-red-100 text-red-800"
-      }`}
-  >
-    {entry.status == "Full Day" ? "Leave" : entry.status}
-  </span>
-</button>
+                          type="button"
+                          onClick={() => handleopenabsentmodal(entry.id)}
+                          className="focus:outline-none"
+                        >
+                          <span
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
+                              ? "bg-green-100 text-green-800"
+                              : entry.status === "late"
+                                ? "bg-yellow-100 text-yellow-800"
+                                : "bg-red-100 text-red-800"
+                              }`}
+                          >
+                            {entry.status == "Full Day" ? "Leave" : entry.status}
+                          </span>
+                        </button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
@@ -2659,19 +2658,19 @@ useEffect(() => {
                       </div>
                     </div>
                   ))}
-                      <Transition appear show={modalVisible} as={Fragment}>
-        <Dialog as="div" className="relative z-10" onClose={handleabsentclosemodal}>
-          <Transition.Child
-            as={Fragment}
-            enter="ease-out duration-300"
-            enterFrom="opacity-0"
-            enterTo="opacity-100"
-            leave="ease-in duration-200"
-            leaveFrom="opacity-100"
-            leaveTo="opacity-0"
-          >
-            <div className="fixed inset-0 bg-black bg-opacity-25" />
-          </Transition.Child>
+                  <Transition appear show={modalVisible} as={Fragment}>
+                    <Dialog as="div" className="relative z-10" onClose={handleabsentclosemodal}>
+                      <Transition.Child
+                        as={Fragment}
+                        enter="ease-out duration-300"
+                        enterFrom="opacity-0"
+                        enterTo="opacity-100"
+                        leave="ease-in duration-200"
+                        leaveFrom="opacity-100"
+                        leaveTo="opacity-0"
+                      >
+                        <div className="fixed inset-0 bg-black bg-opacity-25" />
+                      </Transition.Child>
 
           <div className="fixed inset-0 overflow-y-auto">
             <div className="flex min-h-full items-center justify-center p-4 text-center">
@@ -2739,29 +2738,76 @@ useEffect(() => {
                     </RadioGroup>
                   </div>
 
-                  <div className="mt-8 flex justify-end space-x-3">
-                    <button
-                      type="button"
-                      className="inline-flex justify-center rounded-md border border-gray-300 bg-gray-500 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none"
-                      onClick={handleabsentclosemodal}
-                    >
-                      Cancel
-                    </button>
-                    <button
-                      type="button"
-                      disabled={absentloading}
-                      className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
-                      onClick={handleSaveChanges}
-                    >
-                      Save
-                    </button>
-                  </div>
-                </Dialog.Panel>
-              </Transition.Child>
-            </div>
-          </div>
-        </Dialog>
-      </Transition>
+                              <div className="mt-4">
+                                <RadioGroup value={selectedMode} onChange={setSelectedMode} className="space-y-4">
+                                  <RadioGroup.Option value="Absent">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                                        <span className="ml-3 text-gray-800">Absent</span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                  <RadioGroup.Option value="Full Day">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                                        <span className="ml-3 text-gray-800">Casual Leave</span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                  <RadioGroup.Option value="Half Day">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                                        <span className="ml-3 text-gray-800">Half Day Leave</span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                  <RadioGroup.Option value="Sick Leave">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                                        <span className="ml-3 text-gray-800">Sick Leave</span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+
+
+                                  <RadioGroup.Option value="Emergency Leave">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
+                                        <span className="ml-3 text-gray-800">Emergency Leave</span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                </RadioGroup>
+                              </div>
+
+                              <div className="mt-8 flex justify-end space-x-3">
+                                <button
+                                  type="button"
+                                  className="inline-flex justify-center rounded-md border border-gray-300 bg-gray-500 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none"
+                                  onClick={handleabsentclosemodal}
+                                >
+                                  Cancel
+                                </button>
+                                <button
+                                  type="button"
+                                  disabled={absentloading}
+                                  className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
+                                  onClick={handleSaveChanges}
+                                >
+                                  Save
+                                </button>
+                              </div>
+                            </Dialog.Panel>
+                          </Transition.Child>
+                        </div>
+                      </div>
+                    </Dialog>
+                  </Transition>
                 </div>
               </div>
 
@@ -3155,8 +3201,8 @@ useEffect(() => {
                             setShowEmployeeList(false); // Hide list after selection on mobile
                           }}
                           className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
-                              ? "bg-blue-100 text-blue-600"
-                              : "hover:bg-gray-100"
+                            ? "bg-blue-100 text-blue-600"
+                            : "hover:bg-gray-100"
                             } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
                         >
                           <span className="truncate mr-2 text-sm">{employee.full_name}</span>
@@ -3198,8 +3244,8 @@ useEffect(() => {
                         handleEmployeeClick(employee.id);
                       }}
                       className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
-                          ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                          : "hover:bg-gray-100"
+                        ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                        : "hover:bg-gray-100"
                         } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
                     >
                       <span className="truncate mr-2 text-xs sm:text-base">{employee.full_name}</span>
