@@ -32,7 +32,7 @@ import {
 } from 'date-fns';
 import AbsenteeComponent from './AbsenteesData';
 import { id } from 'date-fns/locale/id';
-import{
+import {
   PanelRightClose,
   Coffee
 } from 'lucide-react';
@@ -120,11 +120,11 @@ const AdminPage: React.FC = () => {
   const [breaks, setbreak] = useState('');
   const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [sideopen, setsideopen] = useState(false);
-  const [permanentopen , setPermanentopen] = useState(true);
+  const [permanentopen, setPermanentopen] = useState(true);
   // console.log("isopen" , isOpen);
-  console.log("permanentopen" , permanentopen);
-  
-  
+  console.log("permanentopen", permanentopen);
+
+
 
 
   useEffect(() => {
@@ -140,7 +140,7 @@ const AdminPage: React.FC = () => {
   }, []);
 
   const handleClose = () => {
-    setsideopen(false);
+    setPermanentopen(false);
   };
   const handleOpen = () => {
     setsideopen(true);
@@ -165,7 +165,7 @@ const AdminPage: React.FC = () => {
   useEffect(() => {
     const checkScreenSize = () => {
       setIsSmallScreen(window.innerWidth < 795);
-      
+
       // console.log(window.innerWidth)
 
     };
@@ -288,7 +288,41 @@ const AdminPage: React.FC = () => {
     fetchsoftwareComplaints();
   }
 
-
+  const Loader = () => (
+    <div className="flex flex-col items-center justify-center min-h-[200px] py-8">
+      <svg className="animate-spin h-14 w-14 text-[#9A00FF]" viewBox="0 0 50 50">
+        <circle
+          className="opacity-20"
+          cx="25"
+          cy="25"
+          r="20"
+          stroke="#9A00FF"
+          strokeWidth="6"
+          fill="none"
+        />
+        <path
+          className="opacity-80"
+          fill="none"
+          stroke="url(#gradient)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray="65, 150"
+          d="M25 5
+             a 20 20 0 0 1 0 40
+             a 20 20 0 0 1 0 -40"
+        />
+        <defs>
+          <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#9A00FF" />
+            <stop offset="100%" stopColor="#5A00B4" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="pt-4 text-[#9A00FF] font-semibold text-lg animate-pulse">
+        Loading Complaints...
+      </div>
+    </div>
+  );
 
 
   //Fetching Office Complaints From Database
@@ -607,14 +641,14 @@ const AdminPage: React.FC = () => {
 
 
   return (
-    
+
     <>
       <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
         <div className='flex flex-col'>
-        <PanelRightClose className={`${permanentopen ? "hidden" : "display-block"} 
+          <PanelRightClose className={`${permanentopen ? "hidden" : "display-block"} 
         box-border-2  border-gray-300 rounded-full  m-2 fixed top-2 left-[-20px] z-40  size-[50px] p-3 text-[#7e26b8] hover:bg-gray-200 shadow-lg cursor-pointer `}
-                  onClick={ () => setPermanentopen(true)} 
-                  />
+            onClick={() => setPermanentopen(true)}
+          />
           <div className="min-h-screen bg-gray-100 flex">
             {/* <motion.div
               className="fixed top-0 left-0 h-full w-64 bb-white text-white shadow-lg p-4 z-20"
@@ -632,10 +666,10 @@ const AdminPage: React.FC = () => {
               }}
             > */}
 
-             <motion.div
+            <motion.div
               className="absolute top-0 left-0 min-h-full w-64 bb-white text-white shadow-lg p-4 z-20"
               initial={{ x: "-100%" }}
-              animate={{ 
+              animate={{
                 x: permanentopen ? "0%" : "-100%"
               }}
               transition={{ duration: 0.4, ease: "easeInOut" }} // Smooth transition
@@ -647,7 +681,7 @@ const AdminPage: React.FC = () => {
             >
 
 
-            
+
 
               {/* Sidebar Space Filler */}
               {/* <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div> */}
@@ -660,23 +694,23 @@ const AdminPage: React.FC = () => {
               </button> */}
 
               {/* Overlay (Only for Small Screens when Sidebar is Open) */}
-             
+
 
               {/* Sidebar (Fixed) */}
               <div
                 className={`bg-black w-64 p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
-  ${ permanentopen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 h-screen flex flex-col`}
+  ${permanentopen ? "translate-x-0" : "-translate-x-full"} lg:translate-x-0 h-screen flex flex-col`}
               >
 
                 {/* Logo */}
                 <div className="mb-8 flex justify-between items-center">
- 
+
                   <h1 className='font-semibold text-[26px]'>Talent Sync</h1>
                   <PanelRightClose className={`${permanentopen ? "hidden" : "display-block"}`}
-                  onClick={ () => setPermanentopen(true)} 
+                    onClick={() => setPermanentopen(true)}
                   />
                   <PanelLeftClose className={`${permanentopen ? "display-block" : "hidden"}`}
-                  onClick={ () => setPermanentopen(false)}
+                    onClick={() => setPermanentopen(false)}
                   />
                 </div>
 
@@ -792,6 +826,7 @@ const AdminPage: React.FC = () => {
                     <button
                       onClick={() => {
                         setSelectedTab("Holidays");
+                        handleClose()
                         handleSoftwareComplaintsClick();
                       }}
                       className={`w-full text-left p-2 rounded ${selectedTab === "Holidays"
@@ -825,12 +860,12 @@ const AdminPage: React.FC = () => {
                       onClick={() => {
                         handleClose()
                         setSelectedTab("Updates");
-                      
+
                         // setIsOpen(false);
                       }}
                       className={`w-full text-left p-2 rounded ${selectedTab === "Updates"
-                          ? "bg-[#9A00FF] text-White"
-                          : "text-white hover:bg-[#9A00FF]"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
                         }`}
                     >
                       Office Alerts
@@ -894,34 +929,34 @@ const AdminPage: React.FC = () => {
 
         {/* Main Content */}
         {selectedTab === "ListView" && (
-          <div className={`flex-1  transition-all duration-300 p-4 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1  transition-all duration-300 p-4 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <EmployeeAttendanceTable />
           </div>
         )}
         {selectedTab === "EmployeesDetails" && (
-          <div className={`flex-1 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <EmployeesDetails selectedTab={selectedTab} />
           </div>
         )}
         {selectedTab === "Projects" && (
-          <div className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 py-10 px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <ProjectsAdmin />
           </div>
         )}
         {selectedTab === "Updates" && (
-          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <Updates />
           </div>
         )}
-          {selectedTab === "Holidays" && (
-          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+        {selectedTab === "Holidays" && (
+          <div className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-            <AdminHoliday/>
+            <AdminHoliday />
           </div>
         )}
         {selectedTab === 'Employees' && (
-          <div className={`flex-1 px-20 py-8 transition-all duration-300 ${permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 px-20 py-8 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <div className='flex flex-row justify-between px-10'>
               <div></div>
               <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
@@ -1168,92 +1203,97 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
-<Chatlayout><Chatbutton></Chatbutton></Chatlayout>
+        <Chatlayout><Chatbutton></Chatbutton></Chatlayout>
 
         {selectedTab === 'SoftwareComplaints' && (
-          <div className={`flex-1 sm:px-10 py-8 px-3 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 py-8 px-3 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
 
             <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Software Complaints</h2>
-              {softwareComplaints.length === 0 ? (
-                <p className="text-gray-600 text-center">No complaints found.</p>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {softwareComplaints.map((softwareComplaints, index) => (
-                    <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
-                      {/* <h3 className="text-lg font-medium text-gray-900">{softwareComplaints.title}</h3> */}
-                      <p className="text-15px text-gray-700 mt-1">{softwareComplaints.complaint_text}</p>
-                      <p className="text-17px text-gray-800 mt-3">By : {softwareComplaints.users?.full_name || 'Unknown'}</p>
-                      <p className="text-17px text-gray-800 mt-0.6"> {new Date(softwareComplaints.created_at).toLocaleString('en-US', {
-                        year: 'numeric',
-                        month: 'short', // "Feb"
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true, // AM/PM format
-                      })}                               </p>
-                      <span
-                        className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${softwareComplaints.status === "Pending"
-                          ? "bg-yellow-300 text-yellow-800"
-                          : "bg-green-300 text-green-800"
-                          }`}
-                      >
-                        {softwareComplaints.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+              {loading ? <Loader /> : <>
+                {softwareComplaints.length === 0 ? (
+                  <p className="text-gray-600 text-center">No complaints found.</p>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {softwareComplaints.map((softwareComplaints, index) => (
+                      <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
+                        {/* <h3 className="text-lg font-medium text-gray-900">{softwareComplaints.title}</h3> */}
+                        <p className="text-15px text-gray-700 mt-1">{softwareComplaints.complaint_text}</p>
+                        <p className="text-17px text-gray-800 mt-3">By : {softwareComplaints.users?.full_name || 'Unknown'}</p>
+                        <p className="text-17px text-gray-800 mt-0.6"> {new Date(softwareComplaints.created_at).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short', // "Feb"
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true, // AM/PM format
+                        })}                               </p>
+                        <span
+                          className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${softwareComplaints.status === "Pending"
+                            ? "bg-yellow-300 text-yellow-800"
+                            : "bg-green-300 text-green-800"
+                            }`}
+                        >
+                          {softwareComplaints.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>}
             </div>
           </div>
         )}
 
 
         {selectedTab === 'OfficeComplaints' && (
-          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
 
             <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">Office Complaints</h2>
-              {officeComplaints.length === 0 ? (
-                <p className="text-gray-600 text-center">No complaints found.</p>
-              ) : (
-                <div className="grid md:grid-cols-2 gap-4">
-                  {officeComplaints.map((officeComplaints, index) => (
-                    <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
-                      {/* <h3 className="text-lg font-medium text-gray-900">{officeComplaints.title}</h3> */}
-                      <p className="text-15px text-gray-700 mt-1">{officeComplaints.complaint_text}</p>
-                      <p className="text-17px text-gray-900 mt-3">By : {officeComplaints.users?.full_name || 'Unknown'}</p>
-                      <p className="text-17px text-gray-900 mt-0.6"> {new Date(officeComplaints.created_at).toLocaleString('en-US', {
-                        year: 'numeric',
-                        month: 'short', // "Feb"
-                        day: 'numeric',
-                        hour: '2-digit',
-                        minute: '2-digit',
-                        hour12: true, // AM/PM format
-                      })}</p>
-                      <span
-                        className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${officeComplaints.status === "Pending"
-                          ? "bg-yellow-300 text-yellow-800"
-                          : "bg-green-300 text-green-800"
-                          }`}
-                      >
-                        {officeComplaints.status}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              )}
+
+              {loading ? <Loader /> : <>
+                {officeComplaints.length === 0 ? (
+                  <p className="text-gray-600 text-center">No complaints found.</p>
+                ) : (
+                  <div className="grid md:grid-cols-2 gap-4">
+                    {officeComplaints.map((officeComplaints, index) => (
+                      <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
+                        {/* <h3 className="text-lg font-medium text-gray-900">{officeComplaints.title}</h3> */}
+                        <p className="text-15px text-gray-700 mt-1">{officeComplaints.complaint_text}</p>
+                        <p className="text-17px text-gray-900 mt-3">By : {officeComplaints.users?.full_name || 'Unknown'}</p>
+                        <p className="text-17px text-gray-900 mt-0.6"> {new Date(officeComplaints.created_at).toLocaleString('en-US', {
+                          year: 'numeric',
+                          month: 'short', // "Feb"
+                          day: 'numeric',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true, // AM/PM format
+                        })}</p>
+                        <span
+                          className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${officeComplaints.status === "Pending"
+                            ? "bg-yellow-300 text-yellow-800"
+                            : "bg-green-300 text-green-800"
+                            }`}
+                        >
+                          {officeComplaints.status}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </>}
             </div>
           </div>
         )}
         {selectedTab === 'leaveRequests' && (
-          <div className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2  ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2  ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
@@ -1265,7 +1305,7 @@ const AdminPage: React.FC = () => {
         )}
 
 
-      </div>
+      </div >
     </>
   );
 };

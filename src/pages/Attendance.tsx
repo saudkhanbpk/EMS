@@ -76,8 +76,8 @@ const Attendance: React.FC = () => {
   const [isDisabled, setIsDisabled] = useState(false);
   const [isButtonLoading, setisButtonLoading] = useState(false);
   const [alreadycheckedin, setalreadycheckedin] = useState(false)
-  const [alreadybreak,setalreadybreak]=useState<boolean>(false)
-  const [isbreak,setisbreak]=useState<boolean>(true);
+  const [alreadybreak, setalreadybreak] = useState<boolean>(false)
+  const [isbreak, setisbreak] = useState<boolean>(true);
 
 
 
@@ -489,7 +489,7 @@ const Attendance: React.FC = () => {
               end_time: now.toISOString(),
               status: 'on_time',
 
-              ending:"auto"
+              ending: "auto"
             })
             .eq('attendance_id', attendanceId)
             .is('end_time', null)
@@ -924,7 +924,7 @@ const Attendance: React.FC = () => {
 
               <button
                 onClick={handleBreak}
-                disabled={loading || isbreak || alreadybreak }
+                disabled={loading || isbreak || alreadybreak}
                 className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnBreak
                   ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
                   : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'
