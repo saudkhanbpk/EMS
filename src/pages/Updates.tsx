@@ -8,7 +8,41 @@ interface Update {
   selected: boolean;
   created_at?: string;
 }
-
+const Loader = () => (
+  <div className="flex flex-col items-center justify-center min-h-[200px] py-8">
+    <svg className="animate-spin h-14 w-14 text-[#9A00FF]" viewBox="0 0 50 50">
+      <circle
+        className="opacity-20"
+        cx="25"
+        cy="25"
+        r="20"
+        stroke="#9A00FF"
+        strokeWidth="6"
+        fill="none"
+      />
+      <path
+        className="opacity-80"
+        fill="none"
+        stroke="url(#gradient)"
+        strokeWidth="6"
+        strokeLinecap="round"
+        strokeDasharray="65, 150"
+        d="M25 5
+             a 20 20 0 0 1 0 40
+             a 20 20 0 0 1 0 -40"
+      />
+      <defs>
+        <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#9A00FF" />
+          <stop offset="100%" stopColor="#5A00B4" />
+        </linearGradient>
+      </defs>
+    </svg>
+    <div className="pt-4 text-[#9A00FF] font-semibold text-lg animate-pulse">
+      Loading Alerts...
+    </div>
+  </div>
+);
 function Updates() {
   const [updates, setUpdates] = useState<Update[]>([]);
   const [submitted, setSubmitted] = useState(false);
@@ -16,10 +50,11 @@ function Updates() {
   const [errorMsg, setErrorMsg] = useState("");
   const [emaillist, setemaillist] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
+  const [loading, setloading] = useState<boolean>(false)
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    
+
     if (!updateval.trim()) {
       setErrorMsg("Alert message cannot be empty");
       return;
@@ -35,7 +70,7 @@ function Updates() {
           .select("*");
 
         if (error) throw error;
-        
+
         console.log("Update successful:", data);
         setSubmitted(true);
         setEditingId(null);
@@ -47,7 +82,7 @@ function Updates() {
           .select("*");
 
         if (error) throw error;
-        
+
         console.log("Update inserted:", data);
         setUpdates(prev => [...prev, data[0]]);
         await sendemail();
@@ -69,12 +104,12 @@ function Updates() {
       const { data, error } = await supabase
         .from("users")
         .select("personal_email");
-    
+
       if (error) throw error;
-      
+
       const emailList = data.map(user => user.personal_email);
       setemaillist(emailList);
-      
+
       // 2. Send emails
       const response = await fetch("http://localhost:4000/send-alertemail", {
         method: "POST",
@@ -87,7 +122,7 @@ function Updates() {
       });
 
       if (!response.ok) throw new Error("Email sending failed");
-      
+
       const result = await response.json();
       console.log("Email response:", result);
     } catch (err) {
@@ -96,6 +131,7 @@ function Updates() {
   };
 
   async function fetchupdates() {
+    setloading(true)
     try {
       const { data, error } = await supabase
         .from("Updates")
@@ -104,13 +140,14 @@ function Updates() {
 
       if (error) throw error;
 
-      const sortedUpdates = [...data].sort((a, b) => 
+      const sortedUpdates = [...data].sort((a, b) =>
         (b.selected === true ? 1 : 0) - (a.selected === true ? 1 : 0)
       );
       setUpdates(sortedUpdates);
     } catch (error) {
       console.error("Fetch error:", error);
     }
+    setloading(false)
   }
 
   async function handledelete(id: number) {
@@ -121,7 +158,7 @@ function Updates() {
         .eq("id", id);
 
       if (error) throw error;
-      
+
       fetchupdates();
     } catch (error) {
       console.error("Delete error:", error);
@@ -143,7 +180,7 @@ function Updates() {
         .eq("id", id);
 
       if (error) throw error;
-      
+
       fetchupdates();
     } catch (error) {
       console.error("Selection error:", error);
@@ -208,16 +245,16 @@ function Updates() {
             {editingId ? "Alert updated successfully!" : "Alert submitted successfully!"}
           </p>
         )}
-        
+
         <h1 className="text-2xl font-bold font-mono mt-8">All Office Alerts</h1>
-        <div className="flex justify-center gap-4 mt-4 flex-wrap">
+
+        {loading ? <Loader /> : <div className="flex justify-center gap-4 mt-4 flex-wrap">
           {updates.length > 0 ? (
             updates.map((update) => (
-              <div 
-                key={update.id} 
-                className={`max-w-sm w-full bg-white rounded-lg shadow-md overflow-hidden ${
-                  update.selected ? "border-2 border-blue-500" : ""
-                }`}
+              <div
+                key={update.id}
+                className={`max-w-sm w-full bg-white rounded-lg shadow-md overflow-hidden ${update.selected ? "border-2 border-blue-500" : ""
+                  }`}
               >
                 <div className="p-4 sm:p-6">
                   <div className="mb-4">
@@ -231,11 +268,10 @@ function Updates() {
                     <button
                       onClick={() => handleselect(update.id)}
                       disabled={update.selected}
-                      className={`flex items-center justify-center gap-2 ${
-                        update.selected
-                          ? "bg-blue-600 cursor-not-allowed"
-                          : "bg-green-600 hover:bg-green-700"
-                      } text-white py-2 px-4 rounded-md transition-colors`}
+                      className={`flex items-center justify-center gap-2 ${update.selected
+                        ? "bg-blue-600 cursor-not-allowed"
+                        : "bg-green-600 hover:bg-green-700"
+                        } text-white py-2 px-4 rounded-md transition-colors`}
                     >
                       {update.selected ? (
                         <>
@@ -273,7 +309,7 @@ function Updates() {
               No alerts available
             </div>
           )}
-        </div>
+        </div>}
       </div>
     </div>
   );

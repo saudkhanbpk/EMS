@@ -6,6 +6,7 @@ import {
   Calendar, X, Trash2, Check, ChevronLeft, ChevronRight, Edit, AlertCircle
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
+import { set } from "date-fns";
 
 // Add this CSS to your global styles or component-specific styles
 const calendarStyles = `
@@ -157,6 +158,7 @@ function AdminHoliday() {
   const [submitted, setSubmitted] = useState<boolean>(false);
   // State for holidays list
   const [holidays, setHolidays] = useState<Holiday[]>([]);
+  const [loading, setloading] = useState<boolean>(false);
   // State for edit mode
   const [editMode, setEditMode] = useState<boolean>(false);
   // State for current holiday being edited
@@ -167,6 +169,7 @@ function AdminHoliday() {
   const [calendarDate, setCalendarDate] = useState<Date>(new Date());
 
   async function fetchholiday() {
+    setloading(true);
     const { data, error } = await supabase
       .from('holidays')           // table name
       .select('*');
@@ -175,7 +178,8 @@ function AdminHoliday() {
     }
     else {
       setHolidays(data)
-    } 
+    }
+    setloading(false)
   }
 
   // Load holidays on component mount
@@ -201,16 +205,16 @@ function AdminHoliday() {
   };
 
   // Handle form submission
-  const handleSubmit = async(e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (editMode && currentHoliday) {
       const { error } = await supabase
         .from('holidays')
-        .update({ dates: selectedDates, name: holidayName }) 
-        .eq('id', currentHoliday.id);  
+        .update({ dates: selectedDates, name: holidayName })
+        .eq('id', currentHoliday.id);
       if (!error) {
         const updatedHolidays = holidays.map(holiday =>
-          holiday.id === currentHoliday.id 
+          holiday.id === currentHoliday.id
             ? { ...holiday, name: holidayName, dates: selectedDates }
             : holiday
         );
@@ -248,7 +252,7 @@ function AdminHoliday() {
   };
 
   // Handle delete button click
-  const handleDelete = async(id: string) => {
+  const handleDelete = async (id: string) => {
     const { error } = await supabase
       .from('holidays')
       .delete()
@@ -283,7 +287,7 @@ function AdminHoliday() {
       const currentDate = new Date();
       const currentMonth = currentDate.getMonth();
       const currentYear = currentDate.getFullYear();
-      
+
       // Only allow changes to current or future months
       if (date.getFullYear() === currentYear && newMonth >= currentMonth) {
         changeMonth(newMonth);
@@ -291,30 +295,30 @@ function AdminHoliday() {
         changeMonth(newMonth);
       }
     };
-  
+
     const handleYearChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
       const newYear = Number(e.target.value);
       const currentDate = new Date();
       const currentYear = currentDate.getFullYear();
-      
+
       // Only allow changes to current or future years
       if (newYear >= currentYear) {
         changeYear(newYear);
-        
+
         // If switching back to current year, set month to current month
         if (newYear === currentYear && date.getMonth() < currentDate.getMonth()) {
           changeMonth(currentDate.getMonth());
         }
       }
     };
-  
+
     // Check if we should disable the previous month button
     const currentDate = new Date();
-    const isPrevMonthDisabled = 
-      (date.getFullYear() === currentDate.getFullYear() && 
-       date.getMonth() <= currentDate.getMonth()) ||
+    const isPrevMonthDisabled =
+      (date.getFullYear() === currentDate.getFullYear() &&
+        date.getMonth() <= currentDate.getMonth()) ||
       date.getFullYear() < currentDate.getFullYear();
-  
+
     return (
       <div className="flex flex-col space-y-2">
         <div className="flex items-center justify-between px-4 py-2">
@@ -339,8 +343,8 @@ function AdminHoliday() {
                   style={{ minWidth: 120 }}
                 >
                   {monthNames.map((month, idx) => {
-                    const isDisabled = 
-                      date.getFullYear() === currentDate.getFullYear() && 
+                    const isDisabled =
+                      date.getFullYear() === currentDate.getFullYear() &&
                       idx < currentDate.getMonth();
                     return (
                       <option key={month} value={idx} disabled={isDisabled}>
@@ -361,8 +365,8 @@ function AdminHoliday() {
                   style={{ minWidth: 100 }}
                 >
                   {yearRange.map(year => (
-                    <option 
-                      key={year} 
+                    <option
+                      key={year}
                       value={year}
                       disabled={year < currentDate.getFullYear()}
                     >
@@ -385,7 +389,41 @@ function AdminHoliday() {
       </div>
     );
   };
-
+  const Loader = () => (
+    <div className="flex flex-col items-center justify-center min-h-[200px] py-8">
+      <svg className="animate-spin h-14 w-14 text-[#9A00FF]" viewBox="0 0 50 50">
+        <circle
+          className="opacity-20"
+          cx="25"
+          cy="25"
+          r="20"
+          stroke="#9A00FF"
+          strokeWidth="6"
+          fill="none"
+        />
+        <path
+          className="opacity-80"
+          fill="none"
+          stroke="url(#gradient)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray="65, 150"
+          d="M25 5
+             a 20 20 0 0 1 0 40
+             a 20 20 0 0 1 0 -40"
+        />
+        <defs>
+          <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#9A00FF" />
+            <stop offset="100%" stopColor="#5A00B4" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="pt-4 text-[#9A00FF] font-semibold text-lg animate-pulse">
+        Loading Holidays...
+      </div>
+    </div>
+  );
   // Custom day component to show selected dates (dot under selected)
   const renderDayContents = (day: number, dateString: string) => {
     const date = new Date(dateString);
@@ -412,7 +450,7 @@ function AdminHoliday() {
       year: 'numeric'
     });
   };
-  
+
   // Custom input component for the DatePicker
   const CustomInput = forwardRef(({ value, onClick }: any, ref: any) => (
     <button
@@ -456,8 +494,8 @@ function AdminHoliday() {
         </div>
 
         <div>
-          <label 
-            htmlFor="holidayName" 
+          <label
+            htmlFor="holidayName"
             className="block text-sm font-medium text-gray-700 mb-1"
           >
             Holiday Name
@@ -508,8 +546,8 @@ function AdminHoliday() {
                 const now = new Date();
                 const currentHour = now.getHours();
                 const isToday = date.getDate() === now.getDate() &&
-                                date.getMonth() === now.getMonth() &&
-                                date.getFullYear() === now.getFullYear();
+                  date.getMonth() === now.getMonth() &&
+                  date.getFullYear() === now.getFullYear();
                 if (isToday && currentHour >= 21) {
                   return false;
                 }
@@ -526,8 +564,8 @@ function AdminHoliday() {
             <div className="flex flex-wrap gap-2 mb-4">
               {selectedDates.length > 0 ? (
                 selectedDates.map((date, index) => (
-                  <div 
-                    key={index} 
+                  <div
+                    key={index}
                     className="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full text-sm flex items-center shadow-sm"
                   >
                     {formatDate(date)}
@@ -584,56 +622,58 @@ function AdminHoliday() {
         <h2 className="text-xl font-semibold text-gray-800 mb-6">
           Existing Holidays
         </h2>
-        {holidays.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-500">No holidays have been added yet.</p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {holidays.map((holiday) => (
-              <div 
-                key={holiday.id} 
-                className="holiday-card bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
-                  <h3 className="font-semibold text-lg text-gray-800">{holiday.name}</h3>
-                  <p className="text-sm text-gray-500">{holiday.dates.length} {holiday.dates.length === 1 ? 'day' : 'days'}</p>
-                </div>
-                <div className="p-4">
-                  <div className="flex flex-wrap gap-2 mb-4">
-                    {holiday.dates.slice(0, 3).map((date, index) => (
-                      <span 
-                        key={index} 
-                        className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md text-xs"
+        {loading ? <Loader /> : <>
+          {holidays.length === 0 ? (
+            <div className="text-center py-8">
+              <p className="text-gray-500">No holidays have been added yet.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {holidays.map((holiday) => (
+                <div
+                  key={holiday.id}
+                  className="holiday-card bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                >
+                  <div className="p-4 border-b border-gray-100 bg-gradient-to-r from-indigo-50 to-purple-50">
+                    <h3 className="font-semibold text-lg text-gray-800">{holiday.name}</h3>
+                    <p className="text-sm text-gray-500">{holiday.dates.length} {holiday.dates.length === 1 ? 'day' : 'days'}</p>
+                  </div>
+                  <div className="p-4">
+                    <div className="flex flex-wrap gap-2 mb-4">
+                      {holiday.dates.slice(0, 3).map((date, index) => (
+                        <span
+                          key={index}
+                          className="bg-indigo-50 text-indigo-700 px-2 py-1 rounded-md text-xs"
+                        >
+                          {formatDate(date)}
+                        </span>
+                      ))}
+                      {holiday.dates.length > 3 && (
+                        <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
+                          +{holiday.dates.length - 3} more
+                        </span>
+                      )}
+                    </div>
+                    <div className="flex justify-end space-x-2">
+                      <button
+                        onClick={() => handleEdit(holiday)}
+                        className="p-2 text-indigo-600 hover:text-indigo-800 focus:outline-none"
                       >
-                        {formatDate(date)}
-                      </span>
-                    ))}
-                    {holiday.dates.length > 3 && (
-                      <span className="bg-gray-100 text-gray-700 px-2 py-1 rounded-md text-xs">
-                        +{holiday.dates.length - 3} more
-                      </span>
-                    )}
-                  </div>
-                  <div className="flex justify-end space-x-2">
-                    <button
-                      onClick={() => handleEdit(holiday)}
-                      className="p-2 text-indigo-600 hover:text-indigo-800 focus:outline-none"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => setShowDeleteConfirm(holiday.id)}
-                      className="p-2 text-red-600 hover:text-red-800 focus:outline-none"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
+                        <Edit className="h-4 w-4" />
+                      </button>
+                      <button
+                        onClick={() => setShowDeleteConfirm(holiday.id)}
+                        className="p-2 text-red-600 hover:text-red-800 focus:outline-none"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-          </div>
-        )}
+              ))}
+            </div>
+          )}
+        </>}
       </div>
 
       {/* Delete Confirmation Modal */}
