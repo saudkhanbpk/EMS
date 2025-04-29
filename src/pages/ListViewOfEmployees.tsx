@@ -112,6 +112,7 @@ const EmployeeAttendanceTable = () => {
   const [isinAM, setIsinAM] = useState(true);  // AM/PM toggle
   const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [absentloading,setabsentloading]=useState(false)
   // const [formattedDate2, setformattedDate2] = useState('');
   const [startdate, setStartdate] = useState('');
   const [enddate, setEnddate] = useState('');
@@ -163,6 +164,7 @@ const EmployeeAttendanceTable = () => {
   }
 
  async function handleopenabsentmodal(id:string,) {
+  setabsentloading(true)
   setslecteduser(id)
   setModalVisible(true);
     console.log("absent id", id);
@@ -186,7 +188,7 @@ setabsentid(dataid)
   }
   console.log('Today\'s attendance:', data)
 }
-    
+    setabsentloading(false)
   }
 
 
@@ -1727,7 +1729,7 @@ useEffect(() => {
   // Fetch attendance data
   const fetchAttendanceData = async (date) => {
     setLoading(true);
-    const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD format
+    const formattedDate = date.toISOString().split("T")[0]; 
   
     try {
       // Fetch all users
@@ -1848,6 +1850,7 @@ useEffect(() => {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + (direction === "prev" ? -1 : 1));
     setSelectedDate(newDate);
+
     // console.log("passing time : " , newDate);
     // console.log("pakistan time time : " , pakistanTime);
     if (DetailedVieww === true) {
@@ -2594,6 +2597,7 @@ useEffect(() => {
                     </button>
                     <button
                       type="button"
+                      disabled={absentloading}
                       className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
                       onClick={handleSaveChanges}
                     >

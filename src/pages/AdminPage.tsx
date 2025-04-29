@@ -140,7 +140,7 @@ const AdminPage: React.FC = () => {
   }, []);
 
   const handleClose = () => {
-    setsideopen(false);
+   setPermanentopen(false);
   };
   const handleOpen = () => {
     setsideopen(true);
@@ -792,6 +792,7 @@ const AdminPage: React.FC = () => {
                     <button
                       onClick={() => {
                         setSelectedTab("Holidays");
+                        handleClose()
                         handleSoftwareComplaintsClick();
                       }}
                       className={`w-full text-left p-2 rounded ${selectedTab === "Holidays"
@@ -909,13 +910,13 @@ const AdminPage: React.FC = () => {
           </div>
         )}
         {selectedTab === "Updates" && (
-          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div  className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <Updates />
           </div>
         )}
           {selectedTab === "Holidays" && (
-          <div  className={`flex-1 py-10 px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
+          <div  className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${ permanentopen && window.innerWidth>=900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <AdminHoliday/>
           </div>

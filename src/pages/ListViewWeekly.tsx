@@ -615,6 +615,10 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                   <p className="font-medium">{entry.absentDays}</p>
                 </div>
                 <div className="py-1">
+                  <span className="text-gray-500">Remote Days:</span>
+                  <p className="font-medium">{entry.remoteDays}</p>
+                </div>
+                <div className="py-1">
                   <span className="text-gray-500">Total Hours:</span>
                   <p className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</p>
                 </div>

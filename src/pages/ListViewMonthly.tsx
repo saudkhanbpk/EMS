@@ -496,6 +496,11 @@ const handleDownload = async (userId: string, fullName: string) => {
               <div className="font-medium">{entry.absentDays}</div>
             </div>
             
+            <div className="flex flex-col">
+              <span className="text-gray-500 text-[10px] xs:text-[11px]">Remote Work</span>
+              <div className="font-medium">{entry.remoteDays}</div>
+            </div>
+
             <div className="flex flex-col col-span-2">
               <span className="text-gray-500 text-[10px] xs:text-[11px]">Total Hours Worked</span>
               <div className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</div>

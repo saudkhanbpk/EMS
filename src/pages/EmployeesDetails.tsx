@@ -26,7 +26,8 @@ interface Project {
 const EmployeesDetails = ({ selectedTab }) => {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [employee , setEmployee] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState<boolean>(true);
+  const [employee, setEmployee] = useState<Employee | null>(null);
   const [employeeview, setEmployeeView] = useState<"generalview" | "detailview">("generalview");
   const [employeeId, setEmployeeId] = useState<string>('');
   const [currentEmployee, setCurrentEmployee] = useState<Employee | null>(null);
@@ -72,6 +73,7 @@ const EmployeesDetails = ({ selectedTab }) => {
 
   // Fetch employees with their projects and tasks
   const fetchEmployees = async () => {
+    setLoading(true);
     try {
       // Fetch employees
       const { data: employeesData, error: employeesError } = await supabase
@@ -93,12 +95,30 @@ const EmployeesDetails = ({ selectedTab }) => {
         .select("*");
 
       if (tasksError) throw tasksError;
+      const { data: increamentdata, error: increamenterror } = await supabase
+        .from("sallery_increment")
+        .select("*")
+      if (increamenterror) {
+        console.error("Error fetching increament data:", increamenterror.message);
+      }
+      console.log("Increament data array:", increamentdata);
 
       // Process employee data
       const employeesWithProjects = employeesData.map(employee => {
         const employeeProjects = projectsData.filter(project =>
           project.devops?.some((dev: any) => dev.id === employee.id)
         );
+        let increamentdataone;
+        const incrementone = increamentdata?.filter((increament) => {
+          return increament.user_id === employee.id;
+        })
+        if (incrementone?.length) {
+          increamentdataone = incrementone[incrementone.length - 1].increment_date
+          console.log(increamentdata)
+        } else {
+          increamentdataone = "N/A"
+        }
+        console.log("Increment one  data:", incrementone);
 
         const employeeTasks = tasksData.filter(task =>
           task.devops?.some(dev => dev.id === employee.id) &&
@@ -121,6 +141,9 @@ const EmployeesDetails = ({ selectedTab }) => {
 
         return {
           ...employee,
+          joining_date: employee.joining_date || "NA",
+          lastincrement: increamentdataone,
+          upcomingincrement: "N/A",
           projects: employeeProjects,
           projectid: employeeProjects.map(project => project.id),
           TotalKPI: totalKPI,
@@ -130,6 +153,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       });
 
       setEmployees(employeesWithProjects);
+      setLoading(false);
     } catch (error) {
       console.error("Error fetching data:", error);
     }
@@ -148,6 +172,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       .from("tasks_of_projects")
       .select("*")
 
+
     if (tasksError) {
       console.error("Error fetching tasks:", tasksError.message);
       return;
@@ -165,6 +190,10 @@ const EmployeesDetails = ({ selectedTab }) => {
       const employeeProjects = projectsData.filter(project =>
         project.devops?.some((dev: any) => dev.id === employee.id)
       );
+      let increment = increamentdata?.filter((increament) => {
+        return increament.user_id === employee.id;
+      })
+      console.log("Increment data:", increment);
 
       // Find all tasks assigned to this employee that aren't done
       const employeeTasks = tasksData.filter(task =>
@@ -353,6 +382,42 @@ const EmployeesDetails = ({ selectedTab }) => {
     setSignupData({ email: "", password: "" });
     if (formRef.current) formRef.current.reset();
   };
+
+  const Loader = () => (
+    <div className="flex flex-col items-center justify-center min-h-[200px] py-8">
+      <svg className="animate-spin h-14 w-14 text-[#9A00FF]" viewBox="0 0 50 50">
+        <circle
+          className="opacity-20"
+          cx="25"
+          cy="25"
+          r="20"
+          stroke="#9A00FF"
+          strokeWidth="6"
+          fill="none"
+        />
+        <path
+          className="opacity-80"
+          fill="none"
+          stroke="url(#gradient)"
+          strokeWidth="6"
+          strokeLinecap="round"
+          strokeDasharray="65, 150"
+          d="M25 5
+             a 20 20 0 0 1 0 40
+             a 20 20 0 0 1 0 -40"
+        />
+        <defs>
+          <linearGradient id="gradient" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0%" stopColor="#9A00FF" />
+            <stop offset="100%" stopColor="#5A00B4" />
+          </linearGradient>
+        </defs>
+      </svg>
+      <div className="pt-4 text-[#9A00FF] font-semibold text-lg animate-pulse">
+        Loading employees...
+      </div>
+    </div>
+  );
 
   const handleCancel = () => {
     resetForm();
@@ -845,8 +910,8 @@ const EmployeesDetails = ({ selectedTab }) => {
 
                 {/* Employee Table */}
 
-                <div className="w-full">
-                  {/* Desktop table - hidden on small screens, with improved responsiveness */}
+                {loading ? <Loader /> : (<div className="w-full">
+
 
                   <div className="hidden md:block w-full">
                     <div className="w-full inline-block align-middle">
@@ -861,6 +926,12 @@ const EmployeesDetails = ({ selectedTab }) => {
                                 Joined
                               </th>
 
+                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Last increament
+                              </th>
+                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Upcoming increament
+                              </th>
                               <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Projects
                               </th>
@@ -899,13 +970,31 @@ const EmployeesDetails = ({ selectedTab }) => {
                                   </button>
                                 </td>
                                 <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
-                                  {new Date(entry.joining_date).toLocaleDateString('en-US', {
-                                    year: 'numeric',
-                                    month: 'short',
-                                    day: 'numeric'
-                                  })}
+                                  {(() => {
+                                    const date = new Date(entry.joining_date);
+                                    return isNaN(date.getTime())
+                                      ? "N/A"
+                                      : date.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                      });
+                                  })()}
                                 </td>
 
+
+                                <td className="px-4 lg:px-6 py-4">
+
+                                  <span className="text-sm">
+                                    {entry.lastincrement}
+                                  </span>
+                                </td>
+                                <td className="px-4 lg:px-6 py-4">
+
+                                  <span className="text-sm">
+                                    {entry.upcomingincrement}
+                                  </span>
+                                </td>
                                 <td className="px-4 lg:px-6 py-4">
                                   {/* {entry.projects?.length > 0 ? (
                                 <div className="flex flex-wrap gap-1 lg:gap-1.5">
@@ -1188,7 +1277,11 @@ const EmployeesDetails = ({ selectedTab }) => {
                       </div>
                     ))}
                   </div>
-                </div>
+
+                </div>)}
+
+
+
               </div>
             )}
           </div>
