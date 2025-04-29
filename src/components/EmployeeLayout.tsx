@@ -86,7 +86,7 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Tasks', href: '/tasks', icon: ListTodo },
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
-    { name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote},
+    { name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote },
     // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
 
@@ -106,7 +106,7 @@ const EmployeeLayout: React.FC = () => {
       {/* <div className="flex h-screen"> */}
       <div >
         <div className="min-h-screen bg-gray-100 overflow-hidden">
-         <Updateview/>
+          <Updateview />
           <div className="flex ">
 
             {/* Sidebar Toggle Button (Only for Small Screens) */}
@@ -192,7 +192,7 @@ const EmployeeLayout: React.FC = () => {
             {/* Main Content */}
             <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
              `}>
-              <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "p-8"}`}>
+              <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "sm:p-8"}`}>
                 <Outlet />
               </div>
             </div>
