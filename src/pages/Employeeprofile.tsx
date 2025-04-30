@@ -5,7 +5,7 @@ import { FaEdit } from "react-icons/fa";
 import { startOfMonth } from "date-fns";
 import {
   CheckCircle, PieChart, Users, CalendarClock, Moon, AlarmClockOff, Watch, Info, Landmark,
-  Clock, DollarSign, FileMinusIcon, TrendingDown, TrendingUp, FileText
+  Clock, DollarSign, FileMinusIcon, TrendingDown, TrendingUp, FileText, History
 } from 'lucide-react';
 
 
@@ -359,6 +359,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     increment_amount: "",
     increment_date: new Date().toISOString().split('T')[0], // Default to today's date
     basic_sallery: "",
+    upcomming_increment: "",
     after_increment: ""
   });
 
@@ -375,9 +376,25 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     role: "",
     profile_image: null,
     joining_date: "",
+    CNIC: "",
+    bank_account: "",
   });
 
+  // Define the type for increment history items
+  interface IncrementHistoryItem {
+    id?: string;
+    user_id?: string;
+    increment_date: string;
+    increment_amount: string;
+    basic_sallery: string;
+    after_increment: string;
+    upcomming_increment?: string;
+    created_at?: string;
+  }
+
   const [upcomingIncrementDate, setUpcomingIncrementDate] = useState("");
+  const [showIncrementHistory, setShowIncrementHistory] = useState(false);
+  const [incrementHistory, setIncrementHistory] = useState<IncrementHistoryItem[]>([]);
 
   const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
@@ -393,6 +410,41 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     }
   };
 
+  const fetchIncrementHistory = async () => {
+    try {
+      const { data: incrementHistoryData, error: historyError } = await supabase
+        .from("sallery_increment")
+        .select("*")
+        .eq("user_id", employeeid)
+        .order("created_at", { ascending: false });
+
+      if (historyError) {
+        console.error("Error fetching increment history:", historyError);
+        return [];
+      }
+
+      console.log("Increment history:", incrementHistoryData);
+
+      // Convert any null values to empty strings to avoid rendering issues
+      const formattedHistory: IncrementHistoryItem[] = (incrementHistoryData || []).map(item => ({
+        id: item.id,
+        user_id: item.user_id,
+        increment_date: item.increment_date || '',
+        increment_amount: item.increment_amount || '0',
+        basic_sallery: item.basic_sallery || '0',
+        after_increment: item.after_increment || '0',
+        upcomming_increment: item.upcomming_increment || '',
+        created_at: item.created_at
+      }));
+
+      setIncrementHistory(formattedHistory);
+      return formattedHistory;
+    } catch (err) {
+      console.error("Error in fetchIncrementHistory:", err);
+      return [];
+    }
+  };
+
   const fetchEmployee = async () => {
     try {
       setLoading(true);
@@ -405,17 +457,34 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       if (userError) throw userError;
 
-      // Fetch past increments
+      // Fetch last increment
       const { data: pastIncrements, error: incrementError } = await supabase
         .from("sallery_increment")
-        .select("increment_date, increment_amount")
+        .select("increment_date, increment_amount, basic_sallery, after_increment, upcomming_increment")
         .eq("user_id", employeeid)
-        .lt("increment_date", new Date().toISOString())
-        .order("increment_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(1);
 
-      if (incrementError) console.error("Error fetching past increments:", incrementError);
-      if (pastIncrements?.length) setLastIncrement(pastIncrements[0]);
+      if (incrementError) {
+        console.error("Error fetching past increments:", incrementError);
+      } else {
+        console.log("Last increment data:", pastIncrements);
+        if (pastIncrements?.length) {
+          setLastIncrement(pastIncrements[0]);
+          if (pastIncrements[0].upcomming_increment) {
+            // Format the date as YYYY-MM-DD for the date input field
+            const upcomingDate = new Date(pastIncrements[0].upcomming_increment);
+            if (!isNaN(upcomingDate.getTime())) {
+              const formattedDate = upcomingDate.toISOString().split('T')[0];
+              console.log("Formatted upcoming increment date:", formattedDate);
+              setUpcomingIncrementDate(formattedDate);
+            } else {
+              console.log("Invalid upcoming increment date:", pastIncrements[0].upcomming_increment);
+              setUpcomingIncrementDate("");
+            }
+          }
+        }
+      }
 
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
@@ -454,7 +523,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       attendanceData.forEach(log => {
         const checkIn = new Date(log.check_in);
-        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime()); // fallback to check_in time
+        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
 
         let hoursWorked = (checkOut - checkIn) / (1000 * 60 * 60);
 
@@ -465,10 +534,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         breaks.forEach(b => {
           if (b.start_time) {
             const breakStart = new Date(b.start_time);
-            // If end_time is missing, calculate only 1 hour of break
             const breakEnd = b.end_time
               ? new Date(b.end_time)
-              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000);
 
             breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
           }
@@ -558,12 +626,12 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // Filter active tasks where the employee is in the devops array or is the user_id
       const employeeTasks = tasksData.filter(task => {
         // Check if task is directly assigned to the employee
-        if (task.user_id === userData.id) return true;
+        if (task.user_id === userData.id && task.status?.toLowerCase() !== "done") return true;
 
         // Check if employee is in the devops array and task is not done
         if (task.devops && Array.isArray(task.devops)) {
           return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id) &&
-            task.status?.toLowerCase() == "done";
+            task.status?.toLowerCase() !== "done";
         }
 
         return false;
@@ -586,7 +654,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       console.log("All-time active tasks found:", employeeTasks.length);
       console.log("All-time completed tasks found:", completedTasks.length);
 
-      const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+      const totalKPI = completedTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
       let profileImageUrl = null;
       if (userData.profile_image) {
@@ -629,22 +697,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         role: userData.role || "",
         profile_image: null,
         joining_date: userData.joining_date || "",
+        CNIC: userData.CNIC || "",
+        bank_account: userData.bank_account || "",
       });
-
-      // Fetch upcoming increment from sallery_increment table
-      const { data: upcomingIncrements, error: upcomingIncrementError } = await supabase
-        .from("sallery_increment")
-        .select("increment_date")
-        .eq("user_id", employeeid)
-        .gte("increment_date", new Date().toISOString())
-        .order("increment_date", { ascending: true })
-        .limit(1);
-
-      if (upcomingIncrementError) {
-        console.error("Error fetching upcoming increments:", upcomingIncrementError);
-      } else if (upcomingIncrements?.length > 0) {
-        setUpcomingIncrementDate(upcomingIncrements[0].increment_date);
-      }
 
     } catch (err) {
       setError(err.message);
@@ -868,6 +923,21 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   }, [employeeid]);
 
   const handleEditClick = () => {
+    // Initialize the incrementData with the lastIncrement data if available
+    if (lastIncrement) {
+      setIncrementData(prevData => ({
+        ...prevData,
+        increment_date: lastIncrement.increment_date || new Date().toISOString().split('T')[0],
+        increment_amount: lastIncrement.increment_amount || "",
+        basic_sallery: lastIncrement.basic_sallery || "",
+        after_increment: lastIncrement.after_increment || "",
+        upcomming_increment: lastIncrement.upcomming_increment || upcomingIncrementDate || ""
+      }));
+    }
+
+    // Log the current upcomingIncrementDate for debugging
+    console.log("Current upcomingIncrementDate:", upcomingIncrementDate);
+
     setIsEditMode(true);
   };
 
@@ -877,6 +947,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       [e.target.name]: e.target.value,
     });
   };
+
 
   const handleSubmitIncrement = async (e) => {
     e.preventDefault();
@@ -895,7 +966,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       const updatedIncrementData = {
         ...incrementData,
         basic_sallery: currentSalary.toString(),
-        after_increment: newSalary.toString()
+        after_increment: newSalary.toString(),
+        upcomming_increment: incrementData.upcomming_increment
       };
 
       // Insert the increment record
@@ -918,7 +990,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         increment_amount: incrementData.increment_amount,
         increment_date: incrementData.increment_date,
         basic_sallery: currentSalary.toString(),
-        after_increment: newSalary.toString()
+        after_increment: newSalary.toString(),
+        upcomming_increment: incrementData.upcomming_increment
       });
 
       // Refresh the data
@@ -929,7 +1002,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         increment_amount: "",
         increment_date: new Date().toISOString().split('T')[0],
         basic_sallery: "",
-        after_increment: ""
+        after_increment: "",
+        upcomming_increment: ""
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -973,6 +1047,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           role: formData.role,
           profile_image: profileImagePath,
           joining_date: formData.joining_date,
+          CNIC: formData.CNIC,
+          bank_account: formData.bank_account,
         })
         .eq("id", employeeid)
         .select();
@@ -981,13 +1057,12 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       // Handle upcoming increment date if it has changed
       if (upcomingIncrementDate) {
-        // Check if there's an existing upcoming increment record
+        // Check if there's an existing increment record for this user
         const { data: existingIncrements, error: fetchError } = await supabase
           .from("sallery_increment")
           .select("id")
           .eq("user_id", employeeid)
-          .gte("increment_date", new Date().toISOString())
-          .order("increment_date", { ascending: true })
+          .order("created_at", { ascending: false })
           .limit(1);
 
         if (fetchError) {
@@ -997,11 +1072,13 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             // Update existing record
             const { error: updateError } = await supabase
               .from("sallery_increment")
-              .update({ increment_date: upcomingIncrementDate })
+              .update({ upcomming_increment: upcomingIncrementDate })
               .eq("id", existingIncrements[0].id);
 
             if (updateError) {
               console.error("Error updating increment date:", updateError);
+            } else {
+              console.log("Successfully updated upcoming increment date:", upcomingIncrementDate);
             }
           } else {
             // Insert new record with default values
@@ -1009,14 +1086,17 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               .from("sallery_increment")
               .insert({
                 user_id: employeeid,
-                increment_date: upcomingIncrementDate,
+                upcomming_increment: upcomingIncrementDate,
                 increment_amount: "0", // Default value
                 basic_sallery: formData.salary || "0",
-                after_increment: formData.salary || "0"
+                after_increment: formData.salary || "0",
+                increment_date: new Date().toISOString() // Set current date as increment_date
               });
 
             if (insertError) {
               console.error("Error inserting increment record:", insertError);
+            } else {
+              console.log("Successfully inserted new record with upcoming increment date:", upcomingIncrementDate);
             }
           }
         }
@@ -1069,7 +1149,18 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch sm:items-center w-full sm:w-auto">
           <button
-            onClick={() => setIncrementModel(true)}
+            onClick={() => {
+              // Initialize the incrementData with default values
+              setIncrementData({
+                user_id: employeeid,
+                increment_amount: "",
+                increment_date: new Date().toISOString().split('T')[0], // Default to today's date
+                basic_sallery: employeeData?.salary || "",
+                upcomming_increment: upcomingIncrementDate || "",
+                after_increment: ""
+              });
+              setIncrementModel(true);
+            }}
             className="flex justify-center items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition duration-200 w-full sm:w-auto"
           >
             Add Increment
@@ -1256,13 +1347,33 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Bank Account No</span>
+              <span className="text-gray-500 text-sm">Bank Account</span>
               <span className="text-gray-600 text-sm">{employeeData?.bank_account || "N/A"}</span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Employement Duration</span>
               <span className="text-gray-600 text-sm">{employeeData?.created_at ? getEmploymentDuration(employeeData.created_at) : "N/A"}</span>
+            </div>
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Last Increment</span>
+              <span className="text-gray-600 text-sm">
+                {lastIncrement
+                  ? `Rs. ${lastIncrement.increment_amount} on ${new Date(lastIncrement.increment_date).toLocaleDateString()}`
+                  : "N/A"}
+              </span>
+            </div>
+
+
+
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Upcoming Increment</span>
+              <span className="text-gray-600 text-sm">
+                {upcomingIncrementDate
+                  ? new Date(upcomingIncrementDate).toLocaleDateString()
+                  : "N/A"}
+              </span>
             </div>
           </div>
         </div>
@@ -1311,24 +1422,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                   : "0"}
               </span>
             </div>
-
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Last Increment</span>
-              <span className="text-gray-600 text-sm">
-                {lastIncrement
-                  ? `Rs. ${lastIncrement.increment_amount} on ${new Date(lastIncrement.increment_date).toLocaleDateString()}`
-                  : "N/A"}
-              </span>
-            </div>
-
-            {lastIncrement && lastIncrement.basic_sallery && lastIncrement.after_increment && (
-              <div className="flex justify-between">
-                <span className="text-gray-500 text-sm">Increment Details</span>
-                <span className="text-gray-600 text-sm">
-                  {`Rs. ${lastIncrement.basic_sallery} → Rs. ${lastIncrement.after_increment}`}
-                </span>
-              </div>
-            )}
 
 
           </div>
@@ -1410,6 +1503,29 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                   onChange={handleIncrementChange}
                   required
                 />
+              </div>
+              <div className="mb-4">
+                <label htmlFor="upcomming_increment" className="block mb-1 font-medium">
+                  Upcoming Increment:
+                </label>
+                <input
+                  className="p-2 rounded-xl bg-gray-100 w-full"
+                  type="date"
+                  name="upcomming_increment"
+                  value={incrementData.upcomming_increment || ""}
+                  onChange={(e) => {
+                    console.log("New upcoming increment date in modal:", e.target.value);
+                    setIncrementData({
+                      ...incrementData,
+                      upcomming_increment: e.target.value
+                    });
+                  }}
+                  required
+                />
+                {/* Debug info */}
+                <div className="text-xs text-gray-400 mt-1">
+                  Current value: {incrementData.upcomming_increment || "Not set"}
+                </div>
               </div>
 
               <div className="text-center mt-6">
@@ -1609,14 +1725,57 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
+                  <label className="block text-gray-700 font-medium">CNIC</label>
+                  <input
+                    type="text"
+                    name="CNIC"
+                    value={formData.CNIC}
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Enter CNIC number"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <label className="block text-gray-700 font-medium">Bank Account</label>
+                  <input
+                    type="text"
+                    name="bank_account"
+                    value={formData.bank_account}
+                    onChange={handleChange}
+                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
+                    placeholder="Enter bank account number"
+                  />
+                </div>
+
+                <div className="space-y-2">
                   <label className="block text-gray-700 font-medium">Upcoming Increment Date</label>
                   <input
                     type="date"
                     name="upcoming_increment"
                     value={upcomingIncrementDate}
-                    onChange={(e) => setUpcomingIncrementDate(e.target.value)}
+                    onChange={(e) => {
+                      console.log("New upcoming increment date:", e.target.value);
+                      setUpcomingIncrementDate(e.target.value);
+                    }}
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
+                  {/* Debug info */}
+                  <div className="text-xs text-gray-400">
+                    Current value: {upcomingIncrementDate || "Not set"}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      await fetchIncrementHistory();
+                      setShowIncrementHistory(true);
+                    }}
+                    className="mt-2 w-full flex justify-center items-center px-4 py-2 bg-purple-100 text-purple-700 rounded-lg hover:bg-purple-200 transition duration-200"
+                  >
+                    <History className="mr-2 h-4 w-4" />
+                    View Increment History
+                  </button>
                 </div>
               </div>
             </div>
@@ -1643,6 +1802,77 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       )}
 
 
+      {/* Increment History Modal */}
+      {showIncrementHistory && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Salary Increment History</h2>
+              <button
+                onClick={() => setShowIncrementHistory(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {incrementHistory.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="min-w-full bg-white border border-gray-200">
+                  <thead>
+                    <tr className="bg-gray-100">
+                      <th className="py-2 px-4 border-b text-left">Date</th>
+                      <th className="py-2 px-4 border-b text-left">Previous Salary</th>
+                      <th className="py-2 px-4 border-b text-left">Increment Amount</th>
+                      <th className="py-2 px-4 border-b text-left">After Increment</th>
+                      <th className="py-2 px-4 border-b text-left">Next Increment Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {incrementHistory.map((increment, index) => (
+                      <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                        <td className="py-2 px-4 border-b">
+                          {new Date(increment.increment_date).toLocaleDateString()}
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          {increment.basic_sallery || "N/A"}
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          <span className="text-green-600 font-medium">
+                            +{increment.increment_amount || "0"}
+                          </span>
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          {increment.after_increment || "N/A"}
+                        </td>
+                        <td className="py-2 px-4 border-b">
+                          {increment.upcomming_increment
+                            ? new Date(increment.upcomming_increment).toLocaleDateString()
+                            : "Not scheduled"}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8">
+                <p className="text-gray-500">No increment history found for this employee.</p>
+              </div>
+            )}
+
+            <div className="mt-6 flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowIncrementHistory(false)}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -13,7 +13,8 @@ import {
   X,
   Eye,
   EyeOff,
-  Calendar
+  Calendar,
+  DollarSign 
 } from "lucide-react";
 import { FaEdit } from "react-icons/fa";
 import { useAuthStore } from "../lib/store";
@@ -34,6 +35,20 @@ interface UserProfile {
   per_hour_pay?: string;
   role?: string;
   created_at: string;
+  CNIC?: string;
+  bank_account?: string;
+  profile_image_url?: string;
+}
+
+interface IncrementData {
+  id?: string;
+  user_id?: string;
+  increment_date: string;
+  increment_amount: string;
+  basic_sallery: string;
+  after_increment: string;
+  upcomming_increment?: string;
+  created_at?: string;
 }
 
 const ProfileCard: React.FC = () => {
@@ -54,7 +69,10 @@ const ProfileCard: React.FC = () => {
     per_hour_pay: "",
     role: "",
     profile_image: null as File | null,
+    CNIC: "",
+    bank_account: "",
   });
+  const [lastIncrement, setLastIncrement] = useState<IncrementData | null>(null);
   const [showPasswords, setShowPasswords] = useState({
     current: false,
     new: false,
@@ -102,13 +120,30 @@ const ProfileCard: React.FC = () => {
           if (data.profile_image.startsWith("http")) {
             profileImageUrl = data.profile_image;
           } else {
-            const { data: { publicUrl } } = await supabase
+            const { data: { publicUrl } } = supabase
               .storage
               .from("profilepics")
               .getPublicUrl(data.profile_image);
             profileImageUrl = publicUrl;
           }
-        } 
+        }
+
+        // Fetch last increment
+        const { data: pastIncrements, error: incrementError } = await supabase
+          .from("sallery_increment")
+          .select("increment_date, increment_amount, basic_sallery, after_increment, upcomming_increment")
+          .eq("user_id", authUser.id)
+          .order("created_at", { ascending: false })
+          .limit(1);
+
+        if (incrementError) {
+          console.error("Error fetching past increments:", incrementError);
+        } else {
+          console.log("Last increment data:", pastIncrements);
+          if (pastIncrements?.length) {
+            setLastIncrement(pastIncrements[0] as IncrementData);
+          }
+        }
 
         setUser({ ...data, profile_image_url: profileImageUrl });
         setFormData({
@@ -123,6 +158,8 @@ const ProfileCard: React.FC = () => {
           per_hour_pay: data.per_hour_pay || "",
           role: data.role || "",
           profile_image: null,
+          CNIC: data.CNIC || "",
+          bank_account: data.bank_account || "",
         });
       } catch (err: any) {
         setError(err.message);
@@ -181,6 +218,8 @@ const ProfileCard: React.FC = () => {
           per_hour_pay: formData.per_hour_pay,
           role: formData.role,
           profile_image: profileImagePath,
+          CNIC: formData.CNIC,
+          bank_account: formData.bank_account,
         })
         .eq("id", authUser?.id)
         .select();
@@ -350,6 +389,30 @@ const ProfileCard: React.FC = () => {
               </select>
             </div> */}
             <div>
+              <label className="text-gray-700">CNIC</label>
+              <input
+                type="text"
+                name="CNIC"
+                value={formData.CNIC}
+                onChange={handleChange}
+                className="mt-2 p-2 border rounded w-full"
+                placeholder="Enter CNIC number"
+              />
+            </div>
+
+            <div>
+              <label className="text-gray-700">Bank Account</label>
+              <input
+                type="text"
+                name="bank_account"
+                value={formData.bank_account}
+                onChange={handleChange}
+                className="mt-2 p-2 border rounded w-full"
+                placeholder="Enter bank account number"
+              />
+            </div>
+
+            <div>
               <label className="text-gray-700">Profile Image</label>
               <input
                 type="file"
@@ -482,6 +545,22 @@ const ProfileCard: React.FC = () => {
               <Calendar className="w-5 h-5" />
               <span className="text-gray-700">{user.joining_date || "N/A"}</span>
             </div>
+            <div className="flex items-center space-x-2 text-purple-600">
+              <CreditCard className="w-5 h-5" />
+              <span className="text-gray-700">{user.CNIC || "N/A"}</span>
+            </div>
+            <div className="flex items-center space-x-2 text-purple-600">
+              <Building2 className="w-5 h-5" />
+              <span className="text-gray-700">{user.bank_account || "N/A"}</span>
+            </div>
+            {lastIncrement && (
+              <div className="flex items-center space-x-2 text-purple-600">
+                <DollarSign className="w-5 h-5" />
+                <span className="text-gray-700">
+                  Last Increment: {lastIncrement.increment_amount} on {new Date(lastIncrement.increment_date).toLocaleDateString()}
+                </span>
+              </div>
+            )}
           </div>
         )}
       </div>

@@ -3,8 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { Clock, User, Eye, EyeOff } from 'lucide-react';
-import { onMessage } from "firebase/messaging";
-import { messaging, GenerateToken } from "../../notifications/firebase";
+
 
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -17,13 +16,14 @@ const Login: React.FC = () => {
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
 
+
   // 🔁 Redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
-        const isAdmin = session.user.email.endsWith('@admin.com');        
+        const isAdmin = session.user.email.endsWith('@admin.com');
         navigate(isAdmin ? '/admin' : '/');
       }
     };
@@ -61,11 +61,7 @@ const Login: React.FC = () => {
         localStorage.setItem('user_id', authData.user.id);
         localStorage.setItem('user_email', authData.user.email);
 
-        // Notifications
-        GenerateToken();
-        onMessage(messaging, (payload) => {
-          console.log('Message received: ', payload);
-        });
+        // Notification permission will be requested automatically by NotificationProvider
 
         // Redirect
         navigate(isAdmin ? '/admin' : '/');

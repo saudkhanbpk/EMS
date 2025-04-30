@@ -213,16 +213,16 @@ function TaskBoard({ setSelectedTAB }) {
     const fetchTasks = async () => {
       try {
         const userId = localStorage.getItem("user_id");
-    
+
         // Step 1: Fetch all tasks in the selected project
         const { data: taskData, error: taskError } = await supabase
           .from("tasks_of_projects")
           .select("*")
           .eq("project_id", id || projectIdd[0])
           .order("created_at", { ascending: true });
-    
+
         if (taskError) throw taskError;
-    
+
         // Step 2: Filter tasks based on devops array (manually, not joined)
         const filteredTasks = taskData.filter((task) => {
           return (
@@ -232,48 +232,48 @@ function TaskBoard({ setSelectedTAB }) {
             task.devops.length === 0
           );
         });
-    
+
         // Step 3: Fetch all comments
         const { data: commentsData, error: commentsError } = await supabase
           .from("comments")
           .select("*");
-    
+
         if (commentsError) throw commentsError;
-    
+
         // Step 4: Fetch all users
         const { data: usersData, error: usersError } = await supabase
           .from("users")
           .select("id, full_name");
-    
+
         if (usersError) throw usersError;
-    
+
         // Step 5: Create user map
         const userMap = usersData.reduce((acc, user) => {
           acc[user.id] = user.full_name;
           return acc;
         }, {});
-    
+
         // Step 6: Enrich comments with user names
         const enrichedComments = commentsData.map((comment) => ({
           ...comment,
           commentor_name: userMap[comment.user_id] || "Unknown User",
         }));
-    
+
         setComments(enrichedComments); // For global comment list if needed
-    
+
         // Step 7: Attach comments and images to tasks
         const processedTasks = filteredTasks.map((task) => {
           const taskComments = enrichedComments.filter(
             (comment) => comment.task_id === task.id
           );
-    
+
           const imageData = task.imageurl
             ? {
                 image_url: task.imageurl,
                 thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
               }
             : {};
-    
+
           return {
             ...task,
             comments: taskComments,
@@ -289,23 +289,23 @@ function TaskBoard({ setSelectedTAB }) {
           return (priorityOrder[aPriority] ?? 3) - (priorityOrder[bPriority] ?? 3);
         });
         console.log("the task is",processedTasks)
-    
+
         setTasks(processedTasks);
-    
+
         // Step 8: Group comments by task ID
         const commentsByTask = enrichedComments.reduce((acc, comment) => {
           if (!acc[comment.task_id]) acc[comment.task_id] = [];
           acc[comment.task_id].push(comment);
           return acc;
         }, {});
-    
+
         setCommentByTaskID(commentsByTask);
       } catch (error) {
         console.error("Error fetching tasks:", error);
         // Show toast, alert, etc. if needed
       }
     };
-    
+
     fetchTasks();
   }, [id, projectIdd]);
 
@@ -714,11 +714,11 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
           {task.devops?.length > 0 && (
             <div className="flex justify-between items-center mt-1">
               <div className="flex items-center gap-2">
-                <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-medium font-semibold flex items-center justify-center">
-                  {task.devops.map((dev) => dev.name[0].toUpperCase()).join("")}
+                <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-semibold flex items-center justify-center">
+                  {task.devops.map((dev) => (dev.name ? dev.name[0].toUpperCase() : '')).join("")}
                 </div>
                 <span className="text-[13px] text-[#404142]">
-                  {task.devops.map((dev) => dev.name.charAt(0).toUpperCase() + dev.name.slice(1)).join(", ")}
+                  {task.devops.map((dev) => (dev.name ? dev.name.charAt(0).toUpperCase() + dev.name.slice(1) : 'Unknown')).join(", ")}
                 </span>
               </div>
               {task.commentCount > 0 && (
@@ -856,7 +856,7 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
                     <img
                       src={openedTask.imageurl}
                       alt="Task"
-                      className="max-w-full p-2 border-2 border-gray-200 rounded-2xl mb-4 max-h-[60vh] object-contain rounded cursor-pointer"
+                      className="max-w-full p-2 border-2 border-gray-200 rounded-2xl mb-4 max-h-[60vh] object-contain cursor-pointer"
                       onClick={() => {
                         setFullImageUrl(openedTask.imageurl || "");
                         setIsFullImageOpen(true);
@@ -896,7 +896,7 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600 mb-6">
                   <div><span className="font-semibold">KPIs:</span> {openedTask.score}</div>
                   <div>
-                    <span className="font-semibold">Developer:</span> {openedTask.devops?.map((dev) => dev.name).join(", ")}
+                    <span className="font-semibold">Developer:</span> {openedTask.devops?.map((dev) => (dev.name ? dev.name : 'Unknown')).join(", ")}
                   </div>
                   {openedTask.priority && (
                     <div>

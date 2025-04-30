@@ -10,6 +10,7 @@ import { Dialog } from "@headlessui/react";
 import DailyStatusTable from '../components/DailyStatusTable';
 import BreakRecordsTable from '../components/BreakRecordTable';
 import MonthlyRecord from '../components/MonthlyRecords';
+
 import {
   AreaChart,
   Area,
@@ -454,11 +455,11 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const handleDayNext = () => {
     const newDate = new Date(selectedDate);
     newDate.setDate(selectedDate.getDate() + 1);
-  
+
     const today = new Date();
     today.setHours(0, 0, 0, 0); // Normalize to midnight
     newDate.setHours(0, 0, 0, 0); // Normalize to midnight
-  
+
     if (newDate <= today) {
       setSelectedDate(newDate);
       // loadTodayData2(newDate);
@@ -527,7 +528,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     <div className='max-w-7xl mx-auto  px-4 lg:py-8'>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
         <div>
-          <div className={`${selectedtab === 'filter'? 'flex flex-col' :  ''} `}>          
+          <div className={`${selectedtab === 'filter'? 'flex flex-col' :  ''} `}>
             <h1 className="text-2xl font-bold text-gray-900 sm:text-left text-center">
             Welcome, {userProfile?.full_name || 'Employee'}
           </h1>
@@ -620,7 +621,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         </div>
         <div >
           <div className="flex items-left justify-end lg:flex-row flex-col ">
-            
+
             <div className="flex flex-row gap-5 lg:mx-0 mx-auto">
 
               {/* Date Navigation - Only show in Default View */}
@@ -736,7 +737,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                               className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                             />
                             <button
-                              onClick={() => { 
+                              onClick={() => {
                                 handleDateFilter()
                                 setIsDateDialogOpen(false)
                                }}

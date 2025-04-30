@@ -108,17 +108,34 @@ const EmployeesDetails = ({ selectedTab }) => {
         const employeeProjects = projectsData.filter(project =>
           project.devops?.some((dev: any) => dev.id === employee.id)
         );
-        let increamentdataone;
+        // Get last increment date
+        let increamentdataone = "N/A";
+        let upcomingIncrementDate = "N/A";
+
         const incrementone = increamentdata?.filter((increament) => {
           return increament.user_id === employee.id;
-        })
-        if (incrementone?.length) {
-          increamentdataone = incrementone[incrementone.length - 1].increment_date
-          console.log(increamentdata)
-        } else {
-          increamentdataone = "N/A"
+        });
+
+        // Sort increments by created_at in descending order to get the latest one
+        const sortedIncrements = [...(incrementone || [])].sort((a, b) => {
+          return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+        });
+
+        if (sortedIncrements.length > 0) {
+          const latestIncrement = sortedIncrements[0];
+
+          // Get the last increment date
+          if (latestIncrement.increment_date) {
+            increamentdataone = latestIncrement.increment_date;
+          }
+
+          // Get the upcoming increment date from the upcomming_increment field
+          if (latestIncrement.upcomming_increment) {
+            upcomingIncrementDate = latestIncrement.upcomming_increment;
+          }
+
+          console.log("Increment data for employee:", employee.full_name, sortedIncrements);
         }
-        console.log("Increment one  data:", incrementone);
 
         const employeeTasks = tasksData.filter(task =>
           task.devops?.some(dev => dev.id === employee.id) &&
@@ -134,7 +151,6 @@ const EmployeesDetails = ({ selectedTab }) => {
           task.status?.toLowerCase() == "done"
         );
 
-
         const completedKPI = employeeTaskscompleted.reduce((sum, task) => {
           return sum + (Number(task.score) || 0);
         }, 0);
@@ -143,7 +159,7 @@ const EmployeesDetails = ({ selectedTab }) => {
           ...employee,
           joining_date: employee.joining_date || "NA",
           lastincrement: increamentdataone,
-          upcomingincrement: "N/A",
+          upcomingincrement: upcomingIncrementDate.split("T")[0] || "N/A",
           projects: employeeProjects,
           projectid: employeeProjects.map(project => project.id),
           TotalKPI: totalKPI,
@@ -190,9 +206,33 @@ const EmployeesDetails = ({ selectedTab }) => {
       const employeeProjects = projectsData.filter(project =>
         project.devops?.some((dev: any) => dev.id === employee.id)
       );
-      let increment = increamentdata?.filter((increament) => {
+      // Get increment data for this employee
+      let lastIncrementDate = "N/A";
+      let upcomingIncrementDate = "N/A";
+
+      const increment = increamentdata?.filter((increament) => {
         return increament.user_id === employee.id;
-      })
+      });
+
+      // Sort increments by created_at in descending order to get the latest one
+      const sortedIncrements = [...(increment || [])].sort((a, b) => {
+        return new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime();
+      });
+
+      if (sortedIncrements.length > 0) {
+        const latestIncrement = sortedIncrements[0];
+
+        // Get the last increment date
+        if (latestIncrement.increment_date) {
+          lastIncrementDate = latestIncrement.increment_date;
+        }
+
+        // Get the upcoming increment date
+        if (latestIncrement.upcomming_increment) {
+          upcomingIncrementDate = latestIncrement.upcomming_increment;
+        }
+      }
+
       console.log("Increment data:", increment);
 
       // Find all tasks assigned to this employee that aren't done
@@ -213,6 +253,8 @@ const EmployeesDetails = ({ selectedTab }) => {
         projects: employeeProjects.map(project => project.title),
         projectid: employeeProjects.map(project => project.id),
         TotalKPI: totalKPI,
+        lastincrement: lastIncrementDate,
+        upcomingincrement: upcomingIncrementDate,
         // Optional: include task count for reference
         activeTaskCount: employeeTasks.length
       };
@@ -261,7 +303,8 @@ const EmployeesDetails = ({ selectedTab }) => {
       const selectedProject = userProjects.find(p => p.title === assignment.project);
       if (!selectedProject) throw new Error("Project not found");
 
-      const { error } = await supabase
+      // Insert the task into the database
+      const { data: insertedTask, error } = await supabase
         .from("tasks_of_projects")
         .insert([{
           project_id: selectedProject.id,
@@ -271,9 +314,95 @@ const EmployeesDetails = ({ selectedTab }) => {
           status: "todo",
           score: assignment.score,
           created_at: new Date().toISOString()
-        }]);
+        }])
+        .select(); // Return the inserted task
 
       if (error) throw error;
+
+      // Get the inserted task ID
+      const taskId = insertedTask?.[0]?.id;
+
+      // Get the employee's name for the notification
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("full_name")
+        .eq("id", employeeId)
+        .single();
+
+      if (userError) {
+        console.error("Error fetching user data:", userError);
+      } else {
+        // Send notification to all devices of the employee
+        try {
+          console.log(`Attempting to send notification to employee ${employeeId}`);
+
+          // Always use the userId parameter to try both the fcm_tokens table and users table
+          const notificationPayload = {
+            title: "New Task Assigned",
+            body: `You have been assigned a new task: ${assignment.title} in project ${selectedProject.title}`,
+            userId: employeeId, // This will try all devices
+            taskId: taskId,
+            projectId: selectedProject.id,
+            url: `/taskboard?projectId=${selectedProject.id}`
+          };
+
+          // Send the notification
+          console.log("Sending notification with payload:", notificationPayload);
+          const response = await fetch("http://localhost:4000/send-singlenotifications", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(notificationPayload)
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              console.log(`Notification sent to ${userData?.full_name || 'employee'} on ${result.successCount} device(s)`);
+              console.log("Notification result:", result);
+            } else {
+              console.log(`No notifications sent to ${userData?.full_name || 'employee'} - user may not have enabled notifications`);
+              console.log("Notification result:", result);
+
+              // If the user has no valid tokens, we need to regenerate one
+              if (result.message && result.message.includes("No valid FCM tokens found")) {
+                // Show a message to the user that the employee needs to enable notifications
+                alert(`${userData?.full_name || 'Employee'} needs to enable notifications. Please ask them to log in and allow notifications.`);
+
+                // Clear any invalid tokens for this user
+                try {
+                  const { error: clearError } = await supabase
+                    .from("users")
+                    .update({ fcm_token: null })
+                    .eq("id", employeeId);
+
+                  if (!clearError) {
+                    console.log(`Cleared invalid tokens for user ${employeeId}`);
+                  }
+
+                  // Also clear from fcm_tokens table
+                  const { error: deleteError } = await supabase
+                    .from("fcm_tokens")
+                    .delete()
+                    .eq("user_id", employeeId);
+
+                  if (!deleteError) {
+                    console.log(`Cleared all tokens from fcm_tokens table for user ${employeeId}`);
+                  }
+                } catch (clearError) {
+                  console.error("Error clearing invalid tokens:", clearError);
+                }
+              }
+            }
+          } else {
+            console.log(`Failed to send notification to ${userData?.full_name || 'employee'} - server returned ${response.status}`);
+            const errorText = await response.text();
+            console.error("Error response:", errorText);
+          }
+        } catch (notificationError) {
+          console.error("Error sending notification:", notificationError);
+          // Non-critical error, continue with task assignment
+        }
+      }
 
       setAssignment({
         title: "",
@@ -286,7 +415,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       alert("Task assigned successfully!");
     } catch (err) {
       console.error("Error assigning task:", err);
-      alert("Failed to assign task: " + err.message);
+      alert("Failed to assign task: " + (err instanceof Error ? err.message : String(err)));
     }
   };
 
@@ -315,7 +444,7 @@ const EmployeesDetails = ({ selectedTab }) => {
         setStep(2);
       }
     } catch (err) {
-      alert(err.message);
+      alert(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -360,7 +489,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       setStep(1);
       fetchEmployees();
     } catch (err) {
-      alert(err.message);
+      alert(err instanceof Error ? err.message : String(err));
     }
   };
 
@@ -919,29 +1048,29 @@ const EmployeesDetails = ({ selectedTab }) => {
                         <table className="w-full divide-y divide-gray-200 table-auto">
                           <thead className="bg-gray-50">
                             <tr>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-4 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Employee
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Joined
                               </th>
 
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Last increament
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Upcoming increament
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-4 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Projects
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-4 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Workload
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-4 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Completed Points
                               </th>
-                              <th scope="col" className="px-4 lg:px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                              <th scope="col" className="px-4 lg:px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                                 Actions
                               </th>
                             </tr>
@@ -969,7 +1098,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     </div>
                                   </button>
                                 </td>
-                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
+                                <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
                                   {(() => {
                                     const date = new Date(entry.joining_date);
                                     return isNaN(date.getTime())
@@ -983,19 +1112,37 @@ const EmployeesDetails = ({ selectedTab }) => {
                                 </td>
 
 
-                                <td className="px-4 lg:px-6 py-4">
+                                <td className="px-3 lg:px-34 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
 
                                   <span className="text-sm">
-                                    {entry.lastincrement}
+                                  {(() => {
+                                    const date = new Date(entry.lastincrement);
+                                    return isNaN(date.getTime())
+                                      ? "N/A"
+                                      : date.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                      });
+                                  })()}
                                   </span>
                                 </td>
-                                <td className="px-4 lg:px-6 py-4">
+                                <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
 
                                   <span className="text-sm">
-                                    {entry.upcomingincrement}
+                                  {(() => {
+                                    const date = new Date(entry.upcomingincrement);
+                                    return isNaN(date.getTime())
+                                      ? "N/A"
+                                      : date.toLocaleDateString('en-US', {
+                                        year: 'numeric',
+                                        month: 'short',
+                                        day: 'numeric',
+                                      });
+                                  })()}
                                   </span>
                                 </td>
-                                <td className="px-4 lg:px-6 py-4">
+                                <td className="px-4 lg:px-4 py-4">
                                   {/* {entry.projects?.length > 0 ? (
                                 <div className="flex flex-wrap gap-1 lg:gap-1.5">
                                   {entry.projects.slice(0, 2).map((project: any) => (
@@ -1037,7 +1184,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     <span className="text-sm text-gray-400">Not assigned</span>
                                   )}
                                 </td>
-                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                <td className="px-4 lg:px-4 py-4 whitespace-nowrap">
                                   {/* <div className="flex items-center gap-2">
                                 <div className={`w-2 h-2 lg:w-3 lg:h-3 rounded-full ${entry.TotalKPI <= 20 ? "bg-red-500" :
                                     entry.TotalKPI <= 70 ? "bg-amber-500" :
@@ -1079,7 +1226,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     ></div>
                                   </div>
                                 </td>
-                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap">
+                                <td className="px-4 lg:px-4 py-4 whitespace-nowrap">
                                   <div
                                     className={`text-md lg:text-md truncate text-center font-semibold  max-w-[120px] lg:max-w-[240px] xl:max-w-full
     ${(() => {
@@ -1097,7 +1244,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                     {entry.completedKPI}
                                   </div>
                                 </td>
-                                <td className="px-4 lg:px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
                                   <div className="flex justify-end items-center gap-1 lg:gap-2">
                                     <button
                                       onClick={() => handleAssignClick(entry)}

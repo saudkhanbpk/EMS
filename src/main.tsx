@@ -3,18 +3,17 @@ import { createRoot } from 'react-dom/client';
 import App from './App.tsx';
 import './index.css';
 import { AuthProvider } from './lib/AuthProvider.tsx';
-import { initializeApp } from "firebase/app";
-import { getMessaging, getToken, onMessage } from "firebase/messaging";
 import { UserProvider } from './lib/userprovider';
+import { NotificationProvider } from './lib/NotificationProvider';
 
 createRoot(document.getElementById('root')!).render(
-
   <AuthProvider>
     <UserProvider>
-      <App />
+      <NotificationProvider>
+        <App />
+      </NotificationProvider>
     </UserProvider>
   </AuthProvider>
-
 );
 // if ("serviceWorker" in navigator) {
 //   navigator.serviceWorker
