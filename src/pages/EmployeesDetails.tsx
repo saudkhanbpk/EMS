@@ -310,7 +310,7 @@ const EmployeesDetails = ({ selectedTab }) => {
           project_id: selectedProject.id,
           title: assignment.title,
           description: assignment.description,
-          devops: [{ id: employeeId }],
+          devops: [{ id: employeeId , name : currentEmployee?.full_name }],
           status: "todo",
           score: assignment.score,
           created_at: new Date().toISOString()

@@ -1014,21 +1014,34 @@ const EmployeeAttendanceTable = () => {
           return acc;
         }, {});
 
-        const uniqueAttendance = Object.values(attendanceByDate);
+        const uniqueAttendance = Object.values(attendanceByDate) as AttendanceRecord[];
 
         let totalHours = 0;
 
-        uniqueAttendance.forEach(attendance => {
+        uniqueAttendance.forEach((attendance: AttendanceRecord) => {
           const start = new Date(attendance.check_in);
-          // Match the calculation in EmployeeProfile.tsx - use check_in time if no check_out
-          const end = attendance.check_out ? new Date(attendance.check_out) : new Date(start.getTime());
-          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+          // For no checkout, use current time but cap at 8 hours after check-in
+          let end: Date;
+          if (attendance.check_out) {
+            end = new Date(attendance.check_out);
+          } else {
+            const currentTime = new Date();
+            const maxEndTime = new Date(start);
+            maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
+
+            // Use the earlier of current time or max end time (8 hours after check-in)
+            end = currentTime < maxEndTime ? currentTime : maxEndTime;
+          }
+
+          // Calculate hours worked (ensure it's not negative)
+          let hoursWorked = Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
 
           // Subtract breaks
           const breaks = allBreaksByAttendance[attendance.id] || [];
           let breakHours = 0;
 
-          breaks.forEach(b => {
+          breaks.forEach((b: any) => {
             if (b.start_time) {
               const breakStart = new Date(b.start_time);
               // If end_time is missing, calculate only 1 hour of break

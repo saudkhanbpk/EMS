@@ -96,7 +96,19 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // First, calculate total raw hours without breaks
       uniqueAttendance.forEach(log => {
         const checkIn = new Date(log.check_in);
-        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
+
+        // For no checkout, use current time but cap at 8 hours after check-in
+        let checkOut;
+        if (log.check_out) {
+          checkOut = new Date(log.check_out);
+        } else {
+          const currentTime = new Date();
+          const maxEndTime = new Date(checkIn);
+          maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
+
+          // Use the earlier of current time or max end time (8 hours after check-in)
+          checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
+        }
 
         let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
         // Handle negative values by using Math.max(0, hoursWorked)
@@ -110,7 +122,19 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // Now calculate break hours and net working hours for each attendance record
       uniqueAttendance.forEach(log => {
         const checkIn = new Date(log.check_in);
-        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
+
+        // For no checkout, use current time but cap at 8 hours after check-in
+        let checkOut;
+        if (log.check_out) {
+          checkOut = new Date(log.check_out);
+        } else {
+          const currentTime = new Date();
+          const maxEndTime = new Date(checkIn);
+          maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
+
+          // Use the earlier of current time or max end time (8 hours after check-in)
+          checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
+        }
 
         let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
         // Handle negative values by using Math.max(0, hoursWorked)
