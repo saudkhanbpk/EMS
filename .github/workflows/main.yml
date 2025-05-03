@@ -1,3 +1,32 @@
+# name: Run FetchUsers Daily at 9:00 PM Pakistan Time (Mon-Fri)
+
+# on:
+#   schedule:
+#     - cron: '0 16 * * 1-5'  # Runs at 9:00 PM Pakistan Time (16:00 UTC) on Monday to Friday
+#   workflow_dispatch:
+
+# jobs:
+#   run-fetch-users:
+#     runs-on: ubuntu-latest
+
+#     steps:
+#       - name: Checkout Repository
+#         uses: actions/checkout@v4
+
+#       - name: Set Up Node.js
+#         uses: actions/setup-node@v4
+#         with:
+#           node-version: 18
+
+#       - name: Install Dependencies
+#         run: npm install
+
+#       - name: Run FetchUsers Script
+#         run: node fetchUsers.js
+#         env:
+#           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+#           SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+
 name: Run FetchUsers Daily at 9:00 PM Pakistan Time (Mon-Fri)
 
 on:
@@ -16,13 +45,13 @@ jobs:
       - name: Set Up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: 18
+          node-version: '18'
 
       - name: Install Dependencies
         run: npm install
 
       - name: Run FetchUsers Script
-        run: node fetchUsers.js
+        run: node --experimental-modules fetchUsers.js
         env:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_KEY }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
