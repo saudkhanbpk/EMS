@@ -27,6 +27,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
     const chatuser = chatUsers.find((user) => user.id === id);
     const [isVisible, setIsVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
+    const [isPageVisible, setIsPageVisible] = useState(true);
     const currentuser = useAuthStore((state) => state.user);
 
     const [messageText, setMessageText] = useState('');
@@ -240,11 +241,44 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
         }
     };
 
+    // Add visibility change detection
     useEffect(() => {
-        if (currentuser?.id && chatuser?.id) {
-            markMessagesAsSeen(currentuser.id, chatuser.id);
-        }
-    }, [messages, currentuser?.id, chatuser?.id]);
+        const handleVisibilityChange = () => {
+            setIsPageVisible(document.visibilityState === 'visible');
+
+            // Mark messages as seen when the page becomes visible
+            if (document.visibilityState === 'visible' && currentuser?.id && chatuser?.id) {
+                markMessagesAsSeen(currentuser.id, chatuser.id);
+            }
+        };
+
+        document.addEventListener('visibilitychange', handleVisibilityChange);
+
+        return () => {
+            document.removeEventListener('visibilitychange', handleVisibilityChange);
+        };
+    }, [currentuser?.id, chatuser?.id]);
+
+    // Replace the existing useEffect for markMessagesAsSeen
+    useEffect(() => {
+        if (!currentuser?.id || !chatuser?.id || !isPageVisible) return;
+
+        const markAsSeen = async () => {
+            try {
+                await markMessagesAsSeen(currentuser.id, chatuser.id);
+            } catch (error) {
+                console.error('Error marking messages as seen:', error);
+            }
+        };
+
+        markAsSeen();
+
+        const intervalId = setInterval(markAsSeen, 5000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, [messages, currentuser?.id, chatuser?.id, isPageVisible]);
 
     useEffect(() => {
         if (!currentuser?.id || !chatuser?.id) return;
@@ -266,12 +300,23 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                     if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentuser.id) {
                         setMessages(prevMessages => [...prevMessages, payload.new]);
 
+                        // Mark messages as seen immediately when a new message arrives
                         if (payload.new.sender_id === chatuser.id && currentuser?.id) {
                             await markMessagesAsSeen(currentuser.id, chatuser.id);
                         }
                     }
 
                     if (payload.eventType === 'UPDATE' && payload.new.sender_id !== currentuser.id) {
+                        setMessages(prevMessages =>
+                            prevMessages.map(msg =>
+                                msg.id === payload.new.id ? payload.new : msg
+                            )
+                        );
+                    }
+
+                    // Add a specific subscription for seen status updates
+                    if (payload.eventType === 'UPDATE' && payload.old && payload.new &&
+                        payload.old.seen !== payload.new.seen) {
                         setMessages(prevMessages =>
                             prevMessages.map(msg =>
                                 msg.id === payload.new.id ? payload.new : msg
@@ -288,8 +333,33 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
             )
             .subscribe();
 
+        // Add a separate channel specifically for seen status updates
+        const seenChannel = supabase
+            .channel(`message-seen-${currentuser.id}-${chatuser.id}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'UPDATE',
+                    schema: 'public',
+                    table: 'messages',
+                    filter: `sender_id=eq.${currentuser.id}`
+                },
+                (payload: any) => {
+                    if (payload.new && payload.old && payload.new.seen !== payload.old.seen) {
+                        // Update the seen status in the UI
+                        setMessages(prevMessages =>
+                            prevMessages.map(msg =>
+                                msg.id === payload.new.id ? payload.new : msg
+                            )
+                        );
+                    }
+                }
+            )
+            .subscribe();
+
         return () => {
             channel.unsubscribe();
+            seenChannel.unsubscribe();
         };
     }, [currentuser?.id, chatuser?.id]);
 
@@ -640,3 +710,18 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
 };
 
 export default Chat;
+
+
+{/* Message status indicators */ }
+{
+    isCurrentUserMessage(msg) && (
+        <div className="text-xs text-gray-500 flex items-center mt-1">
+            <span className="mr-1">{formatMessageTime(msg.created_at)}</span>
+            {msg.seen ? (
+                <CheckCheck size={14} className="text-blue-500" />
+            ) : (
+                <Check size={14} />
+            )}
+        </div>
+    )
+}
