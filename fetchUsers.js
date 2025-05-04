@@ -225,6 +225,10 @@ dotenv.config();
 
 // Create a connection to the Supabase database
 const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY);
+// Validate environment variables
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
+  throw new Error('Missing SUPABASE_URL or SUPABASE_ANON_KEY environment variables');
+}
 
 const holidaydates = [];
 
