@@ -1,52 +1,93 @@
-
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, Paperclip, MoreVertical, Trash2, Check,CheckCheck } from 'lucide-react';
-import { useParams } from 'react-router-dom';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { Send, Paperclip, MoreVertical, Trash2, Check, CheckCheck, Image, Smile, X, PhoneCall, Video, ExternalLink, Info, Edit2 } from 'lucide-react';
+import { useParams, Link } from 'react-router-dom';
 import { useUserContext } from '../lib/userprovider';
-import { deleteMessage, fetchChatMessages, markMessagesAsSeen, sendMessage } from './chatlib/supabasefunc';
+import { deleteMessage, editMessage, fetchChatMessages, markMessagesAsSeen, sendMessage } from './chatlib/supabasefunc';
 import { useAuthStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
 import ConfirmationAlert from './confirmdelete';
-import { isValid, set } from 'date-fns';
 
-const Chat = () => {
-    let { id } = useParams();
+interface Message {
+    id: string;
+    content: string;
+    created_at: string;
+    sender_id: string;
+    seen: boolean;
+}
+
+interface ChatUser {
+    id: string;
+    full_name: string;
+    role: string;
+}
+
+const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void }) => {
+
     const { chatUsers } = useUserContext();
-    let chatuser = chatUsers.find((user) => user.id == id);
+    const chatuser = chatUsers.find((user) => user.id === id);
     const [isVisible, setIsVisible] = useState(false);
     const [isDeleting, setIsDeleting] = useState(false);
     const currentuser = useAuthStore((state) => state.user);
-    
+
     const [messageText, setMessageText] = useState('');
-    const [messages, setMessages] = useState([]);
-    const [loading, setLoading] = useState(false);
+    const [messages, setMessages] = useState<Message[]>([]);
+    const [initialLoading, setInitialLoading] = useState(false); // For initial message loading only
+    const [isSending, setIsSending] = useState(false); // For tracking message sending state
+    const [showUserCard, setShowUserCard] = useState(false);
+    const [isMinimized, setIsMinimized] = useState(false);
+    const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+    const [editingMessageId, setEditingMessageId] = useState<string | null>(null);
+    const [editingText, setEditingText] = useState('');
 
-    // Create a reference to the chat container
-    const chatContainerRef = useRef(null);
+    const chatContainerRef = useRef<HTMLDivElement>(null);
+    const userCardRef = useRef<HTMLDivElement>(null);
+    const userAvatarRef = useRef<HTMLImageElement>(null);
+    const editInputRef = useRef<HTMLTextAreaElement>(null);
 
-    // Scroll to the bottom of the chat container
+    // Handle click outside of user card
+    useEffect(() => {
+        const handleClickOutside = (event: MouseEvent) => {
+            if (
+                userCardRef.current &&
+                !userCardRef.current.contains(event.target as Node) &&
+                userAvatarRef.current &&
+                !userAvatarRef.current.contains(event.target as Node)
+            ) {
+                setShowUserCard(false);
+            }
+        };
+
+        document.addEventListener('mousedown', handleClickOutside);
+        return () => {
+            document.removeEventListener('mousedown', handleClickOutside);
+        };
+    }, []);
+
+    // Focus on edit input when editing starts
+    useEffect(() => {
+        if (editingMessageId && editInputRef.current) {
+            editInputRef.current.focus();
+        }
+    }, [editingMessageId]);
+
     const scrollToBottom = () => {
         if (chatContainerRef.current) {
             chatContainerRef.current.scrollTop = chatContainerRef.current.scrollHeight;
         }
     };
- 
-    // Scroll to the bottom whenever messages change or when the component mounts
+
     useEffect(() => {
         scrollToBottom();
     }, [messages]);
 
-    // Format the timestamp for display
-    const formatMessageTime = (timestamp) => {
+    const formatMessageTime = (timestamp: string) => {
         const now = new Date();
         const messageDate = new Date(timestamp);
-        
-        // Format time (HH:MM)
+
         const hours = messageDate.getHours().toString().padStart(2, '0');
         const minutes = messageDate.getMinutes().toString().padStart(2, '0');
-        const timeString = `${hours}:${minutes}`;
-        
-        // If the message is not from today, also display the date
+        const timeString = `${hours}:${minutes} ${hours >= 12 ? 'PM' : 'AM'}`;
+
         if (
             messageDate.getDate() !== now.getDate() ||
             messageDate.getMonth() !== now.getMonth() ||
@@ -57,92 +98,161 @@ const Chat = () => {
             const year = messageDate.getFullYear();
             return `${day}/${month}/${year} ${timeString}`;
         }
-        
+
         return timeString;
     };
 
-    // Get status text or icon based on message status
-    const getMessageStatus = (status) => {
-        switch (status) {
-            case 'sent':
-                return (
-                    <span className="text-xs font-light flex items-center">
-                        <span className="mr-1">Sent</span>
-                        <Check className="w-3 h-3" />
-                    </span>
-                );
-            case 'seen':
-                return (
-                    <span className="text-xs font-light flex items-center">
-                        <span className="mr-1">Seen</span>
-                        <Check className="w-3 h-3" />
-                    </span>
-                );
-            default:
-                return null;
+    const groupMessagesByDate = () => {
+        const groups: { [key: string]: Message[] } = {};
+        messages.forEach(msg => {
+            const date = new Date(msg.created_at);
+            const dateKey = `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+
+            if (!groups[dateKey]) {
+                groups[dateKey] = [];
+            }
+            groups[dateKey].push(msg);
+        });
+        return groups;
+    };
+
+    const getDayLabel = (dateKey: string) => {
+        const [year, month, day] = dateKey.split('-').map(Number);
+        const date = new Date(year, month, day);
+        const today = new Date();
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+
+        if (date.toDateString() === today.toDateString()) {
+            return 'TODAY';
+        } else if (date.toDateString() === yesterday.toDateString()) {
+            return 'YESTERDAY';
+        } else {
+            const options: Intl.DateTimeFormatOptions = { weekday: 'long', month: 'long', day: 'numeric' };
+            return date.toLocaleDateString('en-US', options).toUpperCase();
         }
     };
 
-    const handleSendMessage = async () => {
-        if (!messageText.trim()) return;
-        
+    const handleSendMessage = useCallback(async () => {
+        if (!messageText.trim() || !currentuser?.id || !chatuser?.id) return;
+
         try {
-            const sentMessage = await sendMessage(currentuser?.id, chatuser.id, messageText);
-            
-            // Add the new message to the existing messages array
-            // if (sentMessage && sentMessage.length > 0) {
-            //     setMessages(prevMessages => [...prevMessages, sentMessage[0]]);
-            // }
-            
-            // Clear the input field
-            setMessageText("");
+            setIsSending(true);
+
+            // Create a temporary message to show immediately
+            const tempMessage: Message = {
+                id: `temp-${Date.now()}`,
+                content: messageText,
+                created_at: new Date().toISOString(),
+                sender_id: currentuser.id,
+                seen: false
+            };
+
+            // Add the temporary message to the UI immediately
+            setMessages(prevMessages => [...prevMessages, tempMessage]);
+
+            // Clear the input field right away for better UX
+            setMessageText('');
+
+            // Actually send the message to the server
+            const data = await sendMessage(currentuser.id, chatuser.id, tempMessage.content);
+
+            // If successful, replace the temp message with the real one
+            if (data && data.length > 0) {
+                const newMessage = data[0];
+                setMessages(prevMessages =>
+                    prevMessages.map(msg =>
+                        msg.id === tempMessage.id ? newMessage : msg
+                    )
+                );
+            }
         } catch (error) {
             console.error('Error sending message:', error);
+            // If there's an error, remove the temporary message
+            setMessages(prevMessages =>
+                prevMessages.filter(msg => msg.id !== `temp-${Date.now()}`)
+            );
+        } finally {
+            setIsSending(false);
+        }
+    }, [messageText, currentuser?.id, chatuser?.id]);
+
+    const handleDeleteMessage = async (id: string) => {
+        try {
+            setIsVisible(true);
+            setIsDeleting(true);
+            await deleteMessage(id);
+            setMessages(prevMessages => prevMessages.filter(msg => msg.id !== id));
+        } catch (error) {
+            console.error('Error deleting message:', error);
+        } finally {
+            setIsDeleting(false);
+            setTimeout(() => {
+                setIsVisible(false);
+            }, 700);
         }
     };
 
-    // Function to delete a message
-    const handleDeleteMessage = async(id:unknown) => {
-        setIsVisible(true)
-        setIsDeleting(true)
-        await deleteMessage(id);
-        setMessages(messages.filter(msg => msg.id !== id));
-        setIsDeleting(false)
-        setTimeout(() => {
-            setIsVisible(false);
-          }, 700);
+    const handleStartEditing = (message: Message) => {
+        setEditingMessageId(message.id);
+        setEditingText(message.content);
+    };
+
+    const handleCancelEditing = () => {
+        setEditingMessageId(null);
+        setEditingText('');
+    };
+
+    const handleSaveEdit = async () => {
+        if (!editingMessageId || !editingText.trim()) return;
+
+        try {
+            const data = await editMessage(editingMessageId, editingText);
+
+            // Update the message locally instead of waiting for the subscription
+            if (data && data.length > 0) {
+                const updatedMessage = data[0];
+                setMessages(prevMessages =>
+                    prevMessages.map(msg =>
+                        msg.id === updatedMessage.id ? updatedMessage : msg
+                    )
+                );
+            }
+
+            setEditingMessageId(null);
+            setEditingText('');
+        } catch (error) {
+            console.error('Error updating message:', error);
+        }
     };
 
     const loadMessages = async () => {
+        if (!currentuser?.id || !chatuser?.id) return;
+
         try {
-            setLoading(true);
-            const data = await fetchChatMessages(currentuser?.id, chatuser.id);
+            setInitialLoading(true);
+            const data = await fetchChatMessages(currentuser.id, chatuser.id);
             setMessages(data || []);
-    
-       
-           
-               
-            
         } catch (error) {
             console.error('Error fetching messages:', error);
         } finally {
-            setLoading(false);
+            setInitialLoading(false);
         }
     };
+
     useEffect(() => {
-         markMessagesAsSeen(currentuser?.id, chatuser.id);
-    
-     
-    }, [messages])
-    
-    
+        if (currentuser?.id && chatuser?.id) {
+            markMessagesAsSeen(currentuser.id, chatuser.id);
+        }
+    }, [messages, currentuser?.id, chatuser?.id]);
+
     useEffect(() => {
         if (!currentuser?.id || !chatuser?.id) return;
-    
+
         loadMessages();
-    
+
         const channel = supabase
-            .channel(`chat-messages-${currentuser?.id}`)
+            .channel(`chat-messages-${currentuser.id}`)
             .on(
                 'postgres_changes',
                 {
@@ -150,162 +260,380 @@ const Chat = () => {
                     schema: 'public',
                     table: 'messages',
                 },
-                async (payload) => {
-                    console.log("Realtime payload received:", payload);
-    
-                    if (payload.eventType === 'INSERT') {
-                        setMessages((prevMessages) => [...prevMessages, payload.new]);
-    
-                        // If a new message is received from the chat user, mark it as seen
-                        if (payload.new.sender_id === chatuser.id) {
-                            await markMessagesAsSeen(currentuser.id, chatuser.id, setMessages);
+                async (payload: any) => {
+                    // Only handle messages from other users via subscription
+                    // Our own messages are handled directly in the send/edit/delete functions
+                    if (payload.eventType === 'INSERT' && payload.new.sender_id !== currentuser.id) {
+                        setMessages(prevMessages => [...prevMessages, payload.new]);
+
+                        if (payload.new.sender_id === chatuser.id && currentuser?.id) {
+                            await markMessagesAsSeen(currentuser.id, chatuser.id);
                         }
                     }
-                    
-    
-                    if (payload.eventType === 'UPDATE') {
-                        setMessages((prevMessages) =>
-                            prevMessages.map((msg) =>
+
+                    if (payload.eventType === 'UPDATE' && payload.new.sender_id !== currentuser.id) {
+                        setMessages(prevMessages =>
+                            prevMessages.map(msg =>
                                 msg.id === payload.new.id ? payload.new : msg
                             )
                         );
                     }
-                    
-                    if (payload.eventType === 'DELETE') {
-                        setMessages((prevMessages) =>
-                            prevMessages.filter((msg) => msg.id !== payload.old.id)
+
+                    if (payload.eventType === 'DELETE' && payload.old.sender_id !== currentuser.id) {
+                        setMessages(prevMessages =>
+                            prevMessages.filter(msg => msg.id !== payload.old.id)
                         );
                     }
                 }
             )
             .subscribe();
-    
+
         return () => {
-            supabase.removeChannel(channel);
+            channel.unsubscribe();
         };
     }, [currentuser?.id, chatuser?.id]);
-    
-    
-    
-      
-  
-    // Determine if a message is from the current user
-    const isCurrentUserMessage = (msg) => {
+
+    const isCurrentUserMessage = (msg: Message) => {
         return msg.sender_id === currentuser?.id;
     };
-if(!chatuser){
-    return   <div className="flex justify-center items-center h-full text-gray-500">
-    <p className='text-3xl'>No user found </p>
-</div>
-}
-if(chatuser.id==currentuser?.id){
-    return   <div className="flex justify-center items-center h-full text-gray-500">
-    <p className='text-3xl' >You can't chat to yourself sorry!</p>
-</div>
-}
-    return (
-        <div className="flex flex-col h-screen bg-gray-100">
-            {/* Chat Header */}
-            <div className="bg-white p-4 flex items-center justify-between shadow-sm">
-                <div className="flex items-center space-x-4">
-                    <div className="relative">
-                        <span className="text-3xl">
-                            <img 
-                                className='h-[36px]' 
-                                src={`${chatuser.role == "admin" ? "/admin.jpeg" : "/profile.png"}`} 
-                                alt="profile image" 
-                            />
-                        </span>
-                        <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></span>
-                    </div>
-                    <div>
-                        <h2 className="font-semibold text-gray-800">Chat with {chatuser?.full_name}</h2>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-4">
-                    <MoreVertical className="w-5 h-5 text-gray-600 cursor-pointer" />
+
+    if (!chatuser) {
+        return (
+            <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
+                <div className="flex justify-center items-center h-full text-gray-500 bg-white p-4 rounded-t-lg shadow-xl">
+                    <p className='text-xl'>No user found</p>
                 </div>
             </div>
+        );
+    }
 
-            {/* Chat Messages */}
-            <div 
-                ref={chatContainerRef}
-                className="flex-grow overflow-y-auto p-4 space-y-4 bg-[#E6E6FA]"
+    if (chatuser.id === currentuser?.id) {
+        return (
+            <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
+                <div className="flex justify-center items-center h-full text-gray-500 bg-white p-4 rounded-t-lg shadow-xl">
+                    <p className='text-xl'>You can't chat with yourself!</p>
+                </div>
+            </div>
+        );
+    }
+
+    const messageGroups = groupMessagesByDate();
+
+    return (
+        <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
+            <div
+                className={`flex flex-col ${isMinimized ? 'h-16' : 'h-[80vh]'} bg-white shadow-xl rounded-t-lg border transition-all duration-300`}
+                style={{ maxWidth: '750px', width: '90vw' }}
             >
-                {loading ? (
-                    <div className="flex justify-center items-center h-full">
-                        <p>Loading messages...</p>
-                    </div>
-                ) : messages.length === 0 ? (
-                    <div className="flex justify-center items-center h-full text-gray-500">
-                        <p >No messages yet. Start the conversation!</p>
-                    </div>
-                ) : (
-                    messages.map((msg) => (
-                        <div 
-                            key={msg.id} 
-                            className={`flex ${isCurrentUserMessage(msg) ? 'justify-end' : 'justify-start'}`}
+                {/* LinkedIn-style Chat Header */}
+                <div className="bg-white p-3 flex items-center justify-between border-b shadow-sm rounded-t-lg">
+                    <div className="flex items-center space-x-3">
+                        <div className="relative">
+                            <img
+                                ref={userAvatarRef}
+                                className='h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity border border-gray-300'
+                                src={chatuser.role === "admin" ? "/admin.jpeg" : "/profile.png"}
+                                alt="profile"
+                                onClick={() => setShowUserCard(!showUserCard)}
+                            />
+                            <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
+                        </div>
+                        <div
+                            className="flex flex-col cursor-pointer hover:text-blue-600 transition-colors"
+                            onClick={() => setShowUserCard(!showUserCard)}
                         >
-                            <div 
-                                className={`
-                                    relative max-w-xs p-3 rounded-lg group
-                                    ${isCurrentUserMessage(msg) 
-                                    ? 'bg-blue-500 text-white' 
-                                    : 'bg-white text-gray-800 border'}
-                                `}
-                            >
-                                <div className="mb-1">{msg.content}</div>
-                                
-                                {/* Time and status information */}
-                                <div className={`flex items-center justify-between mt-1 ${isCurrentUserMessage(msg) ? 'text-blue-100' : 'text-gray-500'}`}>
-                                    <span className="text-xs">{formatMessageTime(msg.created_at)}</span>
-                                    {isCurrentUserMessage(msg) && (
-                                        <div className="flex items-center">
-                                            {msg.seen?   <CheckCheck className="w-4 h-4 mr-1" />
-                                           : <Check className="w-4 h-4" />}
-                                         
-                                        </div>
-                                    )}
-                                    {isCurrentUserMessage(msg) && (
-                                        <span className="ml-2">{getMessageStatus(msg.status)}</span>
-                                    )}
+                            <h2 className="font-medium text-gray-900">{chatuser.full_name}</h2>
+                            <span className="text-xs text-gray-500">Online now</span>
+                        </div>
+                    </div>
+                    <div className="flex items-center space-x-2">
+                        <button className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                            <PhoneCall size={18} />
+                        </button>
+                        <button className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                            <Video size={18} />
+                        </button>
+                        <button className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                            <Info size={18} />
+                        </button>
+                        <button
+                            className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                            onClick={() => setIsMinimized(!isMinimized)}
+                        >
+                            {isMinimized ? <Image size={18} /> : <MoreVertical size={18} />}
+                        </button>
+                        <button
+                            className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors ml-1"
+                            onClick={() => closechatperson()}
+                        >
+                            <X size={18} />
+                        </button>
+                    </div>
+
+                    {/* LinkedIn-style User Profile Card on Hover */}
+                    {showUserCard && (
+                        <div
+                            ref={userCardRef}
+                            className="absolute top-16 left-4 z-50 bg-white rounded-lg shadow-xl border border-gray-200 w-80 transition-all duration-200 animate-fade-in"
+                        >
+                            <div className="relative">
+                                <div className="h-20 bg-gray-100 rounded-t-lg"></div>
+                                <div className="absolute top-8 left-4">
+                                    <img
+                                        src={chatuser.role === "admin" ? "/admin.jpeg" : "/profile.png"}
+                                        className="w-16 h-16 rounded-full border-4 border-white"
+                                        alt={chatuser.full_name}
+                                    />
                                 </div>
-                                
-                                {/* Delete button - only visible for user's own messages */}
-                                {isCurrentUserMessage(msg) && (
-                                    <button 
-                                        onClick={() => handleDeleteMessage(msg.id)}
-                                        className="absolute -left-8 top-1/2 transform -translate-y-1/2 p-1 rounded-full bg-red-500 text-white opacity-0 group-hover:opacity-100 transition-opacity duration-200 hover:bg-red-600"
-                                        aria-label="Delete message"
-                                    >
-                                        <Trash2 className="w-4 h-4" />
+                            </div>
+                            <div className="pt-10 p-4">
+                                <h3 className="font-semibold text-lg text-gray-900">{chatuser.full_name}</h3>
+                                <p className="text-sm text-gray-600 capitalize">{chatuser.role} at EMS</p>
+                                <p className="text-xs text-gray-500 mt-1">Active now</p>
+
+                                <div className="mt-4 flex gap-2">
+                                    <button className="px-3 py-1.5 bg-blue-600 text-white text-sm font-medium rounded hover:bg-blue-700 transition-colors flex-1">
+                                        View Profile
                                     </button>
-                                )}
+                                    <button className="px-3 py-1.5 border border-gray-300 text-gray-700 text-sm font-medium rounded hover:bg-gray-50 transition-colors flex-1">
+                                        Connect
+                                    </button>
+                                </div>
+
+                                <div className="mt-4 pt-4 border-t border-gray-200">
+                                    <div className="flex items-center text-sm text-gray-600">
+                                        <span className="font-medium">Contact info:</span>
+                                    </div>
+                                    <div className="mt-1.5 text-sm flex items-center text-gray-600">
+                                        <ExternalLink size={14} className="mr-2" />
+                                        <span>example@ems.com</span>
+                                    </div>
+                                </div>
                             </div>
                         </div>
-                    ))
-                )}
-            </div>
-<ConfirmationAlert isDeleting={isDeleting} isVisible={isVisible} ></ConfirmationAlert>
-            {/* Message Input */}
-            <div className="bg-white p-4 flex items-center space-x-4 border-t">
-                <Paperclip className="w-6 h-6 text-gray-600 cursor-pointer" />
-                <div className="flex-grow">
-                    <input 
-                        type="text"
-                        placeholder="Type a message..."
-                        value={messageText}
-                        onChange={(e) => setMessageText(e.target.value)}
-                        onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                        className="w-full p-2 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
+                    )}
                 </div>
-                <button 
-                    onClick={handleSendMessage}
-                    className="bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 transition-colors"
-                >
-                    <Send className="w-5 h-5" />
-                </button>
+
+                {/* Chat Messages - Only show when not minimized */}
+                {
+                    !isMinimized && (
+                        <div
+                            ref={chatContainerRef}
+                            className="flex-grow overflow-y-auto bg-white px-4 py-2"
+                        >
+                            {initialLoading ? (
+                                <div className="flex justify-center items-center h-full">
+                                    <p className="text-gray-500">Loading messages...</p>
+                                </div>
+                            ) : messages.length === 0 ? (
+                                <div className="flex justify-center items-center h-full text-gray-500">
+                                    <p>No messages yet. Start the conversation!</p>
+                                </div>
+                            ) : (
+                                Object.keys(messageGroups).sort().map(dateKey => (
+                                    <div key={dateKey} className="mb-4">
+                                        <div className="flex justify-center my-4">
+                                            <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                                {getDayLabel(dateKey)}
+                                            </div>
+                                        </div>
+                                        {messageGroups[dateKey].map(msg => (
+                                            <div key={msg.id} className="mb-3">
+                                                {!isCurrentUserMessage(msg) ? (
+                                                    <div className="flex items-start mb-1 group">
+                                                        <div className="relative">
+                                                            <img
+                                                                src={chatuser.role === "admin" ? "/admin.jpeg" : "/profile.png"}
+                                                                className="w-8 h-8 rounded-full mr-2 cursor-pointer hover:opacity-90 transition-opacity"
+                                                                alt="Profile"
+                                                                onClick={() => setShowUserCard(true)}
+                                                            />
+                                                        </div>
+                                                        <div>
+                                                            <div className="flex items-center mb-0.5">
+                                                                <span
+                                                                    className="font-medium text-sm mr-2 cursor-pointer hover:text-blue-600 transition-colors"
+                                                                    onClick={() => setShowUserCard(true)}
+                                                                >
+                                                                    {chatuser.full_name}
+                                                                </span>
+                                                                <span className="text-xs text-gray-500">{formatMessageTime(msg.created_at)}</span>
+                                                            </div>
+                                                            <div className="bg-gray-100 rounded-xl rounded-tl-none px-3 py-2 text-gray-800 max-w-xs sm:max-w-md relative group">
+                                                                {msg.content}
+                                                                <div className="absolute left-0 -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
+                                                                    <button className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 transition-colors">
+                                                                        <Smile className="w-3.5 h-3.5 text-gray-600" />
+                                                                    </button>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ) : (
+                                                    <div className="flex justify-end">
+                                                        <div className="flex flex-col items-end max-w-xs sm:max-w-md">
+                                                            <div className="flex items-center mb-0.5 justify-end">
+                                                                <span className="text-xs text-gray-500 mr-1">{formatMessageTime(msg.created_at)}</span>
+                                                                {msg.seen ? (
+                                                                    <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
+                                                                ) : (
+                                                                    <Check className="w-3.5 h-3.5 text-gray-500" />
+                                                                )}
+                                                            </div>
+                                                            <div className="flex group relative">
+                                                                {editingMessageId === msg.id ? (
+                                                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-1 min-w-[200px]">
+                                                                        <textarea
+                                                                            ref={editInputRef}
+                                                                            value={editingText}
+                                                                            onChange={(e) => setEditingText(e.target.value)}
+                                                                            className="w-full p-2 outline-none text-gray-800 resize-none bg-transparent rounded-lg"
+                                                                            rows={2}
+                                                                            onKeyDown={(e) => {
+                                                                                if (e.key === 'Enter' && !e.shiftKey) {
+                                                                                    e.preventDefault();
+                                                                                    handleSaveEdit();
+                                                                                } else if (e.key === 'Escape') {
+                                                                                    handleCancelEditing();
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        <div className="flex justify-end space-x-2 mt-1 px-2 pb-1">
+                                                                            <button
+                                                                                onClick={handleCancelEditing}
+                                                                                className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                                                                            >
+                                                                                Cancel
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={handleSaveEdit}
+                                                                                disabled={!editingText.trim()}
+                                                                                className={`px-2 py-1 text-xs rounded ${editingText.trim()
+                                                                                    ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                                                    }`}
+                                                                            >
+                                                                                Save
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <>
+                                                                        {/* Message action buttons - Improved visibility */}
+                                                                        <div className="absolute right-full mr-1 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1 bg-white/80 p-0.5 rounded-lg shadow-sm">
+                                                                            <button
+                                                                                onClick={() => handleStartEditing(msg)}
+                                                                                className="p-1.5 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                                                                                aria-label="Edit message"
+                                                                            >
+                                                                                <Edit2 className="w-4 h-4" />
+                                                                            </button>
+                                                                            <button
+                                                                                onClick={() => handleDeleteMessage(msg.id)}
+                                                                                className="p-1.5 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                                                                                aria-label="Delete message"
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className="absolute left-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center transform translate-y-full pt-1 space-x-1">
+                                                                            <button className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 transition-colors">
+                                                                                <Smile className="w-3.5 h-3.5 text-gray-600" />
+                                                                            </button>
+                                                                        </div>
+                                                                        <div className="bg-blue-600 text-white rounded-xl rounded-tr-none px-3 py-2 hover:bg-blue-700 transition-colors">
+                                                                            {msg.content}
+                                                                        </div>
+                                                                    </>
+                                                                )}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        ))}
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    )
+                }
+
+                <ConfirmationAlert isDeleting={isDeleting} isVisible={isVisible} />
+
+                {/* Message Input - Only show when not minimized */}
+                {
+                    !isMinimized && (
+                        <div className="bg-white p-2 border-t mt-auto">
+                            <div className="rounded-lg border border-gray-300 bg-white">
+                                <textarea
+                                    placeholder="Write a message..."
+                                    value={messageText}
+                                    onChange={(e) => setMessageText(e.target.value)}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter' && !e.shiftKey) {
+                                            e.preventDefault();
+                                            handleSendMessage();
+                                        }
+                                    }}
+                                    className="w-full p-3 outline-none text-gray-800 resize-none min-h-[40px] max-h-32 text-sm"
+                                    rows={1}
+                                />
+                                <div className="flex justify-between items-center p-2 border-t">
+                                    <div className="flex space-x-1">
+                                        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors relative">
+                                            <Image className="w-5 h-5 text-gray-500" />
+                                            <div className="absolute bottom-full left-0 mb-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                                                Add image
+                                            </div>
+                                        </button>
+                                        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors relative">
+                                            <Paperclip className="w-5 h-5 text-gray-500" />
+                                            <div className="absolute bottom-full left-0 mb-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                                                Attach file
+                                            </div>
+                                        </button>
+                                        <div className="relative">
+                                            <button
+                                                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                                onClick={() => setShowEmojiPicker(!showEmojiPicker)}
+                                            >
+                                                <Smile className="w-5 h-5 text-gray-500" />
+                                            </button>
+                                            {showEmojiPicker && (
+                                                <div className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 w-64 grid grid-cols-7 gap-1">
+                                                    {/* Simple emoji picker UI */}
+                                                    {['😀', '😂', '😊', '🥰', '😍', '🤔', '😎', '👍', '👏', '❤️', '🎉', '🔥', '💯', '🙏'].map((emoji) => (
+                                                        <button
+                                                            key={emoji}
+                                                            className="text-xl hover:bg-gray-100 p-1 rounded"
+                                                            onClick={() => {
+                                                                setMessageText(prev => prev + emoji);
+                                                                setShowEmojiPicker(false);
+                                                            }}
+                                                        >
+                                                            {emoji}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={handleSendMessage}
+                                        disabled={!messageText.trim() || isSending}
+                                        className={`px-4 py-1.5 rounded-full text-sm font-medium ${messageText.trim() && !isSending
+                                            ? 'bg-blue-600 text-white hover:bg-blue-700'
+                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            } transition-colors`}
+                                    >
+                                        {isSending ? 'Sending...' : 'Send'}
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    )
+                }
             </div>
         </div>
     );

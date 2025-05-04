@@ -1,6 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import Chatlayout from '../components/chatlayout';
-import Chatbutton from '../components/chatbtn';
+
 import { useAuthStore } from '../lib/store';
 import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
@@ -1203,7 +1202,7 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
-        <Chatlayout><Chatbutton></Chatbutton></Chatlayout>
+
 
         {selectedTab === 'SoftwareComplaints' && (
           <div className={`flex-1 sm:px-10 py-8 px-3 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
@@ -1250,7 +1249,7 @@ const AdminPage: React.FC = () => {
 
 
         {selectedTab === 'OfficeComplaints' && (
-          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 max-w-7xl text-center ease-in-out ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
