@@ -5,19 +5,9 @@ import { getUnseenMessageCount } from './chatlib/supabasefunc';
 import { useAuthStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
 
-function Chatbutton({ openchat }: { openchat: () => void }) {
-  console.log("logging from the chatbtn");
+function Chatbutton() {
   const currentuser = useAuthStore((state) => state.user);
   const [messageCount, setMessageCount] = useState(0);
-
-  const handleClick = () => {
-    // Simply call the function passed from App.tsx
-    if (typeof openchat === 'function') {
-      openchat();
-    } else {
-      console.error('openchat is not a function:', openchat);
-    }
-  };
 
   useEffect(() => {
     const getMessageCount = async () => {
@@ -57,58 +47,52 @@ function Chatbutton({ openchat }: { openchat: () => void }) {
     };
   }, [currentuser]);
 
-  // If openchat is not provided, don't render the button
-  if (!openchat) {
-    return null;
-  }
-
   return (
-    <div
-      onClick={handleClick}
-      className="
-          fixed
-          bottom-4
-          right-4
-          flex
-          items-center
-          justify-center
-          bg-gradient-to-r
-          from-[#a36fd4]
-          to-blue-500
-          rounded-full
-          shadow-lg
-          hover:shadow-xl
-          hover:scale-105
-          transition-transform
-          duration-300
-          w-16
+    <Link to= {`${localStorage.getItem('user_email')?.endsWith('@admin.com') ? "/chat-admin" : '/chat'}`} className="no-underline">
+      <div className="
+          fixed 
+          bottom-4 
+          right-4 
+          flex 
+          items-center 
+          justify-center 
+          bg-gradient-to-r 
+          from-[#a36fd4] 
+          to-blue-500 
+          rounded-full 
+          shadow-lg 
+          hover:shadow-xl 
+          hover:scale-105 
+          transition-transform 
+          duration-300 
+          w-16 
           z-50
-          h-16
-          border-2
-          cursor-pointer
+          h-16 
+          border-2 
           border-white">
-      <MessageCircle className="w-8 h-8 text-white" />
-      {messageCount > 0 && (
-        <div className="absolute -top-2 -right-2">
-          <div className="
-              relative
-              flex
-              items-center
-              justify-center
-              w-6
-              h-6
-              bg-red-500
-              text-white
-              text-xs
-              font-bold
-              rounded-full
-              border-2
+        <MessageCircle className="w-8 h-8 text-white" />
+        {messageCount > 0 && (
+          <div className="absolute -top-2 -right-2">
+            <div className="
+              relative 
+              flex 
+              items-center 
+              justify-center 
+              w-6 
+              h-6 
+              bg-red-500 
+              text-white 
+              text-xs 
+              font-bold 
+              rounded-full 
+              border-2 
               border-white">
-            {messageCount}
+              {messageCount}
+            </div>
           </div>
-        </div>
-      )}
-    </div>
+        )}
+      </div>
+    </Link>
   );
 }
 
