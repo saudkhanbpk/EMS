@@ -198,7 +198,7 @@ function Updates() {
   }, []);
 
   return (
-    <div>
+    <div className="max-w-7xl mx-auto" >
       <h2 className="text-[28px] leading-9 text-[#000000] font-bold mb-4">
         Office Alerts
       </h2>
