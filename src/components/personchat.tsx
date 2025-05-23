@@ -614,6 +614,17 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                                         <div className="bg-blue-600 text-white rounded-xl rounded-tr-none px-3 py-2 hover:bg-blue-700 transition-colors">
                                                                             {msg.content}
                                                                         </div>
+                                                                        {/* Message status indicators */}
+                                                                        {isCurrentUserMessage(msg) && (
+                                                                            <div className="text-xs text-gray-500 flex items-center mt-1">
+                                                                                <span className="mr-1">{formatMessageTime(msg.created_at)}</span>
+                                                                                {msg.seen ? (
+                                                                                    <CheckCheck size={14} className="text-blue-500" />
+                                                                                ) : (
+                                                                                    <Check size={14} />
+                                                                                )}
+                                                                            </div>
+                                                                        )}
                                                                     </>
                                                                 )}
                                                             </div>
@@ -712,16 +723,3 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
 export default Chat;
 
 
-{/* Message status indicators */ }
-{
-    isCurrentUserMessage(msg) && (
-        <div className="text-xs text-gray-500 flex items-center mt-1">
-            <span className="mr-1">{formatMessageTime(msg.created_at)}</span>
-            {msg.seen ? (
-                <CheckCheck size={14} className="text-blue-500" />
-            ) : (
-                <Check size={14} />
-            )}
-        </div>
-    )
-}
