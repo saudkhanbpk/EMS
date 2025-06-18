@@ -12,7 +12,8 @@ import {
   CloudCog,
   Building2,
   Menu,
-  Banknote
+  Banknote,
+  Notebook 
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
@@ -87,6 +88,7 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     { name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote },
+    { name: "DailyLogs", href: "/Dailylogs", icon: Notebook },
     // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
 
@@ -148,7 +150,7 @@ const EmployeeLayout: React.FC = () => {
                   <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
                 </div>
 
-                <nav className="flex-1 px-4 py-16 space-y-1">
+                <nav className="flex-1 px-4 py-8 space-y-1">
                   {navigation.map((item) => {
                     const Icon = item.icon;
                     return (

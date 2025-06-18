@@ -288,6 +288,7 @@ import ExtraHours from './pages/ExtraHours2';
 import SalaryBreakdown from './components/SalaryBreakdown';
 import TaskBoard from './components/TaskBoard';
 import ProfileCard from './components/Profile';
+import DailyLogs from './pages/DailyLogs';
 import WidgetDemo from './components/WidgetDemo';
 import { getMessaging, onMessage } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
@@ -416,6 +417,7 @@ function App() {
           <Route path="salary-breakdown" element={<SalaryBreakdown />} />
           <Route path="board/:id" element={<TaskBoard />} />
           <Route path="profile" element={<ProfileCard />} />
+          <Route path="dailylogs" element={<DailyLogs />} />
           <Route path='chat' element={<ChatSidebar/>}></Route>
           <Route path="chat/:id" element={<Chat />} />
     

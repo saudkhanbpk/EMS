@@ -39,6 +39,7 @@ import {
 import { error } from 'console';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminHoliday from './adminHoliday';
+import AdminDailyLogs from '../components/AdminDailyLogs';
 
 interface AttendanceRecord {
   id: string;
@@ -756,7 +757,11 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 {/* Sidebar Buttons Container (Ensures Space Between) */}
-                <div className="flex flex-col flex-grow justify-between">
+                <div className="flex flex-col flex-grow justify-between overflow-y-auto sidebar-scroll"
+                     style={{
+                       scrollbarWidth: 'none', /* Firefox */
+                       msOverflowStyle: 'none', /* Internet Explorer 10+ */
+                     }}>
                   <div className="space-y-4">
 
                     <button
@@ -911,6 +916,19 @@ const AdminPage: React.FC = () => {
                     >
                       Office Alerts
                     </button>
+
+                    <button
+                      onClick={() => {
+                        handleClose()
+                        setSelectedTab("DailyLogs");
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "DailyLogs"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Daily Logs
+                    </button>
                   </div>
 
                   {/* Sign Out Button (Placed at the Bottom) */}
@@ -1016,7 +1034,7 @@ const AdminPage: React.FC = () => {
               {!isSmallScreen && (
                 <div className="col-span-1 ">
                   <h2 className="text-xl font-semibold mb-4">Employee List</h2>
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
+                  <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 light-scroll">
                     {employees.map((employee) => (
                       <li
                         key={employee.id}
@@ -1342,6 +1360,12 @@ const AdminPage: React.FC = () => {
             <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
             </div>
+          </div>
+        )}
+
+        {selectedTab === 'DailyLogs' && (
+          <div className={`flex-1 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
+            <AdminDailyLogs />
           </div>
         )}
 
