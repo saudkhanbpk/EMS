@@ -30,7 +30,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
     const sendEmail = async () => {
 
       try {
-        const response = await fetch("http://localhost:4000/send-email", {
+        const response = await fetch("https://ems-server-0bvq.onrender.com/send-email", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",

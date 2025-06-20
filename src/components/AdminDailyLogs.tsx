@@ -1,7 +1,14 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, User, Notebook, Search, MessageCircle, Star } from 'lucide-react';
-import { useAuthStore } from '../lib/store';
-import { supabase } from '../lib/supabase';
+import React, { useState, useEffect, useRef } from "react";
+import {
+  Send,
+  User,
+  Notebook,
+  Search,
+  MessageCircle,
+  Star,
+} from "lucide-react";
+import { useAuthStore } from "../lib/store";
+import { supabase } from "../lib/supabase";
 
 interface Employee {
   id: string;
@@ -34,21 +41,26 @@ interface DailyLog {
 
 const AdminDailyLogs: React.FC = () => {
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
+    null
+  );
   const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [replyText, setReplyText] = useState('');
+  const [replyText, setReplyText] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [searchTerm, setSearchTerm] = useState("");
   const [showRatingModal, setShowRatingModal] = useState(false);
-  const [pendingRating, setPendingRating] = useState<{messageId: string, rating: number} | null>(null);
+  const [pendingRating, setPendingRating] = useState<{
+    messageId: string;
+    rating: number;
+  } | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const replyInputRef = useRef<HTMLTextAreaElement>(null);
   const user = useAuthStore((state) => state.user);
 
   // Auto-scroll to bottom when new logs arrive
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
   // Fetch all employees
@@ -66,13 +78,13 @@ const AdminDailyLogs: React.FC = () => {
   const fetchEmployees = async () => {
     try {
       const { data, error } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .not('email', 'like', '%@admin.com')
-        .order('full_name');
+        .from("users")
+        .select("id, full_name, email")
+        .not("email", "like", "%@admin.com")
+        .order("full_name");
 
       if (error) {
-        console.error('Error fetching employees:', error);
+        console.error("Error fetching employees:", error);
       } else {
         // Fetch additional data for each employee
         const employeesWithStats = await Promise.all(
@@ -84,7 +96,7 @@ const AdminDailyLogs: React.FC = () => {
         setEmployees(employeesWithStats);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     }
   };
 
@@ -92,77 +104,84 @@ const AdminDailyLogs: React.FC = () => {
     try {
       // Get unread count
       const { count: unreadCount } = await supabase
-        .from('dailylog')
-        .select('*', { count: 'exact', head: true })
-        .eq('userid', employeeId)
-        .eq('sender_type', 'employee')
-        .eq('is_read', false);
-
-
-
-
+        .from("dailylog")
+        .select("*", { count: "exact", head: true })
+        .eq("userid", employeeId)
+        .eq("sender_type", "employee")
+        .eq("is_read", false);
 
       // Get monthly rating (current month)
       const now = new Date();
       const currentYear = now.getFullYear();
       const currentMonth = now.getMonth(); // 0-based month
-      const startOfCurrentMonth = new Date(currentYear, currentMonth, 1).toISOString();
-      const startOfNextMonth = new Date(currentYear, currentMonth + 1, 1).toISOString();
+      const startOfCurrentMonth = new Date(
+        currentYear,
+        currentMonth,
+        1
+      ).toISOString();
+      const startOfNextMonth = new Date(
+        currentYear,
+        currentMonth + 1,
+        1
+      ).toISOString();
 
       const { data: monthlyLogs } = await supabase
-        .from('dailylog')
-        .select('rating')
-        .eq('userid', employeeId)
-        .eq('sender_type', 'employee')
-        .not('rating', 'is', null)
-        .gte('created_at', startOfCurrentMonth)
-        .lt('created_at', startOfNextMonth);
+        .from("dailylog")
+        .select("rating")
+        .eq("userid", employeeId)
+        .eq("sender_type", "employee")
+        .not("rating", "is", null)
+        .gte("created_at", startOfCurrentMonth)
+        .lt("created_at", startOfNextMonth);
 
       // Get overall rating
       const { data: allLogs } = await supabase
-        .from('dailylog')
-        .select('rating')
-        .eq('userid', employeeId)
-        .eq('sender_type', 'employee')
-        .not('rating', 'is', null);
+        .from("dailylog")
+        .select("rating")
+        .eq("userid", employeeId)
+        .eq("sender_type", "employee")
+        .not("rating", "is", null);
 
       const monthlyRating = monthlyLogs?.length
-        ? (monthlyLogs.reduce((sum, log) => sum + (log.rating || 0), 0) / monthlyLogs.length)
+        ? monthlyLogs.reduce((sum, log) => sum + (log.rating || 0), 0) /
+          monthlyLogs.length
         : 0;
 
       const overallRating = allLogs?.length
-        ? (allLogs.reduce((sum, log) => sum + (log.rating || 0), 0) / allLogs.length)
+        ? allLogs.reduce((sum, log) => sum + (log.rating || 0), 0) /
+          allLogs.length
         : 0;
 
       // Get last message from EITHER employee OR admin (most recent)
       const { data: lastMessageData } = await supabase
-        .from('dailylog')
-        .select('dailylog, created_at, sender_type')
+        .from("dailylog")
+        .select("dailylog, created_at, sender_type")
         .or(`userid.eq.${employeeId},admin_id.eq.${employeeId}`)
-        .order('created_at', { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(1);
 
       // Get first 5 words of last message
       const lastMessage = lastMessageData?.[0]?.dailylog;
       const lastMessagePreview = lastMessage
-        ? lastMessage.split(' ').slice(0, 5).join(' ') + (lastMessage.split(' ').length > 5 ? '...' : '')
-        : '';
+        ? lastMessage.split(" ").slice(0, 5).join(" ") +
+          (lastMessage.split(" ").length > 5 ? "..." : "")
+        : "";
 
       return {
         unread_count: unreadCount || 0,
         last_message: lastMessagePreview,
         last_message_time: lastMessageData?.[0]?.created_at,
         monthly_rating: Math.round(monthlyRating * 10) / 10, // Round to 1 decimal place
-        overall_rating: Math.round(overallRating * 10) / 10   // Round to 1 decimal place
+        overall_rating: Math.round(overallRating * 10) / 10, // Round to 1 decimal place
       };
     } catch (error) {
-      console.error('Error fetching employee stats:', error);
+      console.error("Error fetching employee stats:", error);
       return {
         unread_count: 0,
-        last_message: '',
-        last_message_time: '',
+        last_message: "",
+        last_message_time: "",
         monthly_rating: 0,
-        overall_rating: 0
+        overall_rating: 0,
       };
     }
   };
@@ -171,23 +190,25 @@ const AdminDailyLogs: React.FC = () => {
     setIsLoading(true);
     try {
       const { data, error } = await supabase
-        .from('dailylog')
-        .select(`
+        .from("dailylog")
+        .select(
+          `
           *,
           user:users!dailylog_userid_fkey(full_name, email)
-        `)
+        `
+        )
         .or(`userid.eq.${employeeId},admin_id.eq.${employeeId}`)
-        .order('created_at', { ascending: true });
+        .order("created_at", { ascending: true });
 
       if (error) {
-        console.error('Error fetching logs:', error);
+        console.error("Error fetching logs:", error);
       } else {
         setLogs(data || []);
         // Mark employee messages as read
         await markMessagesAsRead(employeeId);
       }
     } catch (error) {
-      console.error('Error:', error);
+      console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
@@ -196,19 +217,19 @@ const AdminDailyLogs: React.FC = () => {
   const markMessagesAsRead = async (employeeId: string) => {
     try {
       await supabase
-        .from('dailylog')
+        .from("dailylog")
         .update({
           is_read: true,
-          read_at: new Date().toISOString()
+          read_at: new Date().toISOString(),
         })
-        .eq('userid', employeeId)
-        .eq('sender_type', 'employee')
-        .eq('is_read', false);
+        .eq("userid", employeeId)
+        .eq("sender_type", "employee")
+        .eq("is_read", false);
 
       // Refresh employee list to update unread counts
       fetchEmployees();
     } catch (error) {
-      console.error('Error marking messages as read:', error);
+      console.error("Error marking messages as read:", error);
     }
   };
 
@@ -222,31 +243,37 @@ const AdminDailyLogs: React.FC = () => {
 
     try {
       const { error } = await supabase
-        .from('dailylog')
+        .from("dailylog")
         .update({
           rating: pendingRating.rating,
-          rated_at: new Date().toISOString()
+          rated_at: new Date().toISOString(),
         })
-        .eq('id', pendingRating.messageId);
+        .eq("id", pendingRating.messageId);
 
       if (error) {
-        console.error('Error rating message:', error);
-        alert('Failed to save rating. Please try again.');
+        console.error("Error rating message:", error);
+        alert("Failed to save rating. Please try again.");
       } else {
         // Update local state
-        setLogs(prev => prev.map(log =>
-          log.id === pendingRating.messageId
-            ? { ...log, rating: pendingRating.rating, rated_at: new Date().toISOString() }
-            : log
-        ));
+        setLogs((prev) =>
+          prev.map((log) =>
+            log.id === pendingRating.messageId
+              ? {
+                  ...log,
+                  rating: pendingRating.rating,
+                  rated_at: new Date().toISOString(),
+                }
+              : log
+          )
+        );
         // Refresh employee stats
         fetchEmployees();
         setShowRatingModal(false);
         setPendingRating(null);
       }
     } catch (error) {
-      console.error('Error rating message:', error);
-      alert('Failed to save rating. Please try again.');
+      console.error("Error rating message:", error);
+      alert("Failed to save rating. Please try again.");
     }
   };
 
@@ -261,45 +288,50 @@ const AdminDailyLogs: React.FC = () => {
     setIsSending(true);
     try {
       const { data, error } = await supabase
-        .from('dailylog')
+        .from("dailylog")
         .insert([
           {
             userid: user.id,
             dailylog: replyText.trim(),
-            sender_type: 'admin',
-            admin_id: selectedEmployee.id
-          }
+            sender_type: "admin",
+            admin_id: selectedEmployee.id,
+          },
         ])
-        .select(`
+        .select(
+          `
           *,
           user:users!dailylog_userid_fkey(full_name, email)
-        `)
+        `
+        )
         .single();
 
       if (error) {
-        console.error('Error sending reply:', error);
-        alert('Failed to send reply. Please try again.');
+        console.error("Error sending reply:", error);
+        alert("Failed to send reply. Please try again.");
       } else {
-        setLogs(prev => [...prev, data]);
-        setReplyText('');
+        setLogs((prev) => [...prev, data]);
+        setReplyText("");
       }
     } catch (error) {
-      console.error('Error:', error);
-      alert('Failed to send reply. Please try again.');
+      console.error("Error:", error);
+      alert("Failed to send reply. Please try again.");
     } finally {
       setIsSending(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
+    if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       sendReply();
     }
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return new Date(dateString).toLocaleTimeString([], {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
   };
 
   const formatDate = (dateString: string) => {
@@ -309,20 +341,24 @@ const AdminDailyLogs: React.FC = () => {
   // Star Display Component with Color Coding - Always shows 5 stars
   const StarDisplay: React.FC<{
     rating: number;
-    size?: 'sm' | 'md' | 'lg';
-  }> = ({ rating, size = 'sm' }) => {
+    size?: "sm" | "md" | "lg";
+  }> = ({ rating, size = "sm" }) => {
     const getStarColor = (rating: number) => {
-      if (rating <= 2) return 'text-red-500 fill-red-500';
-      if (rating <= 4) return 'text-yellow-500 fill-yellow-500';
-      return 'text-green-500 fill-green-500';
+      if (rating <= 2) return "text-red-500 fill-red-500";
+      if (rating <= 4) return "text-yellow-500 fill-yellow-500";
+      return "text-green-500 fill-green-500";
     };
 
     const getStarSize = (size: string) => {
       switch (size) {
-        case 'sm': return 'w-3 h-3';
-        case 'md': return 'w-4 h-4';
-        case 'lg': return 'w-5 h-5';
-        default: return 'w-3 h-3';
+        case "sm":
+          return "w-3 h-3";
+        case "md":
+          return "w-4 h-4";
+        case "lg":
+          return "w-5 h-5";
+        default:
+          return "w-3 h-3";
       }
     };
 
@@ -344,8 +380,13 @@ const AdminDailyLogs: React.FC = () => {
         {hasHalfStar && (
           <div className="relative">
             <Star className={`${getStarSize(size)} text-gray-300`} />
-            <div className="absolute inset-0 overflow-hidden" style={{ width: '50%' }}>
-              <Star className={`${getStarSize(size)} ${getStarColor(rating)}`} />
+            <div
+              className="absolute inset-0 overflow-hidden"
+              style={{ width: "50%" }}
+            >
+              <Star
+                className={`${getStarSize(size)} ${getStarColor(rating)}`}
+              />
             </div>
           </div>
         )}
@@ -381,8 +422,8 @@ const AdminDailyLogs: React.FC = () => {
             <Star
               className={`w-4 h-4 ${
                 star <= (hoveredStar || currentRating || 0)
-                  ? 'text-yellow-400 fill-yellow-400'
-                  : 'text-gray-300 hover:text-yellow-200'
+                  ? "text-yellow-400 fill-yellow-400"
+                  : "text-gray-300 hover:text-yellow-200"
               }`}
             />
           </button>
@@ -397,9 +438,10 @@ const AdminDailyLogs: React.FC = () => {
   };
 
   const filteredEmployees = employees
-    .filter(employee =>
-      employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      employee.email.toLowerCase().includes(searchTerm.toLowerCase())
+    .filter(
+      (employee) =>
+        employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.email.toLowerCase().includes(searchTerm.toLowerCase())
     )
     .sort((a, b) => {
       // Sort by unread messages first (employees with unread messages at top)
@@ -407,7 +449,7 @@ const AdminDailyLogs: React.FC = () => {
       const bHasUnread = (b.unread_count || 0) > 0;
 
       if (aHasUnread && !bHasUnread) return -1; // a comes first
-      if (!aHasUnread && bHasUnread) return 1;  // b comes first
+      if (!aHasUnread && bHasUnread) return 1; // b comes first
 
       // If both have unread or both don't have unread, sort by unread count (descending)
       if (aHasUnread && bHasUnread) {
@@ -422,13 +464,15 @@ const AdminDailyLogs: React.FC = () => {
     <>
       {/* Rating Confirmation Modal */}
       {showRatingModal && pendingRating && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className="fixed inset-0  bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4 shadow-xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-4">
               Confirm Rating
             </h3>
             <p className="text-gray-600 mb-6">
-              Are you sure you want to rate this message with {pendingRating.rating} star{pendingRating.rating !== 1 ? 's' : ''}?
+              Are you sure you want to rate this message with{" "}
+              {pendingRating.rating} star{pendingRating.rating !== 1 ? "s" : ""}
+              ?
             </p>
             <div className="flex justify-center mb-4">
               {[1, 2, 3, 4, 5].map((star) => (
@@ -436,13 +480,13 @@ const AdminDailyLogs: React.FC = () => {
                   key={star}
                   className={`w-6 h-6 mx-1 ${
                     star <= pendingRating.rating
-                      ? 'text-yellow-400 fill-yellow-400'
-                      : 'text-gray-300'
+                      ? "text-yellow-400 fill-yellow-400"
+                      : "text-gray-300"
                   }`}
                 />
               ))}
             </div>
-            <div className="flex space-x-3">
+            <div className="flex space-x-3 ">
               <button
                 onClick={cancelRating}
                 className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50 transition-colors"
@@ -460,235 +504,303 @@ const AdminDailyLogs: React.FC = () => {
         </div>
       )}
 
-      <div className="flex h-screen bg-gray-50">
-      {/* Employee List Sidebar */}
-      <div className="w-1/3 bg-white border-r border-gray-300 flex flex-col shadow-sm">
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
-          <div className="flex items-center space-x-3 justify-center mb-4">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
-              <Notebook className="w-7 h-7 text-white" />
+      <div className="  flex h-[100vh] overflow-hidden bg-gray-50">
+        {/* Employee List Sidebar - Fixed height with internal scroll */}
+        <div
+          className={`${
+            selectedEmployee ? "hidden sm:flex" : "flex"
+          } flex-col w-full sm:w-[300px] md:w-[320px] lg:w-[350px] xl:w-[380px] bg-white border-r border-gray-300`}
+        >
+          {/* Fixed Header */}
+          <div className="flex-none p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
+            <div className="flex items-center space-x-3 justify-center mb-4">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center shadow-md">
+                <Notebook className="w-6 h-6 sm:w-7 sm:h-7 text-white" />
+              </div>
+              <div>
+                <h1 className="text-xl sm:text-2xl font-bold text-gray-800">
+                  Daily Logs
+                </h1>
+              </div>
             </div>
-            <div>
-              <h1 className="text-2xl font-bold text-gray-800">Daily Logs</h1>
-              {/* <p className="text-sm text-gray-600">Admin Dashboard</p */}
-            </div>
-          </div>
-          
-          {/* Search */}
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
-            <input
-              type="text"
-              placeholder="Search employees..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition-all duration-200 bg-gray-50 focus:bg-white"
-            />
-          </div>
-        </div>
 
-        {/* Employee List */}
-        <div className="flex-1 overflow-y-auto">
-          {filteredEmployees.length === 0 ? (
-            <div className="p-6 text-center text-gray-500">
-              <User className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-              <p>No employees found</p>
+            {/* Search */}
+            <div className="relative">
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-5 h-5" />
+              <input
+                type="text"
+                placeholder="Search employees..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-11 pr-4 py-2.5 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-300 transition-all duration-200 bg-gray-50 focus:bg-white text-sm"
+              />
             </div>
-          ) : (
-            filteredEmployees.map((employee) => (
-              <div
-                key={employee.id}
-                onClick={() => setSelectedEmployee(employee)}
-                className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-all duration-200 ${
-                  selectedEmployee?.id === employee.id
-                    ? 'bg-blue-100 border-blue-300 shadow-sm'
-                    : 'hover:shadow-sm'
-                }`}
-              >
-                <div className="flex items-center space-x-4">
-                  <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+          </div>
+
+          {/* Scrollable Employee List */}
+          <div className="flex-1 overflow-y-auto">
+            {filteredEmployees.length === 0 ? (
+              <div className="p-6 text-center text-gray-500">
+                <User className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p>No employees found</p>
+              </div>
+            ) : (
+              filteredEmployees.map((employee) => (
+                <div
+                  key={employee.id}
+                  onClick={() => setSelectedEmployee(employee)}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-all duration-200 ${
                     selectedEmployee?.id === employee.id
-                      ? 'bg-blue-600'
-                      : 'bg-gradient-to-r from-gray-400 to-gray-500'
-                  }`}>
-                    <User className="w-6 h-6 text-white" />
-                  </div>
+                      ? "bg-blue-100 border-blue-300 shadow-sm"
+                      : "hover:shadow-sm"
+                  }`}
+                >
+                  <div className="flex items-center space-x-2 md:space-x-4">
+                    <div
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                        selectedEmployee?.id === employee.id
+                          ? "bg-blue-600"
+                          : "bg-gradient-to-r from-gray-400 to-gray-500"
+                      }`}
+                    >
+                      <User className="w-6 h-6 text-white" />
+                    </div>
 
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-gray-900 truncate mb-1">
-                      {employee.full_name}
-                    </p>
+                    <div className="flex-1 min-w-0 ">
+                      <p className="text-sm font-semibold text-gray-900 truncate mb-1">
+                        {employee.full_name}
+                      </p>
 
-                    {/* Last Message Preview - In front of username */}
+                      {/* Last Message Preview - In front of username */}
+                      {/* {employee.last_message && (
+                        <p className="text-xs text-gray-600 truncate mb-1 italic">
+                          "{employee.last_message}"
+                        </p>
+                      )} */}
+
+                      <div className="space-y-1">
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-blue-700 font-medium">
+                            Monthly:
+                          </span>
+                          <StarDisplay
+                            rating={employee.monthly_rating || 0}
+                            size="sm"
+                          />
+                        </div>
+                        <div className="flex items-center space-x-2">
+                          <span className="text-xs text-green-700 font-medium">
+                            Overall:
+                          </span>
+                          <StarDisplay
+                            rating={employee.overall_rating || 0}
+                            size="sm"
+                          />
+                        </div>
+                      </div>
+                    </div>
+
                     {/* {employee.last_message && (
                       <p className="text-xs text-gray-600 truncate mb-1 italic">
                         "{employee.last_message}"
                       </p>
                     )} */}
 
-                    <div className="space-y-1">
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-blue-700 font-medium">Monthly:</span>
-                        <StarDisplay rating={employee.monthly_rating || 0} size="sm" />
-                      </div>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-green-700 font-medium">Overall:</span>
-                        <StarDisplay rating={employee.overall_rating || 0} size="sm" />
-                      </div>
+                    {/* Message Icon with Unread Count */}
+                    <div className="relative">
+                      {employee.unread_count && employee.unread_count > 0 ? (
+                        <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none shadow-md animate-pulse">
+                          {employee.unread_count}
+                        </span>
+                      ) : (
+                        ""
+                      )}
+                      <MessageCircle
+                        className={`w-5 h-5 ${
+                          selectedEmployee?.id === employee.id
+                            ? "text-blue-600"
+                            : "text-gray-400"
+                        }`}
+                      />
                     </div>
                   </div>
+                </div>
+              ))
+            )}
+          </div>
+        </div>
 
-                  {employee.last_message && (
-                      <p className="text-xs text-gray-600 truncate mb-1 italic">
-                        "{employee.last_message}"
+        {/* Chat Area - Fixed height with internal scroll for messages */}
+        <div
+          className={`${
+            selectedEmployee ? "flex" : "hidden sm:flex"
+          } flex-col flex-1 h-[100vh]`}
+        >
+          {selectedEmployee ? (
+            <>
+              {/* Fixed Chat Header */}
+              <div className="flex-none bg-white border-b border-gray-200 px-4 py-3">
+                <div className="flex items-center">
+                  <button
+                    onClick={() => setSelectedEmployee(null)}
+                    className="sm:hidden p-2 mr-2 text-gray-600 hover:text-gray-900"
+                    aria-label="Back to chat list"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-6 w-6 ms-10 md:ms-0"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2.5}
+                        d="M15 19l-7-7 7-7"
+                      />
+                    </svg>
+                  </button>
+
+                  <div className="flex items-center flex-1 min-w-0 space-x-4">
+                    <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center flex-shrink-0">
+                      <User className="w-5 h-5 text-gray-600" />
+                    </div>
+
+                    <div className="min-w-0 flex-1">
+                      <h2 className="text-base font-semibold text-gray-900 truncate">
+                        {selectedEmployee.full_name}
+                      </h2>
+                      <p className="text-xs text-gray-500">
+                        Daily Logs Conversation
                       </p>
-                    )}
-
-                  {/* Message Icon with Unread Count */}
-                  <div className="relative">
-                    {employee.unread_count && employee.unread_count > 0?(
-                      <span className="absolute -top-2 -right-2 bg-red-500 text-white text-xs rounded-full px-1.5 py-0.5 min-w-[18px] text-center leading-none shadow-md animate-pulse">
-                        {employee.unread_count}
-                      </span>
-                    ):("")}
-                    <MessageCircle className={`w-5 h-5 ${
-                      selectedEmployee?.id === employee.id ? 'text-blue-600' : 'text-gray-400'
-                    }`} />
+                    </div>
                   </div>
-                </div>  
+                </div>
               </div>
-            ))
+
+              {/* Scrollable Messages Area */}
+              <div className="flex-1 overflow-y-auto min-h-0 p-4 space-y-4 bg-gray-50">
+                {isLoading ? (
+                  <div className="flex justify-center items-center h-32">
+                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                  </div>
+                ) : logs.length === 0 ? (
+                  <div className="text-center py-8">
+                    <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500">
+                      No daily logs yet from this employee.
+                    </p>
+                  </div>
+                ) : (
+                  logs.map((log) => {
+                    const isAdmin = log.sender_type === "admin";
+                    return (
+                      <div
+                        key={log.id}
+                        className={`flex ${
+                          isAdmin ? "justify-end" : "justify-start"
+                        }`}
+                      >
+                        <div
+                          className={`flex items-start space-x-2 max-w-xs sm:max-w-sm lg:max-w-md ${
+                            isAdmin ? "flex-row-reverse space-x-reverse" : ""
+                          }`}
+                        >
+                          {/* Avatar */}
+                          <div
+                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
+                              isAdmin ? "bg-green-600" : "bg-blue-600"
+                            }`}
+                          >
+                            <User className="w-4 h-4 text-white" />
+                          </div>
+
+                          {/* Message Bubble */}
+                          <div
+                            className={`rounded-2xl px-4 py-2 ${
+                              isAdmin
+                                ? "bg-green-600 text-white"
+                                : "bg-white text-gray-800 shadow-sm border border-gray-200"
+                            }`}
+                          >
+                            <p className="text-sm whitespace-pre-wrap">
+                              {log.dailylog}
+                            </p>
+                            <p
+                              className={`text-xs mt-1 ${
+                                isAdmin ? "text-green-100" : "text-gray-500"
+                              }`}
+                            >
+                              {formatTime(log.created_at)}
+                            </p>
+
+                            {/* Star Rating for Employee Messages */}
+                            {!isAdmin && (
+                              <StarRating
+                                messageId={log.id}
+                                currentRating={log.rating}
+                                onRate={handleRatingClick}
+                              />
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+                <div ref={messagesEndRef} />
+              </div>
+
+              {/* Fixed Reply Input */}
+              <div className="flex-none bg-white border-t border-gray-200 p-4">
+                <div className="flex items-end space-x-2">
+                  <textarea
+                    ref={replyInputRef}
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your reply..."
+                    className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
+                    rows={2}
+                  />
+                  <button
+                    onClick={sendReply}
+                    disabled={!replyText.trim() || isSending}
+                    className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center space-x-2"
+                  >
+                    {isSending ? (
+                      <>
+                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                        <span>Sending...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Send className="w-4 h-4" />
+                        <span>Send</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </>
+          ) : (
+            /* No Employee Selected */
+            <div className="hidden sm:flex flex-1 items-center justify-center bg-gray-50 p-4">
+              <div className="text-center max-w-md mx-auto">
+                <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  Select an Employee
+                </h3>
+                <p className="text-gray-500">
+                  Choose an employee from the list to view their daily logs and
+                  send replies.
+                </p>
+              </div>
+            </div>
           )}
         </div>
       </div>
-
-      {/* Chat Area */}
-      <div className="flex-1 flex flex-col">
-        {selectedEmployee ? (
-          <>
-            {/* Chat Header */}
-            <div className="bg-white border-b border-gray-200 p-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                  <User className="w-5 h-5 text-gray-600" />
-                </div>
-                <div>
-                  <h2 className="text-lg font-semibold text-gray-800">
-                    {selectedEmployee.full_name}
-                  </h2>
-                  <p className="text-sm text-gray-500">Daily Logs Conversation</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Messages Area */}
-            <div className="flex-1 overflow-y-auto p-4 space-y-4 bg-gray-50">
-              {isLoading ? (
-                <div className="flex justify-center items-center h-32">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                </div>
-              ) : logs.length === 0 ? (
-                <div className="text-center py-8">
-                  <MessageCircle className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p className="text-gray-500">No daily logs yet from this employee.</p>
-                </div>
-              ) : (
-                logs.map((log) => {
-                  const isAdmin = log.sender_type === 'admin';
-                  return (
-                    <div
-                      key={log.id}
-                      className={`flex ${isAdmin ? 'justify-end' : 'justify-start'}`}
-                    >
-                      <div className={`flex items-start space-x-2 max-w-xs sm:max-w-sm lg:max-w-md ${
-                        isAdmin ? 'flex-row-reverse space-x-reverse' : ''
-                      }`}>
-                        {/* Avatar */}
-                        <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isAdmin ? 'bg-green-600' : 'bg-blue-600'
-                        }`}>
-                          <User className="w-4 h-4 text-white" />
-                        </div>
-
-                        {/* Message Bubble */}
-                        <div className={`rounded-2xl px-4 py-2 ${
-                          isAdmin
-                            ? 'bg-green-600 text-white'
-                            : 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                        }`}>
-                          <p className="text-sm whitespace-pre-wrap">{log.dailylog}</p>
-                          <p className={`text-xs mt-1 ${
-                            isAdmin ? 'text-green-100' : 'text-gray-500'
-                          }`}>
-                            {formatTime(log.created_at)}
-                          </p>
-
-                          {/* Star Rating for Employee Messages */}
-                          {!isAdmin && (
-                            <StarRating
-                              messageId={log.id}
-                              currentRating={log.rating}
-                              onRate={handleRatingClick}
-                            />
-                          )}
-                        </div>
-                      </div>
-                    </div>
-                  );
-                })
-              )}
-              <div ref={messagesEndRef} />
-            </div>
-
-            {/* Reply Input */}
-            <div className="bg-white border-t border-gray-200 p-4">
-              <div className="flex items-end space-x-2">
-                <textarea
-                  ref={replyInputRef}
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your reply..."
-                  className="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent resize-none"
-                  rows={2}
-                />
-                <button
-                  onClick={sendReply}
-                  disabled={!replyText.trim() || isSending}
-                  className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-all flex items-center space-x-2"
-                >
-                  {isSending ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                      <span>Sending...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Send className="w-4 h-4" />
-                      <span>Send</span>
-                    </>
-                  )}
-                </button>
-              </div>
-            </div>
-          </>
-        ) : (
-          /* No Employee Selected */
-          <div className="flex-1 flex items-center justify-center bg-gray-50">
-            <div className="text-center">
-              <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-medium text-gray-900 mb-2">
-                Select an Employee
-              </h3>
-              <p className="text-gray-500">
-                Choose an employee from the list to view their daily logs and send replies.
-              </p>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
     </>
   );
 };

@@ -714,7 +714,7 @@ const EmployeeAttendanceTable = () => {
   // }
   const downloadPDF = async () => {
     try {
-      const response = await fetch("http://localhost:4000/generate-pdfDaily", {
+      const response = await fetch("https://ems-server-0bvq.onrender.com/generate-pdfDaily", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1716,7 +1716,7 @@ const EmployeeAttendanceTable = () => {
   //   //   return;
   //   // }
   //   try {
-  //     const response = await fetch('http://localhost:4000/generate-Filtered', {
+  //     const response = await fetch('https://ems-server-0bvq.onrender.com/generate-Filtered', {
   //       method: 'POST',
   //       headers: {
   //         'Content-Type': 'application/json',
@@ -1759,7 +1759,7 @@ const EmployeeAttendanceTable = () => {
     //   return;
     // }
     try {
-      const response = await fetch("http://localhost:4000/generate-Filtered", {
+      const response = await fetch("https://ems-server-0bvq.onrender.com/generate-Filtered", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1809,7 +1809,7 @@ const EmployeeAttendanceTable = () => {
     //   return;
     // }
     try {
-      const response = await fetch("http://localhost:4000/generate-pdfWeekly", {
+      const response = await fetch("https://ems-server-0bvq.onrender.com/generate-pdfWeekly", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -1853,7 +1853,7 @@ const EmployeeAttendanceTable = () => {
     // }
     try {
       const response = await fetch(
-        "http://localhost:4000/generate-pdfMonthly",
+        "https://ems-server-0bvq.onrender.com/generate-pdfMonthly",
         {
           method: "POST",
           headers: {

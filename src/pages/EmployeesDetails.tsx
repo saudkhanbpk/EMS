@@ -348,7 +348,7 @@ const EmployeesDetails = ({ selectedTab }) => {
 
           // Send the notification
           console.log("Sending notification with payload:", notificationPayload);
-          const response = await fetch("http://localhost:4000/send-singlenotifications", {
+          const response = await fetch("https://ems-server-0bvq.onrender.com/send-singlenotifications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(notificationPayload)

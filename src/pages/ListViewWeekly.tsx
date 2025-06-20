@@ -464,7 +464,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
   const downloadPDF = async (filteredDailyAttendance, fullName) => {
     try {
       const response = await fetch(
-        "http://localhost:4000/generate-pdfWeeklyOfEmployee",
+        "https://ems-server-0bvq.onrender.com/generate-pdfWeeklyOfEmployee",
         {
           method: "POST",
           headers: {

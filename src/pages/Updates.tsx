@@ -111,7 +111,7 @@ function Updates() {
       setemaillist(emailList);
 
       // 2. Send emails
-      const response = await fetch("http://localhost:4000/send-alertemail", {
+      const response = await fetch("https://ems-server-0bvq.onrender.com/send-alertemail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

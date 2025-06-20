@@ -107,7 +107,7 @@ const EmployeeLayout: React.FC = () => {
       />
       {/* <div className="flex h-screen"> */}
       <div >
-        <div className="min-h-screen bg-gray-100 overflow-hidden">
+        <div className="min-h-screen bg-gray-100 overflow-hidden ">
           <Updateview />
           <div className="flex ">
 
@@ -145,12 +145,12 @@ const EmployeeLayout: React.FC = () => {
                   : 'translate-x-0'
                 }`}
             >
-              <div className="flex flex-col h-full ">
+              <div className="flex flex-col h-full overflow-y-scroll sidebar-scroll  ">
                 <div className="flex items-center justify-center">
                   <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
                 </div>
 
-                <nav className="flex-1 px-4 py-8 space-y-1">
+                <nav className="flex-1 px-4 py-8 space-y- ">
                   {navigation.map((item) => {
                     const Icon = item.icon;
                     return (
