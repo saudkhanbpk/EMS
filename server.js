@@ -670,7 +670,7 @@ cron.schedule("45 8 * * *", () => {
         from: process.env.VITE_EMAIL_USER, // The email that actually sends the email
         to: recipientEmail, // Admin's email
         subject: subject,
-        text: message,
+        html: message,
         replyTo: senderEmail, // This ensures the admin’s reply goes to the user
     };
 
