@@ -1,25 +1,53 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
-import { Mail, Phone, MapPin, CreditCard, Globe, Building2, Slack, Briefcase, X, ArrowLeft } from "lucide-react";
+import {
+  Mail,
+  Phone,
+  MapPin,
+  CreditCard,
+  Globe,
+  Building2,
+  Slack,
+  Briefcase,
+  X,
+  ArrowLeft,
+} from "lucide-react";
 import { FaEdit } from "react-icons/fa";
 import { startOfMonth } from "date-fns";
 import {
-  CheckCircle, PieChart, Users, CalendarClock, Moon, AlarmClockOff, Watch, Info, Landmark,
-  Clock, DollarSign, FileMinusIcon, TrendingDown, TrendingUp, FileText, History
-} from 'lucide-react';
+  CheckCircle,
+  PieChart,
+  Users,
+  CalendarClock,
+  Moon,
+  AlarmClockOff,
+  Watch,
+  Info,
+  Landmark,
+  Clock,
+  DollarSign,
+  FileMinusIcon,
+  TrendingDown,
+  TrendingUp,
+  FileText,
+  History,
+} from "lucide-react";
 
-
-const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }) => {
-
+const Employeeprofile = ({
+  employeeid,
+  employee,
+  employeeview,
+  setemployeeview,
+}) => {
   const [employeeData, setEmployeeData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [incrementModel, setIncrementModel] = useState(false);
   const [lastIncrement, setLastIncrement] = useState(null); // Changed from increment to lastIncrement for clarity
-  const [selectedmonth, setselectedmonth] = useState('');
-  const [startdate, setStartdate] = useState('');
-  const [enddate, setEnddate] = useState('');
+  const [selectedmonth, setselectedmonth] = useState("");
+  const [startdate, setStartdate] = useState("");
+  const [enddate, setEnddate] = useState("");
   const [monthlyData, setMonthlyData] = useState({
     totalAttendance: 0,
     totalAbsents: 0,
@@ -30,7 +58,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     activeTaskCount: 0,
     completedTaskCount: 0,
     completedTasksScore: 0,
-    projectsCount: 0
+    projectsCount: 0,
   });
 
   // Function to fetch data for the selected month
@@ -47,9 +75,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         .gte("check_in", startDate)
         .lte("check_in", endDate);
 
-        // console.log("start Date" , startdate);
-        // console.log("end Date" , enddate);
-
+      // console.log("start Date" , startdate);
+      // console.log("end Date" , enddate);
 
       if (attendanceError) {
         console.error("Error fetching attendance:", attendanceError);
@@ -60,33 +87,45 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       const { data: breakData, error: breakError } = await supabase
         .from("breaks")
         .select("start_time, end_time, attendance_id")
-        .in("attendance_id", attendanceData.length > 0 ? attendanceData.map(a => a.id) : ['']);
+        .in(
+          "attendance_id",
+          attendanceData.length > 0 ? attendanceData.map((a) => a.id) : [""]
+        );
 
       if (breakError) {
         console.error("Error fetching breaks:", breakError);
       }
 
       // Group breaks by attendance_id
-      const breaksByAttendance: Record<string, Array<{ start_time: string; end_time: string | null }>> = {};
+      const breaksByAttendance: Record<
+        string,
+        Array<{ start_time: string; end_time: string | null }>
+      > = {};
       if (breakData) {
-        breakData.forEach(b => {
-          if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+        breakData.forEach((b) => {
+          if (!breaksByAttendance[b.attendance_id])
+            breaksByAttendance[b.attendance_id] = [];
           breaksByAttendance[b.attendance_id].push(b);
         });
       }
 
       // Group attendance by day (taking the earliest record for each day), just like in ListViewOfEmployees.tsx
       const attendanceByDate = {};
-      attendanceData.forEach(log => {
-        const date = new Date(log.check_in).toISOString().split('T')[0]; // Format: YYYY-MM-DD
-        if (!attendanceByDate[date] || new Date(log.check_in) < new Date(attendanceByDate[date].check_in)) {
+      attendanceData.forEach((log) => {
+        const date = new Date(log.check_in).toISOString().split("T")[0]; // Format: YYYY-MM-DD
+        if (
+          !attendanceByDate[date] ||
+          new Date(log.check_in) < new Date(attendanceByDate[date].check_in)
+        ) {
           attendanceByDate[date] = log;
         }
       });
 
       // Convert to array of unique attendance records (one per day)
       const uniqueAttendance = Object.values(attendanceByDate);
-      console.log(`Grouped ${attendanceData.length} attendance records into ${uniqueAttendance.length} unique days`);
+      console.log(
+        `Grouped ${attendanceData.length} attendance records into ${uniqueAttendance.length} unique days`
+      );
 
       // Calculate total working hours and break hours separately
       let totalRawWorkHours = 0;
@@ -94,7 +133,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       let totalNetWorkHours = 0;
 
       // First, calculate total raw hours without breaks
-      uniqueAttendance.forEach(log => {
+      uniqueAttendance.forEach((log) => {
         const checkIn = new Date(log.check_in);
 
         // For no checkout, use current time but cap at 8 hours after check-in
@@ -110,17 +149,21 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
         }
 
-        let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+        let hoursWorked =
+          (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
         // Handle negative values by using Math.max(0, hoursWorked)
         hoursWorked = Math.max(0, hoursWorked);
         // Cap at 12 hours per day
         totalRawWorkHours += Math.min(hoursWorked, 12);
       });
 
-      console.log("Total Raw Working Hours (before breaks):", totalRawWorkHours.toFixed(2));
+      console.log(
+        "Total Raw Working Hours (before breaks):",
+        totalRawWorkHours.toFixed(2)
+      );
 
       // Now calculate break hours and net working hours for each attendance record
-      uniqueAttendance.forEach(log => {
+      uniqueAttendance.forEach((log) => {
         const checkIn = new Date(log.check_in);
 
         // For no checkout, use current time but cap at 8 hours after check-in
@@ -136,7 +179,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
         }
 
-        let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+        let hoursWorked =
+          (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
         // Handle negative values by using Math.max(0, hoursWorked)
         hoursWorked = Math.max(0, hoursWorked);
 
@@ -152,7 +196,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               ? new Date(b.end_time)
               : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-            const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            const thisBreakHours =
+              (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
             breakHoursForThisLog += thisBreakHours;
             totalBreakHours += thisBreakHours;
           }
@@ -160,15 +205,30 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
         // Calculate net hours for this log
         // Handle negative values and cap at 12 hours per day
-        const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
+        const netHoursForThisLog = Math.max(
+          0,
+          Math.min(hoursWorked - breakHoursForThisLog, 12)
+        );
         totalNetWorkHours += netHoursForThisLog;
 
         // Log details for each attendance record
-        console.log(`Attendance ID ${log.id}: Raw Hours = ${hoursWorked.toFixed(2)}h, Break Hours = ${breakHoursForThisLog.toFixed(2)}h, Net Hours = ${netHoursForThisLog.toFixed(2)}h`);
+        console.log(
+          `Attendance ID ${log.id}: Raw Hours = ${hoursWorked.toFixed(
+            2
+          )}h, Break Hours = ${breakHoursForThisLog.toFixed(
+            2
+          )}h, Net Hours = ${netHoursForThisLog.toFixed(2)}h`
+        );
       });
 
       // Log the totals
-      console.log(`TOTAL: Raw Working Hours = ${totalRawWorkHours.toFixed(2)}h, Total Break Hours = ${totalBreakHours.toFixed(2)}h, Net Working Hours = ${totalNetWorkHours.toFixed(2)}h`);
+      console.log(
+        `TOTAL: Raw Working Hours = ${totalRawWorkHours.toFixed(
+          2
+        )}h, Total Break Hours = ${totalBreakHours.toFixed(
+          2
+        )}h, Net Working Hours = ${totalNetWorkHours.toFixed(2)}h`
+      );
 
       // Use the net hours as the total work hours
       let totalWorkHours = totalNetWorkHours;
@@ -190,7 +250,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       const { data: remoteBreakData, error: remoteBreakError } = await supabase
         .from("Remote_Breaks")
         .select("start_time, end_time, Remote_Id")
-        .in("Remote_Id", extrahoursData.length > 0 ? extrahoursData.map(a => a.id) : ['']);
+        .in(
+          "Remote_Id",
+          extrahoursData.length > 0 ? extrahoursData.map((a) => a.id) : [""]
+        );
 
       if (remoteBreakError) {
         console.error("Error fetching remote breaks:", remoteBreakError);
@@ -199,26 +262,28 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // Group remote breaks by Remote_Id
       const remoteBreaksByAttendance = {};
       if (remoteBreakData) {
-        remoteBreakData.forEach(b => {
-          if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+        remoteBreakData.forEach((b) => {
+          if (!remoteBreaksByAttendance[b.Remote_Id])
+            remoteBreaksByAttendance[b.Remote_Id] = [];
           remoteBreaksByAttendance[b.Remote_Id].push(b);
         });
       }
 
       // Calculate total overtime hours
       let totalOvertimeHours = 0;
-      extrahoursData.forEach(log => {
+      extrahoursData.forEach((log) => {
         if (log.check_in && log.check_out) {
           const checkIn = new Date(log.check_in);
           const checkOut = new Date(log.check_out);
 
-          let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+          let hoursWorked =
+            (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
 
           // Subtract remote breaks
           const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
           let remoteBreakHours = 0;
 
-          remoteBreaks.forEach(b => {
+          remoteBreaks.forEach((b) => {
             if (b.start_time) {
               const breakStart = new Date(b.start_time);
               // If end_time is missing, calculate only 1 hour of break
@@ -226,7 +291,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 ? new Date(b.end_time)
                 : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-              remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+              remoteBreakHours +=
+                (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
             }
           });
 
@@ -247,12 +313,18 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         throw absenteeError;
       }
 
-      const totalAbsents = absenteeData.filter(a => a.absentee_type === "Absent").length;
-      const totalLeaves = absenteeData.filter(a => a.absentee_type === "leave").length;
+      const totalAbsents = absenteeData.filter(
+        (a) => a.absentee_type === "Absent"
+      ).length;
+      const totalLeaves = absenteeData.filter(
+        (a) => a.absentee_type === "leave"
+      ).length;
 
       // Calculate overtime pay
       const overtimePay = employeeData?.per_hour_pay
-        ? (parseFloat(employeeData.per_hour_pay) * totalOvertimeHours).toFixed(2)
+        ? (parseFloat(employeeData.per_hour_pay) * totalOvertimeHours).toFixed(
+            2
+          )
         : "0";
 
       // Fetch all tasks for the selected month
@@ -267,27 +339,36 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       }
 
       // Filter tasks where the employee is in the devops array or is the user_id
-      const tasksData = allTasksData ? allTasksData.filter(task => {
-        // Check if task is directly assigned to the employee
-        if (task.user_id === employeeid) return true;
+      const tasksData = allTasksData
+        ? allTasksData.filter((task) => {
+            // Check if task is directly assigned to the employee
+            if (task.user_id === employeeid) return true;
 
-        // Check if employee is in the devops array
-        if (task.devops && Array.isArray(task.devops)) {
-          return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === employeeid);
-        }
+            // Check if employee is in the devops array
+            if (task.devops && Array.isArray(task.devops)) {
+              return task.devops.some(
+                (dev) => dev && typeof dev === "object" && dev.id === employeeid
+              );
+            }
 
-        return false;
-      }) : [];
+            return false;
+          })
+        : [];
 
       console.log("Monthly tasks found:", tasksData.length);
 
       // Count active tasks
-      const activeTaskCount = tasksData.filter(task => task.status !== "done").length;
+      const activeTaskCount = tasksData.filter(
+        (task) => task.status !== "done"
+      ).length;
 
       // Get completed tasks and calculate total score
-      const completedTasks = tasksData.filter(task => task.status === "done");
+      const completedTasks = tasksData.filter((task) => task.status === "done");
       const completedTaskCount = completedTasks.length;
-      const completedTasksScore = completedTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+      const completedTasksScore = completedTasks.reduce(
+        (sum, task) => sum + (Number(task.score) || 0),
+        0
+      );
 
       // Fetch all projects for the selected month
       const { data: allProjectsData, error: projectsError } = await supabase
@@ -301,12 +382,16 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       }
 
       // Filter projects where the employee is in the devops array
-      const projectsData = allProjectsData ? allProjectsData.filter(project => {
-        if (!project.devops || !Array.isArray(project.devops)) return false;
+      const projectsData = allProjectsData
+        ? allProjectsData.filter((project) => {
+            if (!project.devops || !Array.isArray(project.devops)) return false;
 
-        // Check if any devops entry has the employee's ID
-        return project.devops.some(dev => dev && typeof dev === 'object' && dev.id === employeeid);
-      }) : [];
+            // Check if any devops entry has the employee's ID
+            return project.devops.some(
+              (dev) => dev && typeof dev === "object" && dev.id === employeeid
+            );
+          })
+        : [];
 
       console.log("Monthly projects found:", projectsData.length);
       const projectsCount = projectsData.length;
@@ -322,7 +407,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         activeTaskCount,
         completedTaskCount,
         completedTasksScore,
-        projectsCount
+        projectsCount,
       });
 
       console.log("Monthly data updated:", {
@@ -335,12 +420,13 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         activeTaskCount,
         completedTaskCount,
         completedTasksScore,
-        projectsCount
+        projectsCount,
       });
-
     } catch (err) {
       console.error("Error fetching monthly data:", err);
-      setError("Failed to fetch monthly data: " + (err.message || "Unknown error"));
+      setError(
+        "Failed to fetch monthly data: " + (err.message || "Unknown error")
+      );
     } finally {
       setLoading(false);
     }
@@ -351,15 +437,19 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     if (selectedmonth) {
       try {
         // Parse the selected month (format: "YYYY-MM")
-        const [year, month] = selectedmonth.split('-').map(Number);
+        const [year, month] = selectedmonth.split("-").map(Number);
 
         // Create date objects for the first and last day of the month
         // Set time to start of day (00:00:00) for the first day
-        const startOfMonthDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+        const startOfMonthDate = new Date(
+          Date.UTC(year, month - 1, 1, 0, 0, 0, 0)
+        );
 
         // Get the last day of the month and set time to end of day (23:59:59.999)
         const lastDay = new Date(Date.UTC(year, month, 0)).getDate(); // Last day of the month
-        const endOfMonthDate = new Date(Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999));
+        const endOfMonthDate = new Date(
+          Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999)
+        );
 
         console.log("Selected month:", selectedmonth);
         console.log("Start of Month:", startOfMonthDate.toISOString());
@@ -370,21 +460,23 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         setEnddate(endOfMonthDate.toISOString());
 
         // Fetch data for the selected month
-        fetchMonthlyData(startOfMonthDate.toISOString(), endOfMonthDate.toISOString());
+        fetchMonthlyData(
+          startOfMonthDate.toISOString(),
+          endOfMonthDate.toISOString()
+        );
       } catch (err) {
         console.error("Error processing dates:", err);
       }
     }
   }, [selectedmonth, employeeid]);
 
-
   const [incrementData, setIncrementData] = useState({
     user_id: employeeid,
     increment_amount: "",
-    increment_date: new Date().toISOString().split('T')[0], // Default to today's date
+    increment_date: new Date().toISOString().split("T")[0], // Default to today's date
     basic_sallery: "",
     upcomming_increment: "",
-    after_increment: ""
+    after_increment: "",
   });
 
   const [formData, setFormData] = useState({
@@ -418,7 +510,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
   const [upcomingIncrementDate, setUpcomingIncrementDate] = useState("");
   const [showIncrementHistory, setShowIncrementHistory] = useState(false);
-  const [incrementHistory, setIncrementHistory] = useState<IncrementHistoryItem[]>([]);
+  const [incrementHistory, setIncrementHistory] = useState<
+    IncrementHistoryItem[]
+  >([]);
 
   const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
@@ -450,15 +544,17 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       console.log("Increment history:", incrementHistoryData);
 
       // Convert any null values to empty strings to avoid rendering issues
-      const formattedHistory: IncrementHistoryItem[] = (incrementHistoryData || []).map(item => ({
+      const formattedHistory: IncrementHistoryItem[] = (
+        incrementHistoryData || []
+      ).map((item) => ({
         id: item.id,
         user_id: item.user_id,
-        increment_date: item.increment_date || '',
-        increment_amount: item.increment_amount || '0',
-        basic_sallery: item.basic_sallery || '0',
-        after_increment: item.after_increment || '0',
-        upcomming_increment: item.upcomming_increment || '',
-        created_at: item.created_at
+        increment_date: item.increment_date || "",
+        increment_amount: item.increment_amount || "0",
+        basic_sallery: item.basic_sallery || "0",
+        after_increment: item.after_increment || "0",
+        upcomming_increment: item.upcomming_increment || "",
+        created_at: item.created_at,
       }));
 
       setIncrementHistory(formattedHistory);
@@ -484,7 +580,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // Fetch last increment
       const { data: pastIncrements, error: incrementError } = await supabase
         .from("sallery_increment")
-        .select("increment_date, increment_amount, basic_sallery, after_increment, upcomming_increment")
+        .select(
+          "increment_date, increment_amount, basic_sallery, after_increment, upcomming_increment"
+        )
         .eq("user_id", employeeid)
         .order("created_at", { ascending: false })
         .limit(1);
@@ -497,13 +595,18 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           setLastIncrement(pastIncrements[0]);
           if (pastIncrements[0].upcomming_increment) {
             // Format the date as YYYY-MM-DD for the date input field
-            const upcomingDate = new Date(pastIncrements[0].upcomming_increment);
+            const upcomingDate = new Date(
+              pastIncrements[0].upcomming_increment
+            );
             if (!isNaN(upcomingDate.getTime())) {
-              const formattedDate = upcomingDate.toISOString().split('T')[0];
+              const formattedDate = upcomingDate.toISOString().split("T")[0];
               console.log("Formatted upcoming increment date:", formattedDate);
               setUpcomingIncrementDate(formattedDate);
             } else {
-              console.log("Invalid upcoming increment date:", pastIncrements[0].upcomming_increment);
+              console.log(
+                "Invalid upcoming increment date:",
+                pastIncrements[0].upcomming_increment
+              );
               setUpcomingIncrementDate("");
             }
           }
@@ -532,22 +635,31 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       const { data: breakData, error: breakError } = await supabase
         .from("breaks")
         .select("start_time, end_time, attendance_id")
-        .in("attendance_id", attendanceData.map(a => a.id));
+        .in(
+          "attendance_id",
+          attendanceData.map((a) => a.id)
+        );
 
       if (breakError) throw breakError;
 
       // Group breaks by attendance_id
-      const breaksByAttendance: Record<string, { start_time: string; end_time: string | null }[]> = {};
-      breakData.forEach(b => {
-        if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+      const breaksByAttendance: Record<
+        string,
+        { start_time: string; end_time: string | null }[]
+      > = {};
+      breakData.forEach((b) => {
+        if (!breaksByAttendance[b.attendance_id])
+          breaksByAttendance[b.attendance_id] = [];
         breaksByAttendance[b.attendance_id].push(b);
       });
 
       let totalWorkHours = 0;
 
-      attendanceData.forEach(log => {
+      attendanceData.forEach((log) => {
         const checkIn = new Date(log.check_in);
-        const checkOut = log.check_out ? new Date(log.check_out) : new Date(checkIn.getTime());
+        const checkOut = log.check_out
+          ? new Date(log.check_out)
+          : new Date(checkIn.getTime());
 
         let hoursWorked = (checkOut - checkIn) / (1000 * 60 * 60);
 
@@ -555,14 +667,15 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         const breaks = breaksByAttendance[log.id] || [];
         let breakHours = 0;
 
-        breaks.forEach(b => {
+        breaks.forEach((b) => {
           if (b.start_time) {
             const breakStart = new Date(b.start_time);
             const breakEnd = b.end_time
               ? new Date(b.end_time)
               : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000);
 
-            breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            breakHours +=
+              (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
           }
         });
 
@@ -586,17 +699,24 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       const { data: remoteBreakData, error: remoteBreakError } = await supabase
         .from("Remote_Breaks")
         .select("start_time, end_time, Remote_Id")
-        .in("Remote_Id", extrahoursData.map(a => a.id));
+        .in(
+          "Remote_Id",
+          extrahoursData.map((a) => a.id)
+        );
 
       if (remoteBreakError) {
         console.error("Error fetching remote breaks:", remoteBreakError);
       }
 
       // Group remote breaks by Remote_Id
-      const remoteBreaksByAttendance: Record<string, { start_time: string; end_time: string | null }[]> = {};
+      const remoteBreaksByAttendance: Record<
+        string,
+        { start_time: string; end_time: string | null }[]
+      > = {};
       if (remoteBreakData) {
-        remoteBreakData.forEach(b => {
-          if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+        remoteBreakData.forEach((b) => {
+          if (!remoteBreaksByAttendance[b.Remote_Id])
+            remoteBreaksByAttendance[b.Remote_Id] = [];
           remoteBreaksByAttendance[b.Remote_Id].push(b);
         });
       }
@@ -604,22 +724,24 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       // Calculate total overtime hours
       let totalOvertimeHours = 0;
 
-      extrahoursData.forEach(log => {
+      extrahoursData.forEach((log) => {
         if (log.check_in && log.check_out) {
           const checkIn = new Date(log.check_in);
           const checkOut = new Date(log.check_out);
 
-          let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+          let hoursWorked =
+            (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
 
           // Subtract remote breaks
           const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
           let remoteBreakHours = 0;
 
-          remoteBreaks.forEach(b => {
+          remoteBreaks.forEach((b) => {
             if (b.start_time && b.end_time) {
               const breakStart = new Date(b.start_time);
               const breakEnd = new Date(b.end_time);
-              remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+              remoteBreakHours +=
+                (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
             }
           });
 
@@ -636,40 +758,60 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
       if (absenteeError) throw absenteeError;
 
-      const totalAbsents = absenteeData.filter(a => a.absentee_type === "Absent").length;
-      const totalLeaves = absenteeData.filter(a => a.absentee_type === "leave").length;
+      const totalAbsents = absenteeData.filter(
+        (a) => a.absentee_type === "Absent"
+      ).length;
+      const totalLeaves = absenteeData.filter(
+        (a) => a.absentee_type === "leave"
+      ).length;
 
       // Filter projects where the employee is in the devops array
-      const employeeProjects = projectsData.filter(project => {
+      const employeeProjects = projectsData.filter((project) => {
         if (!project.devops || !Array.isArray(project.devops)) return false;
-        return project.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id);
+        return project.devops.some(
+          (dev) => dev && typeof dev === "object" && dev.id === userData.id
+        );
       });
 
       console.log("All-time projects found:", employeeProjects.length);
 
       // Filter active tasks where the employee is in the devops array or is the user_id
-      const employeeTasks = tasksData.filter(task => {
+      const employeeTasks = tasksData.filter((task) => {
         // Check if task is directly assigned to the employee
-        if (task.user_id === userData.id && task.status?.toLowerCase() !== "done") return true;
+        if (
+          task.user_id === userData.id &&
+          task.status?.toLowerCase() !== "done"
+        )
+          return true;
 
         // Check if employee is in the devops array and task is not done
         if (task.devops && Array.isArray(task.devops)) {
-          return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id) &&
-            task.status?.toLowerCase() !== "done";
+          return (
+            task.devops.some(
+              (dev) => dev && typeof dev === "object" && dev.id === userData.id
+            ) && task.status?.toLowerCase() !== "done"
+          );
         }
 
         return false;
       });
 
       // Filter completed tasks where the employee is in the devops array or is the user_id
-      const completedTasks = tasksData.filter(task => {
+      const completedTasks = tasksData.filter((task) => {
         // Check if task is directly assigned to the employee and is done
-        if (task.user_id === userData.id && task.status?.toLowerCase() === "done") return true;
+        if (
+          task.user_id === userData.id &&
+          task.status?.toLowerCase() === "done"
+        )
+          return true;
 
         // Check if employee is in the devops array and task is done
         if (task.devops && Array.isArray(task.devops)) {
-          return task.devops.some(dev => dev && typeof dev === 'object' && dev.id === userData.id) &&
-            task.status?.toLowerCase() === "done";
+          return (
+            task.devops.some(
+              (dev) => dev && typeof dev === "object" && dev.id === userData.id
+            ) && task.status?.toLowerCase() === "done"
+          );
         }
 
         return false;
@@ -678,23 +820,30 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       console.log("All-time active tasks found:", employeeTasks.length);
       console.log("All-time completed tasks found:", completedTasks.length);
 
-      const totalKPI = completedTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+      const totalKPI = completedTasks.reduce(
+        (sum, task) => sum + (Number(task.score) || 0),
+        0
+      );
 
       let profileImageUrl = null;
       if (userData.profile_image) {
         profileImageUrl = userData.profile_image.startsWith("http")
           ? userData.profile_image
-          : supabase.storage.from("profilepics").getPublicUrl(userData.profile_image).data.publicUrl;
+          : supabase.storage
+              .from("profilepics")
+              .getPublicUrl(userData.profile_image).data.publicUrl;
       }
 
       // Calculate overtime pay
-      const overtimePay = userData.per_hour_pay ? (parseFloat(userData.per_hour_pay) * totalOvertimeHours).toFixed(2) : "0";
+      const overtimePay = userData.per_hour_pay
+        ? (parseFloat(userData.per_hour_pay) * totalOvertimeHours).toFixed(2)
+        : "0";
 
       const enrichedEmployee = {
         ...userData,
         profile_image_url: profileImageUrl,
-        projects: employeeProjects.map(p => p.title),
-        projectid: employeeProjects.map(p => p.id),
+        projects: employeeProjects.map((p) => p.title),
+        projectid: employeeProjects.map((p) => p.id),
         TotalKPI: totalKPI,
         activeTaskCount: employeeTasks.length,
         completedTaskCount: completedTasks.length,
@@ -703,7 +852,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         overtimePay: overtimePay,
         totalAttendance,
         totalAbsents,
-        totalLeaves
+        totalLeaves,
       };
 
       setEmployeeData(enrichedEmployee);
@@ -724,7 +873,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         CNIC: userData.CNIC || "",
         bank_account: userData.bank_account || "",
       });
-
     } catch (err) {
       setError(err.message);
       console.error("Error:", err.message);
@@ -939,9 +1087,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   //   }
   // };
 
-
-
-
   useEffect(() => {
     if (employeeid) fetchEmployee();
   }, [employeeid]);
@@ -949,13 +1094,16 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   const handleEditClick = () => {
     // Initialize the incrementData with the lastIncrement data if available
     if (lastIncrement) {
-      setIncrementData(prevData => ({
+      setIncrementData((prevData) => ({
         ...prevData,
-        increment_date: lastIncrement.increment_date || new Date().toISOString().split('T')[0],
+        increment_date:
+          lastIncrement.increment_date ||
+          new Date().toISOString().split("T")[0],
         increment_amount: lastIncrement.increment_amount || "",
         basic_sallery: lastIncrement.basic_sallery || "",
         after_increment: lastIncrement.after_increment || "",
-        upcomming_increment: lastIncrement.upcomming_increment || upcomingIncrementDate || ""
+        upcomming_increment:
+          lastIncrement.upcomming_increment || upcomingIncrementDate || "",
       }));
     }
 
@@ -971,7 +1119,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       [e.target.name]: e.target.value,
     });
   };
-
 
   const handleSubmitIncrement = async (e) => {
     e.preventDefault();
@@ -991,7 +1138,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         ...incrementData,
         basic_sallery: currentSalary.toString(),
         after_increment: newSalary.toString(),
-        upcomming_increment: incrementData.upcomming_increment
+        upcomming_increment: incrementData.upcomming_increment,
       };
 
       // Insert the increment record
@@ -1015,7 +1162,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         increment_date: incrementData.increment_date,
         basic_sallery: currentSalary.toString(),
         after_increment: newSalary.toString(),
-        upcomming_increment: incrementData.upcomming_increment
+        upcomming_increment: incrementData.upcomming_increment,
       });
 
       // Refresh the data
@@ -1024,10 +1171,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
       setIncrementData({
         user_id: employeeid,
         increment_amount: "",
-        increment_date: new Date().toISOString().split('T')[0],
+        increment_date: new Date().toISOString().split("T")[0],
         basic_sallery: "",
         after_increment: "",
-        upcomming_increment: ""
+        upcomming_increment: "",
       });
     } catch (err) {
       if (err instanceof Error) {
@@ -1102,7 +1249,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             if (updateError) {
               console.error("Error updating increment date:", updateError);
             } else {
-              console.log("Successfully updated upcoming increment date:", upcomingIncrementDate);
+              console.log(
+                "Successfully updated upcoming increment date:",
+                upcomingIncrementDate
+              );
             }
           } else {
             // Insert new record with default values
@@ -1114,13 +1264,16 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 increment_amount: "0", // Default value
                 basic_sallery: formData.salary || "0",
                 after_increment: formData.salary || "0",
-                increment_date: new Date().toISOString() // Set current date as increment_date
+                increment_date: new Date().toISOString(), // Set current date as increment_date
               });
 
             if (insertError) {
               console.error("Error inserting increment record:", insertError);
             } else {
-              console.log("Successfully inserted new record with upcoming increment date:", upcomingIncrementDate);
+              console.log(
+                "Successfully inserted new record with upcoming increment date:",
+                upcomingIncrementDate
+              );
             }
           }
         }
@@ -1137,7 +1290,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
   console.log("Employee : ", employee);
 
-
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prevState) => ({
@@ -1152,24 +1304,26 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
   return (
     <div className="w-full flex flex-col justify-center  items-center min-h-screen  bg-gray-50 p-6">
       <div className="flex justify-between items-center w-full max-w-4xl mb-6">
-      <div className="flex flex-col sm:flex-row sm:items-center rounded-lg justify-between gap-4 p-3 bg-white shadow-sm border-b border-gray-100">
-      <div className="flex items-center gap-3">
-        <button
-          onClick={() => setemployeeview('generalview')}
-          className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-          aria-label="Go back"
-        >
-          <ArrowLeft className="w-5 h-5 text-gray-600" />
-        </button>
-        <h2 className="text-xl font-semibold text-gray-800">Employee Details</h2>
-      </div>
-      <input
-        type="month"
-        value={selectedmonth}
-        onChange={(e) => setselectedmonth(e.target.value)}
-        className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700 bg-gray-50"
-      />
-    </div>
+        <div className="flex flex-col sm:flex-row sm:items-center rounded-lg justify-between gap-4 p-3 bg-white shadow-sm border-b border-gray-100">
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => setemployeeview("generalview")}
+              className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+              aria-label="Go back"
+            >
+              <ArrowLeft className="w-5 h-5 text-gray-600" />
+            </button>
+            <h2 className="text-xl font-semibold text-gray-800">
+              Employee Details
+            </h2>
+          </div>
+          <input
+            type="month"
+            value={selectedmonth}
+            onChange={(e) => setselectedmonth(e.target.value)}
+            className="w-full sm:w-auto px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-all duration-200 text-gray-700 bg-gray-50"
+          />
+        </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch sm:items-center w-full sm:w-auto">
           <button
@@ -1178,10 +1332,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               setIncrementData({
                 user_id: employeeid,
                 increment_amount: "",
-                increment_date: new Date().toISOString().split('T')[0], // Default to today's date
+                increment_date: new Date().toISOString().split("T")[0], // Default to today's date
                 basic_sallery: employeeData?.salary || "",
                 upcomming_increment: upcomingIncrementDate || "",
-                after_increment: ""
+                after_increment: "",
               });
               setIncrementModel(true);
             }}
@@ -1198,7 +1352,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             Edit
           </button>
         </div>
-
       </div>
 
       <div className="bg-white flex flex-col md:flex-row justify-between items-center rounded-2xl shadow-md p-4 md:p-6 max-w-4xl mb-5 w-full gap-6">
@@ -1208,7 +1361,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             src={
               formData.profile_image
                 ? URL.createObjectURL(formData.profile_image)
-                : employeeData?.profile_image_url || "https://via.placeholder.com/150"
+                : employeeData?.profile_image_url ||
+                  "https://via.placeholder.com/150"
             }
             alt="Profile"
             className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover"
@@ -1217,7 +1371,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             <h2 className="text-lg sm:text-xl text-gray-700 font-semibold">
               {employeeData?.full_name || "Employee"}
             </h2>
-            <p className="text-gray-600 capitalize">{employeeData?.role || "employee"}</p>
+            <p className="text-gray-600 capitalize">
+              {employeeData?.role || "employee"}
+            </p>
           </div>
         </div>
 
@@ -1225,37 +1381,49 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         <div className="bg-purple-600 w-full md:w-auto h-fit flex flex-col justify-center items-center text-white px-6 py-4 rounded-lg text-base sm:text-lg font-medium">
           <span className="mr-2">Total Earning is</span>
           <span className="font-bold text-3xl sm:text-4xl ml-2">
-            {employeeData?.salary ?
-              selectedmonth ?
-                (parseFloat(employeeData.salary) + parseFloat(monthlyData.overtimePay || "0")).toFixed(2)
-                : (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
+            {employeeData?.salary
+              ? selectedmonth
+                ? (
+                    parseFloat(employeeData.salary) +
+                    parseFloat(monthlyData.overtimePay || "0")
+                  ).toFixed(2)
+                : (
+                    parseFloat(employeeData.salary) +
+                    parseFloat(employeeData.overtimePay || "0")
+                  ).toFixed(2)
               : "0"}
           </span>
           {selectedmonth && <span className="text-xs mt-1"></span>}
         </div>
       </div>
 
-
-
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2 mb-6 max-w-4xl w-full">
         <div className="bg-white rounded-2xl shadow-md pb-4 flex flex-col items-center justify-center text-center">
           <p className="text-[140px] text-gray-500">
             {selectedmonth
               ? monthlyData.projectsCount
-              : (employeeData && employeeData.projects ? employeeData.projects.length : " ")}
+              : employeeData && employeeData.projects
+              ? employeeData.projects.length
+              : " "}
           </p>
           <p className="text-xl font-semibold">
             {selectedmonth ? "Monthly Projects" : "Total Projects"}
           </p>
-          {selectedmonth && <p className="text-xs text-gray-400">For selected month</p>}
-          <button className="bg-purple-600 rounded-2xl px-3 py-1 mt-2 text-sm text-white">View Details</button>
+          {selectedmonth && (
+            <p className="text-xs text-gray-400">For selected month</p>
+          )}
+          <button className="bg-purple-600 rounded-2xl px-3 py-1 mt-2 text-sm text-white">
+            View Details
+          </button>
         </div>
 
         <div className="rounded-2xl p-2 gap-3 flex flex-col items-center justify-between text-center">
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
               <h2 className="text-gray-800 text-2xl font-medium">
-                {selectedmonth ? monthlyData.completedTasksScore : (employeeData?.TotalKPI || 0)}
+                {selectedmonth
+                  ? monthlyData.completedTasksScore
+                  : employeeData?.TotalKPI || 0}
               </h2>
               <CheckCircle className="text-purple-600 h-5 w-5" />
             </div>
@@ -1263,23 +1431,29 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             {selectedmonth && (
               <div className="text-gray-400 text-xs mt-1">
                 {monthlyData.completedTaskCount > 0
-                  ? `${monthlyData.completedTaskCount} ${monthlyData.completedTaskCount === 1 ? 'task' : 'tasks'} completed this month`
-                  : "0 task completed this month"
-                }
+                  ? `${monthlyData.completedTaskCount} ${
+                      monthlyData.completedTaskCount === 1 ? "task" : "tasks"
+                    } completed this month`
+                  : "0 task completed this month"}
               </div>
             )}
           </div>
 
-
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center mt-3">
             <div className="flex justify-between items-center w-full">
               <h2 className="text-gray-800 text-2xl font-medium">
-                {selectedmonth ? monthlyData.totalAttendance : (employeeData?.totalAttendance || 0)}
+                {selectedmonth
+                  ? monthlyData.totalAttendance
+                  : employeeData?.totalAttendance || 0}
               </h2>
               <Moon className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Present Days</div>
-            {selectedmonth && <div className="text-gray-400 text-xs mt-1">For selected month</div>}
+            {selectedmonth && (
+              <div className="text-gray-400 text-xs mt-1">
+                For selected month
+              </div>
+            )}
           </div>
         </div>
 
@@ -1287,26 +1461,37 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
               <h2 className="text-gray-800 text-2xl font-medium">
-                {selectedmonth ? monthlyData.totalWorkingHours : (employeeData?.totalWorkingHours || 0)}
+                {selectedmonth
+                  ? monthlyData.totalWorkingHours
+                  : employeeData?.totalWorkingHours || 0}
               </h2>
               <Clock className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Total Working Hours</div>
-            {selectedmonth ?
-              <div className="text-gray-400 text-xs mt-1">For selected month</div> :
+            {selectedmonth ? (
+              <div className="text-gray-400 text-xs mt-1">
+                For selected month
+              </div>
+            ) : (
               <div className="text-gray-400 text-xs mt-1">All time total</div>
-            }
+            )}
           </div>
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
               <h2 className="text-gray-800 text-2xl font-medium">
-                {selectedmonth ? monthlyData.totalAbsents : (employeeData?.totalAbsents || 0)}
+                {selectedmonth
+                  ? monthlyData.totalAbsents
+                  : employeeData?.totalAbsents || 0}
               </h2>
               <AlarmClockOff className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Absent Days</div>
-            {selectedmonth && <div className="text-gray-400 text-xs mt-1">For selected month</div>}
+            {selectedmonth && (
+              <div className="text-gray-400 text-xs mt-1">
+                For selected month
+              </div>
+            )}
           </div>
         </div>
 
@@ -1314,29 +1499,41 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
               <h2 className="text-gray-800 text-2xl font-medium">
-                {selectedmonth ? monthlyData.totalOvertimeHours : (employeeData?.totalOvertimeHours || 0)}
+                {selectedmonth
+                  ? monthlyData.totalOvertimeHours
+                  : employeeData?.totalOvertimeHours || 0}
               </h2>
               <Watch className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Overtime Hours</div>
-            {selectedmonth ?
-              <div className="text-gray-400 text-xs mt-1">For selected month</div> :
-              <div className="text-gray-400 text-xs mt-1">Calculated from extrahours records</div>
-            }
+            {selectedmonth ? (
+              <div className="text-gray-400 text-xs mt-1">
+                For selected month
+              </div>
+            ) : (
+              <div className="text-gray-400 text-xs mt-1">
+                Calculated from extrahours records
+              </div>
+            )}
           </div>
 
           <div className="bg-white h-full w-full rounded-2xl shadow-md p-4 flex flex-col items-start justify-center">
             <div className="flex justify-between items-center w-full">
               <h2 className="text-gray-800 text-2xl font-medium">
-                {selectedmonth ? monthlyData.totalLeaves : (employeeData?.totalLeaves || 0)}
+                {selectedmonth
+                  ? monthlyData.totalLeaves
+                  : employeeData?.totalLeaves || 0}
               </h2>
               <CalendarClock className="text-purple-600 h-5 w-5" />
             </div>
             <div className="text-gray-500 text-sm">Leave Days</div>
-            {selectedmonth && <div className="text-gray-400 text-xs mt-1">For selected month</div>}
+            {selectedmonth && (
+              <div className="text-gray-400 text-xs mt-1">
+                For selected month
+              </div>
+            )}
           </div>
         </div>
-
       </div>
 
       <div className="flex flex-wrap gap-4 p-4 bg-gray-50">
@@ -1352,44 +1549,60 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           <div className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Email</span>
-              <span className="text-gray-600 text-sm">{employeeData?.email || "N/A"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.email || "N/A"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Phone Number</span>
-              <span className="text-gray-600 text-sm">{employeeData?.phone_number || "N/A"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.phone_number || "N/A"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Slack id</span>
-              <span className="text-gray-600 text-sm">{employeeData?.slack_id || "N/A"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.slack_id || "N/A"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">CNIC Number</span>
-              <span className="text-gray-600 text-sm">{employeeData?.CNIC || "N/A"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.CNIC || "N/A"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Bank Account</span>
-              <span className="text-gray-600 text-sm">{employeeData?.bank_account || "N/A"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.bank_account || "N/A"}
+              </span>
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Employement Duration</span>
-              <span className="text-gray-600 text-sm">{employeeData?.created_at ? getEmploymentDuration(employeeData.created_at) : "N/A"}</span>
+              <span className="text-gray-500 text-sm">
+                Employement Duration
+              </span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.created_at
+                  ? getEmploymentDuration(employeeData.created_at)
+                  : "N/A"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Last Increment</span>
               <span className="text-gray-600 text-sm">
                 {lastIncrement
-                  ? `Rs. ${lastIncrement.increment_amount} on ${new Date(lastIncrement.increment_date).toLocaleDateString()}`
+                  ? `Rs. ${lastIncrement.increment_amount} on ${new Date(
+                      lastIncrement.increment_date
+                    ).toLocaleDateString()}`
                   : "N/A"}
               </span>
             </div>
-
-
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Upcoming Increment</span>
@@ -1414,40 +1627,55 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
           <div className="space-y-4">
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Basic Pay</span>
-              <span className="text-gray-600 text-sm">{employeeData?.salary || "0"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.salary || "0"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Total Hours</span>
-              <span className="text-gray-600 text-sm">{selectedmonth ? monthlyData.totalWorkingHours : (employeeData?.totalWorkingHours || 0)}</span>
+              <span className="text-gray-600 text-sm">
+                {selectedmonth
+                  ? monthlyData.totalWorkingHours
+                  : employeeData?.totalWorkingHours || 0}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Pay Per Hour</span>
-              <span className="text-gray-600 text-sm">{employeeData?.per_hour_pay || "0"}</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.per_hour_pay || "0"}
+              </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Overtime</span>
               <span className="text-gray-600 text-sm">
-                {selectedmonth ? monthlyData.overtimePay : (employeeData?.overtimePay || "0")}
-                {selectedmonth && <span className="text-xs text-gray-400 ml-1">(monthly)</span>}
+                {selectedmonth
+                  ? monthlyData.overtimePay
+                  : employeeData?.overtimePay || "0"}
+                {selectedmonth && (
+                  <span className="text-xs text-gray-400 ml-1">(monthly)</span>
+                )}
               </span>
             </div>
 
             <div className="flex justify-between">
               <span className="text-gray-500 text-sm">Total Earning</span>
               <span className="text-gray-600 text-sm">
-                {employeeData?.salary ?
-                  selectedmonth ?
-                    (parseFloat(employeeData.salary) + parseFloat(monthlyData.overtimePay || "0")).toFixed(2) +
-                    (selectedmonth ? "" : "")
-                    : (parseFloat(employeeData.salary) + parseFloat(employeeData.overtimePay || "0")).toFixed(2)
+                {employeeData?.salary
+                  ? selectedmonth
+                    ? (
+                        parseFloat(employeeData.salary) +
+                        parseFloat(monthlyData.overtimePay || "0")
+                      ).toFixed(2) + (selectedmonth ? "" : "")
+                    : (
+                        parseFloat(employeeData.salary) +
+                        parseFloat(employeeData.overtimePay || "0")
+                      ).toFixed(2)
                   : "0"}
               </span>
             </div>
-
-
           </div>
         </div>
 
@@ -1484,10 +1712,6 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         </div>
       </div>
 
-
-
-
-
       {incrementModel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
           <div className="bg-white rounded-lg p-6 shadow-lg w-96">
@@ -1502,7 +1726,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 
             <form onSubmit={handleSubmitIncrement}>
               <div className="mb-4">
-                <label htmlFor="increment_date" className="block mb-1 font-medium">
+                <label
+                  htmlFor="increment_date"
+                  className="block mb-1 font-medium"
+                >
                   Increment Date:
                 </label>
                 <input
@@ -1516,7 +1743,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               </div>
 
               <div className="mb-4">
-                <label htmlFor="increment_amount" className="block mb-1 font-medium">
+                <label
+                  htmlFor="increment_amount"
+                  className="block mb-1 font-medium"
+                >
                   Increment Amount:
                 </label>
                 <input
@@ -1529,7 +1759,10 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 />
               </div>
               <div className="mb-4">
-                <label htmlFor="upcomming_increment" className="block mb-1 font-medium">
+                <label
+                  htmlFor="upcomming_increment"
+                  className="block mb-1 font-medium"
+                >
                   Upcoming Increment:
                 </label>
                 <input
@@ -1538,17 +1771,21 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                   name="upcomming_increment"
                   value={incrementData.upcomming_increment || ""}
                   onChange={(e) => {
-                    console.log("New upcoming increment date in modal:", e.target.value);
+                    console.log(
+                      "New upcoming increment date in modal:",
+                      e.target.value
+                    );
                     setIncrementData({
                       ...incrementData,
-                      upcomming_increment: e.target.value
+                      upcomming_increment: e.target.value,
                     });
                   }}
                   required
                 />
                 {/* Debug info */}
                 <div className="text-xs text-gray-400 mt-1">
-                  Current value: {incrementData.upcomming_increment || "Not set"}
+                  Current value:{" "}
+                  {incrementData.upcomming_increment || "Not set"}
                 </div>
               </div>
 
@@ -1565,14 +1802,14 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         </div>
       )}
 
-
-
       {isEditMode && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50 overflow-y-auto">
           <div className="bg-white rounded-2xl shadow-xl w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             {/* Modal Header */}
             <div className="flex justify-between items-center p-6 border-b">
-              <h2 className="text-xl font-bold text-gray-800">Edit Employee Profile</h2>
+              <h2 className="text-xl font-bold text-gray-800">
+                Edit Employee Profile
+              </h2>
               <button
                 onClick={() => setIsEditMode(false)}
                 className="text-gray-500 hover:text-gray-700 focus:outline-none"
@@ -1589,7 +1826,8 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                   src={
                     formData.profile_image
                       ? URL.createObjectURL(formData.profile_image)
-                      : employeeData?.profile_image_url || "https://via.placeholder.com/150"
+                      : employeeData?.profile_image_url ||
+                        "https://via.placeholder.com/150"
                   }
                   alt="Profile"
                   className="w-32 h-32 rounded-xl object-cover mb-4"
@@ -1614,7 +1852,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               {/* Form Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 text-sm">
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Full Name</label>
+                  <label className="block text-gray-700 font-medium">
+                    Full Name
+                  </label>
                   <input
                     type="text"
                     name="full_name"
@@ -1626,7 +1866,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Email</label>
+                  <label className="block text-gray-700 font-medium">
+                    Email
+                  </label>
                   <input
                     type="email"
                     name="email"
@@ -1638,7 +1880,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Phone Number</label>
+                  <label className="block text-gray-700 font-medium">
+                    Phone Number
+                  </label>
                   <input
                     type="text"
                     name="phone_number"
@@ -1650,7 +1894,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Personal Email</label>
+                  <label className="block text-gray-700 font-medium">
+                    Personal Email
+                  </label>
                   <input
                     type="email"
                     name="personal_email"
@@ -1662,7 +1908,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Slack ID</label>
+                  <label className="block text-gray-700 font-medium">
+                    Slack ID
+                  </label>
                   <input
                     type="text"
                     name="slack_id"
@@ -1674,7 +1922,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Location</label>
+                  <label className="block text-gray-700 font-medium">
+                    Location
+                  </label>
                   <input
                     type="text"
                     name="location"
@@ -1686,7 +1936,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Profession</label>
+                  <label className="block text-gray-700 font-medium">
+                    Profession
+                  </label>
                   <input
                     type="text"
                     name="profession"
@@ -1698,7 +1950,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Salary</label>
+                  <label className="block text-gray-700 font-medium">
+                    Salary
+                  </label>
                   <input
                     type="text"
                     name="salary"
@@ -1710,7 +1964,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Per Hour Pay</label>
+                  <label className="block text-gray-700 font-medium">
+                    Per Hour Pay
+                  </label>
                   <input
                     type="text"
                     name="per_hour_pay"
@@ -1722,7 +1978,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Role</label>
+                  <label className="block text-gray-700 font-medium">
+                    Role
+                  </label>
                   <select
                     name="role"
                     value={formData.role}
@@ -1738,7 +1996,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Joining Date</label>
+                  <label className="block text-gray-700 font-medium">
+                    Joining Date
+                  </label>
                   <input
                     type="date"
                     name="joining_date"
@@ -1749,7 +2009,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">CNIC</label>
+                  <label className="block text-gray-700 font-medium">
+                    CNIC
+                  </label>
                   <input
                     type="text"
                     name="CNIC"
@@ -1761,7 +2023,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Bank Account</label>
+                  <label className="block text-gray-700 font-medium">
+                    Bank Account
+                  </label>
                   <input
                     type="text"
                     name="bank_account"
@@ -1773,13 +2037,18 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                 </div>
 
                 <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">Upcoming Increment Date</label>
+                  <label className="block text-gray-700 font-medium">
+                    Upcoming Increment Date
+                  </label>
                   <input
                     type="date"
                     name="upcoming_increment"
                     value={upcomingIncrementDate}
                     onChange={(e) => {
-                      console.log("New upcoming increment date:", e.target.value);
+                      console.log(
+                        "New upcoming increment date:",
+                        e.target.value
+                      );
                       setUpcomingIncrementDate(e.target.value);
                     }}
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
@@ -1808,7 +2077,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
             <div className="flex justify-end gap-4 p-6 border-t">
               <button
                 onClick={() => {
-                  setIsEditMode(false)
+                  setIsEditMode(false);
                 }}
                 className="px-6 py-2.5 bg-gray-200 text-gray-800 font-medium rounded-xl hover:bg-gray-300 transition-colors"
               >
@@ -1825,13 +2094,14 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         </div>
       )}
 
-
       {/* Increment History Modal */}
       {showIncrementHistory && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-xl shadow-lg p-6 w-full max-w-4xl max-h-[80vh] overflow-auto">
             <div className="flex justify-between items-center mb-4">
-              <h2 className="text-xl font-semibold">Salary Increment History</h2>
+              <h2 className="text-xl font-semibold">
+                Salary Increment History
+              </h2>
               <button
                 onClick={() => setShowIncrementHistory(false)}
                 className="text-gray-500 hover:text-gray-700"
@@ -1846,17 +2116,30 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                   <thead>
                     <tr className="bg-gray-100">
                       <th className="py-2 px-4 border-b text-left">Date</th>
-                      <th className="py-2 px-4 border-b text-left">Previous Salary</th>
-                      <th className="py-2 px-4 border-b text-left">Increment Amount</th>
-                      <th className="py-2 px-4 border-b text-left">After Increment</th>
-                      <th className="py-2 px-4 border-b text-left">Next Increment Date</th>
+                      <th className="py-2 px-4 border-b text-left">
+                        Previous Salary
+                      </th>
+                      <th className="py-2 px-4 border-b text-left">
+                        Increment Amount
+                      </th>
+                      <th className="py-2 px-4 border-b text-left">
+                        After Increment
+                      </th>
+                      <th className="py-2 px-4 border-b text-left">
+                        Next Increment Date
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {incrementHistory.map((increment, index) => (
-                      <tr key={index} className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}>
+                      <tr
+                        key={index}
+                        className={index % 2 === 0 ? "bg-gray-50" : "bg-white"}
+                      >
                         <td className="py-2 px-4 border-b">
-                          {new Date(increment.increment_date).toLocaleDateString()}
+                          {new Date(
+                            increment.increment_date
+                          ).toLocaleDateString()}
                         </td>
                         <td className="py-2 px-4 border-b">
                           {increment.basic_sallery || "N/A"}
@@ -1871,7 +2154,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                         </td>
                         <td className="py-2 px-4 border-b">
                           {increment.upcomming_increment
-                            ? new Date(increment.upcomming_increment).toLocaleDateString()
+                            ? new Date(
+                                increment.upcomming_increment
+                              ).toLocaleDateString()
                             : "Not scheduled"}
                         </td>
                       </tr>
@@ -1881,7 +2166,9 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
               </div>
             ) : (
               <div className="text-center py-8">
-                <p className="text-gray-500">No increment history found for this employee.</p>
+                <p className="text-gray-500">
+                  No increment history found for this employee.
+                </p>
               </div>
             )}
 
@@ -1902,11 +2189,3 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
 };
 
 export default Employeeprofile;
-
-
-
-
-
-
-
-
