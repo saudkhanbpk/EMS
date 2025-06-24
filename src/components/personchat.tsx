@@ -507,7 +507,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                 {getDayLabel(dateKey)}
                                             </div>
                                         </div>
-                                        {messageGroups[dateKey].map(msg => (
+                                        {messageGroups[dateKey].sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime()).map(msg => (
                                             <div key={msg.id} className="mb-3">
                                                 {!isCurrentUserMessage(msg) ? (
                                                     <div className="flex items-start mb-1 group">
@@ -542,14 +542,6 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                 ) : (
                                                     <div className="flex justify-end">
                                                         <div className="flex flex-col items-end max-w-xs sm:max-w-md">
-                                                            <div className="flex items-center mb-0.5 justify-end">
-                                                                <span className="text-xs text-gray-500 mr-1">{formatMessageTime(msg.created_at)}</span>
-                                                                {msg.seen ? (
-                                                                    <CheckCheck className="w-3.5 h-3.5 text-blue-500" />
-                                                                ) : (
-                                                                    <Check className="w-3.5 h-3.5 text-gray-500" />
-                                                                )}
-                                                            </div>
                                                             <div className="flex group relative">
                                                                 {editingMessageId === msg.id ? (
                                                                     <div className="bg-blue-50 border border-blue-200 rounded-xl p-1 min-w-[200px]">
@@ -615,16 +607,14 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                                             {msg.content}
                                                                         </div>
                                                                         {/* Message status indicators */}
-                                                                        {isCurrentUserMessage(msg) && (
-                                                                            <div className="text-xs text-gray-500 flex items-center mt-1">
-                                                                                <span className="mr-1">{formatMessageTime(msg.created_at)}</span>
-                                                                                {msg.seen ? (
-                                                                                    <CheckCheck size={14} className="text-blue-500" />
-                                                                                ) : (
-                                                                                    <Check size={14} />
-                                                                                )}
-                                                                            </div>
-                                                                        )}
+                                                                        <div className="text-xs text-gray-500 flex items-center mt-1 justify-end">
+                                                                            <span className="mr-1">{formatMessageTime(msg.created_at)}</span>
+                                                                            {msg.seen ? (
+                                                                                <CheckCheck size={14} className="text-blue-500" />
+                                                                            ) : (
+                                                                                <Check size={14} />
+                                                                            )}
+                                                                        </div>
                                                                     </>
                                                                 )}
                                                             </div>
