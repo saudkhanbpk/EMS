@@ -12,7 +12,7 @@ import { error } from 'console';
 
 const OFFICE_LATITUDE = 34.12018;
 const OFFICE_LONGITUDE =  72.46982;
-const GEOFENCE_RADIUS = 0.05; // km
+const GEOFENCE_RADIUS = 0.15; // km
 
 interface AttendanceRecord {
   id: string;
