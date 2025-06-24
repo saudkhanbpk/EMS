@@ -399,7 +399,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
     per_hour_pay: "",
     role: "",
     profile_image: null,
-    joining_date: "",
+    joining_date: null,
     CNIC: "",
     bank_account: "",
   });
@@ -720,7 +720,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
         per_hour_pay: userData.per_hour_pay,
         role: userData.role || "",
         profile_image: null,
-        joining_date: userData.joining_date || "",
+        joining_date: userData.joining_date || null,
         CNIC: userData.CNIC || "",
         bank_account: userData.bank_account || "",
       });
@@ -1742,7 +1742,7 @@ const Employeeprofile = ({ employeeid, employee, employeeview, setemployeeview }
                   <input
                     type="date"
                     name="joining_date"
-                    value={formData.joining_date}
+                    value={formData.joining_date || ""}
                     onChange={handleChange}
                     className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
                   />
