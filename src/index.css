@@ -1,39 +1,36 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
-
 /* Hide scrollbar by default */
 .custom-scrollbar::-webkit-scrollbar {
-  width: 8px;
-  /* Thin scrollbar */
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
-
-/* Hide the scrollbar track */
-.custom-scrollbar::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-/* Hide scrollbar thumb (dragging part) */
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background: #ddeaf8;
-  /* Blue scrollbar */
-  border-radius: 2px;
-  opacity: 0;
-  transition: opacity 0.3s ease-in-out;
-}
-
-/* Show scrollbar on hover */
-.custom-scrollbar:hover::-webkit-scrollbar-thumb {
-  opacity: 1;
-}
-
-.custom-scrollbar:hover::-webkit-scrollbar {
-  opacity: 1;
-}
-
-.custom-scrollbar::-webkit-scrollbar {
+    width: 8px; /* Thin scrollbar */
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  /* Hide the scrollbar track */
+  .custom-scrollbar::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  
+  /* Hide scrollbar thumb (dragging part) */
+  .custom-scrollbar::-webkit-scrollbar-thumb {
+    background: #ddeaf8; /* Blue scrollbar */
+    border-radius: 2px;
+    opacity: 0;
+    transition: opacity 0.3s ease-in-out;
+  }
+  
+  /* Show scrollbar on hover */
+  .custom-scrollbar:hover::-webkit-scrollbar-thumb {
+    opacity: 1;
+  }
+  
+  .custom-scrollbar:hover::-webkit-scrollbar {
+    opacity: 1;
+  }
+  
+  .custom-scrollbar::-webkit-scrollbar {
   width: 8px;
 }
 
@@ -55,65 +52,84 @@
 .react-time-picker__inputGroup__input.react-time-picker__inputGroup__hour {
   width: 40px !important;
 }
-
-.react-time-picker__inputGroup__input.react-time-picker__inputGroup__minute.react-time-picker__inputGroup__input--hasLeadingZero {
+.react-time-picker__inputGroup__input.react-time-picker__inputGroup__minute.react-time-picker__inputGroup__input--hasLeadingZero{
   width: 80px !important;
 }
-
-.react-time-picker__inputGroup__divider {
+.react-time-picker__inputGroup__divider{
   padding: 4px;
 }
-
-.react-time-picker__inputGroup__leadingZero {
+.react-time-picker__inputGroup__leadingZero{
   display: hidden;
   width: 0px !important;
 }
 
-/* Add to your global CSS file */
-.chat-window {
-  transition: all 0.3s ease-in-out;
+/* Professional Sidebar Scrollbar */
+.sidebar-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
-.chat-window.minimized {
-  height: 60px !important;
-}
-
-.message-bubble {
-  max-width: 70%;
-  word-wrap: break-word;
-}
-
-/* For better scrollbar appearance */
-.custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-}
-
-.custom-scrollbar::-webkit-scrollbar-track {
+.sidebar-scroll::-webkit-scrollbar {
+  width: 0px;
   background: transparent;
 }
 
-.custom-scrollbar::-webkit-scrollbar-thumb {
-  background-color: rgba(0, 0, 0, 0.2);
+.sidebar-scroll:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-scroll:hover::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 3px;
+  margin: 8px 0;
 }
 
-/* Add to your existing CSS */
-.reaction-button {
-  transition: all 0.2s ease;
+.sidebar-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 3px;
+  transition: background 0.2s ease;
 }
 
-.reaction-button:hover {
-  transform: scale(1.2);
+.sidebar-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
-.emoji-picker-wrapper {
-  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+/* Smooth scrolling behavior */
+.sidebar-scroll {
+  scroll-behavior: smooth;
 }
 
-.message-hover-actions {
-  transition: opacity 0.2s ease;
+/* Professional Scrollbar for Light Backgrounds */
+.light-scroll {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* Internet Explorer 10+ */
 }
 
-.message-container:hover .message-hover-actions {
-  opacity: 1;
+.light-scroll::-webkit-scrollbar {
+  width: 0px;
+  background: transparent;
+}
+
+.light-scroll:hover::-webkit-scrollbar {
+  width: 6px;
+}
+
+.light-scroll:hover::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.05);
+  border-radius: 3px;
+  margin: 8px 0;
+}
+
+.light-scroll:hover::-webkit-scrollbar-thumb {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 3px;
+  transition: background 0.2s ease;
+}
+
+.light-scroll:hover::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.light-scroll {
+  scroll-behavior: smooth;
 }

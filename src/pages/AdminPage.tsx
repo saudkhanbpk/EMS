@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
-
+import Chatlayout from '../components/chatlayout';
+import Chatbutton from '../components/chatbtn';
 import { useAuthStore } from '../lib/store';
 import LeaveRequestsAdmin from './LeaveRequestsAdmin';
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
@@ -38,6 +39,7 @@ import {
 import { error } from 'console';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminHoliday from './adminHoliday';
+import AdminDailyLogs from '../components/AdminDailyLogs';
 
 interface AttendanceRecord {
   id: string;
@@ -400,78 +402,119 @@ const AdminPage: React.FC = () => {
 
   useEffect(() => {
     if (selectedTab === "Employees") {
-      const fetchEmployees = async () => {
-        try {
-          // Fetch all employees except excluded ones
-          const { data: employees, error: employeesError } = await supabase
-            .from("users")
-            .select("id, full_name")
+  const fetchEmployees = async () => {
+    try {
+      // Fetch all employees except excluded ones
+      const { data: employees, error: employeesError } = await supabase
+        .from("users")
+        .select("id, full_name")
 
-          if (employeesError) throw employeesError;
-          if (!employees || employees.length === 0) {
-            console.warn("No employees found.");
-            return;
+      if (employeesError) throw employeesError;
+      if (!employees || employees.length === 0) {
+        console.warn("No employees found.");
+        return;
+      }
+
+      setEmployees(employees);
+
+      // if (DataEmployee === null) {
+      //   setDataEmployee(employees[0].id);
+      //   handleEmployeeClick();
+      // }
+
+
+      const today = new Date();
+      const monthStart = startOfMonth(today);
+      const monthEnd = endOfMonth(today);
+
+      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+
+      // Fetch all attendance logs for all employees in one query
+      const { data: attendanceLogs, error: attendanceError } = await supabase
+        .from("attendance_logs")
+        .select("id, user_id, check_in, check_out")
+        .gte("check_in", monthStart.toISOString())
+        .lte("check_in", monthEnd.toISOString())
+        .order("check_in", { ascending: true });
+
+      if (attendanceError) throw attendanceError;
+
+      // Process data to compute stats for each employee
+      const employeeStats = {};
+
+      // Fetch all breaks for all attendance records in one query
+      const { data: allBreaksData, error: allBreaksError } = await supabase
+        .from("breaks")
+        .select("start_time, end_time, attendance_id");
+
+      if (allBreaksError) {
+        console.error("Error fetching all breaks:", allBreaksError);
+      }
+
+      // Group all breaks by attendance_id
+      const allBreaksByAttendance = {};
+      if (allBreaksData) {
+        allBreaksData.forEach(b => {
+          if (!allBreaksByAttendance[b.attendance_id]) allBreaksByAttendance[b.attendance_id] = [];
+          allBreaksByAttendance[b.attendance_id].push(b);
+        });
+      }
+
+      for (const employee of employees) {
+        const employeeLogs = attendanceLogs.filter(log => log.user_id === employee.id);
+
+        // Group attendance by date (earliest record per day)
+        const attendanceByDate = employeeLogs.reduce((acc, curr) => {
+          const date = format(new Date(curr.check_in), "yyyy-MM-dd");
+          if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+            acc[date] = curr;
           }
+          return acc;
+        }, {});
 
-          setEmployees(employees);
+        const uniqueAttendance = Object.values(attendanceByDate);
 
-          // handleEmployeeClick(employees[0].id);
+        let totalHours = 0;
 
-          const today = new Date();
-          const monthStart = startOfMonth(today);
-          const monthEnd = endOfMonth(today);
+        uniqueAttendance.forEach(attendance => {
+          const start = new Date(attendance.check_in);
+          // Match the calculation in EmployeeProfile.tsx - use check_in time if no check_out
+          const end = attendance.check_out ? new Date(attendance.check_out) : new Date(start.getTime());
+          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
 
-          const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-          const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+          // Subtract breaks
+          const breaks = allBreaksByAttendance[attendance.id] || [];
+          let breakHours = 0;
 
-          // Fetch all attendance logs for all employees in one query
-          const { data: attendanceLogs, error: attendanceError } = await supabase
-            .from("attendance_logs")
-            .select("id, user_id, check_in, check_out")
-            .gte("check_in", monthStart.toISOString())
-            .lte("check_in", monthEnd.toISOString())
-            .order("check_in", { ascending: true });
+          breaks.forEach(b => {
+            if (b.start_time) {
+              const breakStart = new Date(b.start_time);
+              // If end_time is missing, calculate only 1 hour of break
+              const breakEnd = b.end_time
+                ? new Date(b.end_time)
+                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-          if (attendanceError) throw attendanceError;
-
-          // Process data to compute stats for each employee
-          const employeeStats = {};
-
-          employees.forEach(employee => {
-            const employeeLogs = attendanceLogs.filter(log => log.user_id === employee.id);
-
-            // Group attendance by date (earliest record per day)
-            const attendanceByDate = employeeLogs.reduce((acc, curr) => {
-              const date = format(new Date(curr.check_in), "yyyy-MM-dd");
-              if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
-                acc[date] = curr;
-              }
-              return acc;
-            }, {});
-
-            const uniqueAttendance = Object.values(attendanceByDate);
-
-            let totalHours = 0;
-            uniqueAttendance.forEach(attendance => {
-              const start = new Date(attendance.check_in);
-              const end = attendance.check_out ? new Date(attendance.check_out) : new Date();
-              const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-              totalHours += Math.min(hours, 12);
-            });
-
-            // Store stats for each employee
-            employeeStats[employee.id] = uniqueAttendance.length
-              ? totalHours / uniqueAttendance.length
-              : 0;
+              breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+            }
           });
 
-          setEmployeeStats(employeeStats);
-          console.log("Employee Stats:", employeeStats);
+          totalHours += Math.min(Math.max(0, hoursWorked - breakHours), 12);
+        });
 
-        } catch (error) {
-          console.error("Error fetching employees and stats:", error);
-        }
-      };
+        // Store stats for each employee
+        employeeStats[employee.id] = uniqueAttendance.length
+          ? totalHours / uniqueAttendance.length
+          : 0;
+      }
+
+      setEmployeeStats(employeeStats);
+      console.log("Employee Stats:", employeeStats);
+
+    } catch (error) {
+      console.error("Error fetching employees and stats:", error);
+    }
+  };
 
       fetchEmployees();
     }
@@ -714,7 +757,11 @@ const AdminPage: React.FC = () => {
                 </div>
 
                 {/* Sidebar Buttons Container (Ensures Space Between) */}
-                <div className="flex flex-col flex-grow justify-between">
+                <div className="flex flex-col flex-grow justify-between overflow-y-auto sidebar-scroll"
+                     style={{
+                       scrollbarWidth: 'none', /* Firefox */
+                       msOverflowStyle: 'none', /* Internet Explorer 10+ */
+                     }}>
                   <div className="space-y-4">
 
                     <button
@@ -869,6 +916,19 @@ const AdminPage: React.FC = () => {
                     >
                       Office Alerts
                     </button>
+
+                    <button
+                      onClick={() => {
+                        handleClose()
+                        setSelectedTab("DailyLogs");
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "DailyLogs"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Daily Logs
+                    </button>
                   </div>
 
                   {/* Sign Out Button (Placed at the Bottom) */}
@@ -974,7 +1034,7 @@ const AdminPage: React.FC = () => {
               {!isSmallScreen && (
                 <div className="col-span-1 ">
                   <h2 className="text-xl font-semibold mb-4">Employee List</h2>
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 custom-scrollbar">
+                  <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 light-scroll">
                     {employees.map((employee) => (
                       <li
                         key={employee.id}
@@ -1171,7 +1231,7 @@ const AdminPage: React.FC = () => {
                                     <div className="flex items-center justify-between">
                                       <span className="text-gray-600">Total Hours:</span>
                                       <span className="font-medium">
-                                        {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h
+                                      {monthlyStats.totalHours.toFixed(1)}h
                                       </span>
                                     </div>
                                     <div className="flex items-center justify-between">
@@ -1202,7 +1262,7 @@ const AdminPage: React.FC = () => {
           </div>
         )}
 
-
+        <Chatlayout><Chatbutton></Chatbutton></Chatlayout>
 
         {selectedTab === 'SoftwareComplaints' && (
           <div className={`flex-1 sm:px-10 py-8 px-3 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
@@ -1249,7 +1309,7 @@ const AdminPage: React.FC = () => {
 
 
         {selectedTab === 'OfficeComplaints' && (
-          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 max-w-7xl text-center ease-in-out ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
+          <div className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
               Admin Dashboard
             </h1>
@@ -1300,6 +1360,12 @@ const AdminPage: React.FC = () => {
             <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
               <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
             </div>
+          </div>
+        )}
+
+        {selectedTab === 'DailyLogs' && (
+          <div className={`flex-1 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
+            <AdminDailyLogs />
           </div>
         )}
 

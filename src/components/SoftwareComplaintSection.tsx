@@ -30,7 +30,7 @@ const SoftwareComplaintSection: React.FC = () => {
       }
   
       // 3. Send notification request
-      const response = await fetch("http://localhost:4000/send-notification", {
+      const response = await fetch("https://ems-server-0bvq.onrender.com/send-notification", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -141,7 +141,7 @@ const SoftwareComplaintSection: React.FC = () => {
   const handleDelete = async (id: number | string) => {
     const sendNotification = async () => {
       try {
-          const response = await fetch("http://localhost:4000/send-notifications", {
+          const response = await fetch("https://ems-server-0bvq.onrender.com/send-notifications", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({

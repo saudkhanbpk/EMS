@@ -88,9 +88,13 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const todayDate = selectedDate;
   //  const today = new Date();
 
-  const monthStart = startOfMonth(todayDate);
-  const monthEnd = endOfMonth(todayDate);
-  useEffect(() => {
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+  console.log("selectedDate" , selectedDate);
+  console.log("todayDate" , todayDate);
+  
+  
+  
     const fetchleaves = async () => {
       const { count, error } = await supabase
         .from("absentees")
@@ -98,11 +102,11 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         .eq('user_id', userID)
         .eq('absentee_type', "leave")
         .gte('created_at', monthStart.toISOString())
-        .gte('created_at', monthEnd.toISOString())
+        .lte('created_at', monthEnd.toISOString())
       if (error) {
         console.error("Error Fetching Absentees Count", error);
       } else {
-        console.log("absentees Count :", count);
+        console.log("Leaves Count :", count);
         if (count > 0) {
           setleaves(count)
         } else {
@@ -110,14 +114,15 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         }
       }
     }
+    useEffect(() => {
     fetchleaves();
-  }, [userID])
+  }, [userID , selectedDate ])
 
 
 
 
 
-  useEffect(() => {
+
     const fetchabsentees = async () => {
       const { count, error } = await supabase
         .from("absentees")
@@ -137,8 +142,9 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         }
       }
     }
+    useEffect(() => {
     fetchabsentees();
-  }, [userID])
+  }, [userID , selectedDate])
 
 
 

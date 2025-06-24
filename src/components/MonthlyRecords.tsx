@@ -51,12 +51,11 @@ const MonthlyRecord = (props: MonthlyRecordProps) => {
                 <td className="border border-gray-200 p-4">{monthlyStats.totalWorkingDays}</td>
                 <td className="border border-gray-200 p-4">{monthlyStats.presentDays}</td>
                 <td className="border border-gray-200 p-4">{monthlyStats?.lateDays}</td>
-                <td className="border border-gray-200 p-4">{absentees}</td>
-                <td className="border border-gray-200 p-4">{leaves}</td>
-                <td className="border border-gray-200 p-4">                      {monthlyStats.averageWorkHours.toFixed(1)}h
-                </td>
-                <td className="border border-gray-200 p-4">   {(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h</td>
-                <td className="border border-gray-200 p-4">                      {(7 * monthlyStats.expectedWorkingDays)}h
+                <td className="border border-gray-200 p-4">{monthlyStats?.absentees}</td>
+                <td className="border border-gray-200 p-4">{monthlyStats?.leaves}</td>
+                <td className="border border-gray-200 p-4">{monthlyStats.averageWorkHours.toFixed(1)}h</td>
+                <td className="border border-gray-200 p-4">{(monthlyStats.averageWorkHours * monthlyStats.totalWorkingDays).toFixed(1)}h</td>
+                <td className="border border-gray-200 p-4">{(7 * monthlyStats.expectedWorkingDays)}h
                 </td>
               </tr>
             </tbody>
