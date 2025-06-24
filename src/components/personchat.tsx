@@ -227,6 +227,10 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
         }
     };
 
+    const isCurrentUserMessage = (msg: Message) => {
+        return msg.sender_id === currentuser?.id;
+    };
+
     const loadMessages = async () => {
         if (!currentuser?.id || !chatuser?.id) return;
 
@@ -362,10 +366,6 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
             seenChannel.unsubscribe();
         };
     }, [currentuser?.id, chatuser?.id]);
-
-    const isCurrentUserMessage = (msg: Message) => {
-        return msg.sender_id === currentuser?.id;
-    };
 
     if (!chatuser) {
         return (
@@ -711,5 +711,3 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
 };
 
 export default Chat;
-
-

@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
-
+import Chatbutton from './chatbtn';
+import Chatlayout from './chatlayout';
 import {
   LayoutDashboard,
   Clock,
@@ -11,7 +12,8 @@ import {
   CloudCog,
   Building2,
   Menu,
-  Banknote
+  Banknote,
+  Notebook 
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
@@ -86,6 +88,7 @@ const EmployeeLayout: React.FC = () => {
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     { name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote },
+    { name: "DailyLogs", href: "/Dailylogs", icon: Notebook },
     // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
 
@@ -104,7 +107,7 @@ const EmployeeLayout: React.FC = () => {
       />
       {/* <div className="flex h-screen"> */}
       <div >
-        <div className="min-h-screen bg-gray-100 overflow-hidden">
+        <div className="min-h-screen bg-gray-100 overflow-hidden ">
           <Updateview />
           <div className="flex ">
 
@@ -142,12 +145,12 @@ const EmployeeLayout: React.FC = () => {
                   : 'translate-x-0'
                 }`}
             >
-              <div className="flex flex-col h-full ">
+              <div className="flex flex-col h-full overflow-y-scroll sidebar-scroll  ">
                 <div className="flex items-center justify-center">
                   <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
                 </div>
 
-                <nav className="flex-1 px-4 py-16 space-y-1">
+                <nav className="flex-1 px-4 py-8 space-y- ">
                   {navigation.map((item) => {
                     const Icon = item.icon;
                     return (
@@ -198,7 +201,7 @@ const EmployeeLayout: React.FC = () => {
           </div>
         </div>
       </div>
-     
+      <Chatlayout><Chatbutton></Chatbutton></Chatlayout>
 
       {/* Add TimeTrackerWidget */}
       {/* <TimeTrackerWidget /> */}

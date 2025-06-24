@@ -177,7 +177,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
       const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
       const remoteDays = uniqueAttendance.filter(a => a.work_mode === 'remote').length;
       const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
-      const absentDays = leavesCount + absenteesCount;
+      const absentDays =  absenteesCount;
 
       // Calculate working hours percentage
       const workingHoursPercentage = (totalHours / (workingDaysInMonth * 8)) * 100; // Assuming 8 hours per day
@@ -189,6 +189,7 @@ const EmployeeMonthlyAttendanceTable: React.FC = ({ selectedDateM }) => {
         remoteDays,
         totalHoursWorked: totalHours,
         workingHoursPercentage,
+        leavedays : leavesCount,
       };
     }));
 
@@ -430,10 +431,11 @@ const handleDownload = async (userId: string, fullName: string) => {
           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Employee Name</th>
           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Present Days</th>
           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Absent Days</th>
+          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Leave Days</th>
           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Remote Work</th>
           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Total Hours Worked</th>
           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Working Hours %</th>
-          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Download</th>
+          {/* <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Download</th> */}
         </tr>
       </thead>
       <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
@@ -454,6 +456,7 @@ const handleDownload = async (userId: string, fullName: string) => {
             </td>
             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.presentDays}</td>
             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.absentDays}</td>
+            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.leavedays}</td>
             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.remoteDays}</td>
             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
@@ -469,14 +472,14 @@ const handleDownload = async (userId: string, fullName: string) => {
                 {entry.workingHoursPercentage.toFixed(2)}%
               </span>
             </td>
-            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+            {/* <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
               <button
                 className="p-1 hover:bg-gray-300 transition-all rounded-2xl text-gray-500"
                 onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
               >
                 <DownloadIcon className="w-4 h-4 xs:w-5 xs:h-5" />
               </button>
-            </td>
+            </td> */}
           </tr>
         ))}
         {filteredData.length === 0 && (

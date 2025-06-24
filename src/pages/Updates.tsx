@@ -111,7 +111,7 @@ function Updates() {
       setemaillist(emailList);
 
       // 2. Send emails
-      const response = await fetch("http://localhost:4000/send-alertemail", {
+      const response = await fetch("https://ems-server-0bvq.onrender.com/send-alertemail", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -198,7 +198,7 @@ function Updates() {
   }, []);
 
   return (
-    <div className="max-w-7xl mx-auto" >
+    <div>
       <h2 className="text-[28px] leading-9 text-[#000000] font-bold mb-4">
         Office Alerts
       </h2>

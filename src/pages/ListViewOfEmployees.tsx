@@ -1,27 +1,37 @@
 import React, { useContext, useEffect, useState, Fragment } from "react";
 import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
-import { useAuthStore } from '../lib/store';
+import { useAuthStore } from "../lib/store";
 import EmployeeWeeklyAttendanceTable from "./ListViewWeekly";
 import { ChevronLeft, ChevronRight, SearchIcon } from "lucide-react"; // Assuming you're using Lucide icons
 import { format, parse, isAfter, addMonths, addWeeks, set } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
-import "./style.css"
-import { PieChart, Pie, Cell, Tooltip, ResponsiveContainer, BarChart, Bar, XAxis, YAxis } from 'recharts';
-import { Trash2 } from 'lucide-react';
+import "./style.css";
+import {
+  PieChart,
+  Pie,
+  Cell,
+  Tooltip,
+  ResponsiveContainer,
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+} from "recharts";
+import { Trash2 } from "lucide-react";
 import { forwardRef, useImperativeHandle } from "react";
 import "./style.css";
-import { useNavigate } from 'react-router-dom';
-import { Dialog, Transition, RadioGroup } from '@headlessui/react'
+import { useNavigate } from "react-router-dom";
+import { Dialog, Transition, RadioGroup } from "@headlessui/react";
 
 import AbsenteeComponentAdmin from "./AbsenteeDataAdmin";
 import {
   startOfMonth,
   endOfMonth,
   isWeekend,
-  eachDayOfInterval
-} from 'date-fns';
+  eachDayOfInterval,
+} from "date-fns";
 import { AttendanceProvider } from "./AttendanceContext";
 import FilteredDataAdmin from "./filteredListAdmin";
 import { id } from "date-fns/locale/id";
@@ -30,7 +40,7 @@ interface AttendanceRecord {
   id: string;
   check_in: string;
   check_out: string | null;
-  work_mode: 'on_site' | 'remote';
+  work_mode: "on_site" | "remote";
   status: string;
   latitude: number;
   longitude: number;
@@ -76,20 +86,15 @@ interface SoftwareComplaint {
 //   })
 // );
 const EmployeeAttendanceTable = () => {
-
-
-
   const [attendanceData, setAttendanceData] = useState([]);
-  const [absentid, setabsentid] = useState<null | number>(null)
-  const [selecteduser, setslecteduser] = useState<null | string>(null)
+  const [absentid, setabsentid] = useState<null | number>(null);
+  const [selecteduser, setslecteduser] = useState<null | string>(null);
   const [filteredData, setFilteredData] = useState([]); // Filtered data for display
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
-  const [selectedMode, setSelectedMode] = useState('remote');;
+  const [selectedMode, setSelectedMode] = useState("remote");
   const [present, setPresent] = useState(0);
-
-
 
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
@@ -103,30 +108,34 @@ const EmployeeAttendanceTable = () => {
   const [dataFromWeeklyChild, setDataFromWeeklyChild] = useState("");
   const [selectedEntry, setSelectedEntry] = useState(null);
   // const [newCheckOutTime, setNewCheckOutTime] = useState('00 : 00');
-  const [hour, setHour] = useState(12);  // Default hour
-  const [minute, setMinute] = useState(0);  // Default minute
-  const [isAM, setIsAM] = useState(true);  // AM/PM toggle
-  const [updatedCheckOutTime, setupdatedCheckOutTime] = useState('')
+  const [hour, setHour] = useState(12); // Default hour
+  const [minute, setMinute] = useState(0); // Default minute
+  const [isAM, setIsAM] = useState(true); // AM/PM toggle
+  const [updatedCheckOutTime, setupdatedCheckOutTime] = useState("");
   const [isCheckinModalOpen, setisCheckinModalOpen] = useState(false);
   // const [newCheckInTime, setNewCheckInTime] = useState('00 : 00');
-  const [hourin, setHourin] = useState(12);  // Default hour
-  const [minutein, setMinutein] = useState(0);  // Default minute
-  const [isinAM, setIsinAM] = useState(true);  // AM/PM toggle
-  const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
+  const [hourin, setHourin] = useState(12); // Default hour
+  const [minutein, setMinutein] = useState(0); // Default minute
+  const [isinAM, setIsinAM] = useState(true); // AM/PM toggle
+  const [updatedCheckInTime, setupdatedCheckInTime] = useState("");
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [absentloading, setabsentloading] = useState(false)
+  const [absentloading, setabsentloading] = useState(false);
   // const [formattedDate2, setformattedDate2] = useState('');
-  const [startdate, setStartdate] = useState('');
-  const [enddate, setEnddate] = useState('');
+  const [startdate, setStartdate] = useState("");
+  const [enddate, setEnddate] = useState("");
   const [search, setsearch] = useState(false);
   const [isModeOpen, setisModeOpen] = useState(false);
-  const [WorkMode, setWorkMode] = useState('selectedEntry.work_mode');
-  const [timestamp, settimestamp] = useState(new Date().toISOString().replace('T', ' ').split('.')[0] + '.000+00');
+  const [WorkMode, setWorkMode] = useState("selectedEntry.work_mode");
+  const [timestamp, settimestamp] = useState(
+    new Date().toISOString().replace("T", " ").split(".")[0] + ".000+00"
+  );
   const [maintab, setmaintab] = useState("TableView");
-  const [selectedTab, setSelectedTab] = useState<string>('Daily');
+  const [selectedTab, setSelectedTab] = useState<string>("Daily");
   const [employees, setEmployees] = useState<any[]>([]);
   const [officeComplaints, setofficeComplaints] = useState<any[]>([]);
-  const [softwareComplaints, setsoftwareComplaints] = useState<SoftwareComplaint[]>([]);
+  const [softwareComplaints, setsoftwareComplaints] = useState<
+    SoftwareComplaint[]
+  >([]);
   const [selectedEmployee, setSelectedEmployee] = useState<any>(null);
   const [selectedEmployeeid, setSelectedEmployeeid] = useState<any>(null);
   const [attendanceLogs, setAttendanceLogs] = useState<AttendanceRecord[]>([]);
@@ -137,17 +146,19 @@ const EmployeeAttendanceTable = () => {
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [showEmployeeList, setShowEmployeeList] = useState(false);
   const user = useAuthStore((state) => state.user);
-  const [leaveRequests, setleaveRequests] = useState(false)
+  const [leaveRequests, setleaveRequests] = useState(false);
   const [PendingLeaveRequests, setPendingLeaveRequests] = useState<any[]>([]);
   const setUser = useAuthStore((state) => state.setUser);
-  const [absentees, setabsentees] = useState('')
-  const [leaves, setleaves] = useState('')
-  const [userID, setUserID] = useState<string>('');
-  const [employeeStats, setEmployeeStats] = useState<Record<string, number>>({});
+  const [absentees, setabsentees] = useState("");
+  const [leaves, setleaves] = useState("");
+  const [userID, setUserID] = useState<string>("");
+  const [employeeStats, setEmployeeStats] = useState<Record<string, number>>(
+    {}
+  );
   const [graphicview, setgraphicview] = useState(false);
-  const [tableData, setTableData] = useState('');
+  const [tableData, setTableData] = useState("");
 
-  const [isDateModalOpen, setIsDateModalOpen] = useState(false)
+  const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [sideopen, setsideopen] = useState(false);
@@ -160,46 +171,42 @@ const EmployeeAttendanceTable = () => {
   // });
 
   function handleabsentclosemodal() {
-    setabsentid(null)
-    setslecteduser(null)
+    setabsentid(null);
+    setslecteduser(null);
     setModalVisible(false);
   }
 
-  async function handleopenabsentmodal(id: string,) {
-    setabsentloading(true)
-    setslecteduser(id)
+  async function handleopenabsentmodal(id: string) {
+    setabsentloading(true);
+    setslecteduser(id);
     setModalVisible(true);
     console.log("absent id", id);
-    let selectdate = new Date(selectedDate)
-    const today = selectdate.toISOString().split('T')[0]
+    let selectdate = new Date(selectedDate);
+    const today = selectdate.toISOString().split("T")[0];
 
     const { data, error } = await supabase
-      .from('absentees') // your table name
-      .select('*')
-      .eq('user_id', id) // filter by user_id
-      .gte('created_at', `${today}T00:00:00`) // start of today
-      .lte('created_at', `${today}T23:59:59`) // end of today
+      .from("absentees") // your table name
+      .select("*")
+      .eq("user_id", id) // filter by user_id
+      .gte("created_at", `${today}T00:00:00`) // start of today
+      .lte("created_at", `${today}T23:59:59`); // end of today
 
     if (error) {
-      console.error('Error fetching attendance:', error)
+      console.error("Error fetching attendance:", error);
     } else {
       if (data.length) {
-        let dataid = data[0].id
-        setabsentid(dataid)
-
+        let dataid = data[0].id;
+        setabsentid(dataid);
       }
-      console.log('Today\'s attendance:', data)
+      console.log("Today's attendance:", data);
     }
-    setabsentloading(false)
+    setabsentloading(false);
   }
-
-
-
 
   async function handleSaveChanges() {
     handleabsentclosemodal();
-    console.log("the absent id is", absentid)
-    console.log('Selected work mode:', selectedMode);
+    console.log("the absent id is", absentid);
+    console.log("Selected work mode:", selectedMode);
 
     let updateSuccess = false;
     let newAbsenteeData = null;
@@ -207,7 +214,10 @@ const EmployeeAttendanceTable = () => {
     if (absentid) {
       const { data, error } = await supabase
         .from("absentees")
-        .update({ absentee_Timing: selectedMode, absentee_type: selectedMode == "Absent" ? "Absent" : "leave" })
+        .update({
+          absentee_Timing: selectedMode,
+          absentee_type: selectedMode == "Absent" ? "Absent" : "leave",
+        })
         .eq("id", absentid);
 
       if (error) {
@@ -221,13 +231,13 @@ const EmployeeAttendanceTable = () => {
     } else {
       if (selecteduser) {
         const { data, error } = await supabase
-          .from('absentees') // your table name
+          .from("absentees") // your table name
           .insert([
             {
               user_id: selecteduser,
               absentee_Timing: selectedMode,
               absentee_type: selectedMode == "Absent" ? "Full Day" : "leave",
-            }
+            },
           ])
           .select(); // So we get inserted row(s) back
         if (!error) {
@@ -241,57 +251,57 @@ const EmployeeAttendanceTable = () => {
     // UI UPDATE LOGIC
     // Try to update attendanceData and filteredData in local state so UI is refreshed instantly.
     if (updateSuccess && newAbsenteeData) {
-      setAttendanceData(prev =>
-        prev.map(item =>
-          (item.id === (newAbsenteeData.user_id || selecteduser))
+      setAttendanceData((prev) =>
+        prev.map((item) =>
+          item.id === (newAbsenteeData.user_id || selecteduser)
             ? {
-              ...item,
-              status: newAbsenteeData.absentee_type,
-              textColor: newAbsenteeData.absentee_type === "Absent"
-                ? "text-red-500"
-                : "text-blue-500"
-            }
+                ...item,
+                status: newAbsenteeData.absentee_type,
+                textColor:
+                  newAbsenteeData.absentee_type === "Absent"
+                    ? "text-red-500"
+                    : "text-blue-500",
+              }
             : item
         )
       );
-      setFilteredData(prev =>
-        prev.map(item =>
-          (item.id === (newAbsenteeData.user_id || selecteduser))
+      setFilteredData((prev) =>
+        prev.map((item) =>
+          item.id === (newAbsenteeData.user_id || selecteduser)
             ? {
-              ...item,
-              status: newAbsenteeData.absentee_type,
-              textColor: newAbsenteeData.absentee_type === "Absent"
-                ? "text-red-500"
-                : "text-blue-500"
-            }
+                ...item,
+                status: newAbsenteeData.absentee_type,
+                textColor:
+                  newAbsenteeData.absentee_type === "Absent"
+                    ? "text-red-500"
+                    : "text-blue-500",
+              }
             : item
         )
       );
     } else if (updateSuccess && selecteduser) {
       // If new absentee but Supabase did not return newAbsenteeData
-      setAttendanceData(prev =>
-        prev.map(item =>
+      setAttendanceData((prev) =>
+        prev.map((item) =>
           item.id === selecteduser
             ? {
-              ...item,
-              status: selectedMode == "Absent" ? "Absent" : "leave",
-              textColor: selectedMode == "Absent"
-                ? "text-red-500"
-                : "text-blue-500"
-            }
+                ...item,
+                status: selectedMode == "Absent" ? "Absent" : "leave",
+                textColor:
+                  selectedMode == "Absent" ? "text-red-500" : "text-blue-500",
+              }
             : item
         )
       );
-      setFilteredData(prev =>
-        prev.map(item =>
+      setFilteredData((prev) =>
+        prev.map((item) =>
           item.id === selecteduser
             ? {
-              ...item,
-              status: selectedMode == "Absent" ? "Absent" : "leave",
-              textColor: selectedMode == "Absent"
-                ? "text-red-500"
-                : "text-blue-500"
-            }
+                ...item,
+                status: selectedMode == "Absent" ? "Absent" : "leave",
+                textColor:
+                  selectedMode == "Absent" ? "text-red-500" : "text-blue-500",
+              }
             : item
         )
       );
@@ -302,9 +312,8 @@ const EmployeeAttendanceTable = () => {
   }
   // ... (rest of the code remains unchanged below this)
 
-
-  const { attendanceDataWeekly, attendanceDataMonthly } = useContext(AttendanceContext);
-
+  const { attendanceDataWeekly, attendanceDataMonthly } =
+    useContext(AttendanceContext);
 
   const handleHourChange = (e) => {
     setHour(e.target.value);
@@ -314,12 +323,9 @@ const EmployeeAttendanceTable = () => {
     setMinute(e.target.value);
   };
 
-
   const toggleAMPM = () => {
     setIsAM(!isAM);
   };
-
-
 
   const handleCheckInHourChange = (e) => {
     setHourin(e.target.value);
@@ -332,7 +338,6 @@ const EmployeeAttendanceTable = () => {
     setIsinAM(!isinAM);
   };
 
-
   //Extracting Hours and Minuates From the previously saved Checkout Time
   const parseCheckOutTime = (checkOutTime) => {
     const regex = /(\d{2}):(\d{2})\s(AM|PM)/;
@@ -344,7 +349,7 @@ const EmployeeAttendanceTable = () => {
 
       setHour(extractedHour);
       setMinute(extractedMinute);
-      setIsAM(extractedAMPM === 'AM');
+      setIsAM(extractedAMPM === "AM");
     }
   };
   //Extracting Hours and Minuates From the previously saved Checkout Time
@@ -358,26 +363,24 @@ const EmployeeAttendanceTable = () => {
 
       setHourin(extractedHourin);
       setMinutein(extractedMinutein);
-      setIsinAM(extractedAMPMin === 'AM');
+      setIsinAM(extractedAMPMin === "AM");
     }
   };
   // Open modal and set the selected entry and default time
   const handleCheckinOpenModal = async (entry) => {
     setSelectedEntry(entry);
-    parseCheckInTime(entry.check_in)
+    parseCheckInTime(entry.check_in);
 
     setisCheckinModalOpen(true);
-
   };
 
   // Open modal and set the selected entry and default time
   const handleOpenModal = (entry) => {
     console.log("entry", entry);
     setSelectedEntry(entry);
-    parseCheckOutTime(entry.check_out)
+    parseCheckOutTime(entry.check_out);
     // setNewCheckOutTime(entry.check_out || ''); // Set default time
     setIsModalOpen(true);
-
   };
 
   // const handleUpdateCheckInTime = async () => {
@@ -457,8 +460,6 @@ const EmployeeAttendanceTable = () => {
 
   //   setisCheckinModalOpen(false);
   // };
-
-
 
   // const handleUpdateCheckInTime = async () => {
   //   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
@@ -549,39 +550,49 @@ const EmployeeAttendanceTable = () => {
     const utcDay = originalDate.getUTCDate(); // 9
 
     // Construct UTC date string
-    const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(2, '0')}-${String(utcDay).padStart(2, '0')}`;
+    const utcDateString = `${utcYear}-${String(utcMonth + 1).padStart(
+      2,
+      "0"
+    )}-${String(utcDay).padStart(2, "0")}`;
     // Result: "2025-04-09"
     // Create new date in UTC
     const adjustedHourin = isinAM ? hourin : (hourin + 12) % 24;
-    const newDate = new Date(Date.UTC(
-      originalDate.getUTCFullYear(),
-      originalDate.getUTCMonth(),
-      originalDate.getUTCDate(),
-      adjustedHourin,
-      minutein
-    ));
+    const newDate = new Date(
+      Date.UTC(
+        originalDate.getUTCFullYear(),
+        originalDate.getUTCMonth(),
+        originalDate.getUTCDate(),
+        adjustedHourin,
+        minutein
+      )
+    );
 
     // Format timestamp correctly
-    const formattedTimestamp = newDate.toISOString().replace("T", " ").replace(/\.\d+Z$/, ".000+00");
+    const formattedTimestamp = newDate
+      .toISOString()
+      .replace("T", " ")
+      .replace(/\.\d+Z$/, ".000+00");
 
     // Calculate status using UTC
-    const checkInTimeLimit = new Date(Date.UTC(
-      newDate.getUTCFullYear(),
-      newDate.getUTCMonth(),
-      newDate.getUTCDate(),
-      9, 30 // 09:30 UTC
-    ));
+    const checkInTimeLimit = new Date(
+      Date.UTC(
+        newDate.getUTCFullYear(),
+        newDate.getUTCMonth(),
+        newDate.getUTCDate(),
+        9,
+        30 // 09:30 UTC
+      )
+    );
 
     const attendanceStatus = newDate > checkInTimeLimit ? "late" : "present";
     console.log("origional Date", originalDate);
 
     console.log("origional Date in api", utcDateString);
 
-
     // Update with correct filtering
     const { data, error } = await supabase
       .from("attendance_logs")
-      .select('*')
+      .select("*")
       // .update({
       //   check_in: formattedTimestamp,
       //   status: attendanceStatus
@@ -596,16 +607,9 @@ const EmployeeAttendanceTable = () => {
     }
   };
 
-
-
-
-
   const handleCheckInCloseModal = () => {
     setisCheckinModalOpen(false);
-  }
-
-
-
+  };
 
   const handleUpdateCheckOutTime = async () => {
     console.log("selectedEntry.check_in2:", selectedEntry.check_in2);
@@ -616,7 +620,11 @@ const EmployeeAttendanceTable = () => {
 
     // Extract the date from selectedEntry.check_in2
     let originalDate;
-    if (selectedEntry.check_in2 === null || !selectedEntry.check_in2 || selectedEntry.check_in2 === "N/A") {
+    if (
+      selectedEntry.check_in2 === null ||
+      !selectedEntry.check_in2 ||
+      selectedEntry.check_in2 === "N/A"
+    ) {
       originalDate = new Date();
     } else {
       originalDate = new Date(selectedEntry.check_in2);
@@ -638,18 +646,37 @@ const EmployeeAttendanceTable = () => {
     const day2 = new Date().getDate();
 
     // Adjust for AM/PM (convert to 24-hour format if PM)
-    let adjustedHour = isAM ? parseInt(formattedHour, 10) : (parseInt(formattedHour, 10) + 12) % 24;
+    let adjustedHour = isAM
+      ? parseInt(formattedHour, 10)
+      : (parseInt(formattedHour, 10) + 12) % 24;
 
     // Create a new Date object with the updated time but keeping the original date
     let formattedDate;
     if (selectedEntry.check_in2 === null) {
-      formattedDate = new Date(year2, month2, day2, adjustedHour, parseInt(formattedMinute, 10), 0, 0);
+      formattedDate = new Date(
+        year2,
+        month2,
+        day2,
+        adjustedHour,
+        parseInt(formattedMinute, 10),
+        0,
+        0
+      );
     } else {
-      formattedDate = new Date(year, month, day, adjustedHour, parseInt(formattedMinute, 10), 0, 0);
+      formattedDate = new Date(
+        year,
+        month,
+        day,
+        adjustedHour,
+        parseInt(formattedMinute, 10),
+        0,
+        0
+      );
     }
 
     // Convert the Date object to the required format [YYYY-MM-DD HH:MM:SS.000+00]
-    const timestamp = formattedDate.toISOString().replace('T', ' ').split('.')[0] + '.000+00';
+    const timestamp =
+      formattedDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
 
     console.log("Selected time:", timestamp);
 
@@ -659,8 +686,8 @@ const EmployeeAttendanceTable = () => {
     // Update the `check_out` field in the database
     const { data, error } = await supabase
       .from("attendance_logs")
-      .update({ check_out: timestamp })  // Updating check_out with the new timestamp
-      .eq("user_id", selectedEntry.id)  // Ensure correct entry by user_id
+      .update({ check_out: timestamp }) // Updating check_out with the new timestamp
+      .eq("user_id", selectedEntry.id) // Ensure correct entry by user_id
       .eq("check_in", selectedEntry.check_in2); // Match check_in for that specific date
 
     if (data) {
@@ -677,13 +704,9 @@ const EmployeeAttendanceTable = () => {
     setIsModalOpen(false);
   };
 
-
-
-
   const handleCloseModal = () => {
     setIsModalOpen(false);
-  }
-
+  };
 
   // function handleDataFromChild(attendanceDataWeekly) {
   //   console.log("Data received from child:", attendanceDataWeekly);
@@ -691,16 +714,16 @@ const EmployeeAttendanceTable = () => {
   // }
   const downloadPDF = async () => {
     try {
-      const response = await fetch('http://localhost:4000/generate-pdfDaily', {
-        method: 'POST',
+      const response = await fetch("https://ems-server-0bvq.onrender.com/generate-pdfDaily", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ data: attendanceData }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error("Failed to generate PDF");
       }
 
       const blob = await response.blob();
@@ -710,11 +733,11 @@ const EmployeeAttendanceTable = () => {
       }
 
       const url = window.URL.createObjectURL(blob);
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = new Date().toISOString().split("T")[0];
       const fileName = `attendance_${currentDate}.pdf`;
 
       // Create and trigger download
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
@@ -722,9 +745,9 @@ const EmployeeAttendanceTable = () => {
       a.remove();
 
       // Open PDF manually
-      window.open(url, '_blank');
+      window.open(url, "_blank");
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error("Error downloading PDF:", error);
     }
   };
 
@@ -734,9 +757,6 @@ const EmployeeAttendanceTable = () => {
       direction === "prev" ? addMonths(prevDate, -1) : addMonths(prevDate, 1)
     );
   };
-
-
-
 
   // Fetching the pending Leave Requests Count
   const fetchPendingCount = async () => {
@@ -749,7 +769,6 @@ const EmployeeAttendanceTable = () => {
       console.error("Error fetching count:", error);
     } else {
       setPendingLeaveRequests(count || 0); // Ensure count is not null
-
     }
   };
 
@@ -761,62 +780,52 @@ const EmployeeAttendanceTable = () => {
     fetchPendingCount();
   }, [userID]); // Empty dependency array ensures it runs once on mount
 
-
   useEffect(() => {
     if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchleaves = async () => {
         const { count, error } = await supabase
           .from("absentees")
           .select("*", { count: "exact", head: true })
-          .eq('user_id', userID)
-          .eq('absentee_type', "leave")
-          .gte('created_at', monthStart.toISOString())
-          .lte('created_at', monthEnd.toISOString());
+          .eq("user_id", userID)
+          .eq("absentee_type", "leave")
+          .gte("created_at", monthStart.toISOString())
+          .lte("created_at", monthEnd.toISOString());
 
         if (error) {
           console.log("Error Fetching Absentees Count", error);
         } else {
           console.log("absentees Count :", count);
-          setleaves(count || 0)
-          console.log("leaves" , count);
-
+          setleaves(count || 0);
+          console.log("leaves", count);
         }
-      }
+      };
       fetchleaves();
     }
-
-
-  }, [userID])
-
+  }, [userID]);
 
   useEffect(() => {
-    console.log("selected tab on Leaves Fetching :" , selectedTab);
+    console.log("selected tab on Leaves Fetching :", selectedTab);
 
     if (selectedTab === "Employees" || selectedTab === "Daily") {
       const fetchabsentees = async () => {
         const { count, error } = await supabase
           .from("absentees")
           .select("*", { count: "exact", head: true })
-          .eq('user_id', userID)
-          .eq('absentee_type', "Absent")
-          .gte('created_at', monthStart.toISOString())
-          .lte('created_at', monthEnd.toISOString());
+          .eq("user_id", userID)
+          .eq("absentee_type", "Absent")
+          .gte("created_at", monthStart.toISOString())
+          .lte("created_at", monthEnd.toISOString());
         if (error) {
           console.error("Error Fetching Absentees Count", error);
         } else {
           console.log("absentees Count :", count);
-          setabsentees(count || 0)
+          setabsentees(count || 0);
           console.log("Absentees", count);
-
         }
-      }
+      };
       fetchabsentees();
     }
-  }, [userID])
-
-
-
-
+  }, [userID]);
 
   //Fetching Software Complaints From Database
 
@@ -826,9 +835,9 @@ const EmployeeAttendanceTable = () => {
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('software_complaints')
-        .select('*, users:users(email, full_name)') // Join users table
-        .order('created_at', { ascending: false });
+        .from("software_complaints")
+        .select("*, users:users(email, full_name)") // Join users table
+        .order("created_at", { ascending: false });
 
       if (fetchError) {
         throw fetchError;
@@ -837,13 +846,10 @@ const EmployeeAttendanceTable = () => {
       if (data) {
         console.log("Complaints Data are: ", data);
         setsoftwareComplaints(data);
-
-
       }
       console.log("officeComplaints : ", officeComplaints);
-
     } catch (err) {
-      console.error('Error fetching complaints:', err);
+      console.error("Error fetching complaints:", err);
       // setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
     } finally {
       setLoading(false);
@@ -851,10 +857,7 @@ const EmployeeAttendanceTable = () => {
   };
   const handleSoftwareComplaintsClick = () => {
     fetchsoftwareComplaints();
-  }
-
-
-
+  };
 
   //Fetching Office Complaints From Database
   const fetchofficeComplaints = async () => {
@@ -863,9 +866,9 @@ const EmployeeAttendanceTable = () => {
       setError(null);
 
       const { data, error: fetchError } = await supabase
-        .from('office_complaints')
-        .select('*, users:users(email, full_name)') // Join users table
-        .order('created_at', { ascending: false });
+        .from("office_complaints")
+        .select("*, users:users(email, full_name)") // Join users table
+        .order("created_at", { ascending: false });
 
       if (fetchError) {
         throw fetchError;
@@ -874,13 +877,10 @@ const EmployeeAttendanceTable = () => {
       if (data) {
         console.log("Complaints Data are: ", data);
         setofficeComplaints(data);
-
-
       }
       // console.log("softwareComplaints : ", softwareComplaints);
-
     } catch (err) {
-      console.error('Error fetching complaints:', err);
+      console.error("Error fetching complaints:", err);
       // setError(err instanceof Error ? err.message : 'Failed to fetch complaints');
     } finally {
       setLoading(false);
@@ -888,9 +888,7 @@ const EmployeeAttendanceTable = () => {
   };
   const handleOfficeComplaintsClick = () => {
     fetchofficeComplaints();
-  }
-
-
+  };
 
   //  useEffect(() => {
   //    const fetching = async () => {
@@ -924,31 +922,13 @@ const EmployeeAttendanceTable = () => {
 
   //  }, [userID]); // Empty dependency array to run only on mount
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   // if (selectedTab === "Employees") {
   const fetchEmployees = async () => {
     try {
       // Fetch all employees except excluded ones
       const { data: employees, error: employeesError } = await supabase
         .from("users")
-        .select("id, full_name")
+        .select("id, full_name");
 
       if (employeesError) throw employeesError;
       if (!employees || employees.length === 0) {
@@ -963,13 +943,17 @@ const EmployeeAttendanceTable = () => {
       //   handleEmployeeClick();
       // }
 
-
       const today = new Date();
       const monthStart = startOfMonth(today);
       const monthEnd = endOfMonth(today);
 
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+      const allDaysInMonth = eachDayOfInterval({
+        start: monthStart,
+        end: monthEnd,
+      });
+      const workingDaysInMonth = allDaysInMonth.filter(
+        (date) => !isWeekend(date)
+      ).length;
 
       // Fetch all attendance logs for all employees in one query
       const { data: attendanceLogs, error: attendanceError } = await supabase
@@ -996,39 +980,63 @@ const EmployeeAttendanceTable = () => {
       // Group all breaks by attendance_id
       const allBreaksByAttendance = {};
       if (allBreaksData) {
-        allBreaksData.forEach(b => {
-          if (!allBreaksByAttendance[b.attendance_id]) allBreaksByAttendance[b.attendance_id] = [];
+        allBreaksData.forEach((b) => {
+          if (!allBreaksByAttendance[b.attendance_id])
+            allBreaksByAttendance[b.attendance_id] = [];
           allBreaksByAttendance[b.attendance_id].push(b);
         });
       }
 
       for (const employee of employees) {
-        const employeeLogs = attendanceLogs.filter(log => log.user_id === employee.id);
+        const employeeLogs = attendanceLogs.filter(
+          (log) => log.user_id === employee.id
+        );
 
         // Group attendance by date (earliest record per day)
         const attendanceByDate = employeeLogs.reduce((acc, curr) => {
           const date = format(new Date(curr.check_in), "yyyy-MM-dd");
-          if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+          if (
+            !acc[date] ||
+            new Date(curr.check_in) < new Date(acc[date].check_in)
+          ) {
             acc[date] = curr;
           }
           return acc;
         }, {});
 
-        const uniqueAttendance = Object.values(attendanceByDate);
+        const uniqueAttendance = Object.values(
+          attendanceByDate
+        ) as AttendanceRecord[];
 
         let totalHours = 0;
 
-        uniqueAttendance.forEach(attendance => {
+        uniqueAttendance.forEach((attendance: AttendanceRecord) => {
           const start = new Date(attendance.check_in);
-          // Match the calculation in EmployeeProfile.tsx - use check_in time if no check_out
-          const end = attendance.check_out ? new Date(attendance.check_out) : new Date(start.getTime());
-          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+
+          // For no checkout, use current time but cap at 8 hours after check-in
+          let end: Date;
+          if (attendance.check_out) {
+            end = new Date(attendance.check_out);
+          } else {
+            const currentTime = new Date();
+            const maxEndTime = new Date(start);
+            maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
+
+            // Use the earlier of current time or max end time (8 hours after check-in)
+            end = currentTime < maxEndTime ? currentTime : maxEndTime;
+          }
+
+          // Calculate hours worked (ensure it's not negative)
+          let hoursWorked = Math.max(
+            0,
+            (end.getTime() - start.getTime()) / (1000 * 60 * 60)
+          );
 
           // Subtract breaks
           const breaks = allBreaksByAttendance[attendance.id] || [];
           let breakHours = 0;
 
-          breaks.forEach(b => {
+          breaks.forEach((b: any) => {
             if (b.start_time) {
               const breakStart = new Date(b.start_time);
               // If end_time is missing, calculate only 1 hour of break
@@ -1036,7 +1044,8 @@ const EmployeeAttendanceTable = () => {
                 ? new Date(b.end_time)
                 : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-              breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+              breakHours +=
+                (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
             }
           });
 
@@ -1051,32 +1060,32 @@ const EmployeeAttendanceTable = () => {
 
       setEmployeeStats(employeeStats);
       console.log("Employee Stats:", employeeStats);
-
     } catch (error) {
       console.error("Error fetching employees and stats:", error);
     }
   };
 
-  useEffect(() => {
-    fetchEmployees();
-  }
+  useEffect(
+    () => {
+      fetchEmployees();
+    },
     // }
-    , [userID, selectedTab]);
-
-
-
+    [userID, selectedTab]
+  );
 
   const handleSignOut = async () => {
-    setUser(null)
+    setUser(null);
     await supabase.auth.signOut();
     localStorage.clear();
-    navigate('/login');
+    navigate("/login");
   };
 
   const calculateDuration = (start: string, end: string | null) => {
     const startTime = new Date(start);
     const endTime = end ? new Date(end) : new Date();
-    const diffInMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
+    const diffInMinutes = Math.round(
+      (endTime.getTime() - startTime.getTime()) / (1000 * 60)
+    );
     const hours = Math.floor(diffInMinutes / 60);
     const minutes = diffInMinutes % 60;
     return `${hours}h ${minutes}m`;
@@ -1084,78 +1093,75 @@ const EmployeeAttendanceTable = () => {
 
   const getTotalBreakDuration = () => {
     let totalMinutes = 0;
-    todayBreak.forEach(breakRecord => {
+    todayBreak.forEach((breakRecord) => {
       if (breakRecord.end_time) {
         const start = new Date(breakRecord.start_time);
         const end = new Date(breakRecord.end_time);
-        totalMinutes += Math.round((end.getTime() - start.getTime()) / (1000 * 60));
+        totalMinutes += Math.round(
+          (end.getTime() - start.getTime()) / (1000 * 60)
+        );
       }
     });
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return totalMinutes > 0 ? `${hours}h ${minutes}m` : '0h 0m';
+    return totalMinutes > 0 ? `${hours}h ${minutes}m` : "0h 0m";
   };
 
   useEffect(() => {
     FetchSelectedAttendance(fetchingid);
-  }, [selectedDate])
-
-
+  }, [selectedDate]);
 
   const fetchtodaybreak = async () => {
-    const today = selectedDate.toISOString().split('T')[0] // 'YYYY-MM-DD'
+    const today = selectedDate.toISOString().split("T")[0]; // 'YYYY-MM-DD'
 
     const { data: breaks, error: breaksError } = await supabase
       .from("breaks")
       .select("*")
       .gte("created_at", `${today}T00:00:00`)
-      .lte("created_at", `${today}T23:59:59`)
+      .lte("created_at", `${today}T23:59:59`);
     if (breaksError) {
       console.error(breaksError);
-    }
-    else{
-
+    } else {
       setTodayBreak(breaks);
     }
-  }
+  };
 
   function formatToTimeString(isoString: string) {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('en-US', {
-      hour: '2-digit',
-      minute: '2-digit',
+    return date.toLocaleTimeString("en-US", {
+      hour: "2-digit",
+      minute: "2-digit",
       hour12: true,
     });
   }
 
   let getuserbreakdate = (id: string) => {
-    let secondcheckin = todayBreak.filter((breaks) => breaks.attendance_id === id)
+    let secondcheckin = todayBreak.filter(
+      (breaks) => breaks.attendance_id === id
+    );
 
-    let second = secondcheckin[0]?.end_time != null
+    let second = secondcheckin[0]?.end_time != null;
 
     // let secondcheckinlength = secondcheckin.end_time != null ;
-    let autoend = secondcheckin[0]?.ending === 'auto'
+    let autoend = secondcheckin[0]?.ending === "auto";
     if (second && !autoend) {
       let oneattendce = secondcheckin[0];
-      const formateddate = formatToTimeString(oneattendce?.end_time)
+      const formateddate = formatToTimeString(oneattendce?.end_time);
       if (formateddate == "Invalid Date") {
-        return "N/A"
+        return "N/A";
       }
       return formateddate;
-    }
-    else {
+    } else {
       return "N/A";
     }
-
-  }
+  };
 
   // const breakone=getuserbreakdate("191c5732-20a9-48ef-92d8-2c593656bf98")
   // console.log("the break one is", breakone)
 
   useEffect(() => {
     fetchtodaybreak();
-  }, [selectedDate])
-
+  }, [selectedDate]);
 
   const FetchSelectedAttendance = async (id) => {
     console.log("Selected ID is", id);
@@ -1168,21 +1174,31 @@ const EmployeeAttendanceTable = () => {
     try {
       // Fetch employee details.
       const { data: userData, error: userError } = await supabase
-        .from('users')
-        .select('*')
-        .eq('id', id)
+        .from("users")
+        .select("*")
+        .eq("id", id)
         .single();
       if (userError) throw userError;
       setSelectedEmployee(userData);
-      setSelectedEmployeeid(id)
+      setSelectedEmployeeid(id);
       setUserID(id);
 
       // Define today's date range.
       const today = new Date();
-      const startOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-      const endOfDay = new Date(today.getFullYear(), today.getMonth(), today.getDate(), 23, 59, 59);
+      const startOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate()
+      );
+      const endOfDay = new Date(
+        today.getFullYear(),
+        today.getMonth(),
+        today.getDate(),
+        23,
+        59,
+        59
+      );
       // console.log('startOfDay:', startOfDay, 'endOfDay:', endOfDay);
-
 
       const formatDateToUTC = (selectedDate) => {
         const date = new Date(selectedDate);
@@ -1200,33 +1216,32 @@ const EmployeeAttendanceTable = () => {
       const day = parsedDate.getUTCDate();
       // const startOfDayFormat = new Date(Date.UTC(year, month, day - 1, 19, 0, 0, 0)).toISOString();
       // const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 0)).toISOString();
-      const startOfDayFormat = new Date(Date.UTC(year, month, day, 0, 0, 0, 0)).toISOString(); // Start of same day
-      const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 999)).toISOString(); // End of same day
-
-
-
+      const startOfDayFormat = new Date(
+        Date.UTC(year, month, day, 0, 0, 0, 0)
+      ).toISOString(); // Start of same day
+      const endOfDayFormat = new Date(
+        Date.UTC(year, month, day, 23, 59, 59, 999)
+      ).toISOString(); // End of same day
 
       console.log("startOfDayFormat : ", startOfDayFormat);
       console.log("EndOfDayFormat : ", endOfDayFormat);
 
-
       // Fetch today's attendance based on check_in time.
       const { data: todayAttendance, error: attendanceError } = await supabase
-        .from('attendance_logs')
-        .select('*')
-        .eq('user_id', id)
-        .gte('check_in', startOfDayFormat)
-        .lte('check_in', endOfDayFormat)
-        .order('check_in', { ascending: false })
+        .from("attendance_logs")
+        .select("*")
+        .eq("user_id", id)
+        .gte("check_in", startOfDayFormat)
+        .lte("check_in", endOfDayFormat)
+        .order("check_in", { ascending: false })
         .limit(1)
         .single();
       console.log("selectedDate : ", selectedDate);
 
-      console.log('todayAttendance:', todayAttendance);
+      console.log("todayAttendance:", todayAttendance);
 
-
-      if (attendanceError && attendanceError.code !== 'PGRST116') {
-        setTodayBreak([])
+      if (attendanceError && attendanceError.code !== "PGRST116") {
+        setTodayBreak([]);
         throw attendanceError;
       }
 
@@ -1235,10 +1250,10 @@ const EmployeeAttendanceTable = () => {
         setAttendanceLogs([todayAttendance]);
 
         const { data: breakData, error: breakError } = await supabase
-          .from('breaks')
-          .select('*')
-          .eq('attendance_id', todayAttendance.id)
-          .order('start_time', { ascending: true });
+          .from("breaks")
+          .select("*")
+          .eq("attendance_id", todayAttendance.id)
+          .order("start_time", { ascending: true });
 
         if (breakError) {
           console.error("Break fetch error:", breakError);
@@ -1248,12 +1263,13 @@ const EmployeeAttendanceTable = () => {
         console.log("Fetched breaks:", breakData);
         setTodayBreak(Array.isArray(breakData) ? breakData : []);
       } else {
-        console.log("No todayAttendance found, clearing break state", todayBreak);
+        console.log(
+          "No todayAttendance found, clearing break state",
+          todayBreak
+        );
         setAttendanceLogs([]);
         setTodayBreak([]);
       }
-
-
 
       // Get current year and month
       const currentYear = today.getFullYear();
@@ -1261,22 +1277,27 @@ const EmployeeAttendanceTable = () => {
 
       // Create date objects for the first and last day of the month
       // Set time to start of day (00:00:00) for the first day
-      const monthStart = new Date(Date.UTC(currentYear, currentMonth, 1, 0, 0, 0, 0));
+      const monthStart = new Date(
+        Date.UTC(currentYear, currentMonth, 1, 0, 0, 0, 0)
+      );
 
       // Get the last day of the month and set time to end of day (23:59:59.999)
-      const lastDay = new Date(Date.UTC(currentYear, currentMonth + 1, 0)).getDate(); // Last day of the month
-      const monthEnd = new Date(Date.UTC(currentYear, currentMonth, lastDay, 23, 59, 59, 999));
+      const lastDay = new Date(
+        Date.UTC(currentYear, currentMonth + 1, 0)
+      ).getDate(); // Last day of the month
+      const monthEnd = new Date(
+        Date.UTC(currentYear, currentMonth, lastDay, 23, 59, 59, 999)
+      );
 
-
-      const employeeid = id
+      const employeeid = id;
       const fetchtableData = async () => {
         const { data, error } = await supabase
           .from("attendance_logs")
           .select("*")
           .eq("user_id", employeeid)
-          .gte('check_in', monthStart.toISOString())
-          .lte('check_in', monthEnd.toISOString())
-          .order('check_in', { ascending: true });;
+          .gte("check_in", monthStart.toISOString())
+          .lte("check_in", monthEnd.toISOString())
+          .order("check_in", { ascending: true });
 
         if (error) {
           console.error("Error fetching data:", error);
@@ -1285,59 +1306,62 @@ const EmployeeAttendanceTable = () => {
 
         setTableData(data); // Assuming setTableData is a state setter
         console.log("data of graphs", data);
-
       };
 
       fetchtableData();
 
-
       // Calculate monthly statistics.
 
-
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
-
+      const allDaysInMonth = eachDayOfInterval({
+        start: monthStart,
+        end: monthEnd,
+      });
+      const workingDaysInMonth = allDaysInMonth.filter(
+        (date) => !isWeekend(date)
+      ).length;
 
       const { data: monthlyAttendance, error: monthlyError } = await supabase
-        .from('attendance_logs')
-        .select('*')
-        .eq('user_id', id)
-        .gte('check_in', monthStart.toISOString())
-        .lte('check_in', monthEnd.toISOString())
-        .order('check_in', { ascending: true });
+        .from("attendance_logs")
+        .select("*")
+        .eq("user_id", id)
+        .gte("check_in", monthStart.toISOString())
+        .lte("check_in", monthEnd.toISOString())
+        .order("check_in", { ascending: true });
 
-        console.log("Start of Month" , monthStart.toISOString());
-        console.log("End of Month" , monthEnd.toISOString());
-
-
+      console.log("Start of Month", monthStart.toISOString());
+      console.log("End of Month", monthEnd.toISOString());
 
       if (monthlyError) throw monthlyError;
 
       if (monthlyAttendance) {
         // Group attendance by day (taking the earliest record for each day).
         const attendanceByDate = monthlyAttendance.reduce((acc, curr) => {
-          const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
-          if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+          const date = format(new Date(curr.check_in), "yyyy-MM-dd");
+          if (
+            !acc[date] ||
+            new Date(curr.check_in) < new Date(acc[date].check_in)
+          ) {
             acc[date] = curr;
           }
           return acc;
         }, {} as Record<string, AttendanceRecord>);
 
-        const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
-
+        const uniqueAttendance: AttendanceRecord[] =
+          Object.values(attendanceByDate);
 
         // Calculate total working hours and break hours separately
         let totalRawWorkHours = 0;
         let totalBreakHours = 0;
         let totalNetWorkHours = 0;
 
-        uniqueAttendance.forEach(attendance => {
+        uniqueAttendance.forEach((attendance) => {
           const start = new Date(attendance.check_in);
           const end = attendance.check_out
             ? new Date(attendance.check_out)
             : new Date(start.getTime()); // If no check-out, use check-in time (0 hours)
 
-          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          let hoursWorked =
+            (end.getTime() - start.getTime()) / (1000 * 60 * 60);
           totalRawWorkHours += Math.min(hoursWorked, 12); // Cap at 12 hours per day
         });
 
@@ -1345,25 +1369,30 @@ const EmployeeAttendanceTable = () => {
         const { data: breaks, error: breaksError } = await supabase
           .from("breaks")
           .select("start_time, end_time, attendance_id")
-          .in("attendance_id", uniqueAttendance.map(a => a.id));
+          .in(
+            "attendance_id",
+            uniqueAttendance.map((a) => a.id)
+          );
 
         if (breaksError) throw breaksError;
 
         // Group breaks by attendance_id for more efficient processing
         const breaksByAttendance = {};
-        breaks.forEach(b => {
-          if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
+        breaks.forEach((b) => {
+          if (!breaksByAttendance[b.attendance_id])
+            breaksByAttendance[b.attendance_id] = [];
           breaksByAttendance[b.attendance_id].push(b);
         });
 
         // Calculate break hours and net working hours for each attendance record
-        uniqueAttendance.forEach(attendance => {
+        uniqueAttendance.forEach((attendance) => {
           const start = new Date(attendance.check_in);
           const end = attendance.check_out
             ? new Date(attendance.check_out)
             : new Date(start.getTime());
 
-          let hoursWorked = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          let hoursWorked =
+            (end.getTime() - start.getTime()) / (1000 * 60 * 60);
           // Handle negative values by using Math.max(0, hoursWorked)
           hoursWorked = Math.max(0, hoursWorked);
 
@@ -1371,7 +1400,7 @@ const EmployeeAttendanceTable = () => {
           const attendanceBreaks = breaksByAttendance[attendance.id] || [];
           let breakHoursForThisLog = 0;
 
-          attendanceBreaks.forEach(b => {
+          attendanceBreaks.forEach((b) => {
             if (b.start_time) {
               const breakStart = new Date(b.start_time);
               // If end_time is missing, calculate only 1 hour of break
@@ -1379,22 +1408,38 @@ const EmployeeAttendanceTable = () => {
                 ? new Date(b.end_time)
                 : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-              const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+              const thisBreakHours =
+                (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
               breakHoursForThisLog += thisBreakHours;
               totalBreakHours += thisBreakHours;
             }
           });
 
           // Calculate net hours for this attendance record
-          const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
+          const netHoursForThisLog = Math.max(
+            0,
+            Math.min(hoursWorked - breakHoursForThisLog, 12)
+          );
           totalNetWorkHours += netHoursForThisLog;
 
           // Log details for each attendance record
-          console.log(`Attendance ID ${attendance.id}: Raw Hours = ${hoursWorked.toFixed(2)}h, Break Hours = ${breakHoursForThisLog.toFixed(2)}h, Net Hours = ${netHoursForThisLog.toFixed(2)}h`);
+          console.log(
+            `Attendance ID ${attendance.id}: Raw Hours = ${hoursWorked.toFixed(
+              2
+            )}h, Break Hours = ${breakHoursForThisLog.toFixed(
+              2
+            )}h, Net Hours = ${netHoursForThisLog.toFixed(2)}h`
+          );
         });
 
         // Log the totals
-        console.log(`TOTAL: Raw Working Hours = ${totalRawWorkHours.toFixed(2)}h, Total Break Hours = ${totalBreakHours.toFixed(2)}h, Net Working Hours = ${totalNetWorkHours.toFixed(2)}h`);
+        console.log(
+          `TOTAL: Raw Working Hours = ${totalRawWorkHours.toFixed(
+            2
+          )}h, Total Break Hours = ${totalBreakHours.toFixed(
+            2
+          )}h, Net Working Hours = ${totalNetWorkHours.toFixed(2)}h`
+        );
 
         // Fetch overtime data for the selected month
         const { data: overtimeData, error: overtimeError } = await supabase
@@ -1413,10 +1458,14 @@ const EmployeeAttendanceTable = () => {
 
         if (overtimeData && overtimeData.length > 0) {
           // Fetch breaks for overtime
-          const { data: remoteBreakData, error: remoteBreakError } = await supabase
-            .from("Remote_Breaks")
-            .select("start_time, end_time, Remote_Id")
-            .in("Remote_Id", overtimeData.map(a => a.id));
+          const { data: remoteBreakData, error: remoteBreakError } =
+            await supabase
+              .from("Remote_Breaks")
+              .select("start_time, end_time, Remote_Id")
+              .in(
+                "Remote_Id",
+                overtimeData.map((a) => a.id)
+              );
 
           if (remoteBreakError) {
             console.error("Error fetching remote breaks:", remoteBreakError);
@@ -1425,25 +1474,27 @@ const EmployeeAttendanceTable = () => {
           // Group remote breaks by Remote_Id
           const remoteBreaksByAttendance = {};
           if (remoteBreakData) {
-            remoteBreakData.forEach(b => {
-              if (!remoteBreaksByAttendance[b.Remote_Id]) remoteBreaksByAttendance[b.Remote_Id] = [];
+            remoteBreakData.forEach((b) => {
+              if (!remoteBreaksByAttendance[b.Remote_Id])
+                remoteBreaksByAttendance[b.Remote_Id] = [];
               remoteBreaksByAttendance[b.Remote_Id].push(b);
             });
           }
 
           // Calculate total overtime hours
-          overtimeData.forEach(log => {
+          overtimeData.forEach((log) => {
             if (log.check_in && log.check_out) {
               const checkIn = new Date(log.check_in);
               const checkOut = new Date(log.check_out);
 
-              let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+              let hoursWorked =
+                (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
 
               // Subtract remote breaks
               const remoteBreaks = remoteBreaksByAttendance[log.id] || [];
               let remoteBreakHours = 0;
 
-              remoteBreaks.forEach(b => {
+              remoteBreaks.forEach((b) => {
                 if (b.start_time) {
                   const breakStart = new Date(b.start_time);
                   // If end_time is missing, calculate only 1 hour of break
@@ -1451,7 +1502,9 @@ const EmployeeAttendanceTable = () => {
                     ? new Date(b.end_time)
                     : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-                  remoteBreakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+                  remoteBreakHours +=
+                    (breakEnd.getTime() - breakStart.getTime()) /
+                    (1000 * 60 * 60);
                 }
               });
 
@@ -1462,30 +1515,31 @@ const EmployeeAttendanceTable = () => {
 
         console.log("Total Overtime Hours:", totalOvertimeHours.toFixed(2));
 
-
-
         setMonthlyStats({
           expectedWorkingDays: workingDaysInMonth,
           totalWorkingDays: uniqueAttendance.length,
-          presentDays: uniqueAttendance.filter((a) => a.status === 'present').length,
-          lateDays: uniqueAttendance.filter((a) => a.status === 'late').length,
-          onSiteDays: uniqueAttendance.filter(a => a.work_mode === 'on_site').length,
-          remoteDays: uniqueAttendance.filter(a => a.work_mode === 'remote').length,
-          averageWorkHours: uniqueAttendance.length ? totalNetWorkHours / uniqueAttendance.length : 0,
+          presentDays: uniqueAttendance.filter((a) => a.status === "present")
+            .length,
+          lateDays: uniqueAttendance.filter((a) => a.status === "late").length,
+          onSiteDays: uniqueAttendance.filter((a) => a.work_mode === "on_site")
+            .length,
+          remoteDays: uniqueAttendance.filter((a) => a.work_mode === "remote")
+            .length,
+          averageWorkHours: uniqueAttendance.length
+            ? totalNetWorkHours / uniqueAttendance.length
+            : 0,
           totalHours: totalNetWorkHours,
-          totalOvertimeHours: totalOvertimeHours
+          totalOvertimeHours: totalOvertimeHours,
         });
-
       } else {
         setMonthlyStats(null);
       }
     } catch (error) {
-      console.error('Error fetching employee data:', error);
+      console.error("Error fetching employee data:", error);
     } finally {
       setLoading(false);
     }
-  }
-
+  };
 
   const handleEmployeeClick = async (id: any) => {
     FetchSelectedAttendance(id);
@@ -1494,13 +1548,14 @@ const EmployeeAttendanceTable = () => {
   // if (loading) return <div>Loading complaints...</div>;
   if (error) return <div>Error: {error}</div>;
 
-
-
-
   //Graph View Component
-  const GraphicViewComponent = ({ selectedEmployee, tableData, attendanceLogs, monthlyStats }) => {
+  const GraphicViewComponent = ({
+    selectedEmployee,
+    tableData,
+    attendanceLogs,
+    monthlyStats,
+  }) => {
     if (!selectedEmployee) return null;
-
 
     // Data for Graphs
     const chartData = [
@@ -1509,20 +1564,29 @@ const EmployeeAttendanceTable = () => {
     ];
     const colors = ["#4A90E2", "#9B59B6", ""];
 
-
-
     return (
       <div className=" bg-white rounded-lg shadow-lg p-6 mt-6 w-full">
-        <h2 className="text-2xl font-bold mb-4">{selectedEmployee.full_name}'s Dashboard</h2>
+        <h2 className="text-2xl font-bold mb-4">
+          {selectedEmployee.full_name}'s Dashboard
+        </h2>
 
         {/* Graphical View */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
           {/* Pie Chart */}
           <div className="w-full bg-gray-100 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Work Mode Distribution</h3>
+            <h3 className="text-lg font-semibold mb-2">
+              Work Mode Distribution
+            </h3>
             <ResponsiveContainer width="100%" height={250}>
               <PieChart>
-                <Pie data={chartData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80}>
+                <Pie
+                  data={chartData}
+                  dataKey="value"
+                  nameKey="name"
+                  cx="50%"
+                  cy="50%"
+                  outerRadius={80}
+                >
                   {chartData.map((entry, index) => (
                     <Cell key={`cell-${index}`} fill={colors[index]} />
                   ))}
@@ -1552,9 +1616,13 @@ const EmployeeAttendanceTable = () => {
           <table className="w-full border-collapse border border-gray-300">
             <thead>
               <tr className="bg-gray-200">
-                {['Date', 'Check-in', 'Check-out', 'Work Mode'].map((header, idx) => (
-                  <th key={idx} className="border p-2">{header}</th>
-                ))}
+                {["Date", "Check-in", "Check-out", "Work Mode"].map(
+                  (header, idx) => (
+                    <th key={idx} className="border p-2">
+                      {header}
+                    </th>
+                  )
+                )}
               </tr>
             </thead>
             <tbody>
@@ -1563,11 +1631,19 @@ const EmployeeAttendanceTable = () => {
                   return (
                     <tr key={id} className="text-center border-b">
                       {/* Format Date */}
-                      <td className="border p-2">{new Date(check_in).toLocaleDateString()}</td>
+                      <td className="border p-2">
+                        {new Date(check_in).toLocaleDateString()}
+                      </td>
                       {/* Format Time */}
-                      <td className="border p-2">{new Date(check_in).toLocaleTimeString()}</td>
-                      <td className="border p-2">{check_out ? new Date(check_out).toLocaleTimeString() : "N/A"}</td>
-                      <td className="border p-2"  >{work_mode}</td>
+                      <td className="border p-2">
+                        {new Date(check_in).toLocaleTimeString()}
+                      </td>
+                      <td className="border p-2">
+                        {check_out
+                          ? new Date(check_out).toLocaleTimeString()
+                          : "N/A"}
+                      </td>
+                      <td className="border p-2">{work_mode}</td>
                     </tr>
                   );
                 })
@@ -1579,21 +1655,16 @@ const EmployeeAttendanceTable = () => {
                 </tr>
               )}
             </tbody>
-
           </table>
         </div>
-
-
       </div>
     );
   };
 
-
-
-
-
   const handleEmployeeDelete = async (userID) => {
-    const isConfirmed = window.confirm("Are you sure you want to delete this user?");
+    const isConfirmed = window.confirm(
+      "Are you sure you want to delete this user?"
+    );
 
     if (!isConfirmed) return; // If user cancels, do nothing
 
@@ -1608,23 +1679,14 @@ const EmployeeAttendanceTable = () => {
     }
   };
 
-
-
-
-
-
-
-
-
-
   const handleModeOpen = (entry) => {
     setisModeOpen(true);
-    setSelectedEntry(entry)
-  }
+    setSelectedEntry(entry);
+  };
 
   const handleModeModal = () => {
-    setisModeOpen(false)
-  }
+    setisModeOpen(false);
+  };
 
   const handleUpdateMode = () => {
     const updateMode = async () => {
@@ -1643,24 +1705,10 @@ const EmployeeAttendanceTable = () => {
       } else {
         console.error("Error updating Work Mode:", error);
       }
-    }
+    };
     updateMode();
-    setisModeOpen(false)
-  }
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    setisModeOpen(false);
+  };
 
   // const downloadPDFFiltered = async () => {
   //   // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
@@ -1668,7 +1716,7 @@ const EmployeeAttendanceTable = () => {
   //   //   return;
   //   // }
   //   try {
-  //     const response = await fetch('http://localhost:4000/generate-Filtered', {
+  //     const response = await fetch('https://ems-server-0bvq.onrender.com/generate-Filtered', {
   //       method: 'POST',
   //       headers: {
   //         'Content-Type': 'application/json',
@@ -1705,38 +1753,22 @@ const EmployeeAttendanceTable = () => {
   //   }
   // };
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   const downloadPDFFiltered = async () => {
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
     //   console.error("No data available to generate PDF");
     //   return;
     // }
     try {
-      const response = await fetch('http://localhost:4000/generate-Filtered', {
-        method: 'POST',
+      const response = await fetch("https://ems-server-0bvq.onrender.com/generate-Filtered", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ data: AttendanceDataFiltered }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error("Failed to generate PDF");
       }
 
       const blob = await response.blob();
@@ -1746,11 +1778,11 @@ const EmployeeAttendanceTable = () => {
       }
 
       const url = window.URL.createObjectURL(blob);
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = new Date().toISOString().split("T")[0];
       const fileName = `attendance_${currentDate}.pdf`;
 
       // Create and trigger download
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
@@ -1758,24 +1790,18 @@ const EmployeeAttendanceTable = () => {
       a.remove();
 
       // Open PDF manually
-      window.open(url, '_blank');
+      window.open(url, "_blank");
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error("Error downloading PDF:", error);
     }
   };
 
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedEmployeesearch, setDataEmployeesearch] = useState(null);
 
-  const filteredEmployees = employees.filter(employee =>
+  const filteredEmployees = employees.filter((employee) =>
     employee.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
-
-
-
-
-
-
 
   const downloadPDFWeekly = async () => {
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
@@ -1783,16 +1809,16 @@ const EmployeeAttendanceTable = () => {
     //   return;
     // }
     try {
-      const response = await fetch('http://localhost:4000/generate-pdfWeekly', {
-        method: 'POST',
+      const response = await fetch("https://ems-server-0bvq.onrender.com/generate-pdfWeekly", {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
         body: JSON.stringify({ data: attendanceDataWeekly }),
       });
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error("Failed to generate PDF");
       }
 
       const blob = await response.blob();
@@ -1802,11 +1828,11 @@ const EmployeeAttendanceTable = () => {
       }
 
       const url = window.URL.createObjectURL(blob);
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = new Date().toISOString().split("T")[0];
       const fileName = `attendance_${currentDate}.pdf`;
 
       // Create and trigger download
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
@@ -1814,13 +1840,11 @@ const EmployeeAttendanceTable = () => {
       a.remove();
 
       // Open PDF manually
-      window.open(url, '_blank');
+      window.open(url, "_blank");
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error("Error downloading PDF:", error);
     }
   };
-
-
 
   const downloadPDFMonthly = async () => {
     // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
@@ -1828,16 +1852,19 @@ const EmployeeAttendanceTable = () => {
     //   return;
     // }
     try {
-      const response = await fetch('http://localhost:4000/generate-pdfMonthly', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: attendanceDataMonthly }),
-      });
+      const response = await fetch(
+        "https://ems-server-0bvq.onrender.com/generate-pdfMonthly",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ data: attendanceDataMonthly }),
+        }
+      );
 
       if (!response.ok) {
-        throw new Error('Failed to generate PDF');
+        throw new Error("Failed to generate PDF");
       }
 
       const blob = await response.blob();
@@ -1847,11 +1874,11 @@ const EmployeeAttendanceTable = () => {
       }
 
       const url = window.URL.createObjectURL(blob);
-      const currentDate = new Date().toISOString().split('T')[0];
+      const currentDate = new Date().toISOString().split("T")[0];
       const fileName = `attendance_${currentDate}.pdf`;
 
       // Create and trigger download
-      const a = document.createElement('a');
+      const a = document.createElement("a");
       a.href = url;
       a.download = fileName;
       document.body.appendChild(a);
@@ -1859,13 +1886,11 @@ const EmployeeAttendanceTable = () => {
       a.remove();
 
       // Open PDF manually
-      window.open(url, '_blank');
+      window.open(url, "_blank");
     } catch (error) {
-      console.error('Error downloading PDF:', error);
+      console.error("Error downloading PDF:", error);
     }
   };
-
-
 
   // Handle week change (previous/next)
   const handleWeekChange = (direction) => {
@@ -1895,7 +1920,9 @@ const EmployeeAttendanceTable = () => {
       // Fetch attendance logs for the selected date
       const { data: attendanceLogs, error: attendanceError } = await supabase
         .from("attendance_logs")
-        .select("user_id, check_in, check_out, work_mode, status, created_at, autocheckout, id")
+        .select(
+          "user_id, check_in, check_out, work_mode, status, created_at, autocheckout, id"
+        )
         .gte("check_in", `${formattedDate}T00:00:00`)
         .lte("check_in", `${formattedDate}T23:59:59`);
 
@@ -1906,14 +1933,17 @@ const EmployeeAttendanceTable = () => {
         .from("absentees")
         .select("user_id, absentee_type")
         .gte("created_at", `${formattedDate}T00:00:00`)
-        .lte("created_at", `${formattedDate}T23:59:59`)
+        .lte("created_at", `${formattedDate}T23:59:59`);
 
       if (absenteesError) throw absenteesError;
 
-
       // Create Maps
-      const attendanceMap = new Map(attendanceLogs.map((log) => [log.user_id, log]));
-      const absenteesMap = new Map(absentees.map((absent) => [absent.user_id, absent.absentee_type]));
+      const attendanceMap = new Map(
+        attendanceLogs.map((log) => [log.user_id, log])
+      );
+      const absenteesMap = new Map(
+        absentees.map((absent) => [absent.user_id, absent.absentee_type])
+      );
 
       // Build final list
       const finalAttendanceData = users.map((user) => {
@@ -1964,8 +1994,8 @@ const EmployeeAttendanceTable = () => {
             log.status.toLowerCase() === "present"
               ? "text-green-500"
               : log.status.toLowerCase() === "late"
-                ? "text-yellow-500"
-                : "text-red-500",
+              ? "text-yellow-500"
+              : "text-red-500",
         };
       });
 
@@ -1973,13 +2003,21 @@ const EmployeeAttendanceTable = () => {
       setFilteredData(finalAttendanceData); // Initialize filtered data with all data
 
       // Calculate counts
-      const lateCount = finalAttendanceData.filter((entry) => entry.status.toLowerCase() === "late").length;
+      const lateCount = finalAttendanceData.filter(
+        (entry) => entry.status.toLowerCase() === "late"
+      ).length;
       setLate(lateCount);
-      const presentCount = finalAttendanceData.filter((entry) => entry.status.toLowerCase() === "present").length;
+      const presentCount = finalAttendanceData.filter(
+        (entry) => entry.status.toLowerCase() === "present"
+      ).length;
       setPresent(presentCount);
-      const absentCount = finalAttendanceData.filter((entry) => entry.status.toLowerCase() === "absent").length;
+      const absentCount = finalAttendanceData.filter(
+        (entry) => entry.status.toLowerCase() === "absent"
+      ).length;
       setAbsent(absentCount);
-      const remoteCount = finalAttendanceData.filter((entry) => entry.work_mode === "remote").length;
+      const remoteCount = finalAttendanceData.filter(
+        (entry) => entry.work_mode === "remote"
+      ).length;
       setRemote(remoteCount);
     } catch (error) {
       setError(error.message);
@@ -1989,10 +2027,8 @@ const EmployeeAttendanceTable = () => {
     }
   };
 
-
   const now = new Date();
-  const [fetchingid, setfetchingid] = useState('')
-
+  const [fetchingid, setfetchingid] = useState("");
 
   // Pakistan is in UTC+5, so add 5 hours to the UTC time
   const offset = 5 * 60 * 60 * 1000; // 5 hours in milliseconds
@@ -2006,7 +2042,7 @@ const EmployeeAttendanceTable = () => {
     // console.log("passing time : " , newDate);
     // console.log("pakistan time time : " , pakistanTime);
     if (DetailedVieww === true) {
-      FetchSelectedAttendance(fetchingid)
+      FetchSelectedAttendance(fetchingid);
     }
   };
 
@@ -2018,58 +2054,68 @@ const EmployeeAttendanceTable = () => {
         setFilteredData(attendanceData);
         break;
       case "present":
-        setFilteredData(attendanceData.filter((entry) => entry.status.toLowerCase() === "present"));
+        setFilteredData(
+          attendanceData.filter(
+            (entry) => entry.status.toLowerCase() === "present"
+          )
+        );
         break;
       case "absent":
-        setFilteredData(attendanceData.filter((entry) => entry.status.toLowerCase() === "absent"));
+        setFilteredData(
+          attendanceData.filter(
+            (entry) => entry.status.toLowerCase() === "absent"
+          )
+        );
         break;
       case "late":
-        setFilteredData(attendanceData.filter((entry) => entry.status.toLowerCase() === "late"));
+        setFilteredData(
+          attendanceData.filter(
+            (entry) => entry.status.toLowerCase() === "late"
+          )
+        );
         break;
       case "remote":
-        setFilteredData(attendanceData.filter((entry) => entry.work_mode === "remote"));
+        setFilteredData(
+          attendanceData.filter((entry) => entry.work_mode === "remote")
+        );
         break;
       default:
         setFilteredData(attendanceData);
     }
   };
   const handlenotification = () => {
-    Notification.requestPermission()
-      .then(() => {
-        const notification = new Notification("Office Time Update", {
-          body: "Please note that our office time is from 9:00 AM to 4:00 PM.",
-          icon: "./efficiency.png"
-        })
-      })
-  }
+    Notification.requestPermission().then(() => {
+      const notification = new Notification("Office Time Update", {
+        body: "Please note that our office time is from 9:00 AM to 4:00 PM.",
+        icon: "./efficiency.png",
+      });
+    });
+  };
 
   const handleDateFilter = () => {
-    setSelectedTab("Filter")
-    setsearch((prev) => !prev)
-  }
+    setSelectedTab("Filter");
+    setsearch((prev) => !prev);
+  };
 
   //  const handletableview = () => {
   //   console.log("abc");
-
 
   //  }
   //  const handleDetailview = (y:any) => {
   //   setmaintab(y)
   //   console.log(y);
   //  }
-  const [DetailedVieww, setDetailedVieww] = useState(false)
+  const [DetailedVieww, setDetailedVieww] = useState(false);
   const handleGraphicViewClick = () => {
-    setgraphicview(true)
-  }
+    setgraphicview(true);
+  };
   const handleDetailedViewClick = () => {
-    setgraphicview(false)
+    setgraphicview(false);
     setDetailedVieww(true);
-  }
+  };
   const handleTableViewClick = () => {
-    setgraphicview(false)
-  }
-
-
+    setgraphicview(false);
+  };
 
   return (
     <div className="flex flex-col  justify-center items-center min-h-full min-w-full bg-gray-100 ">
@@ -2105,19 +2151,17 @@ const EmployeeAttendanceTable = () => {
             }
           }}
         >
-          <option value="TableView" className="mt-4">Table View</option>
+          <option value="TableView" className="mt-4">
+            Table View
+          </option>
           <option value="DetailedView">Detailed View</option>
           <option value="GraphicView">Graphic View</option>
         </select>
-
-
       </div>
       {/* Buttons and Date Navigation */}
       <div className="w-full max-w-7xl flex flex-wrap justify-between items-center mb-6">
         {/* Buttons Row */}
-        {maintab === "DetailedView" && (
-          <div></div>
-        )}
+        {maintab === "DetailedView" && <div></div>}
         {maintab === "TableView" && (
           <>
             <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto sm:ml-5 md:flex justify-center md:space-x-4 space-x-2 ">
@@ -2134,37 +2178,41 @@ const EmployeeAttendanceTable = () => {
 
               <button
                 onClick={() => setSelectedTab("Daily")}
-                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Daily"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-100"
-                  }`}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  selectedTab === "Daily"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-100"
+                }`}
               >
                 Daily
               </button>
               <button
                 onClick={() => setSelectedTab("Weekly")}
-                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Weekly"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-                  }`}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  selectedTab === "Weekly"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setSelectedTab("Monthly")}
-                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Monthly"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-                  }`}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  selectedTab === "Monthly"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setSelectedTab("Filter")}
-                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Filter"
-                  ? "bg-blue-500 text-white"
-                  : "bg-white text-gray-700 hover:bg-gray-200"
-                  }`}
+                className={`px-4 py-2 rounded-lg transition-all ${
+                  selectedTab === "Filter"
+                    ? "bg-blue-500 text-white"
+                    : "bg-white text-gray-700 hover:bg-gray-200"
+                }`}
               >
                 Filter
               </button>
@@ -2182,14 +2230,7 @@ const EmployeeAttendanceTable = () => {
                 <option value="Filter">Filter</option>
               </select>
             </div>
-
-
-
-
-
-
           </>
-
         )}
         <div className="flex flex-row sm:gap-5  lg:flex-nowrap flex-wrap justify-cente md:mx-0 mx-auto">
           {/* Date Navigation */}
@@ -2201,9 +2242,13 @@ const EmployeeAttendanceTable = () => {
               >
                 <ChevronLeft className="w-3 h-3" />
               </button>
-              <span className="md:text-xl ml-0 text-sm font-semibold">
-                {format(selectedDate, "MMMM d, yyyy")}
-              </span>
+              <input
+                className="md:text-xl ml-0 text-sm font-semibold"
+                type="date"
+                value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+              />
+
               <button
                 onClick={() => handleDayChange("next")}
                 className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -2213,7 +2258,6 @@ const EmployeeAttendanceTable = () => {
             </div>
           )}
 
-
           {maintab === "TableView" && selectedTab === "Daily" && (
             <div className="flex items-center space-x-4">
               <button
@@ -2222,9 +2266,15 @@ const EmployeeAttendanceTable = () => {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="md:text-xl font-semibold ">
+              {/* <span className="md:text-xl font-semibold ">
                 {format(selectedDate, "MMMM d, yyyy")}
-              </span>
+              </span> */}
+              <input
+                className="md:text-xl ml-0 text-sm font-semibold"
+                type="date"
+                value={selectedDate ? format(selectedDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => setSelectedDate(new Date(e.target.value))}
+              />
               <button
                 onClick={() => handleDayChange("next")}
                 className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -2241,9 +2291,15 @@ const EmployeeAttendanceTable = () => {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="mx-4 text-xl font-semibold">
+              {/* <span className="mx-4 text-xl font-semibold">
                 {format(selectedDateM, "MMMM yyyy")}
-              </span>
+              </span> */}
+              <input
+                className="md:text-xl ml-0 text-sm font-semibold"
+                type="date"
+                value={selectedDateM ? format(selectedDate, "MMMM yyyy") : ""}
+                onChange={(e) => setSelectedDateM(new Date(e.target.value))}
+              />
               <button
                 onClick={() => handleMonthChange("next")}
                 className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -2260,12 +2316,18 @@ const EmployeeAttendanceTable = () => {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              <span className="mx-4 text-xl font-semibold">
+              {/* <span className="mx-4 text-xl font-semibold">
                 {format(selectedDateW, "MMMM yyyy")}
-              </span>
+              </span> */}
+              <input
+                className="md:text-xl ml-0 text-sm font-semibold"
+                type="date"
+                value={selectedDateW ? format(selectedDate, "yyyy-MM-dd") : ""}
+                onChange={(e) => setSelectedDateW(new Date(e.target.value))}
+              />
               <button
                 onClick={() => {
-                  handleWeekChange("next")
+                  handleWeekChange("next");
                   // console.log("selectedDateW", selectedDateW);
                 }}
                 className="md:p-2 p-0 hover:bg-gray-200 rounded-full transition-all"
@@ -2311,18 +2373,28 @@ const EmployeeAttendanceTable = () => {
 
               {/* Modal for small screens */}
               <Transition appear show={isDateModalOpen} as={Fragment}>
-                <Dialog as="div" className="relative z-10 smi:hidden" onClose={() => setIsDateModalOpen(false)}>
+                <Dialog
+                  as="div"
+                  className="relative z-10 smi:hidden"
+                  onClose={() => setIsDateModalOpen(false)}
+                >
                   <Transition.Child
                     as={Fragment}
-                    enter="ease-out duration-300" enterFrom="opacity-0" enterTo="opacity-100"
-                    leave="ease-in duration-200" leaveFrom="opacity-100" leaveTo="opacity-0"
+                    enter="ease-out duration-300"
+                    enterFrom="opacity-0"
+                    enterTo="opacity-100"
+                    leave="ease-in duration-200"
+                    leaveFrom="opacity-100"
+                    leaveTo="opacity-0"
                   >
                     <div className="fixed inset-0 bg-black bg-opacity-25" />
                   </Transition.Child>
 
                   <div className="fixed inset-0 overflow-y-auto flex items-center justify-center">
                     <Dialog.Panel className="w-full max-w-md p-6 bg-white rounded-xl shadow-xl">
-                      <Dialog.Title className="text-lg font-semibold mb-4">Select Date Range</Dialog.Title>
+                      <Dialog.Title className="text-lg font-semibold mb-4">
+                        Select Date Range
+                      </Dialog.Title>
                       <div className="space-y-4">
                         <input
                           type="date"
@@ -2338,8 +2410,8 @@ const EmployeeAttendanceTable = () => {
                         />
                         <button
                           onClick={() => {
-                            handleDateFilter()
-                            setIsDateModalOpen(false)
+                            handleDateFilter();
+                            setIsDateModalOpen(false);
                           }}
                           className="w-full bg-blue-600 text-white py-2 rounded-md hover:bg-blue-700 transition"
                         >
@@ -2354,22 +2426,38 @@ const EmployeeAttendanceTable = () => {
             </>
           )}
           {maintab === "TableView" && selectedTab === "Daily" && (
-            <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
-              onClick={downloadPDF}><DownloadIcon /> </button>
+            <button
+              className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
+              onClick={downloadPDF}
+            >
+              <DownloadIcon />{" "}
+            </button>
           )}
           {maintab === "TableView" && selectedTab === "Weekly" && (
-            <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
-              onClick={async () => { await downloadPDFWeekly() }}><DownloadIcon /> </button>
+            <button
+              className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
+              onClick={async () => {
+                await downloadPDFWeekly();
+              }}
+            >
+              <DownloadIcon />{" "}
+            </button>
           )}
           {maintab === "TableView" && selectedTab === "Monthly" && (
-            <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
-              onClick={downloadPDFMonthly}><DownloadIcon /> </button>
+            <button
+              className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all"
+              onClick={downloadPDFMonthly}
+            >
+              <DownloadIcon />{" "}
+            </button>
           )}
           {maintab === "TableView" && selectedTab === "Filter" && (
-            <button className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all md:ml-0 sm:ml-10 mx-auto"
+            <button
+              className="hover:bg-gray-300 px-6 py-2 rounded-2xl transition-all md:ml-0 sm:ml-10 mx-auto"
               onClick={downloadPDFFiltered}
             >
-              <DownloadIcon /> </button>
+              <DownloadIcon />{" "}
+            </button>
           )}
         </div>
       </div>
@@ -2378,7 +2466,10 @@ const EmployeeAttendanceTable = () => {
       {loading && (
         <div className="w-full max-w-7xl space-y-4">
           {[...Array(5)].map((_, index) => (
-            <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
+            <div
+              key={index}
+              className="w-full h-16 bg-gray-200 rounded-lg animate-pulse"
+            />
           ))}
         </div>
       )}
@@ -2390,18 +2481,21 @@ const EmployeeAttendanceTable = () => {
             <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
               <button
                 onClick={() => handleFilterChange("all")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${currentFilter === "all" ? "bg-gray-200" : ""
-                  }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${
+                  currentFilter === "all" ? "bg-gray-200" : ""
+                }`}
               >
                 <span className="md:w-4 md:h-4   bg-gray-600 rounded-full"></span>
                 <h2 className="text-gray-600 md:text-xl text-sm">
-                  Total: <span className="font-bold">{present + absent + late}</span>
+                  Total:{" "}
+                  <span className="font-bold">{present + absent + late}</span>
                 </h2>
               </button>
               <button
                 onClick={() => handleFilterChange("present")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${currentFilter === "present" ? "bg-green-200" : ""
-                  }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${
+                  currentFilter === "present" ? "bg-green-200" : ""
+                }`}
               >
                 <span className="md:w-4 md:h-4 bg-green-500 rounded-full"></span>
                 <h2 className="text-green-600 md:text-xl text-sm">
@@ -2410,8 +2504,9 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange("absent")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${currentFilter === "absent" ? "bg-red-100" : ""
-                  }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${
+                  currentFilter === "absent" ? "bg-red-100" : ""
+                }`}
               >
                 <span className="md:w-4 md:h-4 bg-red-500 rounded-full"></span>
                 <h2 className="text-red-600 md:text-xl text-sm">
@@ -2420,8 +2515,9 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange("late")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${currentFilter === "late" ? "bg-yellow-100" : ""
-                  }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${
+                  currentFilter === "late" ? "bg-yellow-100" : ""
+                }`}
               >
                 <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
                 <h2 className="text-yellow-600 md:text-xl text-sm">
@@ -2430,8 +2526,9 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange("remote")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === "remote" ? "bg-purple-100" : ""
-                  }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
+                  currentFilter === "remote" ? "bg-purple-100" : ""
+                }`}
               >
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
@@ -2445,37 +2542,51 @@ const EmployeeAttendanceTable = () => {
           <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
             {error && <p className="text-red-500 text-center">{error}</p>}
             <div className="overflow-x-auto">
-
-
-
-            <div className="w-full shadow-sm rounded-lg">
+              <div className="w-full shadow-sm rounded-lg">
                 {/* Table view for medium and larger screens */}
                 <div className="hidden sm:block overflow-x-auto">
                   <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
                     <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
                       <tr>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Name</th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Check-in</th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Check-out</th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">2nd Check-in</th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Mode</th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">Status</th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                          Name
+                        </th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                          Check-in
+                        </th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                          Check-out
+                        </th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                          2nd Check-in
+                        </th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                          Mode
+                        </th>
+                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                          Status
+                        </th>
                       </tr>
                     </thead>
                     <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
                       {filteredData.map((entry, index) => (
-                        <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+                        <tr
+                          key={index}
+                          className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+                        >
                           <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
                             <span
-                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${entry.status === "present"
-                                ? "text-green-600"
-                                : entry.status === "late"
+                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${
+                                entry.status === "present"
+                                  ? "text-green-600"
+                                  : entry.status === "late"
                                   ? "text-yellow-600"
                                   : "text-red-600"
-                                }`}
+                              }`}
                               title={entry.full_name}
                             >
-                              {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
+                              {entry.full_name.charAt(0).toUpperCase() +
+                                entry.full_name.slice(1)}
                             </span>
                           </td>
                           <td
@@ -2489,7 +2600,9 @@ const EmployeeAttendanceTable = () => {
                             onClick={() => handleOpenModal(entry)}
                           >
                             <div className="flex items-center">
-                              <span className="truncate">{entry.check_out}</span>
+                              <span className="truncate">
+                                {entry.check_out}
+                              </span>
                               {entry.autocheckout ? (
                                 <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
                                   <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
@@ -2503,11 +2616,11 @@ const EmployeeAttendanceTable = () => {
                               ) : null}
                             </div>
                           </td>
-                          <td
-                            className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
-                          >
+                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100">
                             <div className="flex items-center">
-                              <span className="truncate">{getuserbreakdate(entry?.attendance_id)}</span>
+                              <span className="truncate">
+                                {getuserbreakdate(entry?.attendance_id)}
+                              </span>
                               {entry.break_in ? (
                                 <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
                                   <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
@@ -2525,35 +2638,43 @@ const EmployeeAttendanceTable = () => {
                           <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                             <button
                               onClick={() => handleModeOpen(entry)}
-                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === "on_site"
-                                ? "bg-blue-100 text-blue-800"
-                                : entry.work_mode === "remote"
+                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${
+                                entry.work_mode === "on_site"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : entry.work_mode === "remote"
                                   ? "bg-purple-100 text-purple-800"
                                   : "bg-white text-black"
-                                }`}
+                              }`}
                             >
                               {entry.work_mode === "on_site"
                                 ? "On-site"
                                 : entry.work_mode === "remote"
-                                  ? "Remote"
-                                  : "---"}
+                                ? "Remote"
+                                : "---"}
                             </button>
                           </td>
                           <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
-                            <button type="button" onClick={() => handleopenabsentmodal(entry.id)}>
+                            <button
+                              type="button"
+                              onClick={() => handleopenabsentmodal(entry.id)}
+                            >
                               <span
-                                className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === "present"
-                                  ? "bg-green-100 text-green-800"
-                                  : entry.status === "late"
+                                className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${
+                                  entry.status === "present"
+                                    ? "bg-green-100 text-green-800"
+                                    : entry.status === "late"
                                     ? "bg-yellow-100 text-yellow-800"
-                                    : entry.status === "leave" ? "text-purple-900 bg-purple-300" : "bg-red-100 text-red-800"
-                                  }`}
+                                    : entry.status === "leave"
+                                    ? "text-purple-900 bg-purple-300"
+                                    : "bg-red-100 text-red-800"
+                                }`}
                               >
-                                {entry.status == "Full Day" ? "Leave" : entry.status}
+                                {entry.status == "Full Day"
+                                  ? "Leave"
+                                  : entry.status}
                               </span>
                             </button>
                           </td>
-
                         </tr>
                       ))}
                     </tbody>
@@ -2563,18 +2684,23 @@ const EmployeeAttendanceTable = () => {
                 {/* Card view for small screens */}
                 <div className="sm:hidden">
                   {filteredData.map((entry, index) => (
-                    <div key={index} className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]">
+                    <div
+                      key={index}
+                      className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]"
+                    >
                       <div className="flex justify-between items-center mb-2 border-b pb-2">
                         <span
-                          className={`font-medium text-[12px] xs:text-[13px] ${entry.status === "present"
-                            ? "text-green-600"
-                            : entry.status === "late"
+                          className={`font-medium text-[12px] xs:text-[13px] ${
+                            entry.status === "present"
+                              ? "text-green-600"
+                              : entry.status === "late"
                               ? "text-yellow-600"
                               : "text-red-600"
-                            }`}
+                          }`}
                           title={entry.full_name}
                         >
-                          {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
+                          {entry.full_name.charAt(0).toUpperCase() +
+                            entry.full_name.slice(1)}
                         </span>
                         <button
                           type="button"
@@ -2582,21 +2708,26 @@ const EmployeeAttendanceTable = () => {
                           className="focus:outline-none"
                         >
                           <span
-                            className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
-                              ? "bg-green-100 text-green-800"
-                              : entry.status === "late"
+                            className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
+                              entry.status === "present"
+                                ? "bg-green-100 text-green-800"
+                                : entry.status === "late"
                                 ? "bg-yellow-100 text-yellow-800"
                                 : "bg-red-100 text-red-800"
-                              }`}
+                            }`}
                           >
-                            {entry.status == "Full Day" ? "Leave" : entry.status}
+                            {entry.status == "Full Day"
+                              ? "Leave"
+                              : entry.status}
                           </span>
                         </button>
                       </div>
 
                       <div className="grid grid-cols-2 gap-2">
                         <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">Check-in</span>
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            Check-in
+                          </span>
                           <div
                             className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer"
                             onClick={() => handleCheckinOpenModal(entry)}
@@ -2606,12 +2737,16 @@ const EmployeeAttendanceTable = () => {
                         </div>
 
                         <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">Check-out</span>
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            Check-out
+                          </span>
                           <div
                             className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
                             onClick={() => handleOpenModal(entry)}
                           >
-                            <span className="truncate mr-1">{entry.check_out || "---"}</span>
+                            <span className="truncate mr-1">
+                              {entry.check_out || "---"}
+                            </span>
                             {entry.autocheckout ? (
                               <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
                                 Auto
@@ -2622,11 +2757,13 @@ const EmployeeAttendanceTable = () => {
 
                         {/* Added 2nd Check-in for mobile view */}
                         <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">2nd Check-in</span>
-                          <div
-                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
-                          >
-                            <span className="truncate mr-1">{getuserbreakdate(entry?.attendance_id) || "---"}</span>
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            2nd Check-in
+                          </span>
+                          <div className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center">
+                            <span className="truncate mr-1">
+                              {getuserbreakdate(entry?.attendance_id) || "---"}
+                            </span>
                             {entry.break_in ? (
                               <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
                                 Auto
@@ -2636,22 +2773,25 @@ const EmployeeAttendanceTable = () => {
                         </div>
 
                         <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">Mode</span>
+                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            Mode
+                          </span>
                           <div className="mt-1">
                             <button
                               onClick={() => handleModeOpen(entry)}
-                              className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === "on_site"
-                                ? "bg-blue-100 text-blue-800"
-                                : entry.work_mode === "remote"
+                              className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
+                                entry.work_mode === "on_site"
+                                  ? "bg-blue-100 text-blue-800"
+                                  : entry.work_mode === "remote"
                                   ? "bg-purple-100 text-purple-800"
                                   : "bg-gray-100 text-gray-800"
-                                }`}
+                              }`}
                             >
                               {entry.work_mode === "on_site"
                                 ? "On-site"
                                 : entry.work_mode === "remote"
-                                  ? "Remote"
-                                  : "---"}
+                                ? "Remote"
+                                : "---"}
                             </button>
                           </div>
                         </div>
@@ -2659,7 +2799,11 @@ const EmployeeAttendanceTable = () => {
                     </div>
                   ))}
                   <Transition appear show={modalVisible} as={Fragment}>
-                    <Dialog as="div" className="relative z-10" onClose={handleabsentclosemodal}>
+                    <Dialog
+                      as="div"
+                      className="relative z-10"
+                      onClose={handleabsentclosemodal}
+                    >
                       <Transition.Child
                         as={Fragment}
                         enter="ease-out duration-300"
@@ -2672,113 +2816,199 @@ const EmployeeAttendanceTable = () => {
                         <div className="fixed inset-0 bg-black bg-opacity-25" />
                       </Transition.Child>
 
-          <div className="fixed inset-0 overflow-y-auto">
-            <div className="flex min-h-full items-center justify-center p-4 text-center">
-              <Transition.Child
-                as={Fragment}
-                enter="ease-out duration-300"
-                enterFrom="opacity-0 scale-95"
-                enterTo="opacity-100 scale-100"
-                leave="ease-in duration-200"
-                leaveFrom="opacity-100 scale-100"
-                leaveTo="opacity-0 scale-95"
-              >
-                <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all">
-                  <Dialog.Title
-                    as="h3"
-                    className="text-lg font-medium leading-6 text-gray-900 text-center mb-6"
-                  >
-                    Mark Him Leave
-                  </Dialog.Title>
-
-                  <div className="mt-4">
-                    <RadioGroup value={selectedMode} onChange={setSelectedMode} className="space-y-4">
-                      <RadioGroup.Option value="Absent">
-                        {({ checked }) => (
-                          <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                            <span className="ml-3 text-gray-800">Absent</span>
-                          </div>
-                        )}
-                      </RadioGroup.Option>
-                      <RadioGroup.Option value="Full Day">
-                        {({ checked }) => (
-                          <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                            <span className="ml-3 text-gray-800">Casual Leave</span>
-                          </div>
-                        )}
-                      </RadioGroup.Option>
-                      <RadioGroup.Option value="Half Day">
-                        {({ checked }) => (
-                          <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                            <span className="ml-3 text-gray-800">Half Day Leave</span>
-                          </div>
-                        )}
-                      </RadioGroup.Option>
-                      <RadioGroup.Option value="Sick Leave">
-                        {({ checked }) => (
-                          <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                            <span className="ml-3 text-gray-800">Sick Leave</span>
-                          </div>
-                        )}
-                      </RadioGroup.Option>
-
-
-                      <RadioGroup.Option value="Emergency Leave">
-                        {({ checked }) => (
-                          <div className="flex items-center">
-                            <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                            <span className="ml-3 text-gray-800">Emergency Leave</span>
-                          </div>
-                        )}
-                      </RadioGroup.Option>
-                    </RadioGroup>
-                  </div>
+                      <div className="fixed inset-0 overflow-y-auto">
+                        <div className="flex min-h-full items-center justify-center p-4 text-center">
+                          <Transition.Child
+                            as={Fragment}
+                            enter="ease-out duration-300"
+                            enterFrom="opacity-0 scale-95"
+                            enterTo="opacity-100 scale-100"
+                            leave="ease-in duration-200"
+                            leaveFrom="opacity-100 scale-100"
+                            leaveTo="opacity-0 scale-95"
+                          >
+                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all">
+                              <Dialog.Title
+                                as="h3"
+                                className="text-lg font-medium leading-6 text-gray-900 text-center mb-6"
+                              >
+                                Mark Him Leave
+                              </Dialog.Title>
 
                               <div className="mt-4">
-                                <RadioGroup value={selectedMode} onChange={setSelectedMode} className="space-y-4">
+                                <RadioGroup
+                                  value={selectedMode}
+                                  onChange={setSelectedMode}
+                                  className="space-y-4"
+                                >
                                   <RadioGroup.Option value="Absent">
                                     {({ checked }) => (
                                       <div className="flex items-center">
-                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                                        <span className="ml-3 text-gray-800">Absent</span>
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Absent
+                                        </span>
                                       </div>
                                     )}
                                   </RadioGroup.Option>
                                   <RadioGroup.Option value="Full Day">
                                     {({ checked }) => (
                                       <div className="flex items-center">
-                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                                        <span className="ml-3 text-gray-800">Casual Leave</span>
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Casual Leave
+                                        </span>
                                       </div>
                                     )}
                                   </RadioGroup.Option>
                                   <RadioGroup.Option value="Half Day">
                                     {({ checked }) => (
                                       <div className="flex items-center">
-                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                                        <span className="ml-3 text-gray-800">Half Day Leave</span>
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Half Day Leave
+                                        </span>
                                       </div>
                                     )}
                                   </RadioGroup.Option>
                                   <RadioGroup.Option value="Sick Leave">
                                     {({ checked }) => (
                                       <div className="flex items-center">
-                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                                        <span className="ml-3 text-gray-800">Sick Leave</span>
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Sick Leave
+                                        </span>
                                       </div>
                                     )}
                                   </RadioGroup.Option>
 
+                                  <RadioGroup.Option value="Emergency Leave">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Emergency Leave
+                                        </span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                </RadioGroup>
+                              </div>
+
+                              <div className="mt-4">
+                                <RadioGroup
+                                  value={selectedMode}
+                                  onChange={setSelectedMode}
+                                  className="space-y-4"
+                                >
+                                  <RadioGroup.Option value="Absent">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Absent
+                                        </span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                  <RadioGroup.Option value="Full Day">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Casual Leave
+                                        </span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                  <RadioGroup.Option value="Half Day">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Half Day Leave
+                                        </span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
+                                  <RadioGroup.Option value="Sick Leave">
+                                    {({ checked }) => (
+                                      <div className="flex items-center">
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Sick Leave
+                                        </span>
+                                      </div>
+                                    )}
+                                  </RadioGroup.Option>
 
                                   <RadioGroup.Option value="Emergency Leave">
                                     {({ checked }) => (
                                       <div className="flex items-center">
-                                        <div className={`w-5 h-5 rounded-full border ${checked ? 'border-4 border-blue-500' : 'border border-gray-300'}`} />
-                                        <span className="ml-3 text-gray-800">Emergency Leave</span>
+                                        <div
+                                          className={`w-5 h-5 rounded-full border ${
+                                            checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                          }`}
+                                        />
+                                        <span className="ml-3 text-gray-800">
+                                          Emergency Leave
+                                        </span>
                                       </div>
                                     )}
                                   </RadioGroup.Option>
@@ -2810,38 +3040,47 @@ const EmployeeAttendanceTable = () => {
                   </Transition>
                 </div>
               </div>
-
-
             </div>
           </div>
 
           {isModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Change CheckOut Time</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
+                  Change CheckOut Time
+                </h2>
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">New CheckOut Time</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    New CheckOut Time
+                  </label>
 
                   {/* Time Picker Container */}
                   <div className="time-picker-container">
                     <div className="clock bg-gray-100 p-4 rounded-lg shadow-md">
                       <div className="time-display text-4xl font-bold text-center text-gray-800 mb-4">
-                        <span>{hour.toString().padStart(2, '0').slice(0, 2)}:</span>
-                        <span>{minute.toString().padStart(2, '0').slice(0, 2)}</span>
-
+                        <span>
+                          {hour.toString().padStart(2, "0").slice(0, 2)}:
+                        </span>
+                        <span>
+                          {minute.toString().padStart(2, "0").slice(0, 2)}
+                        </span>
                       </div>
 
                       {/* AM/PM Toggle */}
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
+                            isAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                          }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
+                            !isAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                          }`}
                         >
                           PM
                         </button>
@@ -2851,7 +3090,9 @@ const EmployeeAttendanceTable = () => {
                     {/* Input Section for Hour and Minute */}
                     <div className="input-section grid grid-cols-2 gap-4 mt-6">
                       <div className="input-group">
-                        <label className="text-sm font-medium text-gray-700">Hour</label>
+                        <label className="text-sm font-medium text-gray-700">
+                          Hour
+                        </label>
                         <div className="relative">
                           <input
                             type="number"
@@ -2863,20 +3104,28 @@ const EmployeeAttendanceTable = () => {
                               // Ensure the input is only a 2-digit number
                               const value = e.target.value;
                               if (value.length > 2) {
-                                e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                                e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
                             className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
-                              onClick={() => handleHourChange({ target: { value: Math.min(12, hour + 1) } })}
+                              onClick={() =>
+                                handleHourChange({
+                                  target: { value: Math.min(12, hour + 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8593;
                             </button>
                             <button
-                              onClick={() => handleHourChange({ target: { value: Math.max(1, hour - 1) } })}
+                              onClick={() =>
+                                handleHourChange({
+                                  target: { value: Math.max(1, hour - 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8595;
@@ -2886,7 +3135,9 @@ const EmployeeAttendanceTable = () => {
                       </div>
 
                       <div className="input-group">
-                        <label className="text-sm font-medium text-gray-700">Minute</label>
+                        <label className="text-sm font-medium text-gray-700">
+                          Minute
+                        </label>
                         <div className="relative">
                           <input
                             type="number"
@@ -2898,20 +3149,28 @@ const EmployeeAttendanceTable = () => {
                               // Ensure the input is only a 2-digit number
                               const value = e.target.value;
                               if (value.length > 2) {
-                                e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                                e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
                             className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
-                              onClick={() => handleMinuteChange({ target: { value: Math.min(59, minute + 1) } })}
+                              onClick={() =>
+                                handleMinuteChange({
+                                  target: { value: Math.min(59, minute + 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8593;
                             </button>
                             <button
-                              onClick={() => handleMinuteChange({ target: { value: Math.max(0, minute - 1) } })}
+                              onClick={() =>
+                                handleMinuteChange({
+                                  target: { value: Math.max(0, minute - 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8595;
@@ -2942,11 +3201,12 @@ const EmployeeAttendanceTable = () => {
             </div>
           )}
 
-
           {isModeOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white p-6 rounded-lg w-96">
-                <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Change Work Mode</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
+                  Change Work Mode
+                </h2>
 
                 <div className="flex flex-col w-full text-xl mt-3 text-gray-800 gap-2">
                   <button className="flex items-center px-4 py-2 hover:bg-purple-200 rounded-lg transition-all">
@@ -2992,35 +3252,45 @@ const EmployeeAttendanceTable = () => {
             </div>
           )}
 
-
-
           {/* Checkin Time Changing Model */}
           {isCheckinModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
               <div className="bg-white p-6 rounded-lg shadow-lg w-96">
-                <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">Change CheckIn Time</h2>
+                <h2 className="text-2xl font-semibold mb-6 text-center text-gray-800">
+                  Change CheckIn Time
+                </h2>
                 <div className="mb-6">
-                  <label className="block text-sm font-medium mb-2 text-gray-700">New CheckIn Time</label>
+                  <label className="block text-sm font-medium mb-2 text-gray-700">
+                    New CheckIn Time
+                  </label>
 
                   {/* Time Picker Container */}
                   <div className="time-picker-container">
                     <div className="clock bg-gray-100 p-4 rounded-lg shadow-md">
                       <div className="time-display text-4xl font-bold text-center text-gray-800 mb-4">
-                        <span>{hourin.toString().padStart(2, '0').slice(0, 2)}:</span>
-                        <span>{minutein.toString().padStart(2, '0').slice(0, 2)}</span>
+                        <span>
+                          {hourin.toString().padStart(2, "0").slice(0, 2)}:
+                        </span>
+                        <span>
+                          {minutein.toString().padStart(2, "0").slice(0, 2)}
+                        </span>
                       </div>
 
                       {/* AM/PM Toggle */}
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
+                            isinAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                          }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'}`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
+                            !isinAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                          }`}
                         >
                           PM
                         </button>
@@ -3030,9 +3300,12 @@ const EmployeeAttendanceTable = () => {
                     {/* Input Section for Hour and Minute */}
                     <div className="input-section grid grid-cols-2 gap-4 mt-6">
                       <div className="input-group">
-                        <label className="text-sm font-medium text-gray-700">Hour</label>
+                        <label className="text-sm font-medium text-gray-700">
+                          Hour
+                        </label>
                         <div className="relative">
-                          <input className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                          <input
+                            className="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                             type="number"
                             value={hourin}
                             onChange={handleCheckInHourChange}
@@ -3042,20 +3315,28 @@ const EmployeeAttendanceTable = () => {
                               // Ensure the input is only a 2-digit number
                               const value = e.target.value;
                               if (value.length > 2) {
-                                e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                                e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
-                          // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                            // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
-                              onClick={() => handleCheckInHourChange({ target: { value: Math.min(12, hourin + 1) } })}
+                              onClick={() =>
+                                handleCheckInHourChange({
+                                  target: { value: Math.min(12, hourin + 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8593;
                             </button>
                             <button
-                              onClick={() => handleCheckInHourChange({ target: { value: Math.max(1, hourin - 1) } })}
+                              onClick={() =>
+                                handleCheckInHourChange({
+                                  target: { value: Math.max(1, hourin - 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8595;
@@ -3065,7 +3346,9 @@ const EmployeeAttendanceTable = () => {
                       </div>
 
                       <div className="input-group">
-                        <label className="text-sm font-medium text-gray-700">Minute</label>
+                        <label className="text-sm font-medium text-gray-700">
+                          Minute
+                        </label>
                         <div className="relative">
                           <input
                             type="number"
@@ -3077,20 +3360,28 @@ const EmployeeAttendanceTable = () => {
                               // Ensure the input is only a 2-digit number
                               const value = e.target.value;
                               if (value.length > 2) {
-                                e.target.value = value.slice(0, 2);  // Trim to 2 digits if more than 2 characters
+                                e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
                             className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
-                              onClick={() => handleCheckInMinuteChange({ target: { value: Math.min(59, minutein + 1) } })}
+                              onClick={() =>
+                                handleCheckInMinuteChange({
+                                  target: { value: Math.min(59, minutein + 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8593;
                             </button>
                             <button
-                              onClick={() => handleCheckInMinuteChange({ target: { value: Math.max(0, minutein - 1) } })}
+                              onClick={() =>
+                                handleCheckInMinuteChange({
+                                  target: { value: Math.max(0, minutein - 1) },
+                                })
+                              }
                               className="text-xl text-gray-600 w-4 hover:text-blue-500"
                             >
                               &#8595;
@@ -3120,24 +3411,25 @@ const EmployeeAttendanceTable = () => {
               </div>
             </div>
           )}
-
-
-
-
         </>
       )}
 
       {/* Monthly View */}
       {!loading && maintab === "TableView" && selectedTab === "Monthly" && (
-        <EmployeeMonthlyAttendanceTable
-          selectedDateM={selectedDateM}
-        />
-
+        <EmployeeMonthlyAttendanceTable selectedDateM={selectedDateM} />
       )}
-      {!loading && maintab === "TableView" && selectedTab === "Weekly" && <EmployeeWeeklyAttendanceTable selectedDateW={selectedDateW} />}
-      {!loading && maintab === "TableView" && selectedTab === "Filter" && <FilteredDataAdmin search={search} startdate={startdate} enddate={enddate} />}
+      {!loading && maintab === "TableView" && selectedTab === "Weekly" && (
+        <EmployeeWeeklyAttendanceTable selectedDateW={selectedDateW} />
+      )}
+      {!loading && maintab === "TableView" && selectedTab === "Filter" && (
+        <FilteredDataAdmin
+          search={search}
+          startdate={startdate}
+          enddate={enddate}
+        />
+      )}
       {!loading && maintab === "GraphicView" && (
-        <div className='col-span-12 sm:col-span-4 md:col-span-3 lg:col-span-3'>
+        <div className="col-span-12 sm:col-span-4 md:col-span-3 lg:col-span-3">
           <GraphicViewComponent
             selectedEmployee={selectedEmployee}
             attendanceLogs={attendanceLogs}
@@ -3149,9 +3441,8 @@ const EmployeeAttendanceTable = () => {
       {!loading && maintab === "DetailedView" && (
         <>
           <div className="flex-1">
-            <div className='flex flex-row justify-between'>
+            <div className="flex flex-row justify-between">
               <div></div>
-
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-4 gap-2 sm:gap-4">
@@ -3174,8 +3465,17 @@ const EmployeeAttendanceTable = () => {
                         className="text-gray-500 hover:text-gray-700"
                         aria-label="Close employee list"
                       >
-                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-5 w-5"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path
+                            fillRule="evenodd"
+                            d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z"
+                            clipRule="evenodd"
+                          />
                         </svg>
                       </button>
                     </div>
@@ -3200,12 +3500,17 @@ const EmployeeAttendanceTable = () => {
                             handleEmployeeClick(employee.id);
                             setShowEmployeeList(false); // Hide list after selection on mobile
                           }}
-                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
-                            ? "bg-blue-100 text-blue-600"
-                            : "hover:bg-gray-100"
-                            } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${
+                            selectedEmployeesearch?.id === employee.id
+                              ? "bg-blue-100 text-blue-600"
+                              : "hover:bg-gray-100"
+                          } ${
+                            employeeStats[employee.id] < 6 ? "text-red-600" : ""
+                          }`}
                         >
-                          <span className="truncate mr-2 text-sm">{employee.full_name}</span>
+                          <span className="truncate mr-2 text-sm">
+                            {employee.full_name}
+                          </span>
                           <button
                             className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 rounded-xl"
                             onClick={(e) => {
@@ -3243,12 +3548,17 @@ const EmployeeAttendanceTable = () => {
                         setDataEmployeesearch(employee);
                         handleEmployeeClick(employee.id);
                       }}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
-                        ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                        : "hover:bg-gray-100"
-                        } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""}`}
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${
+                        selectedEmployeesearch?.id === employee.id
+                          ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                          : "hover:bg-gray-100"
+                      } ${
+                        employeeStats[employee.id] < 6 ? "text-red-600" : ""
+                      }`}
                     >
-                      <span className="truncate mr-2 text-xs sm:text-base">{employee.full_name}</span>
+                      <span className="truncate mr-2 text-xs sm:text-base">
+                        {employee.full_name}
+                      </span>
                       <button
                         className="hover:bg-gray-300 transition-all ease-in-out px-2 py-1 sm:px-3 sm:py-1 rounded-xl flex-shrink-0"
                         onClick={(e) => {
@@ -3283,64 +3593,101 @@ const EmployeeAttendanceTable = () => {
                         {/* Today's Status & Breaks */}
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-5 mb-4 sm:mb-6">
                           <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Today's Status</h3>
+                            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">
+                              Today's Status
+                            </h3>
                             {attendanceLogs[0] ? (
                               <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
                                 <div className="flex justify-between">
                                   <span>Check-in:</span>
-                                  <span>{format(new Date(attendanceLogs[0].check_in), 'h:mm a')}</span>
+                                  <span>
+                                    {format(
+                                      new Date(attendanceLogs[0].check_in),
+                                      "h:mm a"
+                                    )}
+                                  </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Check-out:</span>
                                   <span>
                                     {attendanceLogs[0].check_out
-                                      ? format(new Date(attendanceLogs[0].check_out), 'h:mm a')
-                                      : 'Not checked out'}
+                                      ? format(
+                                          new Date(attendanceLogs[0].check_out),
+                                          "h:mm a"
+                                        )
+                                      : "Not checked out"}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Work Mode:</span>
-                                  <span className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === 'on_site'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : 'bg-purple-100 text-purple-800'
-                                    }`}>
+                                  <span
+                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${
+                                      attendanceLogs[0].work_mode === "on_site"
+                                        ? "bg-blue-100 text-blue-800"
+                                        : "bg-purple-100 text-purple-800"
+                                    }`}
+                                  >
                                     {attendanceLogs[0].work_mode}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Duration:</span>
                                   <span>
-                                    {calculateDuration(attendanceLogs[0].check_in, attendanceLogs[0].check_out)}
+                                    {calculateDuration(
+                                      attendanceLogs[0].check_in,
+                                      attendanceLogs[0].check_out
+                                    )}
                                   </span>
                                 </div>
                               </div>
                             ) : (
-                              <p className="text-gray-500 text-xs sm:text-base">No attendance record for today</p>
+                              <p className="text-gray-500 text-xs sm:text-base">
+                                No attendance record for today
+                              </p>
                             )}
                           </div>
 
                           {/* Break Summary */}
                           <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">Break Records</h3>
+                            <h3 className="text-base sm:text-lg font-semibold mb-2 sm:mb-3">
+                              Break Records
+                            </h3>
                             {todayBreak.length > 0 ? (
                               todayBreak.map((breakItem, index) => (
-                                <div key={index} className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                <div
+                                  key={index}
+                                  className="space-y-2 sm:space-y-3 text-xs sm:text-base"
+                                >
                                   <div className="flex justify-between">
                                     <span>Start:</span>
-                                    <span>{format(new Date(breakItem.start_time), 'hh:mm a')}</span>
+                                    <span>
+                                      {format(
+                                        new Date(breakItem.start_time),
+                                        "hh:mm a"
+                                      )}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>End:</span>
-                                    <span>{breakItem.end_time ? format(new Date(breakItem.end_time), 'hh:mm a') : 'Ongoing'}</span>
+                                    <span>
+                                      {breakItem.end_time
+                                        ? format(
+                                            new Date(breakItem.end_time),
+                                            "hh:mm a"
+                                          )
+                                        : "Ongoing"}
+                                    </span>
                                   </div>
                                   <div className="flex justify-between">
                                     <span>Status:</span>
-                                    <span>{breakItem.status || 'N/A'}</span>
+                                    <span>{breakItem.status || "N/A"}</span>
                                   </div>
                                 </div>
                               ))
                             ) : (
-                              <p className="text-gray-500 text-xs sm:text-base">No break records for today</p>
+                              <p className="text-gray-500 text-xs sm:text-base">
+                                No break records for today
+                              </p>
                             )}
                           </div>
                         </div>
@@ -3350,88 +3697,146 @@ const EmployeeAttendanceTable = () => {
                           <div className="bg-white rounded-lg shadow-md p-3 sm:p-6">
                             <div className="flex items-center mb-4 sm:mb-6">
                               <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
-                              <h2 className="text-base sm:text-xl font-semibold">Monthly Overview - {format(new Date(), 'MMMM yyyy')}</h2>
+                              <h2 className="text-base sm:text-xl font-semibold">
+                                Monthly Overview -{" "}
+                                {format(new Date(), "MMMM yyyy")}
+                              </h2>
                             </div>
 
                             {monthlyStats ? (
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
                                 <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Attendance Summary</h3>
+                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">
+                                    Attendance Summary
+                                  </h3>
                                   <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Expected Working Days:</span>
-                                      <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
+                                      <span className="text-gray-600">
+                                        Expected Working Days:
+                                      </span>
+                                      <span className="font-medium">
+                                        {monthlyStats.expectedWorkingDays}
+                                      </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Days Attended:</span>
-                                      <span className="font-medium">{monthlyStats.totalWorkingDays}</span>
+                                      <span className="text-gray-600">
+                                        Days Attended:
+                                      </span>
+                                      <span className="font-medium">
+                                        {monthlyStats.totalWorkingDays}
+                                      </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Present Days:</span>
-                                      <span className="font-medium text-green-600">{monthlyStats.presentDays}</span>
+                                      <span className="text-gray-600">
+                                        Present Days:
+                                      </span>
+                                      <span className="font-medium text-green-600">
+                                        {monthlyStats.presentDays}
+                                      </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Late Days:</span>
-                                      <span className="font-medium text-yellow-600">{monthlyStats.lateDays}</span>
+                                      <span className="text-gray-600">
+                                        Late Days:
+                                      </span>
+                                      <span className="font-medium text-yellow-600">
+                                        {monthlyStats.lateDays}
+                                      </span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
                                       <span>Absentees:</span>
-                                      <span className="text-red-600">{absentees || 0}</span>
+                                      <span className="text-red-600">
+                                        {absentees || 0}
+                                      </span>
                                     </div>
                                     <div className="flex justify-between text-gray-600">
                                       <span>Leaves:</span>
-                                      <span className="text-green-600">{leaves || 0}</span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Mode Distribution</h3>
-                                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">On-site Days:</span>
-                                      <span className="font-medium text-blue-600">{monthlyStats.onSiteDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Remote Days:</span>
-                                      <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Attendance Rate:</span>
-                                      <span className="font-medium">
-                                        {((monthlyStats.totalWorkingDays / monthlyStats.expectedWorkingDays) * 100).toFixed(1)}%
+                                      <span className="text-green-600">
+                                        {leaves || 0}
                                       </span>
                                     </div>
                                   </div>
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
-                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">Work Hours</h3>
+                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">
+                                    Work Mode Distribution
+                                  </h3>
                                   <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Average Daily Hours:</span>
-                                      <span className="font-medium">
-                                        {monthlyStats.averageWorkHours.toFixed(1)}h
+                                      <span className="text-gray-600">
+                                        On-site Days:
+                                      </span>
+                                      <span className="font-medium text-blue-600">
+                                        {monthlyStats.onSiteDays}
                                       </span>
                                     </div>
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Total Hours:</span>
-                                      <span className="font-medium">
-                                      {monthlyStats.totalHours.toFixed(1)}h
+                                      <span className="text-gray-600">
+                                        Remote Days:
                                       </span>
-                                    </div>
-
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Overtime Hours:</span>
                                       <span className="font-medium text-purple-600">
-                                        {monthlyStats.totalOvertimeHours.toFixed(1)}h
+                                        {monthlyStats.remoteDays}
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">
+                                        Attendance Rate:
+                                      </span>
+                                      <span className="font-medium">
+                                        {(
+                                          (monthlyStats.totalWorkingDays /
+                                            monthlyStats.expectedWorkingDays) *
+                                          100
+                                        ).toFixed(1)}
+                                        %
+                                      </span>
+                                    </div>
+                                  </div>
+                                </div>
+
+                                <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
+                                  <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">
+                                    Work Hours
+                                  </h3>
+                                  <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">
+                                        Average Daily Hours:
+                                      </span>
+                                      <span className="font-medium">
+                                        {monthlyStats.averageWorkHours.toFixed(
+                                          1
+                                        )}
+                                        h
+                                      </span>
+                                    </div>
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">
+                                        Total Hours:
+                                      </span>
+                                      <span className="font-medium">
+                                        {monthlyStats.totalHours.toFixed(1)}h
                                       </span>
                                     </div>
 
                                     <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">Expected Hours:</span>
+                                      <span className="text-gray-600">
+                                        Overtime Hours:
+                                      </span>
+                                      <span className="font-medium text-purple-600">
+                                        {monthlyStats.totalOvertimeHours.toFixed(
+                                          1
+                                        )}
+                                        h
+                                      </span>
+                                    </div>
+
+                                    <div className="flex items-center justify-between">
+                                      <span className="text-gray-600">
+                                        Expected Hours:
+                                      </span>
                                       <span className="font-medium">
-                                        {(7 * monthlyStats.expectedWorkingDays)}h
+                                        {7 * monthlyStats.expectedWorkingDays}h
                                       </span>
                                     </div>
                                   </div>
@@ -3458,7 +3863,7 @@ const EmployeeAttendanceTable = () => {
       )}
     </div>
   );
-}
+};
 // );
 
 export default EmployeeAttendanceTable;

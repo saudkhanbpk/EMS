@@ -35,6 +35,35 @@ interface devopss {
   full_name?: string;
 }
 
+interface EmployeeWithProjects {
+  id: string;
+  full_name: string;
+  email?: string;
+  role?: string;
+  projects: {
+    id: string;
+    title: string;
+    completedScore: number;
+    pendingScore: number;
+    totalScore: number;
+  }[];
+  completedKPI: number;
+  pendingKPI: number;
+  totalKPI: number;
+}
+
+interface ManagerWithProjects {
+  id: string;
+  full_name: string;
+  projects: {
+    id: string;
+    title: string;
+    completedScore: number;
+    pendingScore: number;
+    totalScore: number;
+  }[];
+}
+
 function ProjectsAdmin() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -46,6 +75,9 @@ function ProjectsAdmin() {
   const [loading, setLoading] = useState(false);
   const [selectedTAB, setSelectedTAB] = useState("Projects")
   const [devopss, setdevops] = useState<devopss[]>([]);
+  const [selectedView, setSelectedView] = useState('cardView');
+  const [showAll, setShowAll] = useState('')
+  const [expandedDevs, setExpandedDevs] = useState<Record<string, boolean>>({});
   const [newProject, setNewProject] = useState({
     title: '',
     type: 'Front-End Developer' as 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer',
@@ -57,16 +89,42 @@ function ProjectsAdmin() {
   const [selectedEmployeesearch, setDataEmployeesearch] = useState(null);
   const [employeeWorkloads, setEmployeeWorkloads] = useState<Record<string, number>>({});
   const [showWorkloadModal, setShowWorkloadModal] = useState(false);
-  const [selectedWorkloadCategory, setSelectedWorkloadCategory] = useState<'free' | 'medium' | 'overloaded' | null>(null);
+  const [selectedWorkloadCategory, setSelectedWorkloadCategory] = useState<'free' | 'medium' | 'Good' | 'overloaded' | null>(null);
   const [workloadEmployees, setWorkloadEmployees] = useState<any[]>([]);
   const [modalLoading, setModalLoading] = useState(false);
+
+  // New state variables for sorting
+  const [sortView, setSortView] = useState<'projects' | 'employees' | 'managers'>('projects');
+  const [employeesWithProjects, setEmployeesWithProjects] = useState<EmployeeWithProjects[]>([]);
+  const [managersWithProjects, setManagersWithProjects] = useState<ManagerWithProjects[]>([]);
+  const [sortLoading, setSortLoading] = useState(false);
+
+  // Search state variables
+  const [projectSearchTerm, setProjectSearchTerm] = useState('');
+  const [employeeSearchTerm, setEmployeeSearchTerm] = useState('');
+  const [managerSearchTerm, setManagerSearchTerm] = useState('');
+  const [expandedProjects, setExpandedProjects] = useState({});
+
+  const toggleExpandProjects = (projectId) => {
+    setExpandedProjects((prev) => ({
+      ...prev,
+      [projectId]: !prev[projectId],
+    }));
+  };
+
+  const toggleExpandManagerProjects = (key) => {
+    setExpandedProjects((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
 
   const filteredEmployees = Devs.filter(Dev =>
     Dev.full_name.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Function to handle opening the workload modal
-  const handleWorkloadCategoryClick = async (category: 'free' | 'medium' | 'overloaded') => {
+  const handleWorkloadCategoryClick = async (category: 'free' | 'medium' | 'Good' | 'overloaded') => {
     setSelectedWorkloadCategory(category);
     setWorkloadEmployees([]);
     setShowWorkloadModal(true);
@@ -76,8 +134,9 @@ function ProjectsAdmin() {
       // Get all employee IDs in this workload category
       const employeeIds = Object.entries(employeeWorkloads)
         .filter(([id, score]) => {
-          if (category === 'free') return score >= 0 && score < 75;
-          if (category === 'medium') return score >= 75 && score < 150;
+          if (category === 'free') return score >= 0 && score < 50;
+          if (category === 'medium') return score >= 50 && score < 100;
+          if (category === 'Good') return score >= 100 && score < 150;
           if (category === 'overloaded') return score >= 150;
           return false;
         })
@@ -352,6 +411,13 @@ function ProjectsAdmin() {
     setSelectedDevs(selectedDevs.filter(dev => dev.id !== id));
   };
 
+  const toggleExpandDevs = (projectId: string) => {
+    setExpandedDevs(prev => ({
+      ...prev,
+      [projectId]: !prev[projectId]
+    }));
+  };
+
   const handleDeleteProject = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
 
@@ -417,12 +483,215 @@ function ProjectsAdmin() {
     setSelectedWorkloadCategory(null);
   };
 
+  // Function to fetch and process employee data with their projects
+  const fetchEmployeesWithProjects = async () => {
+    setSortLoading(true);
+
+    try {
+      // Fetch all employees
+      const { data: employeesData, error: employeesError } = await supabase
+        .from("users")
+        .select("id, full_name, email, role");
+
+      if (employeesError) {
+        console.error("Error fetching employees:", employeesError);
+        setSortLoading(false);
+        return;
+      }
+
+      // Fetch all projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select("*");
+
+      if (projectsError) {
+        console.error("Error fetching projects:", projectsError);
+        setSortLoading(false);
+        return;
+      }
+
+      // Fetch all tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*");
+
+      if (tasksError) {
+        console.error("Error fetching tasks:", tasksError);
+        setSortLoading(false);
+        return;
+      }
+
+      // Process each employee
+      const employeesWithProjectsData: EmployeeWithProjects[] = employeesData.map(employee => {
+        // Find projects for this employee
+        const employeeProjects = projectsData.filter(project =>
+          project.devops?.some((dev: any) => dev.id === employee.id)
+        );
+
+        // Process each project to include scores
+        const processedProjects = employeeProjects.map(project => {
+          // Get tasks for this project
+          const projectTasks = tasksData.filter(task => task.project_id === project.id);
+
+          // Calculate scores
+          const completedScore = projectTasks
+            .filter(task =>
+              task.status === "done" &&
+              task.devops?.some((dev: any) => dev.id === employee.id)
+            )
+            .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+          const pendingScore = projectTasks
+            .filter(task =>
+              task.status !== "done" &&
+              task.devops?.some((dev: any) => dev.id === employee.id)
+            )
+            .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+          const totalScore = completedScore + pendingScore;
+
+          return {
+            id: project.id,
+            title: project.title,
+            completedScore,
+            pendingScore,
+            totalScore
+          };
+        });
+
+        // Calculate total KPIs for the employee
+        const completedKPI = processedProjects.reduce((sum, project) => sum + project.completedScore, 0);
+        const pendingKPI = processedProjects.reduce((sum, project) => sum + project.pendingScore, 0);
+        const totalKPI = completedKPI + pendingKPI;
+
+        return {
+          id: employee.id,
+          full_name: employee.full_name,
+          email: employee.email,
+          role: employee.role,
+          projects: processedProjects,
+          completedKPI,
+          pendingKPI,
+          totalKPI
+        };
+      });
+
+      setEmployeesWithProjects(employeesWithProjectsData);
+      setSortLoading(false);
+    } catch (error) {
+      console.error("Error processing employee data:", error);
+      setSortLoading(false);
+    }
+  };
+
+  // Function to fetch and process manager data with their projects
+  const fetchManagersWithProjects = async () => {
+    setSortLoading(true);
+
+    try {
+      // Fetch all projects with their managers
+      const { data: projectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select("*");
+
+      if (projectsError) {
+        console.error("Error fetching projects:", projectsError);
+        setSortLoading(false);
+        return;
+      }
+
+      // Fetch all users to get manager names
+      const { data: usersData, error: usersError } = await supabase
+        .from("users")
+        .select("id, full_name");
+
+      if (usersError) {
+        console.error("Error fetching users:", usersError);
+        setSortLoading(false);
+        return;
+      }
+
+      // Create a map of user IDs to full names
+      const userMap: Record<string, string> = {};
+      usersData.forEach(user => {
+        userMap[user.id] = user.full_name;
+      });
+
+      // Fetch all tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*");
+
+      if (tasksError) {
+        console.error("Error fetching tasks:", tasksError);
+        setSortLoading(false);
+        return;
+      }
+
+      // Group projects by manager
+      const managerProjectsMap: Record<string, any[]> = {};
+
+      projectsData.forEach(project => {
+        if (project.created_by) {
+          if (!managerProjectsMap[project.created_by]) {
+            managerProjectsMap[project.created_by] = [];
+          }
+
+          // Calculate scores for this project
+          const projectTasks = tasksData.filter(task => task.project_id === project.id);
+          const completedScore = projectTasks
+            .filter(task => task.status === "done")
+            .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+          const pendingScore = projectTasks
+            .filter(task => task.status !== "done")
+            .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+          const totalScore = completedScore + pendingScore;
+
+          managerProjectsMap[project.created_by].push({
+            id: project.id,
+            title: project.title,
+            completedScore,
+            pendingScore,
+            totalScore
+          });
+        }
+      });
+
+      // Convert to array of managers with projects
+      const managersWithProjectsData: ManagerWithProjects[] = Object.entries(managerProjectsMap).map(([managerId, projects]) => ({
+        id: managerId,
+        full_name: userMap[managerId] || "Unknown Manager",
+        projects
+      }));
+
+      setManagersWithProjects(managersWithProjectsData);
+      setSortLoading(false);
+    } catch (error) {
+      console.error("Error processing manager data:", error);
+      setSortLoading(false);
+    }
+  };
+
+  // Function to handle sort view change
+  const handleSortViewChange = (view: 'projects' | 'employees' | 'managers') => {
+    setSortView(view);
+
+    if (view === 'employees' && employeesWithProjects.length === 0) {
+      fetchEmployeesWithProjects();
+    } else if (view === 'managers' && managersWithProjects.length === 0) {
+      fetchManagersWithProjects();
+    }
+  };
+
   // Render the workload employees modal
   const renderWorkloadModal = () => {
     const getCategoryTitle = () => {
       switch (selectedWorkloadCategory) {
         case 'free': return 'Free Developers ';
         case 'medium': return 'Medium Workload Developers ';
+        case 'Good': return 'Good Developers ';
         case 'overloaded': return 'Overloaded Developers ';
         default: return 'Developers';
       }
@@ -430,9 +699,10 @@ function ProjectsAdmin() {
 
     const getCategoryColor = () => {
       switch (selectedWorkloadCategory) {
-        case 'free': return 'bg-green-500';
+        case 'free': return 'bg-red-500';
         case 'medium': return 'bg-yellow-500';
-        case 'overloaded': return 'bg-red-500';
+        case 'Good': return 'bg-green-500';
+        case 'overloaded': return 'bg-purple-500';
         default: return 'bg-gray-500';
       }
     };
@@ -516,20 +786,20 @@ function ProjectsAdmin() {
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap">
                           <div className="flex items-center">
-                            <div className={`w-3 h-3 rounded-full ${
-                              (employee.TotalKPI || 0) < 75 ? "bg-green-500" :
-                              (employee.TotalKPI || 0) < 150 ? "bg-yellow-500" :
-                              "bg-red-500"
-                            } mr-2`}></div>
+                            <div className={`w-3 h-3 rounded-full ${(employee.TotalKPI || 0) < 50 ? "bg-red-500" :
+                              (employee.TotalKPI || 0) < 100 ? "bg-yellow-500" :
+                                (employee.TotalKPI || 0) < 150 ? "bg-green-500" :
+                                  "bg-purple-500"
+                              } mr-2`}></div>
                             <span className="text-sm font-medium">{employee.TotalKPI || 0} KPI</span>
                           </div>
                           <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
                             <div
-                              className={`h-1.5 rounded-full ${
-                                (employee.TotalKPI || 0) < 75 ? "bg-green-500" :
-                                (employee.TotalKPI || 0) < 150 ? "bg-yellow-500" :
-                                "bg-red-500"
-                              }`}
+                              className={`h-1.5 rounded-full ${(employee.TotalKPI || 0) < 50 ? "bg-red-500" :
+                                (employee.TotalKPI || 0) < 100 ? "bg-yellow-500" :
+                                  (employee.TotalKPI || 0) < 150 ? "bg-green-500" :
+                                    "bg-purple-500"
+                                }`}
                               style={{ width: `${Math.min(((employee.TotalKPI || 0) / 200) * 100, 100)}%` }}
                             ></div>
                           </div>
@@ -728,50 +998,281 @@ function ProjectsAdmin() {
           )}
 
           {selectedTAB == "Projects" && (
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-full w-full mx-auto">
               {/* Show workload modal when active */}
               {showWorkloadModal && renderWorkloadModal()}
 
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="xs:text-[26px] text-[18px] font-bold">Your Projects</h1>
-                <button
-                  onClick={openAddModal}
-                  className="bg-[#9A00FF] xs:text-xl text-[13px] text-white px-4 py-2 rounded-lg flex items-center"
-                >
-                  <PlusCircle size={20} className="mr-2" /> New Project
-                </button>
+              {/* <div className="flex flex-col gap-4 p-4 sm:p-6 rounded-2xl bg-white shadow-sm border border-gray-100 mb-4">
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-800">Your Projects</h1>
+                  <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    {sortView === 'projects' && (
+                      <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                          onClick={() => setSelectedView("cardView")}
+                          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${selectedView === "cardView"
+                            ? "bg-white text-purple-700 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                          Card View
+                        </button>
+                        <button
+                          onClick={() => setSelectedView("tableView")}
+                          className={`px-3 py-1 rounded-md text-sm font-medium transition-colors duration-200 ${selectedView === "tableView"
+                            ? "bg-white text-purple-700 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                          Table View
+                        </button>
+                      </div>
+                    )}
+                    <button
+                      onClick={openAddModal}
+                      className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
+                    >
+                      <PlusCircle size={20} className="mr-2" /> New Project
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 w-full">
+                  <div className="flex items-center gap-3 w-full sm:w-auto">
+                    <div className="relative w-full sm:w-48">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-4 w-4 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      {sortView === 'projects' && (
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-gray-300 text-gray-700 py-1.5 pl-9 pr-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                          placeholder="Search projects..."
+                          value={projectSearchTerm}
+                          onChange={(e) => setProjectSearchTerm(e.target.value)}
+                        />
+                      )}
+                      {sortView === 'employees' && (
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-gray-300 text-gray-700 py-1.5 pl-9 pr-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                          placeholder="Search employees..."
+                          value={employeeSearchTerm}
+                          onChange={(e) => setEmployeeSearchTerm(e.target.value)}
+                        />
+                      )}
+                      {sortView === 'managers' && (
+                        <input
+                          type="text"
+                          className="w-full bg-white border border-gray-300 text-gray-700 py-1.5 pl-9 pr-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm"
+                          placeholder="Search managers..."
+                          value={managerSearchTerm}
+                          onChange={(e) => setManagerSearchTerm(e.target.value)}
+                        />
+                      )}
+                    </div>
+
+                    <div className="relative w-full sm:w-36">
+                      <select
+                        className="w-full bg-white border border-gray-300 text-gray-700 py-1.5 px-3 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 text-sm appearance-none"
+                        value={sortView}
+                        onChange={(e) => handleSortViewChange(e.target.value as 'projects' | 'employees' | 'managers')}
+                      >
+                        <option value="projects">View Projects</option>
+                        <option value="employees">View by Employees</option>
+                        <option value="managers">View by Managers</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center text-gray-700">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => handleWorkloadCategoryClick('free')}
+                      className="bg-white rounded-lg shadow-sm px-3 py-1.5 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-green-100 text-sm font-medium"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      Free: {Object.values(employeeWorkloads).filter(score => score >= 0 && score < 50).length} developers
+                    </button>
+                    <button
+                      onClick={() => handleWorkloadCategoryClick('medium')}
+                      className="bg-white rounded-lg shadow-sm px-3 py-1.5 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-yellow-100 text-sm font-medium"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-yellow-500"></div>
+                      Medium: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
+                    </button>
+                    <button
+                      onClick={() => handleWorkloadCategoryClick('Good')}
+                      className="bg-white rounded-lg shadow-sm px-3 py-1.5 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-green-100 text-sm font-medium"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-green-500"></div>
+                      Good: {Object.values(employeeWorkloads).filter(score => score >= 100 && score < 150).length} developers
+                    </button>
+                    <button
+                      onClick={() => handleWorkloadCategoryClick('overloaded')}
+                      className="bg-white rounded-lg shadow-sm px-3 py-1.5 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-red-100 text-sm font-medium"
+                    >
+                      <div className="w-2 h-2 rounded-full bg-purple-500"></div>
+                      Overloaded: {Object.values(employeeWorkloads).filter(score => score >= 150).length} developers
+                    </button>
+                  </div>
+                </div>
+              </div> */}
+              <div className="flex flex-col gap-4 p-3 rounded-2xl mb-4 bg-white shadow-sm border-b border-gray-100">
+                {/* Top Bar - Title and Buttons */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                  <div>
+                    <h1 className="text-md md:text-2xl font-bold text-gray-800">Your Projects</h1>
+                  </div>
+                  <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    {/* Only show view toggle buttons when in projects view */}
+                    {sortView === 'projects' && (
+                      <div className="flex bg-gray-100 rounded-lg p-1">
+                        <button
+                          onClick={() => {
+                            setSelectedView("cardView");
+                          }}
+                          className={`px-3 py-1 rounded-md text-sm font-medium ${selectedView === "cardView"
+                            ? "bg-white text-purple-700 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                          Card View
+                        </button>
+                        <button
+                          onClick={() => {
+                            setSelectedView("tableView");
+                          }}
+                          className={`px-3 py-1 rounded-md text-sm font-medium ${selectedView === "tableView"
+                            ? "bg-white text-purple-700 shadow-sm"
+                            : "text-gray-500 hover:text-gray-700"
+                            }`}
+                        >
+                          Table View
+                        </button>
+                      </div>
+                    )}
+
+                    <button
+                      onClick={openAddModal}
+                      className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
+                    >
+                      <PlusCircle size={20} className="mr-2" /> New Project
+                    </button>
+                  </div>
+                </div>
+
+                {/* Search and Filter Row */}
+                <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 w-full">
+                  {/* Search and Sort */}
+                  <div className="flex flex-wrap items-center gap-3 w-full sm:w-auto">
+                    {/* Search input - changes based on current view */}
+                    <div className="relative w-full sm:w-auto">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg className="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                          <path fillRule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      {sortView === 'projects' && (
+                        <input
+                          type="text"
+                          className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 py-2 pl-10 pr-4 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          placeholder="Search projects..."
+                          value={projectSearchTerm}
+                          onChange={(e) => setProjectSearchTerm(e.target.value)}
+                        />
+                      )}
+                      {sortView === 'employees' && (
+                        <input
+                          type="text"
+                          className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 py-2 pl-10 pr-4 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          placeholder="Search employees..."
+                          value={employeeSearchTerm}
+                          onChange={(e) => setEmployeeSearchTerm(e.target.value)}
+                        />
+                      )}
+                      {sortView === 'managers' && (
+                        <input
+                          type="text"
+                          className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 py-2 pl-10 pr-4 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                          placeholder="Search managers..."
+                          value={managerSearchTerm}
+                          onChange={(e) => setManagerSearchTerm(e.target.value)}
+                        />
+                      )}
+                    </div>
+
+                    {/* View dropdown */}
+                    <div className="relative w-full sm:w-auto">
+                      <select
+                        className="w-full sm:w-auto bg-white border border-gray-300 text-gray-700 py-2 px-3 pr-8 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-purple-500 appearance-none"
+                        value={sortView}
+                        onChange={(e) => handleSortViewChange(e.target.value as 'projects' | 'employees' | 'managers')}
+                      >
+                        <option value="projects">View Projects</option>
+                        <option value="employees">View by Employees</option>
+                        <option value="managers">View by Managers</option>
+                      </select>
+                      <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-gray-700">
+                        <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               </div>
 
               {/* Workload Stats */}
-              <div className="flex flex-wrap gap-4 mb-6">
-                <button
-                  onClick={() => handleWorkloadCategoryClick('free')}
-                  className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow border border-transparent hover:border-green-100"
-                >
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
-                  <span className="text-sm font-medium">
-                    Free: {Object.values(employeeWorkloads).filter(score => score >= 0 && score < 75).length} developers
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleWorkloadCategoryClick('medium')}
-                  className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow border border-transparent hover:border-yellow-100"
-                >
-                  <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
-                  <span className="text-sm font-medium">
-                    Medium: {Object.values(employeeWorkloads).filter(score => score >= 75 && score < 150).length} developers
-                  </span>
-                </button>
-                <button
-                  onClick={() => handleWorkloadCategoryClick('overloaded')}
-                  className="bg-white rounded-lg shadow-sm p-4 flex items-center gap-3 hover:shadow-md transition-shadow border border-transparent hover:border-red-100"
-                >
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
-                  <span className="text-sm font-medium">
-                    Overloaded: {Object.values(employeeWorkloads).filter(score => score >= 150).length} developers
-                  </span>
-                </button>
+              <div className="bg-white rounded-lg shadow-sm px-4 py-3 mb-4">
+                {/* <h2 className="text-lg font-semibold mb-3">Developer Workload</h2> */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                  <button
+                    onClick={() => handleWorkloadCategoryClick('free')}
+                    className="bg-white rounded-lg shadow-sm p-3 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-green-100"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                    <span className="text-sm font-medium">
+                      Free: {Object.values(employeeWorkloads).filter(score => score >= 0 && score < 50).length} developers
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleWorkloadCategoryClick('medium')}
+                    className="bg-white rounded-lg shadow-sm p-3 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-yellow-100"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
+                    <span className="text-sm font-medium">
+                      Medium: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleWorkloadCategoryClick('Good')}
+                    className="bg-white rounded-lg shadow-sm p-3 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-green-100"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                    <span className="text-sm font-medium">
+                      Good: {Object.values(employeeWorkloads).filter(score => score >= 100 && score < 150).length} developers
+                    </span>
+                  </button>
+                  <button
+                    onClick={() => handleWorkloadCategoryClick('overloaded')}
+                    className="bg-white rounded-lg shadow-sm p-3 flex items-center gap-2 hover:shadow-md transition-shadow border border-transparent hover:border-red-100"
+                  >
+                    <div className="w-3 h-3 rounded-full bg-purple-500"></div>
+                    <span className="text-sm font-medium">
+                      Overloaded: {Object.values(employeeWorkloads).filter(score => score >= 150).length} developers
+                    </span>
+                  </button>
+                </div>
               </div>
+
+
 
               {isModalOpen && (
                 <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
@@ -900,99 +1401,542 @@ function ProjectsAdmin() {
                 </div>
               )}
 
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {projects.length === 0 ? (
-                  <p className="text-gray-500">No projects yet. Create one!</p>
-                ) : (
-                  projects.map((project) => (
-                    <div
-                      key={project.id}
-                      className="bg-white rounded-[20px] w-[316px] min-h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
-                      onClick={() => {
-                        setSelectedTAB("taskBoard");
-                        setdevops(project.devops);
-                        console.log("Project devops:", project.devops);
-                        console.log("Project devops structure:", JSON.stringify(project.devops, null, 2));
-                        setProjectId(project.id);
-                      }}
-                    >
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="flex items-center pl-2 pr-4 py-1
-                       bg-[#f7eaff] rounded-full">
-
-                          <span className="text-sm font-semibold ml-2">
-                            <label>Story Points : </label>
-                            <span className="text-green-600">{project.completedScore}</span>
-                            <span className="text-gray-500"> / </span>
-                            <span className="text-red-500">{project.totalScore}</span>
-                          </span>
-                        </div>
-                        <div className="flex space-x-2">
-                          <button
-                            className="text-gray-400 hover:text-gray-600"
-                            onClick={(e) => openEditModal(project, e)}
-                          >
-                            <Pencil size={16} color='#667085' />
-                          </button>
-                          <button
-                            className="text-gray-400 hover:text-red-600"
-                            onClick={(e) => handleDeleteProject(project.id, e)}
-                          >
-                            <Trash2 size={16} color='#667085' />
-                          </button>
-                        </div>
+              {/* Employee View */}
+              {sortView === 'employees' && (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  {sortLoading ? (
+                    <div className="flex justify-center items-center py-20">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                    </div>
+                  ) : employeesWithProjects.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
                       </div>
-                      <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
+                      <h3 className="text-lg font-medium text-gray-700 mb-1">No employees found</h3>
+                      <p className="text-gray-500">There are no employees with assigned projects.</p>
+                    </div>
+                  ) : employeesWithProjects.filter(employee =>
+                    employee.full_name.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+                    (employee.email && employee.email.toLowerCase().includes(employeeSearchTerm.toLowerCase())) ||
+                    (employee.role && employee.role.toLowerCase().includes(employeeSearchTerm.toLowerCase())) ||
+                    employee.projects.some(project => project.title.toLowerCase().includes(employeeSearchTerm.toLowerCase()))
+                  ).length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full  flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-700 mb-1">No employees match your search</h3>
+                      <p className="text-gray-500">Try a different search term.</p>
+                    </div>
+                  ) : (
+                    <div>
+                      {/* Table view for medium and larger screens */}
+                      <div className="hidden sm:block overflow-x-auto">
+                        <table className="min-w-full divide-y divide-gray-200">
+                          <thead className="bg-gray-50">
+                            <tr>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Employee
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Projects
+                              </th>
+                              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Story Points
+                              </th>
+                            </tr>
+                          </thead>
+                          <tbody className="bg-white divide-y divide-gray-200">
+                            {employeesWithProjects
+                              .filter(employee =>
+                                employee.full_name.toLowerCase().includes(employeeSearchTerm.toLowerCase()) ||
+                                (employee.email && employee.email.toLowerCase().includes(employeeSearchTerm.toLowerCase())) ||
+                                (employee.role && employee.role.toLowerCase().includes(employeeSearchTerm.toLowerCase())) ||
+                                employee.projects.some(project => project.title.toLowerCase().includes(employeeSearchTerm.toLowerCase()))
+                              )
+                              .map((employee) => (
+                                <tr key={employee.id} className="hover:bg-gray-50 transition-colors">
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
+                                        {employee.full_name.charAt(0).toUpperCase()}
+                                      </div>
+                                      <div className="ml-4">
+                                        <div className="text-sm font-medium text-gray-900">{employee.full_name}</div>
+                                        <div className="text-sm text-gray-500">{employee.email}</div>
+                                        <div className="text-xs text-gray-400">{employee.role || 'No role'}</div>
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4">
+                                    <div className="text-sm text-gray-900 mb-2">{employee.projects.length} projects</div>
+                                    <div className="space-y-2">
 
-                      {project.creatorName != "Unknown" ? (
-                        <div>
-                          <label className='font-semibold text-[15px] text-[#9A00FF]'>Manager: </label>
-                          <span className="text-sm font-semibold text-[#9A00FF]">
-                            {project.creatorName || "Unknown"}
-                          </span>
-                        </div>
-                      ) : ("")}
-
-                      <div className="flex flex-col items-start justify-between">
-                        <div className="mb-2">
-                          <span className='leading-7 text-[#686a6d]'>
-                            <label className='font-semibold'>Developers: </label>
-                            <ul className='ml-2 list-disc list-inside'>
-                              {project.devops && project.devops.length > 0 ? (
-                                project.devops.map((dev) => {
-                                  console.log("Developer in list:", dev);
-                                  return (
-                                    <li key={dev.id}>
-                                      {dev.full_name || dev.name || JSON.stringify(dev)}
-                                    </li>
-                                  );
-                                })
-                              ) : (
-                                <li>No developers assigned</li>
-                              )}
-                            </ul>
-                          </span>
-                        </div>
-                        {/* <div className="mb-2">
-                        <span className='leading-7 text-[#686a6d]'>
-                          <label className='font-semibold'>Project Scores: </label>
-                          <div className="ml-2 flex items-center gap-3">
-                            <span className="text-green-600 font-semibold">{project.completedScore}</span>
-                            <span className="text-gray-500">/</span>
-                            <span className="text-red-500 font-semibold">{project.totalScore}</span>
-                          </div>
-                        </span>
-                      </div> */}
-                        <div>
-                          <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
-                            {formatDistanceToNow(new Date(project.created_at))} ago
-                          </span>
-                        </div>
+                                      <div>
+                                        {employee.projects && employee.projects.length > 0 ? (
+                                          <div>
+                                            <div className="text-sm text-gray-900">
+                                              {(expandedProjects['all'] ? employee.projects : employee.projects.slice(0, 2)).map(project => (
+                                                <div key={project.id} className="bg-gray-50 p-2 rounded-md mb-2">
+                                                  <div className="text-sm font-medium text-gray-900">{project.title}</div>
+                                                  <div className="flex items-center mt-1">
+                                                    <span className="text-xs text-green-600 font-medium">{project.completedScore}</span>
+                                                    <span className="mx-1 text-xs text-gray-500">/</span>
+                                                    <span className="text-xs text-red-500 font-medium">{project.totalScore}</span>
+                                                    <div className="ml-2 flex-grow h-1.5 bg-gray-200 rounded-full">
+                                                      <div
+                                                        className="bg-green-500 h-1.5 rounded-full"
+                                                        style={{
+                                                          width: `${project.totalScore > 0 ? (project.completedScore / project.totalScore) * 100 : 0}%`
+                                                        }}
+                                                      ></div>
+                                                    </div>
+                                                  </div>
+                                                </div>
+                                              ))}
+                                              {employee.projects.length > 2 && !expandedProjects['all'] && (
+                                                <button
+                                                  className="text-purple-600 hover:text-purple-800 text-sm font-medium mt-2 transition-colors duration-200"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleExpandProjects('all');
+                                                  }}
+                                                >
+                                                  Show More... ({employee.projects.length - 2} more)
+                                                </button>
+                                              )}
+                                              {expandedProjects['all'] && employee.projects.length > 2 && (
+                                                <button
+                                                  className="text-purple-600 hover:text-purple-800 text-sm font-medium mt-2 transition-colors duration-200"
+                                                  onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    toggleExpandProjects('all');
+                                                  }}
+                                                >
+                                                  Show Less
+                                                </button>
+                                              )}
+                                            </div>
+                                          </div>
+                                        ) : (
+                                          <div className="text-sm text-gray-500">No projects assigned</div>
+                                        )}
+                                      </div>
+                                    </div>
+                                  </td>
+                                  <td className="px-6 py-4 whitespace-nowrap">
+                                    <div className="flex items-center">
+                                      <span className="text-green-600 font-medium">{employee.completedKPI}</span>
+                                      <span className="mx-1 text-gray-500">/</span>
+                                      <span className="text-red-500 font-medium">{employee.totalKPI}</span>
+                                    </div>
+                                    <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                      <div
+                                        className="bg-green-500 h-1.5 rounded-full"
+                                        style={{
+                                          width: `${employee.totalKPI > 0 ? (employee.completedKPI / employee.totalKPI) * 100 : 0}%`
+                                        }}
+                                      ></div>
+                                    </div>
+                                    <div className="text-xs text-gray-500 mt-1">
+                                      {employee.pendingKPI} pending
+                                    </div>
+                                  </td>
+                                </tr>
+                              ))}
+                          </tbody>
+                        </table>
                       </div>
                     </div>
-                  ))
-                )}
-              </div>
+                  )}
+                </div>
+              )}
+
+              {/* Manager View */}
+              {sortView === 'managers' && (
+                <div className="bg-white rounded-lg shadow overflow-hidden">
+                  {sortLoading ? (
+                    <div className="flex justify-center items-center py-20">
+                      <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-purple-500"></div>
+                    </div>
+                  ) : managersWithProjects.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-700 mb-1">No managers found</h3>
+                      <p className="text-gray-500">There are no managers with assigned projects.</p>
+                    </div>
+                  ) : managersWithProjects.filter(manager =>
+                    manager.full_name.toLowerCase().includes(managerSearchTerm.toLowerCase()) ||
+                    manager.projects.some(project => project.title.toLowerCase().includes(managerSearchTerm.toLowerCase()))
+                  ).length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                        </svg>
+                      </div>
+                      <h3 className="text-lg font-medium text-gray-700 mb-1">No managers match your search</h3>
+                      <p className="text-gray-500">Try a different search term.</p>
+                    </div>
+                  ) : (
+                    <table className="min-w-full divide-y divide-gray-200">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Manager
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Projects
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            Total Story Points
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="bg-white divide-y divide-gray-200">
+                        {managersWithProjects
+                          .filter(manager =>
+                            manager.full_name.toLowerCase().includes(managerSearchTerm.toLowerCase()) ||
+                            manager.projects.some(project => project.title.toLowerCase().includes(managerSearchTerm.toLowerCase()))
+                          )
+                          .map((manager) => (
+                            <tr key={manager.id} className="hover:bg-gray-50 transition-colors">
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <div className="flex-shrink-0 h-10 w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium">
+                                    {manager.full_name.charAt(0).toUpperCase()}
+                                  </div>
+                                  <div className="ml-4">
+                                    <div className="text-sm font-medium text-gray-900">{manager.full_name}</div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <div className="text-sm text-gray-900 mb-2">{manager.projects.length} projects</div>
+                                <div className="space-y-2">
+                                  <div>
+                                    <h3 className="text-lg font-medium text-gray-900 mb-2">Manager Projects</h3>
+                                    {manager.projects && manager.projects.length > 0 ? (
+                                      <div>
+                                        <div className="text-sm text-gray-900">
+                                          {(expandedProjects['manager'] ? manager.projects : manager.projects.slice(0, 2)).map(project => (
+                                            <div key={project.id} className="bg-gray-50 p-2 rounded-md mb-2">
+                                              <div className="text-sm font-medium text-gray-900">{project.title}</div>
+                                              <div className="flex items-center mt-1">
+                                                <span className="text-xs text-green-600 font-medium">{project.completedScore}</span>
+                                                <span className="mx-1 text-xs text-gray-500">/</span>
+                                                <span className="text-xs text-red-500 font-medium">{project.totalScore}</span>
+                                                <div className="ml-2 flex-grow h-1.5 bg-gray-200 rounded-full">
+                                                  <div
+                                                    className="bg-green-500 h-1.5 rounded-full"
+                                                    style={{
+                                                      width: `${project.totalScore > 0 ? (project.completedScore / project.totalScore) * 100 : 0}%`
+                                                    }}
+                                                  ></div>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          ))}
+                                          {manager.projects.length > 2 && !expandedProjects['manager'] && (
+                                            <button
+                                              className="text-purple-600 hover:text-purple-800 text-sm font-medium mt-2 transition-colors duration-200"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleExpandManagerProjects('manager');
+                                              }}
+                                            >
+                                              Show More... ({manager.projects.length - 2} more)
+                                            </button>
+                                          )}
+                                          {expandedProjects['manager'] && manager.projects.length > 2 && (
+                                            <button
+                                              className="text-purple-600 hover:text-purple-800 text-sm font-medium mt-2 transition-colors duration-200"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                toggleExpandManagerProjects('manager');
+                                              }}
+                                            >
+                                              Show Less
+                                            </button>
+                                          )}
+                                        </div>
+                                      </div>
+                                    ) : (
+                                      <div className="text-sm text-gray-500">No projects assigned</div>
+                                    )}
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4 whitespace-nowrap">
+                                <div className="flex items-center">
+                                  <span className="text-green-600 font-medium">
+                                    {manager.projects.reduce((sum, project) => sum + project.completedScore, 0)}
+                                  </span>
+                                  <span className="mx-1 text-gray-500">/</span>
+                                  <span className="text-red-500 font-medium">
+                                    {manager.projects.reduce((sum, project) => sum + project.totalScore, 0)}
+                                  </span>
+                                </div>
+                                <div className="w-full bg-gray-200 rounded-full h-1.5 mt-1">
+                                  <div
+                                    className="bg-green-500 h-1.5 rounded-full"
+                                    style={{
+                                      width: `${manager.projects.reduce((sum, project) => sum + project.totalScore, 0) > 0
+                                        ? (manager.projects.reduce((sum, project) => sum + project.completedScore, 0) /
+                                          manager.projects.reduce((sum, project) => sum + project.totalScore, 0)) * 100
+                                        : 0}%`
+                                    }}
+                                  ></div>
+                                </div>
+                                <div className="text-xs text-gray-500 mt-1">
+                                  {manager.projects.reduce((sum, project) => sum + project.pendingScore, 0)} pending
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
+
+              {/* Projects View */}
+              {sortView === 'projects' && selectedView === "cardView" && (
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+                  {projects.length === 0 ? (
+                    <div className="col-span-full text-center py-8">
+                      <p className="text-gray-500 text-lg">No projects yet. Create one!</p>
+                    </div>
+                  ) : projects.filter(project =>
+                    project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
+                    (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                  ).length === 0 ? (
+                    <div className="col-span-full text-center py-8">
+                      <p className="text-gray-500 text-lg">No projects match your search.</p>
+                    </div>
+                  ) : (
+                    projects.filter(project =>
+                      project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
+                      (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                    ).map((project) => (
+                      <div
+                        key={project.id}
+                        className="bg-white rounded-[20px] w-full p-4 sm:p-6 shadow-lg cursor-pointer hover:shadow-xl transition-shadow"
+                        onClick={() => {
+                          setSelectedTAB("taskBoard");
+                          setdevops(project.devops);
+                          setProjectId(project.id);
+                        }}
+                      >
+                        <div className="flex items-center justify-between mb-4">
+                          <div className="flex items-center pl-2 pr-4 py-1 bg-[#f7eaff] rounded-full">
+                            <span className="text-sm font-semibold ml-2">
+                              <label>Story Points : </label>
+                              <span className="text-green-600">{project.completedScore}</span>
+                              <span className="text-gray-500"> / </span>
+                              <span className="text-red-500">{project.totalScore}</span>
+                            </span>
+                          </div>
+                          <div className="flex space-x-2">
+                            <button
+                              className="text-gray-400 hover:text-gray-600"
+                              onClick={(e) => openEditModal(project, e)}
+                            >
+                              <Pencil size={16} color='#667085' />
+                            </button>
+                            <button
+                              className="text-gray-400 hover:text-red-600"
+                              onClick={(e) => handleDeleteProject(project.id, e)}
+                            >
+                              <Trash2 size={16} color='#667085' />
+                            </button>
+                          </div>
+                        </div>
+                        <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
+
+                        {project.creatorName !== "Unknown" && (
+                          <div>
+                            <label className='font-semibold text-[15px] text-[#9A00FF]'>Manager: </label>
+                            <span className="text-sm font-semibold text-[#9A00FF]">
+                              {project.creatorName}
+                            </span>
+                          </div>
+                        )}
+
+                        <div className="flex flex-col items-start justify-between">
+                          <div className="mb-2">
+                            <span className='leading-7 text-[#686a6d]'>
+                              <label className='font-semibold'>Developers: </label>
+                              <ul className='ml-2 list-disc list-inside'>
+                                {project.devops && project.devops.length > 0 ? (
+                                  project.devops.map((dev) => (
+                                    <li key={dev.id}>
+                                      {dev.full_name || dev.name || "Unknown Developer"}
+                                    </li>
+                                  ))
+                                ) : (
+                                  <li>No developers assigned</li>
+                                )}
+                              </ul>
+                            </span>
+                          </div>
+                          <div>
+                            <span className='font-medium text-base leading-7 text-[#C4C7CF]'>
+                              {formatDistanceToNow(new Date(project.created_at))} ago
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
+
+              {/* Table View */}
+              {sortView === 'projects' && selectedView === "tableView" && (
+                <div className="overflow-x-auto bg-white rounded-xl shadow-sm border border-gray-100">
+                  {projects.length === 0 ? (
+                    <p className="text-gray-500 p-6 text-center text-sm">No projects yet. Create one!</p>
+                  ) : projects.filter(project =>
+                    project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
+                    (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                  ).length === 0 ? (
+                    <p className="text-gray-500 p-6 text-center text-sm">No projects match your search.</p>
+                  ) : (
+                    <table className="min-w-full divide-y divide-gray-100">
+                      <thead className="bg-gray-50">
+                        <tr>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Project Name
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Manager
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Developers
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Story Points
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Created
+                          </th>
+                          <th scope="col" className="px-6 py-3 text-right text-xs font-semibold text-gray-600 uppercase tracking-wider">
+                            Actions
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-gray-100">
+                        {projects.filter(project =>
+                          project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
+                          (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                        ).map((project) => (
+                          <tr
+                            key={project.id}
+                            className="hover:bg-gray-50 transition-colors duration-200 cursor-pointer"
+                            onClick={() => {
+                              setSelectedTAB("taskBoard");
+                              setdevops(project.devops);
+                              setProjectId(project.id);
+                            }}
+                          >
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm font-semibold text-gray-900">{project.title}</div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-900">{project.creatorName || "N/A"}</div>
+                            </td>
+                            <td className="px-6 py-4">
+                              {project.devops && project.devops.length > 0 ? (
+                                <div>
+                                  <div className="text-sm text-gray-900">
+                                    {(expandedDevs[project.id] ? project.devops : project.devops.slice(0, 3)).map(dev => (
+                                      <div key={dev.id} className="mb-1 flex items-center">
+                                        <span className="h-2 w-2 bg-purple-500 rounded-full mr-2"></span>
+                                        {dev.full_name || dev.name || "Unknown Developer"}
+                                      </div>
+                                    ))}
+                                    {project.devops.length > 3 && !expandedDevs[project.id] && (
+                                      <button
+                                        className="text-purple-600 hover:text-purple-800 text-sm font-medium mt-2 transition-colors duration-200"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleExpandDevs(project.id);
+                                        }}
+                                      >
+                                        Show More... ({project.devops.length - 3} more)
+                                      </button>
+                                    )}
+                                    {expandedDevs[project.id] && project.devops.length > 3 && (
+                                      <button
+                                        className="text-purple-600 hover:text-purple-800 text-sm font-medium mt-2 transition-colors duration-200"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          toggleExpandDevs(project.id);
+                                        }}
+                                      >
+                                        Show Less
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="text-sm text-gray-500">No developers assigned</div>
+                              )}
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="flex items-center space-x-1">
+                                <span className="text-green-600 font-semibold">{project.completedScore}</span>
+                                <span className="text-gray-400">/</span>
+                                <span className="text-red-500 font-semibold">{project.totalScore}</span>
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
+                                <div
+                                  className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${project.totalScore > 0 ? (project.completedScore / project.totalScore) * 100 : 0}%`
+                                  }}
+                                ></div>
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap">
+                              <div className="text-sm text-gray-500">
+                                {formatDistanceToNow(new Date(project.created_at))} ago
+                              </div>
+                            </td>
+                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                              <button
+                                className="text-indigo-600 hover:text-indigo-800 mr-4 transition-colors duration-200"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openEditModal(project, e);
+                                }}
+                              >
+                                <Pencil size={16} />
+                              </button>
+                              <button
+                                className="text-red-600 hover:text-red-900 transition-colors duration-200"
+                                onClick={(e) => handleDeleteProject(project.id, e)}
+                              >
+                                <Trash2 size={16} />
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  )}
+                </div>
+              )}
             </div>
           )}
         </>

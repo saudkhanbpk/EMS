@@ -138,7 +138,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
 
       const sendNotification = async () => {
         try {
-          const response = await fetch("http://localhost:4000/send-singlenotifications", {
+          const response = await fetch("https://ems-server-0bvq.onrender.com/send-singlenotifications", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(
@@ -163,7 +163,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
 
       const sendSlackNotification = async () => {
         try {
-          const response = await fetch("http://localhost:4000/send-slack", {
+          const response = await fetch("https://ems-server-0bvq.onrender.com/send-slack", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -189,7 +189,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         console.log("userEmail", userEmail);
 
         try {
-          const response = await fetch("http://localhost:4000/send-response", {
+          const response = await fetch("https://ems-server-0bvq.onrender.com/send-response", {
             method: "POST",
             headers: {
               "Content-Type": "application/json",
@@ -325,7 +325,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
 
     const sendNotification = async () => {
       try {
-        const response = await fetch("http://localhost:4000/send-singlenotifications", {
+        const response = await fetch("https://ems-server-0bvq.onrender.com/send-singlenotifications", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(
@@ -350,7 +350,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
     //Sending Slack Notification On Reject Request
     const sendSlackNotification = async () => {
       try {
-        const response = await fetch("http://localhost:4000/send-slackreject", {
+        const response = await fetch("https://ems-server-0bvq.onrender.com/send-slackreject", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -377,7 +377,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
       console.log("userEmail", useremail);
 
       try {
-        const response = await fetch("http://localhost:4000/send-rejectresponse", {
+        const response = await fetch("https://ems-server-0bvq.onrender.com/send-rejectresponse", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
