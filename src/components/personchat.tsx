@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Send, Paperclip, MoreVertical, Trash2, Check, CheckCheck, Image, Smile, X, PhoneCall, Video, ExternalLink, Info, Edit2 } from 'lucide-react';
+import { Send, Paperclip, MoreVertical, Trash2, Check, CheckCheck, ChevronDown, ChevronUp, Image, Smile, X, PhoneCall, Video, ExternalLink, Info, Edit2 } from 'lucide-react';
 import { useParams, Link } from 'react-router-dom';
 import { useUserContext } from '../lib/userprovider';
 import { deleteMessage, editMessage, fetchChatMessages, markMessagesAsSeen, sendMessage } from './chatlib/supabasefunc';
@@ -370,7 +370,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
     if (!chatuser) {
         return (
             <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
-                <div className="flex justify-center items-center h-full text-gray-500 bg-white p-4 rounded-t-lg shadow-xl">
+                <div className="flex justify-center items-center h-full text-gray-400 bg-black p-4 rounded-t-lg shadow-xl border border-gray-700">
                     <p className='text-xl'>No user found</p>
                 </div>
             </div>
@@ -380,7 +380,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
     if (chatuser.id === currentuser?.id) {
         return (
             <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
-                <div className="flex justify-center items-center h-full text-gray-500 bg-white p-4 rounded-t-lg shadow-xl">
+                <div className="flex justify-center items-center h-full text-gray-400 bg-black p-4 rounded-t-lg shadow-xl border border-gray-700">
                     <p className='text-xl'>You can't chat with yourself!</p>
                 </div>
             </div>
@@ -392,48 +392,58 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
     return (
         <div className="fixed bottom-0 left-1/2 transform -translate-x-1/2 z-50">
             <div
-                className={`flex flex-col ${isMinimized ? 'h-16' : 'h-[80vh]'} bg-white shadow-xl rounded-t-lg border transition-all duration-300`}
+                className={`flex flex-col ${isMinimized ? 'h-16' : 'h-[80vh]'} bg-black shadow-xl rounded-t-lg border border-gray-700 transition-all duration-300`}
                 style={{ maxWidth: '750px', width: '90vw' }}
             >
                 {/* LinkedIn-style Chat Header */}
-                <div className="bg-white p-3 flex items-center justify-between border-b shadow-sm rounded-t-lg">
+                <div className="bg-black p-3 flex items-center justify-between border-b border-gray-700 shadow-sm rounded-t-lg">
                     <div className="flex items-center space-x-3">
                         <div className="relative">
                             <img
                                 ref={userAvatarRef}
                                 className='h-10 w-10 rounded-full object-cover cursor-pointer hover:opacity-90 transition-opacity border border-gray-300'
-                                src={chatuser.role === "admin" ? "/admin.jpeg" : "/profile.png"}
+                                // Option 1: Inline approach
+                                src={(() => {
+                                    if (chatuser.profile_image) {
+                                        const { data: { publicUrl } } = supabase
+                                            .storage
+                                            .from("profilepics")
+                                            .getPublicUrl(chatuser.profile_image);
+                                        return publicUrl;
+                                    }
+                                    return chatuser.role === "admin" ? "./admin.jpeg" : "./profile.png";
+                                })()}
                                 alt="profile"
                                 onClick={() => setShowUserCard(!showUserCard)}
                             />
                             <span className="absolute bottom-0 right-0 w-2.5 h-2.5 bg-green-500 rounded-full border-2 border-white"></span>
                         </div>
                         <div
-                            className="flex flex-col cursor-pointer hover:text-blue-600 transition-colors"
+                            className="flex flex-col cursor-pointer hover:text-blue-400 transition-colors"
                             onClick={() => setShowUserCard(!showUserCard)}
                         >
-                            <h2 className="font-medium text-gray-900">{chatuser.full_name}</h2>
-                            <span className="text-xs text-gray-500">Online now</span>
+                            <h2 className="font-medium text-white">{chatuser.full_name}</h2>
+                            <span className="text-xs text-gray-400">Online now</span>
                         </div>
                     </div>
                     <div className="flex items-center space-x-2">
-                        <button className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                        <button className="text-gray-400 p-1.5 rounded-full hover:bg-gray-800 transition-colors">
                             <PhoneCall size={18} />
                         </button>
-                        <button className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                        <button className="text-gray-400 p-1.5 rounded-full hover:bg-gray-800 transition-colors">
                             <Video size={18} />
                         </button>
-                        <button className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors">
+                        <button className="text-gray-400 p-1.5 rounded-full hover:bg-gray-800 transition-colors">
                             <Info size={18} />
                         </button>
                         <button
-                            className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                            className="text-gray-400 p-1.5 rounded-full hover:bg-gray-800 transition-colors"
                             onClick={() => setIsMinimized(!isMinimized)}
                         >
-                            {isMinimized ? <Image size={18} /> : <MoreVertical size={18} />}
+                            {isMinimized ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
                         </button>
                         <button
-                            className="text-gray-500 p-1.5 rounded-full hover:bg-gray-100 transition-colors ml-1"
+                            className="text-gray-400 p-1.5 rounded-full hover:bg-gray-800 transition-colors ml-1"
                             onClick={() => closechatperson()}
                         >
                             <X size={18} />
@@ -450,7 +460,16 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                 <div className="h-20 bg-gray-100 rounded-t-lg"></div>
                                 <div className="absolute top-8 left-4">
                                     <img
-                                        src={chatuser.role === "admin" ? "/admin.jpeg" : "/profile.png"}
+                                        src={(() => {
+                                            if (chatuser.profile_image) {
+                                                const { data: { publicUrl } } = supabase
+                                                    .storage
+                                                    .from("profilepics")
+                                                    .getPublicUrl(chatuser.profile_image);
+                                                return publicUrl;
+                                            }
+                                            return chatuser.role === "admin" ? "./admin.jpeg" : "./profile.png";
+                                        })()}
                                         className="w-16 h-16 rounded-full border-4 border-white"
                                         alt={chatuser.full_name}
                                     />
@@ -489,21 +508,21 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                     !isMinimized && (
                         <div
                             ref={chatContainerRef}
-                            className="flex-grow overflow-y-auto bg-white px-4 py-2"
+                            className="flex-grow overflow-y-auto bg-black px-4 py-2"
                         >
                             {initialLoading ? (
                                 <div className="flex justify-center items-center h-full">
-                                    <p className="text-gray-500">Loading messages...</p>
+                                    <p className="text-gray-400">Loading messages...</p>
                                 </div>
                             ) : messages.length === 0 ? (
-                                <div className="flex justify-center items-center h-full text-gray-500">
+                                <div className="flex justify-center items-center h-full text-gray-400">
                                     <p>No messages yet. Start the conversation!</p>
                                 </div>
                             ) : (
                                 Object.keys(messageGroups).sort().map(dateKey => (
                                     <div key={dateKey} className="mb-4">
                                         <div className="flex justify-center my-4">
-                                            <div className="text-xs text-gray-500 bg-gray-100 px-3 py-1 rounded-full">
+                                            <div className="text-xs text-gray-300 bg-gray-800 px-3 py-1 rounded-full">
                                                 {getDayLabel(dateKey)}
                                             </div>
                                         </div>
@@ -513,7 +532,16 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                     <div className="flex items-start mb-1 group">
                                                         <div className="relative">
                                                             <img
-                                                                src={chatuser.role === "admin" ? "/admin.jpeg" : "/profile.png"}
+                                                                src={(() => {
+                                                                    if (chatuser.profile_image) {
+                                                                        const { data: { publicUrl } } = supabase
+                                                                            .storage
+                                                                            .from("profilepics")
+                                                                            .getPublicUrl(chatuser.profile_image);
+                                                                        return publicUrl;
+                                                                    }
+                                                                    return chatuser.role === "admin" ? "./admin.jpeg" : "./profile.png";
+                                                                })()}
                                                                 className="w-8 h-8 rounded-full mr-2 cursor-pointer hover:opacity-90 transition-opacity"
                                                                 alt="Profile"
                                                                 onClick={() => setShowUserCard(true)}
@@ -522,18 +550,18 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                         <div>
                                                             <div className="flex items-center mb-0.5">
                                                                 <span
-                                                                    className="font-medium text-sm mr-2 cursor-pointer hover:text-blue-600 transition-colors"
+                                                                    className="font-medium text-white text-sm mr-2 cursor-pointer hover:text-blue-600 transition-colors"
                                                                     onClick={() => setShowUserCard(true)}
                                                                 >
                                                                     {chatuser.full_name}
                                                                 </span>
-                                                                <span className="text-xs text-gray-500">{formatMessageTime(msg.created_at)}</span>
+                                                                <span className="text-xs text-gray-400">{formatMessageTime(msg.created_at)}</span>
                                                             </div>
-                                                            <div className="bg-gray-100 rounded-xl rounded-tl-none px-3 py-2 text-gray-800 max-w-xs sm:max-w-md relative group">
+                                                            <div className="bg-gray-800 rounded-xl rounded-tl-none px-3 py-2 text-white max-w-xs sm:max-w-md relative group">
                                                                 {msg.content}
                                                                 <div className="absolute left-0 -bottom-6 opacity-0 group-hover:opacity-100 transition-opacity flex space-x-1">
-                                                                    <button className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 transition-colors">
-                                                                        <Smile className="w-3.5 h-3.5 text-gray-600" />
+                                                                    <button className="bg-gray-700 rounded-full p-1 hover:bg-gray-600 transition-colors">
+                                                                        <Smile className="w-3.5 h-3.5 text-gray-300" />
                                                                     </button>
                                                                 </div>
                                                             </div>
@@ -542,14 +570,22 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                 ) : (
                                                     <div className="flex justify-end">
                                                         <div className="flex flex-col items-end max-w-xs sm:max-w-md">
+                                                            <div className="flex items-center mb-0.5 justify-end">
+                                                                <span className="text-xs text-gray-400 mr-1">{formatMessageTime(msg.created_at)}</span>
+                                                                {msg.seen ? (
+                                                                    <CheckCheck className="w-3.5 h-3.5 text-blue-400" />
+                                                                ) : (
+                                                                    <Check className="w-3.5 h-3.5 text-gray-400" />
+                                                                )}
+                                                            </div>
                                                             <div className="flex group relative">
                                                                 {editingMessageId === msg.id ? (
-                                                                    <div className="bg-blue-50 border border-blue-200 rounded-xl p-1 min-w-[200px]">
+                                                                    <div className="bg-gray-800 border border-gray-600 rounded-xl p-1 min-w-[200px]">
                                                                         <textarea
                                                                             ref={editInputRef}
                                                                             value={editingText}
                                                                             onChange={(e) => setEditingText(e.target.value)}
-                                                                            className="w-full p-2 outline-none text-gray-800 resize-none bg-transparent rounded-lg"
+                                                                            className="w-full p-2 outline-none text-white resize-none bg-transparent rounded-lg"
                                                                             rows={2}
                                                                             onKeyDown={(e) => {
                                                                                 if (e.key === 'Enter' && !e.shiftKey) {
@@ -563,7 +599,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                                         <div className="flex justify-end space-x-2 mt-1 px-2 pb-1">
                                                                             <button
                                                                                 onClick={handleCancelEditing}
-                                                                                className="px-2 py-1 text-xs text-gray-600 hover:text-gray-800"
+                                                                                className="px-2 py-1 text-xs text-gray-400 hover:text-gray-200"
                                                                             >
                                                                                 Cancel
                                                                             </button>
@@ -572,7 +608,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                                                 disabled={!editingText.trim()}
                                                                                 className={`px-2 py-1 text-xs rounded ${editingText.trim()
                                                                                     ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                                                                    : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                                                                    : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                                                                     }`}
                                                                             >
                                                                                 Save
@@ -582,38 +618,29 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                                                 ) : (
                                                                     <>
                                                                         {/* Message action buttons - Improved visibility */}
-                                                                        <div className="absolute right-full mr-1 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1 bg-white/80 p-0.5 rounded-lg shadow-sm">
+                                                                        <div className="absolute right-full mr-1 top-1/2 transform -translate-y-1/2 opacity-0 group-hover:opacity-100 transition-opacity duration-200 flex space-x-1 bg-black/80 p-0.5 rounded-lg shadow-sm">
                                                                             <button
                                                                                 onClick={() => handleStartEditing(msg)}
-                                                                                className="p-1.5 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                                                                                className="p-1.5 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
                                                                                 aria-label="Edit message"
                                                                             >
                                                                                 <Edit2 className="w-4 h-4" />
                                                                             </button>
                                                                             <button
                                                                                 onClick={() => handleDeleteMessage(msg.id)}
-                                                                                className="p-1.5 rounded-full bg-gray-200 text-gray-700 hover:bg-gray-300 transition-colors"
+                                                                                className="p-1.5 rounded-full bg-gray-700 text-gray-300 hover:bg-gray-600 transition-colors"
                                                                                 aria-label="Delete message"
                                                                             >
                                                                                 <Trash2 className="w-4 h-4" />
                                                                             </button>
                                                                         </div>
                                                                         <div className="absolute left-0 bottom-0 opacity-0 group-hover:opacity-100 transition-opacity flex items-center transform translate-y-full pt-1 space-x-1">
-                                                                            <button className="bg-gray-200 rounded-full p-1 hover:bg-gray-300 transition-colors">
-                                                                                <Smile className="w-3.5 h-3.5 text-gray-600" />
+                                                                            <button className="bg-gray-700 rounded-full p-1 hover:bg-gray-600 transition-colors">
+                                                                                <Smile className="w-3.5 h-3.5 text-gray-300" />
                                                                             </button>
                                                                         </div>
                                                                         <div className="bg-blue-600 text-white rounded-xl rounded-tr-none px-3 py-2 hover:bg-blue-700 transition-colors">
                                                                             {msg.content}
-                                                                        </div>
-                                                                        {/* Message status indicators */}
-                                                                        <div className="text-xs text-gray-500 flex items-center mt-1 justify-end">
-                                                                            <span className="mr-1">{formatMessageTime(msg.created_at)}</span>
-                                                                            {msg.seen ? (
-                                                                                <CheckCheck size={14} className="text-blue-500" />
-                                                                            ) : (
-                                                                                <Check size={14} />
-                                                                            )}
                                                                         </div>
                                                                     </>
                                                                 )}
@@ -635,8 +662,8 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                 {/* Message Input - Only show when not minimized */}
                 {
                     !isMinimized && (
-                        <div className="bg-white p-2 border-t mt-auto">
-                            <div className="rounded-lg border border-gray-300 bg-white">
+                        <div className="bg-black p-2 border-t border-gray-700 mt-auto">
+                            <div className="rounded-lg border border-gray-600 bg-gray-900">
                                 <textarea
                                     placeholder="Write a message..."
                                     value={messageText}
@@ -647,37 +674,37 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                             handleSendMessage();
                                         }
                                     }}
-                                    className="w-full p-3 outline-none text-gray-800 resize-none min-h-[40px] max-h-32 text-sm"
+                                    className="w-full p-3 outline-none text-white placeholder-gray-400 resize-none min-h-[40px] max-h-32 text-sm bg-transparent"
                                     rows={1}
                                 />
-                                <div className="flex justify-between items-center p-2 border-t">
+                                <div className="flex justify-between items-center p-2 border-t border-gray-700">
                                     <div className="flex space-x-1">
-                                        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors relative">
-                                            <Image className="w-5 h-5 text-gray-500" />
-                                            <div className="absolute bottom-full left-0 mb-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                                        <button className="p-1.5 rounded-full hover:bg-gray-800 transition-colors relative">
+                                            <Image className="w-5 h-5 text-gray-400" />
+                                            <div className="absolute bottom-full left-0 mb-2 bg-gray-700 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
                                                 Add image
                                             </div>
                                         </button>
-                                        <button className="p-1.5 rounded-full hover:bg-gray-100 transition-colors relative">
-                                            <Paperclip className="w-5 h-5 text-gray-500" />
-                                            <div className="absolute bottom-full left-0 mb-2 bg-gray-800 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
+                                        <button className="p-1.5 rounded-full hover:bg-gray-800 transition-colors relative">
+                                            <Paperclip className="w-5 h-5 text-gray-400" />
+                                            <div className="absolute bottom-full left-0 mb-2 bg-gray-700 text-white text-xs rounded px-2 py-1 opacity-0 group-hover:opacity-100 pointer-events-none whitespace-nowrap">
                                                 Attach file
                                             </div>
                                         </button>
                                         <div className="relative">
                                             <button
-                                                className="p-1.5 rounded-full hover:bg-gray-100 transition-colors"
+                                                className="p-1.5 rounded-full hover:bg-gray-800 transition-colors"
                                                 onClick={() => setShowEmojiPicker(!showEmojiPicker)}
                                             >
-                                                <Smile className="w-5 h-5 text-gray-500" />
+                                                <Smile className="w-5 h-5 text-gray-400" />
                                             </button>
                                             {showEmojiPicker && (
-                                                <div className="absolute bottom-full mb-2 bg-white rounded-lg shadow-lg border border-gray-200 p-2 w-64 grid grid-cols-7 gap-1">
+                                                <div className="absolute bottom-full mb-2 bg-gray-800 rounded-lg shadow-lg border border-gray-600 p-2 w-64 grid grid-cols-7 gap-1">
                                                     {/* Simple emoji picker UI */}
                                                     {['😀', '😂', '😊', '🥰', '😍', '🤔', '😎', '👍', '👏', '❤️', '🎉', '🔥', '💯', '🙏'].map((emoji) => (
                                                         <button
                                                             key={emoji}
-                                                            className="text-xl hover:bg-gray-100 p-1 rounded"
+                                                            className="text-xl hover:bg-gray-700 p-1 rounded"
                                                             onClick={() => {
                                                                 setMessageText(prev => prev + emoji);
                                                                 setShowEmojiPicker(false);
@@ -695,7 +722,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                         disabled={!messageText.trim() || isSending}
                                         className={`px-4 py-1.5 rounded-full text-sm font-medium ${messageText.trim() && !isSending
                                             ? 'bg-blue-600 text-white hover:bg-blue-700'
-                                            : 'bg-gray-200 text-gray-400 cursor-not-allowed'
+                                            : 'bg-gray-700 text-gray-500 cursor-not-allowed'
                                             } transition-colors`}
                                     >
                                         {isSending ? 'Sending...' : 'Send'}

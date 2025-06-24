@@ -5,6 +5,7 @@ import React, {
   useCallback,
   useRef,
 } from "react";
+import { motion } from "framer-motion";
 import {
   User,
   Search,
@@ -119,9 +120,17 @@ const ChatUserItem: React.FC<ChatUserItemProps> = ({
       )}
       <div className="relative mr-4">
         <img
-          src={
-            chatUser.role === "admin" ? "./admin.jpeg" : "./profile.png"
-          }
+          // Option 1: Inline approach
+          src={(() => {
+            if (chatUser.profile_image) {
+              const { data: { publicUrl } } = supabase
+                .storage
+                .from("profilepics")
+                .getPublicUrl(chatUser.profile_image);
+              return publicUrl;
+            }
+            return chatUser.role === "admin" ? "./admin.jpeg" : "./profile.png";
+          })()}
           alt={chatUser.full_name}
           className="w-12 h-12 rounded-full object-cover"
         />
@@ -158,6 +167,7 @@ const ChatSidebar = ({ closechat, openchatperson }) => {
   const { chatUsers } = useUserContext();
   const currentUser = useAuthStore((state) => state.user);
   const navigate = useNavigate();
+  console.log("the chat user is", chatUsers)
   const [filteredUsers, setFilteredUsers] = useState<any[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
   const [totalUnseenCount, setTotalUnseenCount] = useState(0);
@@ -275,9 +285,36 @@ const ChatSidebar = ({ closechat, openchatperson }) => {
   }, [navigate, closechat]);
 
   return (
-    <div
+    <motion.div
       ref={sidebarRef}
-      className="fixed top-28 right-0 w-full max-w-xs bg-black border-l border-gray-800 h-[calc(100vh-7rem)] flex flex-col z-50"
+      initial={{
+        x: "calc(100% - 80px)", // Position at chat button location (16px margin + 64px button width)
+        y: "calc(100vh - 7rem - 80px)", // Position at bottom where chat button is
+        scale: 0,
+        opacity: 0,
+        transformOrigin: "bottom right"
+      }}
+      animate={{
+        x: 0,
+        y: 0,
+        scale: 1,
+        opacity: 1,
+        transformOrigin: "bottom right"
+      }}
+      exit={{
+        x: "calc(100% - 80px)",
+        y: "calc(100vh - 7rem - 80px)",
+        scale: 0,
+        opacity: 0,
+        transformOrigin: "bottom right"
+      }}
+      transition={{
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        opacity: { duration: 0.3 }
+      }}
+      className="fixed md:top-32 right-0 w-full max-w-xs bg-black border-l border-gray-800 md:h-[calc(100vh-8rem)] h-full flex flex-col z-50 overflow-hidden"
     >
       <div className="p-4 flex items-center justify-between border-b border-gray-800">
         <div className="flex items-center space-x-2">
@@ -333,7 +370,7 @@ const ChatSidebar = ({ closechat, openchatperson }) => {
           </div>
         )}
       </div>
-    </div>
+    </motion.div>
   );
 };
 
