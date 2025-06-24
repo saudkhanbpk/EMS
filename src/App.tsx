@@ -78,7 +78,7 @@
 //           .catch((error) => {
 //             console.error("SW registration failed:", error);
 //           });
-  
+
 //         }  
 //         requestNotificationPermission();
 //     }
@@ -210,7 +210,7 @@
 //   //   );
 //   // }
 
- 
+
 
 //   return (
 //     <Router>
@@ -305,12 +305,13 @@ import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
 import Adminroute from './components/adminroute';
+import { AnimatePresence } from 'framer-motion';
 
 
 function App() {
   const user = useAuthStore((state) => state.user);
   const setUser = useAuthStore((state) => state.setUser);
-  
+
   // Initialize chat state
   const [chatperson, setchatperson] = useState<boolean>(false);
   const [selecteduser, setselecteduser] = useState<null | string>(null);
@@ -329,7 +330,7 @@ function App() {
   const closeChat = () => {
     setischatopen(false);
   };
-  
+
   const closechatperson = () => {
     setchatperson(false);
     setselecteduser(null);
@@ -366,7 +367,7 @@ function App() {
         .from('users')
         .update({ push_subscription: subscription })
         .eq('id', user?.id);
-      
+
       if (!error) console.log('Subscription saved!');
     }
   };
@@ -389,41 +390,42 @@ function App() {
   return (
     <Router>
       {/* Chat Sidebar - LinkedIn style */}
-      {ischatopen && (
-        <div className="fixed inset-0 z-50 flex pointer-events-none">
-          {/* Invisible overlay to capture clicks outside the sidebar */}
-          <div
-            className="fixed inset-0 pointer-events-auto"
-            onClick={closeChat}
-          ></div>
-          {/* The actual sidebar */}
-          <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
-            <ChatSidebar closechat={closeChat} openchatperson={openchatperson} />
+      <AnimatePresence>
+        {ischatopen && (
+          <div className="fixed inset-0 z-50 flex pointer-events-none">
+            {/* Invisible overlay to capture clicks outside the sidebar */}
+            <div
+              className="fixed inset-0 pointer-events-auto"
+              onClick={closeChat}
+            ></div>
+            {/* The actual sidebar */}
+            <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
+              <ChatSidebar closechat={closeChat} openchatperson={openchatperson} />
+            </div>
           </div>
-        </div>
-      )}
-
+        )}
+      </AnimatePresence>
       {chatperson && <Chat id={selecteduser} closechatperson={closechatperson} />}
       {!ischatopen && <Chatlayout><Chatbutton openchat={openChat} /></Chatlayout>}
-      
+
       {/* App Routes */}
       <Routes>
-         {/* Public Route: Login */}
-         <Route path="/login" element={<Login />} />
+        {/* Public Route: Login */}
+        <Route path="/login" element={<Login />} />
 
-         {/* Widget Demo Route */}
-         <Route path="/widget-demo" element={<WidgetDemo />} />
-         <Route path='/chat-admin' element={<Adminroute> <ChatSidebar/></Adminroute>}></Route>
-         <Route path="chat-admin/:id" element={ <Adminroute> <Chat/></Adminroute>}></Route>
+        {/* Widget Demo Route */}
+        <Route path="/widget-demo" element={<WidgetDemo />} />
+        <Route path='/chat-admin' element={<Adminroute> <ChatSidebar /></Adminroute>}></Route>
+        <Route path="chat-admin/:id" element={<Adminroute> <Chat /></Adminroute>}></Route>
 
-         {/* Admin Route (Protected) */}
-         <Route
+        {/* Admin Route (Protected) */}
+        <Route
           path="/admin"
           element={
             <PrivateRoute adminOnly>
               <AttendanceProvider>
-                
-               <Adminroute><AdminPage /></Adminroute>
+
+                <Adminroute><AdminPage /></Adminroute>
               </AttendanceProvider>
             </PrivateRoute>
           }
@@ -450,9 +452,9 @@ function App() {
           <Route path="board/:id" element={<TaskBoard />} />
           <Route path="profile" element={<ProfileCard />} />
           <Route path="dailylogs" element={<DailyLogs />} />
-          <Route path='chat' element={<ChatSidebar/>}></Route>
+          <Route path='chat' element={<ChatSidebar />}></Route>
           <Route path="chat/:id" element={<Chat />} />
-    
+
         </Route>
 
         {/* Redirect unknown routes to login */}
@@ -462,9 +464,9 @@ function App() {
   );
 }
 
-const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({ 
-  children, 
-  adminOnly 
+const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
+  children,
+  adminOnly
 }) => {
   const user = useAuthStore((state) => state.user);
   if (!user) return <Navigate to="/login" replace />;
