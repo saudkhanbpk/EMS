@@ -7,11 +7,9 @@ import {
   FiTrash2,
   FiX,
   FiPlusSquare,
-  FiUserPlus,
 } from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
 import TaskBoardAdmin from "../components/TaskBoardAdmin";
-import { ArrowLeft, ArrowRight } from "lucide-react";
 
 interface Employee {
   id: string;
@@ -23,6 +21,9 @@ interface Employee {
   TotalKPI?: number;
   role?: string;
   // Add other employee properties as needed
+  lastincrement?: string | null; // Last increment date (nullable)
+  upcomingincrement?: string | null; // Upcoming increment date (nullable)
+  rating?: number; // Employee rating (nullable)
 }
 
 interface Project {
@@ -31,11 +32,10 @@ interface Project {
   devops: any[];
 }
 
-const EmployeesDetails = ({ selectedTab }) => {
+const EmployeesDetails = () => {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
-  const [employee, setEmployee] = useState<Employee | null>(null);
   const [employeeview, setEmployeeView] = useState<
     "generalview" | "detailview"
   >("generalview");
@@ -52,12 +52,11 @@ const EmployeesDetails = ({ selectedTab }) => {
   });
 
   const [selectedTAB, setSelectedTAB] = useState("");
-  const [ProjectId, setProjectId] = useState<string>("");
-  const [devopss, setDevopss] = useState<any[]>([]);
   const [performancePeriod, setPerformancePeriod] = useState<
     "daily" | "weekly" | "monthly"
   >("daily");
   const [showPerformanceMenu, setShowPerformanceMenu] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
 
   const { openTaskBoard } = useContext(AttendanceContext);
   const formRef = useRef<HTMLFormElement>(null);
@@ -68,7 +67,28 @@ const EmployeesDetails = ({ selectedTab }) => {
     password: "",
   });
 
-  const [formData, setFormData] = useState({
+  // Restore needed state variables for TaskBoardAdmin and employee selection
+  const [devopss, setDevopss] = useState<any[]>([]);
+  const [ProjectId, setProjectId] = useState<string>("");
+  const [employee, setEmployee] = useState<Employee | null>(null);
+
+  // Ensure formData uses the FormDataType with index signature
+  type FormDataType = {
+    full_name: string;
+    role: string;
+    phone: string;
+    email: string;
+    personal_email: string;
+    location: string;
+    profession: string;
+    per_hour_pay: string;
+    salary: string;
+    slack_id: string;
+    joining_date: string;
+    profile_image: File | null;
+    [key: string]: any;
+  };
+  const [formData, setFormData] = useState<FormDataType>({
     full_name: "",
     role: "employee",
     phone: "",
@@ -80,7 +100,7 @@ const EmployeesDetails = ({ selectedTab }) => {
     salary: "",
     slack_id: "",
     joining_date: "",
-    profile_image: null as File | null,
+    profile_image: null,
   });
 
   const [step, setStep] = useState(1);
@@ -136,6 +156,8 @@ const EmployeesDetails = ({ selectedTab }) => {
       } else if (performancePeriod === "monthly") {
         startDate = new Date(today.getFullYear(), today.getMonth(), 1);
       }
+      // Add check for startDate before using .toISOString()
+      if (!startDate) return;
       // Fetch ratings for all employees from dailylog (latest rating per employee in period)
       const { data: ratingsData, error: ratingsError } = await supabase
         .from("dailylog")
@@ -146,7 +168,7 @@ const EmployeesDetails = ({ selectedTab }) => {
         console.error("Error fetching ratings:", ratingsError.message);
       }
       // Map: userid -> latest rating in period
-      const latestRatings = {};
+      const latestRatings: { [key: string]: any } = {};
       if (ratingsData) {
         // For each user, find the latest rating in the period
         ratingsData.forEach((row) => {
@@ -163,7 +185,7 @@ const EmployeesDetails = ({ selectedTab }) => {
       // Process employee data
       const employeesWithProjects = employeesData.map((employee) => {
         const employeeProjects = projectsData.filter((project) =>
-          project.devops?.some((dev) => dev.id === employee.id)
+          project.devops?.some((dev: any) => dev.id === employee.id)
         );
         // Get last increment date
         let increamentdataone = "N/A";
@@ -187,7 +209,7 @@ const EmployeesDetails = ({ selectedTab }) => {
         }
         const employeeTasks = tasksData.filter(
           (task) =>
-            task.devops?.some((dev) => dev.id === employee.id) &&
+            task.devops?.some((dev: any) => dev.id === employee.id) &&
             task.status?.toLowerCase() !== "done"
         );
         const totalKPI = employeeTasks.reduce(
@@ -196,7 +218,7 @@ const EmployeesDetails = ({ selectedTab }) => {
         );
         const employeeTaskscompleted = tasksData.filter(
           (task) =>
-            task.devops?.some((dev) => dev.id === employee.id) &&
+            task.devops?.some((dev: any) => dev.id === employee.id) &&
             task.status?.toLowerCase() == "done"
         );
         const completedKPI = employeeTaskscompleted.reduce(
@@ -244,7 +266,7 @@ const EmployeesDetails = ({ selectedTab }) => {
     }
 
     const userProjects = allProjects.filter((project) =>
-      project.devops?.some((item) => item.id === employee.id)
+      project.devops?.some((item: any) => item.id === employee.id)
     );
 
     setUserProjects(userProjects);
@@ -733,7 +755,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                     onChange={(e) =>
                       setFormData((prev) => ({
                         ...prev,
-                        profile_image: e.target.files?.[0] || null,
+                        profile_image: e.target.files && e.target.files[0] ? e.target.files[0] : null,
                       }))
                     }
                     className="w-full px-4 py-2 border border-gray-300 rounded-lg"
@@ -1002,7 +1024,7 @@ const EmployeesDetails = ({ selectedTab }) => {
                                 onChange={(e) =>
                                   setFormData((prev) => ({
                                     ...prev,
-                                    profile_image: e.target.files[0],
+                                    profile_image: e.target.files && e.target.files[0] ? e.target.files[0] : null,
                                   }))
                                 }
                                 className="hidden"
@@ -1038,127 +1060,6 @@ const EmployeesDetails = ({ selectedTab }) => {
             </div>
           )}
 
-          {/* Assign Task Modal */}
-          {showModal && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-              <div className="bg-white rounded-xl shadow-2xl w-full max-w-md">
-                <div className="p-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h2 className="text-xl font-bold text-gray-800">
-                      Assign Task to {employee?.full_name}
-                    </h2>
-                    <button
-                      onClick={() => setShowModal(false)}
-                      className="text-gray-400 hover:text-gray-600 transition-colors"
-                    >
-                      <FiX className="w-5 h-5" />
-                    </button>
-                  </div>
-
-                  <form className="space-y-4">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Title *
-                      </label>
-                      <input
-                        type="text"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
-                        value={assignment.title}
-                        onChange={(e) =>
-                          setAssignment((prev) => ({
-                            ...prev,
-                            title: e.target.value,
-                          }))
-                        }
-                        required
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Project
-                      </label>
-                      {userProjects.length > 0 ? (
-                        <select
-                          className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
-                          value={assignment.project}
-                          onChange={(e) =>
-                            setAssignment((prev) => ({
-                              ...prev,
-                              project: e.target.value,
-                            }))
-                          }
-                        >
-                          {userProjects.map((project) => (
-                            <option key={project.id} value={project.title}>
-                              {project.title}
-                            </option>
-                          ))}
-                        </select>
-                      ) : (
-                        <p className="text-sm text-gray-500 py-2">
-                          No projects available
-                        </p>
-                      )}
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Description
-                      </label>
-                      <textarea
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
-                        rows={3}
-                        value={assignment.description}
-                        onChange={(e) =>
-                          setAssignment((prev) => ({
-                            ...prev,
-                            description: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Score
-                      </label>
-                      <input
-                        type="number"
-                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
-                        value={assignment.score}
-                        onChange={(e) =>
-                          setAssignment((prev) => ({
-                            ...prev,
-                            score: e.target.value,
-                          }))
-                        }
-                      />
-                    </div>
-
-                    <div className="flex justify-end space-x-3 pt-4">
-                      <button
-                        type="button"
-                        onClick={() => setShowModal(false)}
-                        className="px-5 py-2.5 text-sm font-medium rounded-lg border border-gray-300 hover:bg-gray-50 transition-colors"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleAssignSubmit}
-                        disabled={!assignment.title}
-                        className="px-5 py-2.5 text-sm font-medium rounded-lg bg-[#9A00FF] text-white hover:bg-[#8a00e6] transition-colors shadow-sm disabled:opacity-70 disabled:cursor-not-allowed"
-                      >
-                        Assign Task
-                      </button>
-                    </div>
-                  </form>
-                </div>
-              </div>
-            </div>
-          )}
-
           {/* Main Content */}
           <div className="max-w-7xl mx-auto">
             {/* General Employee View */}
@@ -1176,14 +1077,27 @@ const EmployeesDetails = ({ selectedTab }) => {
                       </p>
                     </div>
                     <div className="flex items-center gap-3">
-                      <div className="flex items-center px-4 py-2 rounded-full bg-gray-50 border border-gray-200">
-                        <span className="w-2.5 h-2.5 bg-green-500 rounded-full mr-2"></span>
-                        <span className="text-sm text-gray-600">
-                          Total:{" "}
-                          <span className="font-semibold">
-                            {employees.length}
-                          </span>
-                        </span>
+                      <div className="relative w-48">
+                        <input
+                          type="text"
+                          placeholder="Search employees..."
+                          value={searchQuery}
+                          onChange={(e) => setSearchQuery(e.target.value)}
+                          className="w-full px-4 py-2 pr-10 border border-gray-300 rounded-lg focus:ring-2 focus:ring-[#9A00FF] focus:border-transparent"
+                        />
+                        <div className="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none">
+                          <svg
+                            className="w-5 h-5 text-gray-400"
+                            viewBox="0 0 20 20"
+                            fill="currentColor"
+                          >
+                            <path
+                              fillRule="evenodd"
+                              d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z"
+                              clipRule="evenodd"
+                            />
+                          </svg>
+                        </div>
                       </div>
                       <button
                         onClick={() => setShowForm(true)}
@@ -1338,141 +1252,94 @@ const EmployeesDetails = ({ selectedTab }) => {
                               </tr>
                             </thead>
                             <tbody className="bg-white divide-y divide-gray-200">
-                              {employees.map((entry) => (
-                                <tr
-                                  key={entry.id}
-                                  className="hover:bg-gray-50 transition-colors"
-                                >
-                                  <td className="px-4 lg:px-2 py-4 whitespace-nowrap">
-                                    <button
+                              {employees
+                                .filter(
+                                  (entry) =>
+                                    entry.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                                    entry.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                                )
+                                .map((entry) => {
+                                  return (
+                                    <tr
+                                      key={entry.id}
+                                      className="hover:bg-gray-50 transition-colors cursor-pointer"
                                       onClick={() => {
                                         setEmployee(entry);
                                         setEmployeeId(entry.id);
                                         setEmployeeView("detailview");
                                       }}
-                                      className="flex items-center gap-2 lg:gap-3 group"
                                     >
-                                      <div className="flex-shrink-0 h-8 w-8 lg:h-10 lg:w-10 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs lg:text-sm">
-                                        {
-                                          entry.full_name
-                                            ?.toLocaleUpperCase()
-                                            .split(" ")[0][0]
-                                        }
-                                      </div>
-                                      <div className="text-left">
-                                        <div className="text-xs lg:text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors truncate max-w-[120px] lg:max-w-full">
-                                          {entry.full_name}
+                                      <td className="px-4 lg:px-2 py-4 whitespace-nowrap">
+                                        <div className="flex items-center gap-3">
+                                          <div className="h-9 w-9 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs">
+                                            {entry.full_name?.charAt(0) || '?'}
+                                          </div>
+                                          <div>
+                                            <div className="font-semibold text-gray-800 text-sm">
+                                              {entry.full_name || 'N/A'}
+                                            </div>
+                                            <div className="text-xs text-gray-500">{entry.email || 'N/A'}</div>
+                                          </div>
                                         </div>
-                                        <div className="text-xs text-gray-500 truncate max-w-[120px] lg:max-w-full">
-                                          {entry.email}
-                                        </div>
-                                      </div>
-                                    </button>
-                                  </td>
-                                  <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
-                                    {(() => {
-                                      const date = new Date(entry.joining_date);
-                                      return isNaN(date.getTime())
-                                        ? "N/A"
-                                        : date.toLocaleDateString("en-US", {
-                                            year: "numeric",
-                                            month: "short",
-                                            day: "numeric",
-                                          });
-                                    })()}
-                                  </td>
-                                  <td className="px-3 lg:px-34 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
-                                    <span className="text-sm">
-                                      {entry.lastincrement &&
-                                      entry.lastincrement !== "N/A"
-                                        ? new Date(
-                                            entry.lastincrement
-                                          ).toLocaleDateString("en-US", {
-                                            year: "numeric",
-                                            month: "short",
-                                            day: "numeric",
-                                          })
-                                        : "N/A"}
-                                    </span>
-                                  </td>
-                                  <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-xs lg:text-sm text-gray-500">
-                                    <span className="text-sm">
-                                      {entry.upcomingincrement &&
-                                      entry.upcomingincrement !== "N/A"
-                                        ? new Date(
-                                            entry.upcomingincrement
-                                          ).toLocaleDateString("en-US", {
-                                            year: "numeric",
-                                            month: "short",
-                                            day: "numeric",
-                                          })
-                                        : "N/A"}
-                                    </span>
-                                  </td>
-                                  <td className="px-4 lg:px-4 py-4">
-                                    {entry.projects?.length > 0 ? (
-                                      <div className="flex flex-wrap gap-1 lg:gap-1.5">
-                                        {entry.projects
-                                          .slice(0, 2)
-                                          .map((project: any, idx: number) => (
-                                            <button
-                                              key={idx}
-                                              onClick={() =>
-                                                openTaskBoard(
-                                                  entry.projectid[idx],
-                                                  entry.id
-                                                )
-                                              }
-                                              className="px-2 py-0.5 lg:px-2.5 lg:py-1 text-xs rounded-full bg-indigo-50 text-indigo-700 truncate max-w-[80px] lg:max-w-[120px] xl:max-w-full"
-                                            >
-                                              {typeof project === "string"
-                                                ? project
-                                                : project.title}
-                                            </button>
-                                          ))}
-                                        {entry.projects.length > 2 && (
-                                          <span className="px-2 py-0.5 lg:px-2.5 lg:py-1 text-xs rounded-full bg-gray-100 text-gray-600">
-                                            +{entry.projects.length - 2}
-                                          </span>
+                                      </td>
+                                      <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {entry.joining_date && entry.joining_date !== 'NA' ? new Date(entry.joining_date).toLocaleDateString() : 'N/A'}
+                                      </td>
+                                      <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {entry.lastincrement && entry.lastincrement !== 'N/A' ? new Date(entry.lastincrement).toLocaleDateString() : 'N/A'}
+                                      </td>
+                                      <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {entry.upcomingincrement && entry.upcomingincrement !== 'N/A' ? new Date(entry.upcomingincrement).toLocaleDateString() : 'N/A'}
+                                      </td>
+                                      <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        {entry.projects && entry.projects.length > 0 ? (
+                                          <div className="flex flex-wrap gap-1.5">
+                                            {entry.projects.slice(0, 2).map((project: any) => (
+                                              <button
+                                                key={project.id}
+                                                onClick={() => openTaskBoard(project.id, project.devops)}
+                                                className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
+                                              >
+                                                {project.title}
+                                              </button>
+                                            ))}
+                                            {entry.projects.length > 2 && (
+                                              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+                                                +{entry.projects.length - 2}
+                                              </span>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">Not assigned</span>
                                         )}
-                                      </div>
-                                    ) : (
-                                      <span className="text-xs lg:text-sm text-gray-400">
-                                        Not assigned
-                                      </span>
-                                    )}
-                                  </td>
-                                  <td className="px-4 lg:px-4 py-4 whitespace-nowrap">
-                                    <span className="text-xs lg:text-sm text-gray-700 font-semibold">
-                                      {entry.activeTaskCount || 0} Active
-                                    </span>
-                                  </td>
-                                  <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-center">
-                                    <StarDisplay
-                                      rating={entry.rating || 0}
-                                      size="md"
-                                    />
-                                  </td>
-                                  <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                    <div className="flex justify-end items-center gap-1 lg:gap-2">
-                                      <button
-                                        onClick={() => handleAssignClick(entry)}
-                                        className="p-1.5 lg:p-2 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
-                                        title="Assign Task"
-                                      >
-                                        <FiPlusSquare className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                                      </button>
-                                      <button
-                                        onClick={() => handleDelete(entry.id)}
-                                        className="p-1.5 lg:p-2 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                                        title="Delete"
-                                      >
-                                        <FiTrash2 className="w-3.5 h-3.5 lg:w-4 lg:h-4" />
-                                      </button>
-                                    </div>
-                                  </td>
-                                </tr>
-                              ))}
+                                      </td>
+                                      <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
+                                        <span className="font-medium">{entry.TotalKPI ?? 0}</span>
+                                      </td>
+                                      <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-center">
+                                        <StarDisplay rating={typeof entry.rating === 'number' ? entry.rating : 0} size="md" />
+                                      </td>
+                                      <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-right">
+                                        <div className="flex items-center gap-2 justify-end">
+                                          <button
+                                            onClick={() => handleAssignClick(entry)}
+                                            className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
+                                            title="Assign Task"
+                                          >
+                                            <FiPlusSquare className="w-4 h-4" />
+                                          </button>
+                                          <button
+                                            onClick={() => handleDelete(entry.id)}
+                                            className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                                            title="Delete"
+                                          >
+                                            <FiTrash2 className="w-4 h-4" />
+                                          </button>
+                                        </div>
+                                      </td>
+                                    </tr>
+                                  );
+                                })}
                             </tbody>
                           </table>
                         </div>
@@ -1481,196 +1348,129 @@ const EmployeesDetails = ({ selectedTab }) => {
 
                     {/* Mobile card view - shown only on small screens */}
                     <div className="md:hidden">
-                      {employees.map((entry) => (
-                        <div
-                          key={entry.id}
-                          className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden border border-gray-200"
-                        >
-                          <div className="p-4">
-                            <div className="flex items-center justify-between mb-3">
-                              <button
-                                onClick={() => {
-                                  setEmployee(entry);
-                                  setEmployeeId(entry.id);
-                                  setEmployeeView("detailview");
-                                }}
-                                className="flex items-center gap-3 group"
-                              >
-                                <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs">
-                                  {
-                                    entry.full_name
-                                      ?.toLocaleUpperCase()
-                                      .split(" ")[0][0]
-                                  }
-                                </div>
-                                <div className="text-left">
-                                  <div className="text-sm font-medium text-gray-900 group-hover:text-[#9A00FF] transition-colors truncate max-w-[120px]">
-                                    {entry.full_name}
-                                  </div>
-                                  <div className="text-xs text-gray-500 truncate max-w-[120px]">
-                                    {entry.email}
-                                  </div>
-                                </div>
-                              </button>
-
-                              <div className="flex items-center gap-1">
+                      {employees
+                        .filter(
+                          (entry) =>
+                            entry.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                            entry.email?.toLowerCase().includes(searchQuery.toLowerCase())
+                        )
+                        .map((entry) => (
+                          <div
+                            key={entry.id}
+                            className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden border border-gray-200"
+                          >
+                            <div className="p-4">
+                              <div className="flex items-center justify-between mb-3">
                                 <button
-                                  onClick={() => handleAssignClick(entry)}
-                                  className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
-                                  title="Assign Task"
+                                  onClick={() => {
+                                    setEmployee(entry);
+                                    setEmployeeId(entry.id);
+                                    setEmployeeView("detailview");
+                                  }}
+                                  className="flex items-center gap-3 group"
                                 >
-                                  <FiPlusSquare className="w-3.5 h-3.5" />
+                                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs">
+                                    {entry.full_name?.charAt(0) || '?'}
+                                  </div>
+                                  <div className="text-left">
+                                    <div className="font-semibold text-gray-800 text-sm">
+                                      {entry.full_name || 'N/A'}
+                                    </div>
+                                    <div className="text-xs text-gray-500">{entry.email || 'N/A'}</div>
+                                  </div>
                                 </button>
-                                <button
-                                  onClick={() => handleDelete(entry.id)}
-                                  className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                                  title="Delete"
-                                >
-                                  <FiTrash2 className="w-3.5 h-3.5" />
-                                </button>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleAssignClick(entry)}
+                                    className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
+                                    title="Assign Task"
+                                  >
+                                    <FiPlusSquare className="w-3.5 h-3.5" />
+                                  </button>
+                                  <button
+                                    onClick={() => handleDelete(entry.id)}
+                                    className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                                    title="Delete"
+                                  >
+                                    <FiTrash2 className="w-3.5 h-3.5" />
+                                  </button>
+                                </div>
                               </div>
-                            </div>
+                              <div className="grid grid-cols-2 gap-2 text-xs">
+                                <div className="space-y-0.5">
+                                  <p className="text-gray-500 font-medium">
+                                    Joined
+                                  </p>
+                                  <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
+                                    {entry.joining_date && entry.joining_date !== 'NA' ? new Date(entry.joining_date).toLocaleDateString() : 'N/A'}
+                                  </p>
+                                </div>
 
-                            <div className="grid grid-cols-2 gap-2 text-xs">
-                              <div className="space-y-0.5">
-                                <p className="text-gray-500 font-medium">
-                                  Joined
-                                </p>
-                                <p className="text-gray-700">
-                                  {new Date(
-                                    entry.joining_date
-                                  ).toLocaleDateString("en-US", {
-                                    year: "numeric",
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </p>
-                              </div>
-
-                              {/* <div className="space-y-0.5 ">
-                                <p className="text-gray-500 font-medium" >
-                                  Completed Points
-                                </p>
-                                <p className="text-gray-700 truncate font-semibold  max-w-[120px] ">
-                                  {entry.completedKPI}
-                                </p>
-                              </div> */}
-                            </div>
-
-                            <div className="mt-3 space-y-0.5">
-                              <p className="text-gray-500 font-medium text-xs">
-                                Projects
-                              </p>
-                              {/* {entry.projects?.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5 mt-1">
-                            {entry.projects.slice(0, 2).map((project: any) => (
-                              <button
-                                key={project.id}
-                                onClick={() => openTaskBoard(project.id, project.devops)}
-                                className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
-                              >
-                                {project}
-                              </button>
-                            ))}
-                            {entry.projects.length > 2 && (
-                              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-                                +{entry.projects.length - 2}
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-xs text-gray-400">Not assigned</span>
-                        )} */}
-                              {entry.projects?.length > 0 ? (
-                                <div className="flex flex-wrap gap-1.5">
-                                  {entry.projects
-                                    .slice(0, 2)
-                                    .map((project: any, idx: number) => (
-                                      <span
-                                        key={idx}
-                                        className="inline-block bg-indigo-50 text-indigo-700 rounded-full px-2 py-0.5 mr-1 mb-1 text-xs"
-                                      >
-                                        {typeof project === "string"
-                                          ? project
-                                          : project.title}
-                                      </span>
-                                    ))}
-                                  {entry.projects.length > 2 && (
-                                    <span className="inline-block bg-gray-100 text-gray-600 rounded-full px-2 py-0.5 text-xs">
-                                      +{entry.projects.length - 2}
+                                <div className="space-y-0.5">
+                                  <p className="text-gray-500 font-medium">
+                                    Last Increment
+                                  </p>
+                                  <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
+                                    {entry.lastincrement && entry.lastincrement !== 'N/A' ? new Date(entry.lastincrement).toLocaleDateString() : 'N/A'}
+                                  </p>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="text-gray-500 font-medium">
+                                    Upcoming Increment
+                                  </p>
+                                  <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
+                                    {entry.upcomingincrement && entry.upcomingincrement !== 'N/A' ? new Date(entry.upcomingincrement).toLocaleDateString() : 'N/A'}
+                                  </p>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="text-gray-500 font-medium">
+                                    Projects
+                                  </p>
+                                  {entry.projects && entry.projects.length > 0 ? (
+                                    <div className="flex flex-wrap gap-1.5 mt-1">
+                                      {entry.projects
+                                        .slice(0, 2)
+                                        .map((project: any) => (
+                                          <button
+                                            key={project.id}
+                                            onClick={() =>
+                                              openTaskBoard(project.id, project.devops)
+                                            }
+                                            className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
+                                          >
+                                            {project.title}
+                                          </button>
+                                        ))}
+                                      {entry.projects.length > 2 && (
+                                        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
+                                          +{entry.projects.length - 2}
+                                        </span>
+                                      )}
+                                    </div>
+                                  ) : (
+                                    <span className="text-xs text-gray-400">
+                                      Not assigned
                                     </span>
                                   )}
                                 </div>
-                              ) : (
-                                <span className="text-xs text-gray-400">
-                                  Not assigned
-                                </span>
-                              )}
-                            </div>
-
-                            <div className="mt-3 space-y-0.5">
-                              <p className="text-gray-500 font-medium text-xs">
-                                Workload
-                              </p>
-                              {/* <div className="flex items-center gap-2">
-                          <div className={`w-2.5 h-2.5 rounded-full ${entry.TotalKPI <= 20 ? "bg-red-500" :
-                              entry.TotalKPI <= 70 ? "bg-amber-500" :
-                                entry.TotalKPI <= 120 ? "bg-green-500" :
-                                  "bg-blue-500"
-                            }`}></div>
-                          <span className="text-xs font-medium">
-                            {entry.TotalKPI ?? 0}
-                          </span>
-                        </div>
-                        <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
-                          <div
-                            className={`h-1.5 rounded-full ${entry.TotalKPI <= 20 ? "bg-red-500" :
-                                entry.TotalKPI <= 70 ? "bg-amber-500" :
-                                  entry.TotalKPI <= 120 ? "bg-green-500" :
-                                    "bg-blue-500"
-                              }`}
-                            style={{ width: `${Math.min(entry.TotalKPI, 100)}%` }}
-                          ></div>
-                        </div> */}
-                              <div className="flex items-center gap-2">
-                                <div
-                                  className={`w-3 h-3 rounded-full ${
-                                    (entry.TotalKPI || 0) <= 50
-                                      ? "bg-red-500"
-                                      : (entry.TotalKPI || 0) <= 100
-                                      ? "bg-amber-500"
-                                      : (entry.TotalKPI || 0) <= 150
-                                      ? "bg-green-500"
-                                      : "bg-purple-500"
-                                  }`}
-                                ></div>
-                                <span className="text-sm font-medium">
-                                  {entry.TotalKPI ?? 0}
-                                </span>
-                              </div>
-                              <div className="mt-1 w-full bg-gray-200 rounded-full h-1.5">
-                                {/* <div
-                                  className={`h-1.5 rounded-full ${
-                                    (entry.TotalKPI || 0) <= 50
-                                      ? "bg-red-500"
-                                      : (entry.TotalKPI || 0) <= 100
-                                      ? "bg-amber-500"
-                                      : (entry.TotalKPI || 0) <= 150
-                                      ? "bg-green-500"
-                                      : "bg-purple-500"
-                                  }`}
-                                  style={{
-                                    width: `${Math.min(
-                                      entry.TotalKPI || 0,
-                                      150
-                                    )}%`,
-                                  }}
-                                ></div> */}
+                                <div className="space-y-0.5">
+                                  <p className="text-gray-500 font-medium">
+                                    Workload
+                                  </p>
+                                  <span className="text-xs font-medium">
+                                    {entry.TotalKPI ?? 0}
+                                  </span>
+                                </div>
+                                <div className="space-y-0.5">
+                                  <p className="text-gray-500 font-medium">
+                                    Performance
+                                  </p>
+                                  <StarDisplay rating={typeof entry.rating === 'number' ? entry.rating : 0} size="md" />
+                                </div>
                               </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 )}

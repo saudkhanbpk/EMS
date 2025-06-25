@@ -1621,7 +1621,7 @@ const Employeeprofile = ({
             <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
               <DollarSign className="text-purple-600 h-4 w-4" />
             </div>
-            <h2 className="text-gray-800 font-medium">Earnings</h2>
+            <h2 className="text-gray-800 font-medium">Earningssss</h2>
           </div>
 
           <div className="space-y-4">
@@ -1633,7 +1633,7 @@ const Employeeprofile = ({
             </div>
 
             <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Total Hours</span>
+              <span className="text-gray-500 text-sm">Completed Hours</span>
               <span className="text-gray-600 text-sm">
                 {selectedmonth
                   ? monthlyData.totalWorkingHours

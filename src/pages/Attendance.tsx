@@ -355,110 +355,71 @@ const Attendance: React.FC = () => {
 
   //Handle Check in
   const handleCheckIn = async () => {
-
     if (!user) {
       setError('User not authenticated');
       return;
     }
-    const now = new Date();
 
-    // Convert the current time to Pakistan Time (PKT)
-    const timeZone = 'Asia/Karachi'; // Pakistan Time Zone
-    const pktTime = toZonedTime(now, timeZone); // Convert to Pakistan Time
-    const formattedTime = format(pktTime, 'yyyy-MM-dd HH:mm:ss', { timeZone });
-    console.log('Current Pakistan Time:', formattedTime);
-
-    const hours = pktTime.getHours();
-    const minutes = pktTime.getMinutes();
-    const totalMinutes = hours * 60 + minutes;
-    const startOfWorkDay = 6 * 60 + 0; // 6:00 AM in minutes
-    const endOfWorkDay = 18 * 60 + 0; // 6:00 PM in minutes
-    if (totalMinutes < startOfWorkDay || totalMinutes > endOfWorkDay) {
-      alert("Please Do Checkin After 6:00 AM");
-      return;
-    } else {
-
-      try {
-        setLoading(true);
-        setError(null);
+    try {
+      setLoading(true);
+      setError(null);
 
 
-        const position = await getCurrentLocation();
-        const { latitude, longitude } = position.coords;
+      const position = await getCurrentLocation();
+      const { latitude, longitude } = position.coords;
 
-        setCurrentLocation({ lat: latitude, lng: longitude });
+      setCurrentLocation({ lat: latitude, lng: longitude });
 
-        const now = new Date();
-        const checkInTimeLimit = parse('09:30', 'HH:mm', now);
 
-        let attendanceStatus = 'present';
-        if (isAfter(now, checkInTimeLimit)) {
-          attendanceStatus = 'late';
-        }
+      // Use server time for check_in
+      // Insert without check_in, let Supabase use default now()
+      const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
+      const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
 
-        const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
-        const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
-
-        // If outside office location, prompt for remote check-in confirmation
-        if (mode === 'remote') {
-          const confirmRemote = window.confirm(
-            "Your check-in will be counted as Remote because you are currently outside the office zone. If you don’t have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
-          );
-
-          if (!confirmRemote) {
-            console.log("Remote check-in aborted by user.");
-            return;
-          }
-        }
-
-        const { data, error: dbError }: { data: AttendanceRecord, error: any } = await withRetry(() =>
-          supabase
-            .from('attendance_logs')
-            .insert([
-              {
-                user_id: localStorage.getItem('user_id'),
-                check_in: now.toISOString(),
-                work_mode: mode,
-                latitude,
-                longitude,
-                status: attendanceStatus
-              }
-            ])
-            .select()
-            .single()
+      // If outside office location, prompt for remote check-in confirmation
+      if (mode === 'remote') {
+        const confirmRemote = window.confirm(
+          "Your check-in will be counted as Remote because you are currently outside the office zone. If you don’t have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
         );
 
-
-
-        // Putting Half Day For Employee Checkin if the Checkin is After 11 am
-        //  const checkInTime = now.getHours() * 60 + now.getMinutes(); // Convert time to minutes
-        //  const cutoffTime = 11 * 60; // 11:00 AM in minutes
-        //  if (checkInTime > cutoffTime) {
-        //    await withRetry(() =>
-        //             supabase.from('absentees')
-        //          .insert([{
-        //          user_id: localStorage.getItem('user_id'),
-        //          absentee_type: 'Absent',
-        //          absentee_Timing: 'Half Day',
-        //        }
-        //      ])
-        //    );
-        //  }
-
-
-        if (dbError) throw dbError;
-
-        setIsCheckedIn(true);
-        setCheckIn(now.toISOString());
-        setWorkMode(mode);
-        setAttendanceId(data.id);
-        await loadAttendanceRecords();
-      } catch (err) {
-        setError(handleSupabaseError(err));
-      } finally {
-        setLoading(false);
+        if (!confirmRemote) {
+          console.log("Remote check-in aborted by user.");
+          return;
+        }
       }
-    };
+
+      // Insert attendance record, let Supabase set check_in to now()
+      const { data, error: dbError } = await withRetry(() =>
+        supabase
+          .from('attendance_logs')
+          .insert([
+            {
+              user_id: localStorage.getItem('user_id'),
+              // check_in: not set, let server use now()
+              work_mode: mode,
+              latitude,
+              longitude,
+              status: 'present', // You may want to recalculate status after fetching server time
+            }
+          ])
+          .select()
+          .single()
+      );
+
+
+
+      if (dbError) throw dbError;
+
+      setIsCheckedIn(true);
+      setCheckIn(data.check_in); // Use the value returned from the server
+      setWorkMode(mode);
+      setAttendanceId(data.id);
+      await loadAttendanceRecords();
+    } catch (err) {
+      setError(handleSupabaseError(err));
+    } finally {
+      setLoading(false);
+    }
   }
 
 
