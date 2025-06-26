@@ -1,4 +1,31 @@
+// Utility functions (place near your imports)
+const getWorkingDaysInMonth = (year: number, month: number) => {
+  const date = new Date(year, month, 1);
+  let workingDays = 0;
+
+  while (date.getMonth() === month) {
+    const day = date.getDay();
+    // Monday (1) to Friday (5) only
+    if (day >= 1 && day <= 5) workingDays++;
+    date.setDate(date.getDate() + 1);
+  }
+
+  return workingDays;
+};
+
+const calculateExpectedHours = (year: number, month: number) => {
+  return getWorkingDaysInMonth(year, month) * 7; // 7 hours per working day
+};
+
+const getCurrentMonth = () => {
+  const now = new Date();
+  const year = now.getFullYear();
+  const month = String(now.getMonth() + 1).padStart(2, '0');
+  return `${year}-${month}`;
+};
+
 import React, { useEffect, useState } from "react";
+
 import { supabase } from "../lib/supabase";
 import {
   Mail,
@@ -44,8 +71,9 @@ const Employeeprofile = ({
   const [error, setError] = useState(null);
   const [isEditMode, setIsEditMode] = useState(false);
   const [incrementModel, setIncrementModel] = useState(false);
+  const [expectedHours, setExpectedHours] = useState<number | null>(null);
   const [lastIncrement, setLastIncrement] = useState(null); // Changed from increment to lastIncrement for clarity
-  const [selectedmonth, setselectedmonth] = useState("");
+  const [selectedmonth, setselectedmonth] = useState(getCurrentMonth());
   const [startdate, setStartdate] = useState("");
   const [enddate, setEnddate] = useState("");
   const [monthlyData, setMonthlyData] = useState({
@@ -60,6 +88,9 @@ const Employeeprofile = ({
     completedTasksScore: 0,
     projectsCount: 0,
   });
+
+// Add this right after your imports
+
 
   // Function to fetch data for the selected month
   const fetchMonthlyData = async (startDate, endDate) => {
@@ -433,42 +464,35 @@ const Employeeprofile = ({
   };
 
   // Handle month selection
-  useEffect(() => {
-    if (selectedmonth) {
-      try {
-        // Parse the selected month (format: "YYYY-MM")
-        const [year, month] = selectedmonth.split("-").map(Number);
-
-        // Create date objects for the first and last day of the month
-        // Set time to start of day (00:00:00) for the first day
-        const startOfMonthDate = new Date(
-          Date.UTC(year, month - 1, 1, 0, 0, 0, 0)
-        );
-
-        // Get the last day of the month and set time to end of day (23:59:59.999)
-        const lastDay = new Date(Date.UTC(year, month, 0)).getDate(); // Last day of the month
-        const endOfMonthDate = new Date(
-          Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999)
-        );
-
-        console.log("Selected month:", selectedmonth);
-        console.log("Start of Month:", startOfMonthDate.toISOString());
-        console.log("End of Month:", endOfMonthDate.toISOString());
-
-        // Set the start and end dates
-        setStartdate(startOfMonthDate.toISOString());
-        setEnddate(endOfMonthDate.toISOString());
-
-        // Fetch data for the selected month
-        fetchMonthlyData(
-          startOfMonthDate.toISOString(),
-          endOfMonthDate.toISOString()
-        );
-      } catch (err) {
-        console.error("Error processing dates:", err);
+ useEffect(() => {
+  // This will now run with current month on initial load
+  if (selectedmonth) {
+    try {
+      const [year, month] = selectedmonth.split('-').map(Number);
+      const workingDays = getWorkingDaysInMonth(year, month - 1);
+      const hours = workingDays * 7;
+      setExpectedHours(hours);
+      
+      if (formData.salary) {
+        setFormData(prev => ({
+          ...prev,
+          per_hour_pay: (parseFloat(prev.salary) / hours).toFixed(2)
+        }));
       }
+
+      const startOfMonthDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+      const lastDay = new Date(Date.UTC(year, month, 0)).getDate();
+      const endOfMonthDate = new Date(Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999));
+
+      setStartdate(startOfMonthDate.toISOString());
+      setEnddate(endOfMonthDate.toISOString());
+      fetchMonthlyData(startOfMonthDate.toISOString(), endOfMonthDate.toISOString());
+
+    } catch (err) {
+      console.error("Error processing dates:", err);
     }
-  }, [selectedmonth, employeeid]);
+  }
+}, [selectedmonth, employeeid]);
 
   const [incrementData, setIncrementData] = useState({
     user_id: employeeid,
@@ -513,13 +537,43 @@ const Employeeprofile = ({
   const [incrementHistory, setIncrementHistory] = useState<
     IncrementHistoryItem[]
   >([]);
-
-  const getEmploymentDuration = (joinDate) => {
+const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
     const today = new Date();
     const diffTime = Math.abs(today - joined);
     return Math.ceil(diffTime / (1000 * 60 * 60 * 24 * 30)) + " months";
   };
+
+
+ useEffect(() => {
+    if (selectedmonth) {
+      try {
+        const [year, month] = selectedmonth.split('-').map(Number);
+        const workingDays = getWorkingDaysInMonth(year, month - 1);
+        const hours = workingDays * 7;
+        setExpectedHours(hours);
+        
+        // Calculate per hour rate if salary exists
+        if (formData.salary) {
+          setFormData(prev => ({
+            ...prev,
+            per_hour_pay: (parseFloat(prev.salary) / hours).toFixed(2)
+          }));
+        }
+
+        const startOfMonthDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+        const lastDay = new Date(Date.UTC(year, month, 0)).getDate();
+        const endOfMonthDate = new Date(Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999));
+
+        setStartdate(startOfMonthDate.toISOString());
+        setEnddate(endOfMonthDate.toISOString());
+        fetchMonthlyData(startOfMonthDate.toISOString(), endOfMonthDate.toISOString());
+
+      } catch (err) {
+        console.error("Error processing dates:", err);
+      }
+    }
+  }, [selectedmonth, employeeid]);
 
   const handleImageChange = (e) => {
     const file = e.target.files[0];
@@ -1091,6 +1145,20 @@ const Employeeprofile = ({
     if (employeeid) fetchEmployee();
   }, [employeeid]);
 
+// Usage in your component
+useEffect(() => {
+  if (selectedmonth) {
+    const [year, month] = selectedmonth.split('-').map(Number);
+    const workingDays = getWorkingDaysInMonth(year, month - 1); // month is 0-indexed
+    const expectedHours = workingDays * 7;
+    
+    setFormData(prev => ({
+      ...prev,
+      per_hour_pay: (parseFloat(prev.salary) / expectedHours).toFixed(2)
+    }));
+  }
+}, [selectedmonth, formData.salary]);
+
   const handleEditClick = () => {
     // Initialize the incrementData with the lastIncrement data if available
     if (lastIncrement) {
@@ -1300,6 +1368,31 @@ const Employeeprofile = ({
 
   if (loading) return <div className="text-center p-4">Loading profile...</div>;
   if (!employeeData) return <div className="p-4">No employee found</div>;
+
+
+
+  const calculateWorkingDays = (year: number, month: number) => {
+  let workingDays = 0;
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  
+  for (let day = 1; day <= daysInMonth; day++) {
+    const dayOfWeek = new Date(year, month, day).getDay();
+    // Monday to Friday (1-5), excluding Saturday (6) and Sunday (0)
+    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+      workingDays++;
+    }
+  }
+  return workingDays;
+};
+
+const calculateExpectedHours = (year: number, month: number) => {
+  return calculateWorkingDays(year, month) * 7; // 8 hours per working day
+};
+
+
+
+// Add this with your other useEffect hooks
+
 
   return (
     <div className="w-full flex flex-col justify-center  items-center min-h-screen  bg-gray-50 p-6">
@@ -1616,68 +1709,91 @@ const Employeeprofile = ({
         </div>
 
         {/* Earnings Card */}
-        <div className="bg-white rounded-lg shadow-md p-6 w-72">
-          <div className="flex items-center mb-4">
-            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-              <DollarSign className="text-purple-600 h-4 w-4" />
-            </div>
-            <h2 className="text-gray-800 font-medium">Earningssss</h2>
-          </div>
+     {/* Earnings Card */}
+<div className="bg-white rounded-lg shadow-md p-6 w-72">
+  <div className="flex items-center mb-4">
+    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+      <DollarSign className="text-purple-600 h-4 w-4" />
+    </div>
+    <h2 className="text-gray-800 font-medium">Earnings</h2>
+  </div>
 
-          <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Basic Pay</span>
-              <span className="text-gray-600 text-sm">
-                {employeeData?.salary || "0"}
-              </span>
-            </div>
+  <div className="space-y-4">
+    <div className="flex justify-between">
+      <span className="text-gray-500 text-sm">Basic Pay</span>
+      <span className="text-gray-600 text-sm">
+        {employeeData?.salary || "0"}
+      </span>
+    </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Completed Hours</span>
-              <span className="text-gray-600 text-sm">
-                {selectedmonth
-                  ? monthlyData.totalWorkingHours
-                  : employeeData?.totalWorkingHours || 0}
-              </span>
-            </div>
+    <div className="flex justify-between">
+      <span className="text-gray-600">Expected Hours</span>
+      <span className="font-semibold text-gray-800">
+        {selectedmonth 
+          ? (() => {
+              const [year, month] = selectedmonth.split('-').map(Number);
+              return getWorkingDaysInMonth(year, month - 1) * 7;
+            })()
+          : "Select a month"}
+      </span>
+    </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Pay Per Hour</span>
-              <span className="text-gray-600 text-sm">
-                {employeeData?.per_hour_pay || "0"}
-              </span>
-            </div>
+    <div className="flex justify-between">
+      <span className="text-gray-600">Completed Hours</span>
+      <span className="font-semibold text-gray-800">
+        {selectedmonth ? monthlyData.totalWorkingHours : "Select a month"}
+      </span>
+    </div>
+<div className="flex justify-between">
+  <span className="text-gray-600">Pay Per Hour</span>
+  <span className="font-semibold text-gray-800">
+    {selectedmonth && employeeData?.salary
+      ? (
+          (
+            parseFloat(employeeData.salary) / 
+            (
+              getWorkingDaysInMonth(
+                parseInt(selectedmonth.split('-')[0]), 
+                parseInt(selectedmonth.split('-')[1]) - 1
+              ) * 7
+            )
+          ).toFixed(2)
+        )
+      : "Select a month"}
+  </span>
+</div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Overtime</span>
-              <span className="text-gray-600 text-sm">
-                {selectedmonth
-                  ? monthlyData.overtimePay
-                  : employeeData?.overtimePay || "0"}
-                {selectedmonth && (
-                  <span className="text-xs text-gray-400 ml-1">(monthly)</span>
-                )}
-              </span>
-            </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Total Earning</span>
-              <span className="text-gray-600 text-sm">
-                {employeeData?.salary
-                  ? selectedmonth
-                    ? (
-                        parseFloat(employeeData.salary) +
-                        parseFloat(monthlyData.overtimePay || "0")
-                      ).toFixed(2) + (selectedmonth ? "" : "")
-                    : (
-                        parseFloat(employeeData.salary) +
-                        parseFloat(employeeData.overtimePay || "0")
-                      ).toFixed(2)
-                  : "0"}
-              </span>
-            </div>
-          </div>
-        </div>
+    <div className="flex justify-between">
+      <span className="text-gray-500 text-sm">Overtime</span>
+      <span className="text-gray-600 text-sm">
+        {selectedmonth
+          ? monthlyData.overtimePay
+          : employeeData?.overtimePay || "0"}
+        {selectedmonth && (
+          <span className="text-xs text-gray-400 ml-1">(monthly)</span>
+        )}
+      </span>
+    </div>
+
+    <div className="flex justify-between">
+      <span className="text-gray-500 text-sm">Total Earning</span>
+      <span className="text-gray-600 text-sm">
+        {employeeData?.salary
+          ? selectedmonth
+            ? (
+                parseFloat(employeeData.salary) +
+                parseFloat(monthlyData.overtimePay || "0")
+              ).toFixed(2)
+            : (
+                parseFloat(employeeData.salary) +
+                parseFloat(employeeData.overtimePay || "0")
+              ).toFixed(2)
+          : "0"}
+      </span>
+    </div>
+  </div>
+</div>
 
         {/* Deductions Card */}
         <div className="bg-white rounded-lg shadow-md p-6 w-72">
@@ -1963,19 +2079,23 @@ const Employeeprofile = ({
                   />
                 </div>
 
-                <div className="space-y-2">
-                  <label className="block text-gray-700 font-medium">
-                    Per Hour Pay
-                  </label>
-                  <input
-                    type="text"
-                    name="per_hour_pay"
-                    value={formData.per_hour_pay}
-                    onChange={handleChange}
-                    className="w-full p-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all"
-                    placeholder="Enter hourly rate"
-                  />
-                </div>
+<div className="space-y-2">
+  <label className="block text-gray-700 font-medium">
+    Per Hour Pay
+  </label>
+  <input
+    type="text"
+    name="per_hour_pay"
+    value={formData.per_hour_pay || ""}
+    readOnly
+    className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed"
+  />
+  {expectedHours !== null && (
+    <p className="text-xs text-gray-500">
+      Calculated: {formData.salary || 0} ÷ {expectedHours} hours = {formData.per_hour_pay || 0}/hr
+    </p>
+  )}
+</div>
 
                 <div className="space-y-2">
                   <label className="block text-gray-700 font-medium">

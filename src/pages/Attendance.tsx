@@ -376,6 +376,12 @@ const Attendance: React.FC = () => {
       const distance = calculateDistance(latitude, longitude, OFFICE_LATITUDE, OFFICE_LONGITUDE);
       const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
 
+      // Calculate status based on current time in Pakistan (Asia/Karachi)
+      const nowInPakistan = toZonedTime(new Date(), 'Asia/Karachi');
+      const nineThirty = new Date(nowInPakistan);
+      nineThirty.setHours(9, 30, 0, 0);
+      const status = nowInPakistan > nineThirty ? 'late' : 'present';
+
       // If outside office location, prompt for remote check-in confirmation
       if (mode === 'remote') {
         const confirmRemote = window.confirm(
@@ -399,7 +405,7 @@ const Attendance: React.FC = () => {
               work_mode: mode,
               latitude,
               longitude,
-              status: 'present', // You may want to recalculate status after fetching server time
+              status, // calculated based on time in Pakistan
             }
           ])
           .select()

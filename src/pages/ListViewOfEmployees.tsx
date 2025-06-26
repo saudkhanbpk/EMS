@@ -2502,6 +2502,39 @@ const EmployeeAttendanceTable = () => {
                   Present: <span className="font-bold">{present}</span>
                 </h2>
               </button>
+               <button
+                onClick={() => handleFilterChange("late")}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${
+                  currentFilter === "late" ? "bg-yellow-100" : ""
+                }`}
+              >
+                <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
+                <h2 className="text-yellow-600 md:text-xl text-sm">
+                  Late: <span className="font-bold">{late}</span>
+                </h2>
+              </button>
+               <button
+                onClick={() => handleFilterChange("remote")}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
+                  currentFilter === "remote" ? "bg-purple-100" : ""
+                }`}
+              >
+                <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
+                <h2 className="text-purple-600 md:text-xl text-sm">
+                  Remote: <span className="font-bold">{remote}</span>
+                </h2>
+              </button>
+               <button
+                onClick={() => handleFilterChange("remote")}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
+                  currentFilter === "remote" ? "bg-purple-100" : ""
+                }`}
+              >
+                <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
+                <h2 className="text-purple-600 md:text-xl text-sm">
+                  Leave: <span className="font-bold">{remote}</span>
+                </h2>
+              </button>
               <button
                 onClick={() => handleFilterChange("absent")}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${
@@ -2513,28 +2546,8 @@ const EmployeeAttendanceTable = () => {
                   Absent: <span className="font-bold">{absent}</span>
                 </h2>
               </button>
-              <button
-                onClick={() => handleFilterChange("late")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${
-                  currentFilter === "late" ? "bg-yellow-100" : ""
-                }`}
-              >
-                <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
-                <h2 className="text-yellow-600 md:text-xl text-sm">
-                  Late: <span className="font-bold">{late}</span>
-                </h2>
-              </button>
-              <button
-                onClick={() => handleFilterChange("remote")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === "remote" ? "bg-purple-100" : ""
-                }`}
-              >
-                <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
-                <h2 className="text-purple-600 md:text-xl text-sm">
-                  Remote: <span className="font-bold">{remote}</span>
-                </h2>
-              </button>
+             
+             
             </div>
           </div>
 
