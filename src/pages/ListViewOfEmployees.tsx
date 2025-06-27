@@ -95,6 +95,7 @@ const EmployeeAttendanceTable = () => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedMode, setSelectedMode] = useState("remote");
   const [present, setPresent] = useState(0);
+  const [leaveRequestsData, setLeaveRequestsData] = useState([]);
 
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
@@ -802,6 +803,30 @@ const EmployeeAttendanceTable = () => {
       fetchleaves();
     }
   }, [userID]);
+
+  useEffect(() => {
+  // Fetch leave requests when component mounts
+  const fetchLeaveRequests = async () => {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      const { data, error } = await supabase
+        .from("leave_requests")
+        .select("full_name, user_email, status, leave_type, leave_date")
+        .eq("status", "approved")
+        .eq("leave_date", today);
+
+      if (error) {
+        console.error("Error fetching leave requests:", error);
+      } else {
+        setLeaveRequestsData(data || []);
+      }
+    } catch (err) {
+      console.error("Error fetching leave requests:", err);
+    }
+  };
+
+  fetchLeaveRequests();
+}, []);
 
   useEffect(() => {
     console.log("selected tab on Leaves Fetching :", selectedTab);
@@ -2047,42 +2072,94 @@ const EmployeeAttendanceTable = () => {
   };
 
   // Handle filter change
-  const handleFilterChange = (filter) => {
-    setCurrentFilter(filter);
-    switch (filter) {
-      case "all":
-        setFilteredData(attendanceData);
-        break;
-      case "present":
-        setFilteredData(
-          attendanceData.filter(
-            (entry) => entry.status.toLowerCase() === "present"
-          )
-        );
-        break;
-      case "absent":
-        setFilteredData(
-          attendanceData.filter(
-            (entry) => entry.status.toLowerCase() === "absent"
-          )
-        );
-        break;
-      case "late":
-        setFilteredData(
-          attendanceData.filter(
-            (entry) => entry.status.toLowerCase() === "late"
-          )
-        );
-        break;
-      case "remote":
-        setFilteredData(
-          attendanceData.filter((entry) => entry.work_mode === "remote")
-        );
-        break;
-      default:
-        setFilteredData(attendanceData);
-    }
-  };
+  // const handleFilterChange = (filter) => {
+  //   setCurrentFilter(filter);
+  //   switch (filter) {
+  //     case "all":
+  //       setFilteredData(attendanceData);
+  //       break;
+  //     case "present":
+  //       setFilteredData(
+  //         attendanceData.filter(
+  //           (entry) => entry.status.toLowerCase() === "present"
+  //         )
+  //       );
+  //       break;
+  //     case "absent":
+  //       setFilteredData(
+  //         attendanceData.filter(
+  //           (entry) => entry.status.toLowerCase() === "absent"
+  //         )
+  //       );
+  //       break;
+  //     case "late":
+  //       setFilteredData(
+  //         attendanceData.filter(
+  //           (entry) => entry.status.toLowerCase() === "late"
+  //         )
+  //       );
+  //       break;
+  //     case "remote":
+  //       setFilteredData(
+  //         attendanceData.filter((entry) => entry.work_mode === "remote")
+  //       );
+  //       break;
+  //     default:
+  //       setFilteredData(attendanceData);
+  //   }
+  // };
+const handleFilterChange = async (filter) => {
+  setCurrentFilter(filter);
+  switch (filter) {
+    case "all":
+      setFilteredData(attendanceData);
+      break;
+    case "present":
+      setFilteredData(
+        attendanceData.filter((entry) => entry.status.toLowerCase() === "present")
+      );
+      break;
+    case "absent":
+      setFilteredData(
+        attendanceData.filter((entry) => entry.status.toLowerCase() === "absent")
+      );
+      break;
+    case "late":
+      setFilteredData(
+        attendanceData.filter((entry) => entry.status.toLowerCase() === "late")
+      );
+      break;
+    case "remote":
+      setFilteredData(
+        attendanceData.filter((entry) => entry.work_mode === "remote")
+      );
+      break;
+    case "leave":
+      try {
+        const today = new Date(selectedDate).toISOString().split('T')[0];
+        const { data, error } = await supabase
+          .from("leave_requests")
+          .select("full_name, user_email, status, leave_type, leave_date")
+          .eq("status", "approved")
+          .eq("leave_date", today);
+
+       if (error) {
+          setError(error.message);
+          setLeaveRequestsData([]);
+        } else {
+          setLeaveRequestsData(data || []);
+          // Clear the filtered data to hide regular attendance table
+          setFilteredData([]);
+        }
+      } catch (err) {
+        setError("Failed to fetch leave requests");
+        setLeaveRequestsData([]);
+      }
+      break;
+    default:
+      setFilteredData(attendanceData);
+  }
+};
   const handlenotification = () => {
     Notification.requestPermission().then(() => {
       const notification = new Notification("Office Time Update", {
@@ -2524,17 +2601,17 @@ const EmployeeAttendanceTable = () => {
                   Remote: <span className="font-bold">{remote}</span>
                 </h2>
               </button>
-               <button
-                onClick={() => handleFilterChange("remote")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === "remote" ? "bg-purple-100" : ""
-                }`}
-              >
-                <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
-                <h2 className="text-purple-600 md:text-xl text-sm">
-                  Leave: <span className="font-bold">{remote}</span>
-                </h2>
-              </button>
+           <button
+  onClick={() => handleFilterChange("leave")}
+  className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
+    currentFilter === "leave" ? " bg-purple-100" : ""
+  }`}
+>
+  <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
+  <h2 className="text-purple-600 md:text-xl text-sm">
+    Leave: <span className="font-bold">{leaveRequestsData.length}</span>
+  </h2>
+</button>
               <button
                 onClick={() => handleFilterChange("absent")}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${
@@ -2550,58 +2627,81 @@ const EmployeeAttendanceTable = () => {
              
             </div>
           </div>
-
-          {/* Attendance Table */}
-          <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
-            {error && <p className="text-red-500 text-center">{error}</p>}
-            <div className="overflow-x-auto">
-              <div className="w-full shadow-sm rounded-lg">
-                {/* Table view for medium and larger screens */}
-                <div className="hidden sm:block overflow-x-auto">
-                  <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
-                    <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
-                      <tr>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                          Name
-                        </th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                          Check-in
-                        </th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                          Check-out
-                        </th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                          2nd Check-in
-                        </th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                          Mode
-                        </th>
-                        <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                          Status
-                        </th>
-                      </tr>
-                    </thead>
+{currentFilter === "leave" ? (
+  // Leave Requests View
+  <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
+    <h2 className="text-xl font-bold mb-4 text-purple-700">Approved Leave Requests (Today)</h2>
+    {leaveRequestsData.length > 0 ? (
+      <table className="min-w-full bg-white text-sm">
+        <thead className="bg-gray-50 text-gray-700 uppercase">
+          <tr>
+            <th className="py-2 px-4 text-left">FULL NAME</th>
+            <th className="py-2 px-4 text-left">EMAIL</th>
+            <th className="py-2 px-4 text-left">TYPE</th>
+          </tr>
+        </thead>
+        <tbody>
+          {leaveRequestsData.map((req, idx) => (
+            <tr key={idx} className="border-b">
+              <td className="py-2 px-4">{req.full_name}</td>
+              <td className="py-2 px-4">{req.user_email}</td>
+              <td className="py-2 px-4">{req.leave_type}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    ) : (
+      <p className="text-gray-500 py-4 text-center">No approved leave requests for today</p>
+    )}
+  </div>
+) : (
+  // Regular Attendance View
+  <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
+    {error && <p className="text-red-500 text-center">{error}</p>}
+    <div className="overflow-x-auto">
+      <div className="w-full shadow-sm rounded-lg">
+        {/* Desktop Table View */}
+        <div className="hidden sm:block overflow-x-auto">
+          <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
+            <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
+              <tr>
+                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                  Name
+                </th>
+                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                  Check-in
+                </th>
+                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                  Check-out
+                </th>
+                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                  2nd Check-in
+                </th>
+                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                  Mode
+                </th>
+                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                  Status
+                </th>
+              </tr>
+            </thead>
                     <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
-                      {filteredData.map((entry, index) => (
-                        <tr
-                          key={index}
-                          className="border-b border-gray-200 hover:bg-gray-50 transition-all"
-                        >
-                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
-                            <span
-                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${
-                                entry.status === "present"
-                                  ? "text-green-600"
-                                  : entry.status === "late"
-                                  ? "text-yellow-600"
-                                  : "text-red-600"
-                              }`}
-                              title={entry.full_name}
-                            >
-                              {entry.full_name.charAt(0).toUpperCase() +
-                                entry.full_name.slice(1)}
-                            </span>
-                          </td>
+              {filteredData.map((entry, index) => (
+                <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+                  <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
+                    <span
+                      className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${
+                        entry.status === "present"
+                          ? "text-green-600"
+                          : entry.status === "late"
+                          ? "text-yellow-600"
+                          : "text-red-600"
+                      }`}
+                      title={entry.full_name}
+                    >
+                      {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
+                    </span>
+                  </td>
                           <td
                             className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
                             onClick={() => handleCheckinOpenModal(entry)}
@@ -3055,6 +3155,7 @@ const EmployeeAttendanceTable = () => {
               </div>
             </div>
           </div>
+        )}
 
           {isModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -3768,6 +3869,8 @@ const EmployeeAttendanceTable = () => {
                                       </span>
                                     </div>
                                   </div>
+
+                                  
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-3 sm:p-4">

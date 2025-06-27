@@ -14,7 +14,7 @@ const getWorkingDaysInMonth = (year: number, month: number) => {
 };
 
 const calculateExpectedHours = (year: number, month: number) => {
-  return getWorkingDaysInMonth(year, month) * 7; // 7 hours per working day
+  return getWorkingDaysInMonth(year, month) * 7;
 };
 
 const getCurrentMonth = () => {
@@ -22,6 +22,22 @@ const getCurrentMonth = () => {
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   return `${year}-${month}`;
+};
+
+// Function to calculate overtime earnings based on new rules
+const calculateOvertimeEarnings = (overtimeHours: number, basicPerHourRate: number) => {
+  if (overtimeHours <= 0) return 0;
+
+  let overtimeRate = 0;
+  if (overtimeHours <= 20) {
+    overtimeRate = basicPerHourRate * 0.8; // 80% of basic rate
+  } else if (overtimeHours <= 40) {
+    overtimeRate = basicPerHourRate * 0.75; // 75% of basic rate
+  } else {
+    overtimeRate = basicPerHourRate * 0.7; // 70% of basic rate
+  }
+
+  return overtimeHours * overtimeRate;
 };
 
 import React, { useEffect, useState } from "react";
@@ -80,8 +96,8 @@ const Employeeprofile = ({
     totalAttendance: 0,
     totalAbsents: 0,
     totalLeaves: 0,
-    totalWorkingHours: 0,
-    totalOvertimeHours: 0,
+    totalWorkingHours: "0",
+    totalOvertimeHours: "0",
     overtimePay: "0",
     activeTaskCount: 0,
     completedTaskCount: 0,
@@ -89,8 +105,248 @@ const Employeeprofile = ({
     projectsCount: 0,
   });
 
+  // Deductions state
+  const [deductionsData, setDeductionsData] = useState({
+    advance_pay: "0",
+    property_damage: "0",
+    deducted: "0",
+    month: "",
+  });
+  const [selectedDeductionMonth, setSelectedDeductionMonth] = useState(getCurrentMonth());
+  const [isEditingDeductions, setIsEditingDeductions] = useState(false);
+  const [deductionsLoading, setDeductionsLoading] = useState(false);
+
+  // Add Deduction state (for admin to add monthly deductions)
+  const [addDeductionData, setAddDeductionData] = useState({
+    deducted: "0",
+    month: getCurrentMonth(),
+  });
+  const [isAddingDeduction, setIsAddingDeduction] = useState(false);
+  const [addDeductionLoading, setAddDeductionLoading] = useState(false);
+
 // Add this right after your imports
 
+  // Function to fetch deductions data for a specific month
+  const fetchDeductionsData = async (monthToFetch?: string) => {
+    try {
+      setDeductionsLoading(true);
+      const targetMonth = monthToFetch || selectedDeductionMonth;
+
+      if (!targetMonth) {
+        // If no month is selected, reset to default values
+        setDeductionsData({
+          advance_pay: "0",
+          property_damage: "0",
+          deducted: "0",
+          month: "",
+        });
+        return;
+      }
+
+      const { data, error } = await supabase
+        .from("deductions")
+        .select("advance_pay, property_damage, deducted, month")
+        .eq("user_id", employeeid)
+        .eq("month", targetMonth)
+        .single();
+
+      if (error && error.code !== 'PGRST116') { // PGRST116 is "no rows returned"
+        console.error("Error fetching deductions:", error);
+        return;
+      }
+
+      if (data) {
+        setDeductionsData({
+          advance_pay: data.advance_pay?.toString() || "0",
+          property_damage: data.property_damage?.toString() || "0",
+          deducted: data.deducted?.toString() || "0",
+          month: data.month || targetMonth,
+        });
+      } else {
+        // No deductions found for this month, set defaults
+        setDeductionsData({
+          advance_pay: "0",
+          property_damage: "0",
+          deducted: "0",
+          month: targetMonth,
+        });
+      }
+    } catch (err) {
+      console.error("Error in fetchDeductionsData:", err);
+    } finally {
+      setDeductionsLoading(false);
+    }
+  };
+
+  // Function to save deductions data
+  const saveDeductionsData = async () => {
+    try {
+      setDeductionsLoading(true);
+
+      // Validate that a month is selected
+      if (!selectedDeductionMonth) {
+        alert("Please select a month before saving deductions.");
+        return;
+      }
+
+      const deductionRecord = {
+        user_id: employeeid,
+        advance_pay: parseFloat(deductionsData.advance_pay) || 0,
+        property_damage: parseFloat(deductionsData.property_damage) || 0,
+        month: selectedDeductionMonth,
+      };
+
+      // Try to find existing record for this user and month
+      const { data: existingData, error: fetchError } = await supabase
+        .from("deductions")
+        .select("id")
+        .eq("user_id", employeeid)
+        .eq("month", selectedDeductionMonth)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingData) {
+        // Update existing record for this month
+        const { error: updateError } = await supabase
+          .from("deductions")
+          .update(deductionRecord)
+          .eq("user_id", employeeid)
+          .eq("month", selectedDeductionMonth);
+
+        if (updateError) throw updateError;
+        console.log("Deductions updated successfully for month:", selectedDeductionMonth);
+      } else {
+        // Insert new record for this month
+        const { error: insertError } = await supabase
+          .from("deductions")
+          .insert([deductionRecord]);
+
+        if (insertError) throw insertError;
+        console.log("Deductions inserted successfully for month:", selectedDeductionMonth);
+      }
+
+      setIsEditingDeductions(false);
+
+      // Update the deductions data state with the saved month
+      setDeductionsData(prev => ({
+        ...prev,
+        month: selectedDeductionMonth
+      }));
+
+    } catch (err) {
+      console.error("Error saving deductions:", err);
+      alert("Failed to save deductions: " + (err as any).message);
+    } finally {
+      setDeductionsLoading(false);
+    }
+  };
+
+  // Function to handle deductions input change
+  const handleDeductionsChange = (field: string, value: string) => {
+    setDeductionsData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  // Function to calculate total deductions (advance pay + property damage - deducted)
+  const calculateTotalDeductions = () => {
+    const advancePay = parseFloat(deductionsData.advance_pay) || 0;
+    const propertyDamage = parseFloat(deductionsData.property_damage) || 0;
+    const deducted = parseFloat(deductionsData.deducted) || 0;
+    return Math.max(0, advancePay + propertyDamage - deducted).toFixed(2);
+  };
+
+  // Function to handle deduction month change
+  const handleDeductionMonthChange = (newMonth: string) => {
+    setSelectedDeductionMonth(newMonth);
+    fetchDeductionsData(newMonth);
+  };
+
+  // Function to save monthly deduction amount
+  const saveMonthlyDeduction = async () => {
+    try {
+      setAddDeductionLoading(true);
+
+      // Validate that a month is selected
+      if (!addDeductionData.month) {
+        alert("Please select a month before saving deduction.");
+        return;
+      }
+
+      const deductionRecord = {
+        user_id: employeeid,
+        deducted: parseFloat(addDeductionData.deducted) || 0,
+        month: addDeductionData.month,
+      };
+
+      // Try to find existing record for this user and month
+      const { data: existingData, error: fetchError } = await supabase
+        .from("deductions")
+        .select("id, advance_pay, property_damage")
+        .eq("user_id", employeeid)
+        .eq("month", addDeductionData.month)
+        .single();
+
+      if (fetchError && fetchError.code !== 'PGRST116') {
+        throw fetchError;
+      }
+
+      if (existingData) {
+        // Update existing record with new deducted amount
+        const { error: updateError } = await supabase
+          .from("deductions")
+          .update({ deducted: deductionRecord.deducted })
+          .eq("user_id", employeeid)
+          .eq("month", addDeductionData.month);
+
+        if (updateError) throw updateError;
+        console.log("Monthly deduction updated successfully for month:", addDeductionData.month);
+      } else {
+        // Insert new record with deducted amount (other fields default to 0)
+        const { error: insertError } = await supabase
+          .from("deductions")
+          .insert([{
+            ...deductionRecord,
+            advance_pay: 0,
+            property_damage: 0,
+          }]);
+
+        if (insertError) throw insertError;
+        console.log("Monthly deduction inserted successfully for month:", addDeductionData.month);
+      }
+
+      setIsAddingDeduction(false);
+
+      // Reset the add deduction form
+      setAddDeductionData({
+        deducted: "0",
+        month: getCurrentMonth(),
+      });
+
+      // Refresh deductions data if viewing the same month
+      if (selectedDeductionMonth === addDeductionData.month) {
+        fetchDeductionsData(selectedDeductionMonth);
+      }
+
+    } catch (err) {
+      console.error("Error saving monthly deduction:", err);
+      alert("Failed to save monthly deduction: " + (err as any).message);
+    } finally {
+      setAddDeductionLoading(false);
+    }
+  };
+
+  // Function to handle add deduction input change
+  const handleAddDeductionChange = (field: string, value: string) => {
+    setAddDeductionData(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
 
   // Function to fetch data for the selected month
   const fetchMonthlyData = async (startDate, endDate) => {
@@ -351,12 +607,25 @@ const Employeeprofile = ({
         (a) => a.absentee_type === "leave"
       ).length;
 
-      // Calculate overtime pay
-      const overtimePay = employeeData?.per_hour_pay
-        ? (parseFloat(employeeData.per_hour_pay) * totalOvertimeHours).toFixed(
-            2
-          )
+      // Calculate basic per hour rate from salary and expected hours
+      const [year, month] = selectedmonth.split('-').map(Number);
+      const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+      const basicPerHourRate = employeeData?.salary
+        ? parseFloat(employeeData.salary) / expectedHours
+        : 0;
+
+      // Calculate overtime pay using new rules
+      const overtimePay = totalOvertimeHours > 0
+        ? calculateOvertimeEarnings(totalOvertimeHours, basicPerHourRate).toFixed(2)
         : "0";
+
+      console.log("Overtime Calculation Details:", {
+        totalOvertimeHours,
+        basicPerHourRate,
+        expectedHours,
+        salary: (employeeData as any)?.salary,
+        overtimePay
+      });
 
       // Fetch all tasks for the selected month
       const { data: allTasksData, error: tasksError } = await supabase
@@ -888,9 +1157,18 @@ const getEmploymentDuration = (joinDate) => {
               .getPublicUrl(userData.profile_image).data.publicUrl;
       }
 
-      // Calculate overtime pay
-      const overtimePay = userData.per_hour_pay
-        ? (parseFloat(userData.per_hour_pay) * totalOvertimeHours).toFixed(2)
+      // Calculate basic per hour rate from salary and current month expected hours
+      const currentDate = new Date();
+      const currentYear = currentDate.getFullYear();
+      const currentMonth = currentDate.getMonth();
+      const currentExpectedHours = getWorkingDaysInMonth(currentYear, currentMonth) * 7;
+      const basicPerHourRate = userData.salary
+        ? parseFloat(userData.salary) / currentExpectedHours
+        : 0;
+
+      // Calculate overtime pay using new rules
+      const overtimePay = totalOvertimeHours > 0
+        ? calculateOvertimeEarnings(totalOvertimeHours, basicPerHourRate).toFixed(2)
         : "0";
 
       const enrichedEmployee = {
@@ -1142,7 +1420,10 @@ const getEmploymentDuration = (joinDate) => {
   // };
 
   useEffect(() => {
-    if (employeeid) fetchEmployee();
+    if (employeeid) {
+      fetchEmployee();
+      fetchDeductionsData(selectedDeductionMonth);
+    }
   }, [employeeid]);
 
 // Usage in your component
@@ -1462,10 +1743,10 @@ const calculateExpectedHours = (year: number, month: number) => {
           />
           <div className="flex flex-col items-center sm:items-start text-center sm:text-left">
             <h2 className="text-lg sm:text-xl text-gray-700 font-semibold">
-              {employeeData?.full_name || "Employee"}
+              {(employeeData as any)?.full_name || "Employee"}
             </h2>
             <p className="text-gray-600 capitalize">
-              {employeeData?.role || "employee"}
+              {(employeeData as any)?.role || "employee"}
             </p>
           </div>
         </div>
@@ -1474,15 +1755,21 @@ const calculateExpectedHours = (year: number, month: number) => {
         <div className="bg-purple-600 w-full md:w-auto h-fit flex flex-col justify-center items-center text-white px-6 py-4 rounded-lg text-base sm:text-lg font-medium">
           <span className="mr-2">Total Earning is</span>
           <span className="font-bold text-3xl sm:text-4xl ml-2">
-            {employeeData?.salary
+            {(employeeData as any)?.salary
               ? selectedmonth
-                ? (
-                    parseFloat(employeeData.salary) +
-                    parseFloat(monthlyData.overtimePay || "0")
-                  ).toFixed(2)
+                ? (() => {
+                    // Calculate earnings as: (completed hours × basic rate) + overtime earnings
+                    const [year, month] = selectedmonth.split('-').map(Number);
+                    const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                    const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                    const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                    const basicEarnings = completedHours * basicPerHourRate;
+                    const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                    return (basicEarnings + overtimeEarnings).toFixed(2);
+                  })()
                 : (
-                    parseFloat(employeeData.salary) +
-                    parseFloat(employeeData.overtimePay || "0")
+                    parseFloat((employeeData as any).salary) +
+                    parseFloat((employeeData as any).overtimePay || "0")
                   ).toFixed(2)
               : "0"}
           </span>
@@ -1765,7 +2052,51 @@ const calculateExpectedHours = (year: number, month: number) => {
 
 
     <div className="flex justify-between">
-      <span className="text-gray-500 text-sm">Overtime</span>
+      <span className="text-gray-500 text-sm">Overtime Hours</span>
+      <span className="text-gray-600 text-sm">
+        {selectedmonth
+          ? monthlyData.totalOvertimeHours
+          : employeeData?.totalOvertimeHours || "0"}
+        {selectedmonth && (
+          <span className="text-xs text-gray-400 ml-1">(monthly)</span>
+        )}
+      </span>
+    </div>
+
+    {/* Overtime Rate Calculation */}
+    {selectedmonth && parseFloat(monthlyData.totalOvertimeHours) > 0 && (
+      <div className="flex justify-between">
+        <span className="text-gray-500 text-sm">Overtime Rate</span>
+        <span className="text-gray-600 text-sm">
+          {(() => {
+            const overtimeHours = parseFloat(monthlyData.totalOvertimeHours);
+            const [year, month] = selectedmonth.split('-').map(Number);
+            const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+            const basicPerHourRate = (employeeData as any)?.salary
+              ? parseFloat((employeeData as any).salary) / expectedHours
+              : 0;
+
+            let percentage = "";
+            if (overtimeHours <= 20) {
+              percentage = "80%";
+            } else if (overtimeHours <= 40) {
+              percentage = "75%";
+            } else {
+              percentage = "70%";
+            }
+
+            const overtimeRate = overtimeHours <= 20 ? basicPerHourRate * 0.8 :
+                               overtimeHours <= 40 ? basicPerHourRate * 0.75 :
+                               basicPerHourRate * 0.7;
+
+            return `${overtimeRate.toFixed(2)} (${percentage})`;
+          })()}
+        </span>
+      </div>
+    )}
+
+    <div className="flex justify-between">
+      <span className="text-gray-500 text-sm">Overtime Earnings</span>
       <span className="text-gray-600 text-sm">
         {selectedmonth
           ? monthlyData.overtimePay
@@ -1776,18 +2107,24 @@ const calculateExpectedHours = (year: number, month: number) => {
       </span>
     </div>
 
-    <div className="flex justify-between">
-      <span className="text-gray-500 text-sm">Total Earning</span>
-      <span className="text-gray-600 text-sm">
-        {employeeData?.salary
+    <div className="flex justify-between border-t pt-2">
+      <span className="text-gray-700 text-sm font-medium">Total Earning</span>
+      <span className="text-gray-800 text-sm font-semibold">
+        {(employeeData as any)?.salary
           ? selectedmonth
-            ? (
-                parseFloat(employeeData.salary) +
-                parseFloat(monthlyData.overtimePay || "0")
-              ).toFixed(2)
+            ? (() => {
+                // Calculate earnings as: (completed hours × basic rate) + overtime earnings
+                const [year, month] = selectedmonth.split('-').map(Number);
+                const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                const basicEarnings = completedHours * basicPerHourRate;
+                const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                return (basicEarnings + overtimeEarnings).toFixed(2);
+              })()
             : (
-                parseFloat(employeeData.salary) +
-                parseFloat(employeeData.overtimePay || "0")
+                parseFloat((employeeData as any).salary) +
+                parseFloat((employeeData as any).overtimePay || "0")
               ).toFixed(2)
           : "0"}
       </span>
@@ -1797,36 +2134,328 @@ const calculateExpectedHours = (year: number, month: number) => {
 
         {/* Deductions Card */}
         <div className="bg-white rounded-lg shadow-md p-6 w-72">
-          <div className="flex items-center mb-4">
-            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-              <FileMinusIcon className="text-purple-600 h-4 w-4" />
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+                <FileMinusIcon className="text-purple-600 h-4 w-4" />
+              </div>
+              <h2 className="text-gray-800 font-medium">Deductions</h2>
             </div>
-            <h2 className="text-gray-800 font-medium">Deductions</h2>
+            {!isEditingDeductions ? (
+              <button
+                onClick={() => {
+                  if (!selectedDeductionMonth) {
+                    alert("Please select a month first to edit deductions.");
+                    return;
+                  }
+                  setIsEditingDeductions(true);
+                }}
+                className={`text-sm font-medium ${
+                  selectedDeductionMonth
+                    ? "text-purple-600 hover:text-purple-800"
+                    : "text-gray-400 cursor-not-allowed"
+                }`}
+                disabled={deductionsLoading || !selectedDeductionMonth}
+              >
+                Edit
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button
+                  onClick={saveDeductionsData}
+                  className="text-green-600 hover:text-green-800 text-sm font-medium"
+                  disabled={deductionsLoading}
+                >
+                  Save
+                </button>
+                <button
+                  onClick={() => {
+                    setIsEditingDeductions(false);
+                    fetchDeductionsData(selectedDeductionMonth); // Reset to original values for current month
+                  }}
+                  className="text-gray-600 hover:text-gray-800 text-sm font-medium"
+                  disabled={deductionsLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            )}
           </div>
 
           <div className="space-y-4">
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Extra Leaves</span>
-              <span className="text-gray-600 text-sm">5000</span>
+            {/* Month Selector */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 text-sm">Month</span>
+              <input
+                type="month"
+                value={selectedDeductionMonth}
+                onChange={(e) => handleDeductionMonthChange(e.target.value)}
+                className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                disabled={deductionsLoading}
+              />
             </div>
 
-            {/* <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Check-in Late</span>
-              <span className="text-gray-600 text-sm">1200</span>
-            </div> */}
+            {!selectedDeductionMonth ? (
+              <div className="text-center py-4">
+                <span className="text-gray-400 text-sm">
+                  Please select a month to view deductions
+                </span>
+              </div>
+            ) : (
+              <>
+                {/* Property Damage */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-sm">Property Damage</span>
+                  {isEditingDeductions ? (
+                    <input
+                      type="number"
+                      value={deductionsData.property_damage}
+                      onChange={(e) => handleDeductionsChange('property_damage', e.target.value)}
+                      className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      min="0"
+                      step="0.01"
+                    />
+                  ) : (
+                    <span className="text-gray-600 text-sm">
+                      {parseFloat(deductionsData.property_damage).toFixed(2)}
+                    </span>
+                  )}
+                </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Advance Pay</span>
-              <span className="text-gray-600 text-sm">1500</span>
+                {/* Advance Pay */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-sm">Advance Pay</span>
+                  {isEditingDeductions ? (
+                    <input
+                      type="number"
+                      value={deductionsData.advance_pay}
+                      onChange={(e) => handleDeductionsChange('advance_pay', e.target.value)}
+                      className="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-purple-500 focus:border-purple-500"
+                      min="0"
+                      step="0.01"
+                    />
+                  ) : (
+                    <span className="text-gray-600 text-sm">
+                      {parseFloat(deductionsData.advance_pay).toFixed(2)}
+                    </span>
+                  )}
+                </div>
+
+                {/* Deducted Amount */}
+                <div className="flex justify-between items-center">
+                  <span className="text-gray-500 text-sm">Deducted</span>
+                  <span className="text-red-600 text-sm">
+                    -{parseFloat(deductionsData.deducted).toFixed(2)}
+                  </span>
+                </div>
+
+                {/* Total Deduction */}
+                <div className="flex justify-between border-t pt-2">
+                  <span className="text-gray-700 text-sm font-medium">Remaining Deduction</span>
+                  <span className="text-gray-800 text-sm font-semibold">
+                    {calculateTotalDeductions()}
+                  </span>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {/* Net Earnings Card */}
+      <div className="flex justify-center mt-6">
+        <div className="bg-white rounded-lg shadow-md p-6 w-72">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center">
+              <div className="w-6 h-6 rounded-full bg-green-100 flex items-center justify-center mr-2">
+                <svg className="text-green-600 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1" />
+                </svg>
+              </div>
+              <h2 className="text-gray-800 font-medium">Net Earnings</h2>
+            </div>
+            <button
+              onClick={() => setIsAddingDeduction(true)}
+              className="text-green-600 hover:text-green-800 text-sm font-medium"
+              disabled={addDeductionLoading}
+            >
+              Add Deduction
+            </button>
+          </div>
+
+          <div className="space-y-4">
+            {/* Total Earnings */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 text-sm">Total Earnings</span>
+              <span className="text-gray-600 text-sm">
+                {(employeeData as any)?.salary
+                  ? selectedmonth
+                    ? (() => {
+                        // Calculate earnings as: (completed hours × basic rate) + overtime earnings
+                        const [year, month] = selectedmonth.split('-').map(Number);
+                        const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                        const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                        const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                        const basicEarnings = completedHours * basicPerHourRate;
+                        const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                        return (basicEarnings + overtimeEarnings).toFixed(2);
+                      })()
+                    : (
+                        parseFloat((employeeData as any).salary) +
+                        parseFloat((employeeData as any).overtimePay || "0")
+                      ).toFixed(2)
+                  : "0"}
+              </span>
             </div>
 
-            <div className="flex justify-between">
-              <span className="text-gray-500 text-sm">Total Deduction</span>
-              <span className="text-gray-600 text-sm">1500</span>
+            {/* Total Deductions (Original) */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 text-sm">Total Deductions</span>
+              <span className="text-red-600 text-sm">
+                {(() => {
+                  const advancePay = parseFloat(deductionsData.advance_pay) || 0;
+                  const propertyDamage = parseFloat(deductionsData.property_damage) || 0;
+                  return (advancePay + propertyDamage).toFixed(2);
+                })()}
+              </span>
+            </div>
+
+            {/* Total Deducted (All Months) */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 text-sm">Total Deducted</span>
+              <span className="text-green-600 text-sm">
+                -{parseFloat(deductionsData.deducted || "0").toFixed(2)}
+              </span>
+            </div>
+
+            {/* Remaining Deductions */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 text-sm">Remaining Deductions</span>
+              <span className="text-red-600 text-sm">
+                {calculateTotalDeductions()}
+              </span>
+            </div>
+
+            {/* Current Month Deduction */}
+            <div className="flex justify-between items-center">
+              <span className="text-gray-500 text-sm">
+                Current Month Deduction {selectedDeductionMonth ? `(${new Date(selectedDeductionMonth + '-01').toLocaleDateString('en-US', {
+                  year: 'numeric',
+                  month: 'short'
+                })})` : ''}
+              </span>
+              <span className="text-orange-600 text-sm">
+                -{parseFloat(deductionsData.deducted || "0").toFixed(2)}
+              </span>
+            </div>
+
+            {/* Net Payable */}
+            <div className="flex justify-between border-t pt-2">
+              <span className="text-gray-700 text-sm font-medium">Net Payable</span>
+              <span className="text-green-700 text-sm font-semibold">
+                {(() => {
+                  // Calculate net payable: Total Earnings - Current Month Deduction Amount
+                  const totalEarnings = (employeeData as any)?.salary
+                    ? selectedmonth
+                      ? (() => {
+                          const [year, month] = selectedmonth.split('-').map(Number);
+                          const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                          const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                          const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                          const basicEarnings = completedHours * basicPerHourRate;
+                          const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                          return basicEarnings + overtimeEarnings;
+                        })()
+                      : parseFloat((employeeData as any).salary) + parseFloat((employeeData as any).overtimePay || "0")
+                    : 0;
+
+                  // Get current month deduction amount (from the deductions card's selected month)
+                  const currentMonthDeduction = parseFloat(deductionsData.deducted || "0");
+                  return Math.max(0, totalEarnings - currentMonthDeduction).toFixed(2);
+                })()}
+              </span>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Add Deduction Modal */}
+      {isAddingDeduction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+          <div className="bg-white rounded-lg p-6 shadow-lg w-96">
+            <div className="flex flex-row justify-between mb-4">
+              <h2 className="text-lg font-bold">Add Monthly Deduction</h2>
+              <button
+                onClick={() => {
+                  setIsAddingDeduction(false);
+                  setAddDeductionData({
+                    deducted: "0",
+                    month: getCurrentMonth(),
+                  });
+                }}
+                className="rounded-full hover:bg-gray-300 p-1 cursor-pointer"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Month Selector */}
+              <div>
+                <label className="block mb-1 font-medium text-sm">Month</label>
+                <input
+                  type="month"
+                  value={addDeductionData.month}
+                  onChange={(e) => handleAddDeductionChange('month', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  disabled={addDeductionLoading}
+                />
+              </div>
+
+              {/* Deducted Amount */}
+              <div>
+                <label className="block mb-1 font-medium text-sm">Deduction Amount</label>
+                <input
+                  type="number"
+                  value={addDeductionData.deducted}
+                  onChange={(e) => handleAddDeductionChange('deducted', e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  min="0"
+                  step="0.01"
+                  placeholder="Enter deduction amount"
+                  disabled={addDeductionLoading}
+                />
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex gap-2 pt-4">
+                <button
+                  onClick={saveMonthlyDeduction}
+                  className="flex-1 bg-green-600 text-white py-2 px-4 rounded hover:bg-green-700 disabled:opacity-50"
+                  disabled={addDeductionLoading || !addDeductionData.month}
+                >
+                  {addDeductionLoading ? "Saving..." : "Save Deduction"}
+                </button>
+                <button
+                  onClick={() => {
+                    setIsAddingDeduction(false);
+                    setAddDeductionData({
+                      deducted: "0",
+                      month: getCurrentMonth(),
+                    });
+                  }}
+                  className="flex-1 bg-gray-300 text-gray-700 py-2 px-4 rounded hover:bg-gray-400"
+                  disabled={addDeductionLoading}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {incrementModel && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
@@ -1942,26 +2571,23 @@ const calculateExpectedHours = (year: number, month: number) => {
                   src={
                     formData.profile_image
                       ? URL.createObjectURL(formData.profile_image)
-                      : employeeData?.profile_image_url ||
+                      : (employeeData as any)?.profile_image_url ||
                         "https://via.placeholder.com/150"
                   }
                   alt="Profile"
                   className="w-32 h-32 rounded-xl object-cover mb-4"
                 />
                 <div className="relative">
-                  <input
-                    type="file"
-                    id="profile_image"
-                    accept="image/*"
-                    onChange={handleImageChange}
-                    className="hidden"
-                  />
-                  <label
-                    htmlFor="profile_image"
-                    className="cursor-pointer px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors"
-                  >
-                    Change Photo
-                  </label>
+                  <label htmlFor="profile_image" className="cursor-pointer px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors">
+  Change Photo
+  <input
+    type="file"
+    id="profile_image"
+    name="profile_image"
+    onChange={handleImageChange}
+    className="hidden"
+  />
+</label>
                 </div>
               </div>
 
