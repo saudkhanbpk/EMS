@@ -49,6 +49,8 @@ const AdminDailyLogs: React.FC = () => {
     reasoning: string;
   }>>({});
   const [showAiSuggestion, setShowAiSuggestion] = useState<string | null>(null);
+  const [activeFilter, setActiveFilter] = useState<'all' | 'unstar' | 'unread' | 'unsent'>('all');
+  const [allLogs, setAllLogs] = useState<DailyLog[]>([]);
 
   // ... (keep all your existing useEffect hooks and functions)
 
@@ -106,9 +108,10 @@ const AdminDailyLogs: React.FC = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [logs]);
 
-  // Fetch all employees
+  // Fetch all employees and logs
   useEffect(() => {
     fetchEmployees();
+    fetchAllLogs();
   }, []);
 
   // Fetch logs when employee is selected
@@ -137,6 +140,24 @@ const AdminDailyLogs: React.FC = () => {
           })
         );
         setEmployees(employeesWithStats);
+      }
+    } catch (error) {
+      console.error("Error:", error);
+    }
+  };
+
+  // Fetch all logs for filtering
+  const fetchAllLogs = async () => {
+    try {
+      const { data, error } = await supabase
+        .from("dailylog")
+        .select("*")
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching all logs:", error);
+      } else {
+        setAllLogs(data || []);
       }
     } catch (error) {
       console.error("Error:", error);
@@ -479,28 +500,62 @@ const AdminDailyLogs: React.FC = () => {
     );
   };
 
-  const filteredEmployees = employees
-    .filter(
-      (employee) =>
-        employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        employee.email.toLowerCase().includes(searchTerm.toLowerCase())
-    )
-    .sort((a, b) => {
+  // Filter employees based on active filter
+  const getFilteredEmployees = () => {
+    const today = new Date().toISOString().split('T')[0];
+    
+    return employees.filter((employee) => {
+      // First apply search filter
+      const matchesSearch = employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        employee.email.toLowerCase().includes(searchTerm.toLowerCase());
+      
+      if (!matchesSearch) return false;
+      
+      const employeeLogs = allLogs.filter(log => log.userid === employee.id && log.sender_type === 'employee');
+      const lastEmployeeLog = employeeLogs[0]; // Most recent log
+      
+      switch (activeFilter) {
+        case 'all':
+          return true;
+        
+        case 'unstar':
+          // Show if admin hasn't assigned rating to the last log
+          return lastEmployeeLog && !lastEmployeeLog.rating;
+        
+        case 'unread':
+          // Show if person has not read the log (admin messages to this employee)
+          const adminLogsToEmployee = allLogs.filter(log => 
+            log.admin_id === employee.id && log.sender_type === 'admin' && !log.is_read
+          );
+          return adminLogsToEmployee.length > 0;
+        
+        case 'unsent':
+          // Show if person hasn't sent log today
+          const todayLogs = employeeLogs.filter(log => 
+            log.created_at.split('T')[0] === today
+          );
+          return todayLogs.length === 0;
+        
+        default:
+          return true;
+      }
+    }).sort((a, b) => {
       // Sort by unread messages first (employees with unread messages at top)
       const aHasUnread = (a.unread_count || 0) > 0;
       const bHasUnread = (b.unread_count || 0) > 0;
 
-      if (aHasUnread && !bHasUnread) return -1; // a comes first
-      if (!aHasUnread && bHasUnread) return 1; // b comes first
+      if (aHasUnread && !bHasUnread) return -1;
+      if (!aHasUnread && bHasUnread) return 1;
 
-      // If both have unread or both don't have unread, sort by unread count (descending)
       if (aHasUnread && bHasUnread) {
         return (b.unread_count || 0) - (a.unread_count || 0);
       }
 
-      // If neither has unread messages, sort alphabetically by name
       return a.full_name.localeCompare(b.full_name);
     });
+  };
+
+  const filteredEmployees = getFilteredEmployees();
 
   return (
     <>
@@ -881,17 +936,122 @@ const AdminDailyLogs: React.FC = () => {
               </div>
             </>
           ) : (
-            /* No Employee Selected */
-            <div className="hidden sm:flex flex-1 items-center justify-center bg-gray-50 p-4">
-              <div className="text-center max-w-md mx-auto">
-                <MessageCircle className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                <h3 className="text-lg font-medium text-gray-900 mb-2">
-                  Select an Employee
-                </h3>
-                <p className="text-gray-500">
-                  Choose an employee from the list to view their daily logs and
-                  send replies.
-                </p>
+            /* No Employee Selected - Beautiful Navbar */
+            <div className="flex flex-1 flex-col bg-gray-50">
+              {/* Beautiful Navbar */}
+              <div className="bg-white border-b border-gray-200 shadow-sm">
+                <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+                    <button
+                      onClick={() => setActiveFilter('all')}
+                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                        activeFilter === 'all'
+                          ? 'bg-gray-800 text-white shadow-md transform scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                      }`}
+                    >
+                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden xs:inline sm:inline">All</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveFilter('unstar')}
+                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                        activeFilter === 'unstar'
+                          ? 'bg-yellow-500 text-white shadow-md transform scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700'
+                      }`}
+                    >
+                      <Star className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden xs:inline sm:inline">Unstar</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveFilter('unread')}
+                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                        activeFilter === 'unread'
+                          ? 'bg-blue-500 text-white shadow-md transform scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
+                      }`}
+                    >
+                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden xs:inline sm:inline">Unread</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => setActiveFilter('unsent')}
+                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                        activeFilter === 'unsent'
+                          ? 'bg-red-500 text-white shadow-md transform scale-105'
+                          : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
+                      }`}
+                    >
+                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+                      <span className="hidden xs:inline sm:inline">Unsent</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Content Area */}
+              <div className="flex-1 flex items-center justify-center p-8">
+                <div className="text-center max-w-md mx-auto">
+                  {activeFilter === 'all' && (
+                    <>
+                      <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        All Employees
+                      </h3>
+                      <p className="text-gray-600">
+                        View all employees in your organization. Select an employee to view their daily logs and send messages.
+                      </p>
+                    </>
+                  )}
+                  
+                  {activeFilter === 'unstar' && (
+                    <>
+                      <Star className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        Unrated Logs
+                      </h3>
+                      <p className="text-gray-600">
+                        Employees whose latest logs haven't been rated yet. Select an employee to review and rate their work.
+                      </p>
+                    </>
+                  )}
+                  
+                  {activeFilter === 'unread' && (
+                    <>
+                      <MessageCircle className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        Unread Messages
+                      </h3>
+                      <p className="text-gray-600">
+                        Employees who haven't read your admin messages yet. Select an employee to follow up.
+                      </p>
+                    </>
+                  )}
+                  
+                  {activeFilter === 'unsent' && (
+                    <>
+                      <Send className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                        No Logs Today
+                      </h3>
+                      <p className="text-gray-600">
+                        Employees who haven't submitted their daily logs today. Select an employee to send a reminder.
+                      </p>
+                    </>
+                  )}
+                  
+                  {filteredEmployees.length === 0 && (
+                    <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                      <p className="text-green-700 font-medium">
+                        🎉 All caught up! No employees in this category.
+                      </p>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           )}
