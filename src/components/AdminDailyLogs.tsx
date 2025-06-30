@@ -600,7 +600,62 @@ const AdminDailyLogs: React.FC = () => {
         </div>
       )}
 
-      <div className="  flex h-[100vh] overflow-hidden bg-gray-50">
+      {/* Beautiful Navbar - Always visible */}
+      <div className="bg-white border-b border-gray-200 shadow-sm">
+        <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
+          <div className="flex items-center justify-center space-x-1 sm:space-x-2">
+            <button
+              onClick={() => setActiveFilter('all')}
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                activeFilter === 'all'
+                  ? 'bg-gray-800 text-white shadow-md transform scale-105'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+              }`}
+            >
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden xs:inline sm:inline">All</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveFilter('unstar')}
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                activeFilter === 'unstar'
+                  ? 'bg-yellow-500 text-white shadow-md transform scale-105'
+                  : 'bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700'
+              }`}
+            >
+              <Star className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden xs:inline sm:inline">Unstar</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveFilter('unread')}
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                activeFilter === 'unread'
+                  ? 'bg-blue-500 text-white shadow-md transform scale-105'
+                  : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
+              }`}
+            >
+              <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden xs:inline sm:inline">Unread</span>
+            </button>
+            
+            <button
+              onClick={() => setActiveFilter('unsent')}
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
+                activeFilter === 'unsent'
+                  ? 'bg-red-500 text-white shadow-md transform scale-105'
+                  : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
+              }`}
+            >
+              <Send className="w-4 h-4 sm:w-5 sm:h-5" />
+              <span className="hidden xs:inline sm:inline">Unsent</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div className="flex h-[calc(100vh-80px)] overflow-hidden bg-gray-50">
         {/* Employee List Sidebar - Fixed height with internal scroll */}
         <div
           className={`${selectedEmployee ? "hidden sm:flex" : "flex"
@@ -725,7 +780,7 @@ const AdminDailyLogs: React.FC = () => {
         {/* Chat Area - Fixed height with internal scroll for messages */}
         <div
           className={`${selectedEmployee ? "flex" : "hidden sm:flex"
-            } flex-col flex-1 h-[100vh]`}
+            } flex-col flex-1 h-full`}
         >
           {selectedEmployee ? (
             <>
@@ -936,122 +991,64 @@ const AdminDailyLogs: React.FC = () => {
               </div>
             </>
           ) : (
-            /* No Employee Selected - Beautiful Navbar */
-            <div className="flex flex-1 flex-col bg-gray-50">
-              {/* Beautiful Navbar */}
-              <div className="bg-white border-b border-gray-200 shadow-sm">
-                <div className="max-w-4xl mx-auto px-3 sm:px-6 py-3 sm:py-4">
-                  <div className="flex items-center justify-center space-x-1 sm:space-x-2">
-                    <button
-                      onClick={() => setActiveFilter('all')}
-                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                        activeFilter === 'all'
-                          ? 'bg-gray-800 text-white shadow-md transform scale-105'
-                          : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
-                      }`}
-                    >
-                      <User className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden xs:inline sm:inline">All</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setActiveFilter('unstar')}
-                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                        activeFilter === 'unstar'
-                          ? 'bg-yellow-500 text-white shadow-md transform scale-105'
-                          : 'bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700'
-                      }`}
-                    >
-                      <Star className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden xs:inline sm:inline">Unstar</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setActiveFilter('unread')}
-                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                        activeFilter === 'unread'
-                          ? 'bg-blue-500 text-white shadow-md transform scale-105'
-                          : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
-                      }`}
-                    >
-                      <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden xs:inline sm:inline">Unread</span>
-                    </button>
-                    
-                    <button
-                      onClick={() => setActiveFilter('unsent')}
-                      className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                        activeFilter === 'unsent'
-                          ? 'bg-red-500 text-white shadow-md transform scale-105'
-                          : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
-                      }`}
-                    >
-                      <Send className="w-4 h-4 sm:w-5 sm:h-5" />
-                      <span className="hidden xs:inline sm:inline">Unsent</span>
-                    </button>
+            /* No Employee Selected - Content Area */
+            <div className="flex flex-1 items-center justify-center bg-gray-50 p-8">
+              <div className="text-center max-w-md mx-auto">
+                {activeFilter === 'all' && (
+                  <>
+                    <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      All Employees
+                    </h3>
+                    <p className="text-gray-600">
+                      View all employees in your organization. Select an employee to view their daily logs and send messages.
+                    </p>
+                  </>
+                )}
+                
+                {activeFilter === 'unstar' && (
+                  <>
+                    <Star className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      Unrated Logs
+                    </h3>
+                    <p className="text-gray-600">
+                      Employees whose latest logs haven't been rated yet. Select an employee to review and rate their work.
+                    </p>
+                  </>
+                )}
+                
+                {activeFilter === 'unread' && (
+                  <>
+                    <MessageCircle className="w-16 h-16 text-blue-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      Unread Messages
+                    </h3>
+                    <p className="text-gray-600">
+                      Employees who haven't read your admin messages yet. Select an employee to follow up.
+                    </p>
+                  </>
+                )}
+                
+                {activeFilter === 'unsent' && (
+                  <>
+                    <Send className="w-16 h-16 text-red-400 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold text-gray-900 mb-2">
+                      No Logs Today
+                    </h3>
+                    <p className="text-gray-600">
+                      Employees who haven't submitted their daily logs today. Select an employee to send a reminder.
+                    </p>
+                  </>
+                )}
+                
+                {filteredEmployees.length === 0 && (
+                  <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
+                    <p className="text-green-700 font-medium">
+                      🎉 All caught up! No employees in this category.
+                    </p>
                   </div>
-                </div>
-              </div>
-              
-              {/* Content Area */}
-              <div className="flex-1 flex items-center justify-center p-8">
-                <div className="text-center max-w-md mx-auto">
-                  {activeFilter === 'all' && (
-                    <>
-                      <User className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        All Employees
-                      </h3>
-                      <p className="text-gray-600">
-                        View all employees in your organization. Select an employee to view their daily logs and send messages.
-                      </p>
-                    </>
-                  )}
-                  
-                  {activeFilter === 'unstar' && (
-                    <>
-                      <Star className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        Unrated Logs
-                      </h3>
-                      <p className="text-gray-600">
-                        Employees whose latest logs haven't been rated yet. Select an employee to review and rate their work.
-                      </p>
-                    </>
-                  )}
-                  
-                  {activeFilter === 'unread' && (
-                    <>
-                      <MessageCircle className="w-16 h-16 text-blue-400 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        Unread Messages
-                      </h3>
-                      <p className="text-gray-600">
-                        Employees who haven't read your admin messages yet. Select an employee to follow up.
-                      </p>
-                    </>
-                  )}
-                  
-                  {activeFilter === 'unsent' && (
-                    <>
-                      <Send className="w-16 h-16 text-red-400 mx-auto mb-4" />
-                      <h3 className="text-xl font-semibold text-gray-900 mb-2">
-                        No Logs Today
-                      </h3>
-                      <p className="text-gray-600">
-                        Employees who haven't submitted their daily logs today. Select an employee to send a reminder.
-                      </p>
-                    </>
-                  )}
-                  
-                  {filteredEmployees.length === 0 && (
-                    <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
-                      <p className="text-green-700 font-medium">
-                        🎉 All caught up! No employees in this category.
-                      </p>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
             </div>
           )}
