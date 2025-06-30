@@ -6,9 +6,11 @@ import {
   Search,
   MessageCircle,
   Star,
+  Sparkles,
 } from "lucide-react";
 import { useAuthStore } from "../lib/store";
 import { supabase } from "../lib/supabase";
+import { analyzeMessageForRating } from "../lib/openrouter";
 
 interface Employee {
   id: string;
@@ -40,6 +42,47 @@ interface DailyLog {
 }
 
 const AdminDailyLogs: React.FC = () => {
+  // Add these new state variables for AI functionality
+  const [analyzingMessageId, setAnalyzingMessageId] = useState<string | null>(null);
+  const [aiSuggestions, setAiSuggestions] = useState<Record<string, {
+    rating: number;
+    reasoning: string;
+  }>>({});
+  const [showAiSuggestion, setShowAiSuggestion] = useState<string | null>(null);
+
+  // ... (keep all your existing useEffect hooks and functions)
+
+  // Add the AI analysis function
+  const analyzeWithAI = async (messageId: string, message: string) => {
+    setAnalyzingMessageId(messageId);
+
+    try {
+      const suggestion = await analyzeMessageForRating(message);
+      setAiSuggestions(prev => ({
+        ...prev,
+        [messageId]: {
+          rating: suggestion.suggestedRating,
+          reasoning: suggestion.reasoning
+        }
+      }));
+      setShowAiSuggestion(messageId);
+    } catch (error) {
+      console.error('Error getting AI suggestion:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error occurred';
+      alert(`Failed to get AI suggestion: ${errorMessage}`);
+    } finally {
+      setAnalyzingMessageId(null);
+    }
+  };
+
+  // Add function to apply AI suggestion
+  const applyAiSuggestion = (messageId: string) => {
+    const suggestion = aiSuggestions[messageId];
+    if (suggestion) {
+      handleRatingClick(messageId, suggestion.rating);
+      setShowAiSuggestion(null);
+    }
+  };
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
     null
@@ -144,12 +187,12 @@ const AdminDailyLogs: React.FC = () => {
 
       const monthlyRating = monthlyLogs?.length
         ? monthlyLogs.reduce((sum, log) => sum + (log.rating || 0), 0) /
-          monthlyLogs.length
+        monthlyLogs.length
         : 0;
 
       const overallRating = allLogs?.length
         ? allLogs.reduce((sum, log) => sum + (log.rating || 0), 0) /
-          allLogs.length
+        allLogs.length
         : 0;
 
       // Get last message from EITHER employee OR admin (most recent)
@@ -164,7 +207,7 @@ const AdminDailyLogs: React.FC = () => {
       const lastMessage = lastMessageData?.[0]?.dailylog;
       const lastMessagePreview = lastMessage
         ? lastMessage.split(" ").slice(0, 5).join(" ") +
-          (lastMessage.split(" ").length > 5 ? "..." : "")
+        (lastMessage.split(" ").length > 5 ? "..." : "")
         : "";
 
       return {
@@ -259,10 +302,10 @@ const AdminDailyLogs: React.FC = () => {
           prev.map((log) =>
             log.id === pendingRating.messageId
               ? {
-                  ...log,
-                  rating: pendingRating.rating,
-                  rated_at: new Date().toISOString(),
-                }
+                ...log,
+                rating: pendingRating.rating,
+                rated_at: new Date().toISOString(),
+              }
               : log
           )
         );
@@ -420,11 +463,10 @@ const AdminDailyLogs: React.FC = () => {
             className="transition-colors duration-150 hover:scale-110"
           >
             <Star
-              className={`w-4 h-4 ${
-                star <= (hoveredStar || currentRating || 0)
-                  ? "text-yellow-400 fill-yellow-400"
-                  : "text-gray-300 hover:text-yellow-200"
-              }`}
+              className={`w-4 h-4 ${star <= (hoveredStar || currentRating || 0)
+                ? "text-yellow-400 fill-yellow-400"
+                : "text-gray-300 hover:text-yellow-200"
+                }`}
             />
           </button>
         ))}
@@ -478,11 +520,10 @@ const AdminDailyLogs: React.FC = () => {
               {[1, 2, 3, 4, 5].map((star) => (
                 <Star
                   key={star}
-                  className={`w-6 h-6 mx-1 ${
-                    star <= pendingRating.rating
-                      ? "text-yellow-400 fill-yellow-400"
-                      : "text-gray-300"
-                  }`}
+                  className={`w-6 h-6 mx-1 ${star <= pendingRating.rating
+                    ? "text-yellow-400 fill-yellow-400"
+                    : "text-gray-300"
+                    }`}
                 />
               ))}
             </div>
@@ -507,9 +548,8 @@ const AdminDailyLogs: React.FC = () => {
       <div className="  flex h-[100vh] overflow-hidden bg-gray-50">
         {/* Employee List Sidebar - Fixed height with internal scroll */}
         <div
-          className={`${
-            selectedEmployee ? "hidden sm:flex" : "flex"
-          } flex-col w-full sm:w-[300px] md:w-[320px] lg:w-[350px] xl:w-[380px] bg-white border-r border-gray-300`}
+          className={`${selectedEmployee ? "hidden sm:flex" : "flex"
+            } flex-col w-full sm:w-[300px] md:w-[320px] lg:w-[350px] xl:w-[380px] bg-white border-r border-gray-300`}
         >
           {/* Fixed Header */}
           <div className="flex-none p-4 sm:p-6 border-b border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50">
@@ -549,19 +589,17 @@ const AdminDailyLogs: React.FC = () => {
                 <div
                   key={employee.id}
                   onClick={() => setSelectedEmployee(employee)}
-                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-all duration-200 ${
-                    selectedEmployee?.id === employee.id
-                      ? "bg-blue-100 border-blue-300 shadow-sm"
-                      : "hover:shadow-sm"
-                  }`}
+                  className={`p-4 border-b border-gray-100 cursor-pointer hover:bg-blue-50 transition-all duration-200 ${selectedEmployee?.id === employee.id
+                    ? "bg-blue-100 border-blue-300 shadow-sm"
+                    : "hover:shadow-sm"
+                    }`}
                 >
                   <div className="flex items-center space-x-2 md:space-x-4">
                     <div
-                      className={`w-12 h-12 rounded-full flex items-center justify-center ${
-                        selectedEmployee?.id === employee.id
-                          ? "bg-blue-600"
-                          : "bg-gradient-to-r from-gray-400 to-gray-500"
-                      }`}
+                      className={`w-12 h-12 rounded-full flex items-center justify-center ${selectedEmployee?.id === employee.id
+                        ? "bg-blue-600"
+                        : "bg-gradient-to-r from-gray-400 to-gray-500"
+                        }`}
                     >
                       <User className="w-6 h-6 text-white" />
                     </div>
@@ -616,11 +654,10 @@ const AdminDailyLogs: React.FC = () => {
                         ""
                       )}
                       <MessageCircle
-                        className={`w-5 h-5 ${
-                          selectedEmployee?.id === employee.id
-                            ? "text-blue-600"
-                            : "text-gray-400"
-                        }`}
+                        className={`w-5 h-5 ${selectedEmployee?.id === employee.id
+                          ? "text-blue-600"
+                          : "text-gray-400"
+                          }`}
                       />
                     </div>
                   </div>
@@ -632,9 +669,8 @@ const AdminDailyLogs: React.FC = () => {
 
         {/* Chat Area - Fixed height with internal scroll for messages */}
         <div
-          className={`${
-            selectedEmployee ? "flex" : "hidden sm:flex"
-          } flex-col flex-1 h-[100vh]`}
+          className={`${selectedEmployee ? "flex" : "hidden sm:flex"
+            } flex-col flex-1 h-[100vh]`}
         >
           {selectedEmployee ? (
             <>
@@ -698,50 +734,110 @@ const AdminDailyLogs: React.FC = () => {
                     return (
                       <div
                         key={log.id}
-                        className={`flex ${
-                          isAdmin ? "justify-end" : "justify-start"
-                        }`}
+                        className={`flex ${isAdmin ? "justify-end" : "justify-start"
+                          }`}
                       >
                         <div
-                          className={`flex items-start space-x-2 max-w-xs sm:max-w-sm lg:max-w-md ${
-                            isAdmin ? "flex-row-reverse space-x-reverse" : ""
-                          }`}
+                          className={`flex items-start space-x-2 max-w-xs sm:max-w-sm lg:max-w-md ${isAdmin ? "flex-row-reverse space-x-reverse" : ""
+                            }`}
                         >
                           {/* Avatar */}
                           <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${
-                              isAdmin ? "bg-green-600" : "bg-blue-600"
-                            }`}
+                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdmin ? "bg-green-600" : "bg-blue-600"
+                              }`}
                           >
                             <User className="w-4 h-4 text-white" />
                           </div>
 
                           {/* Message Bubble */}
                           <div
-                            className={`rounded-2xl px-4 py-2 ${
-                              isAdmin
-                                ? "bg-green-600 text-white"
-                                : "bg-white text-gray-800 shadow-sm border border-gray-200"
-                            }`}
+                            className={`rounded-2xl px-4 py-2 ${isAdmin
+                              ? "bg-green-600 text-white"
+                              : "bg-white text-gray-800 shadow-sm border border-gray-200"
+                              }`}
                           >
                             <p className="text-sm whitespace-pre-wrap">
                               {log.dailylog}
                             </p>
                             <p
-                              className={`text-xs mt-1 ${
-                                isAdmin ? "text-green-100" : "text-gray-500"
-                              }`}
+                              className={`text-xs mt-1 ${isAdmin ? "text-green-100" : "text-gray-500"
+                                }`}
                             >
                               {formatTime(log.created_at)}
                             </p>
 
-                            {/* Star Rating for Employee Messages */}
+                            {/* Star Rating and AI Analysis for Employee Messages */}
                             {!isAdmin && (
-                              <StarRating
-                                messageId={log.id}
-                                currentRating={log.rating}
-                                onRate={handleRatingClick}
-                              />
+                              <div className="space-y-2">
+                                <StarRating
+                                  messageId={log.id}
+                                  currentRating={log.rating}
+                                  onRate={handleRatingClick}
+                                />
+
+                                {/* AI Analysis Button */}
+                                {!log.rating && (
+                                  <button
+                                    onClick={() => analyzeWithAI(log.id, log.dailylog)}
+                                    disabled={analyzingMessageId === log.id}
+                                    className="flex items-center space-x-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors mt-2"
+                                  >
+                                    {analyzingMessageId === log.id ? (
+                                      <>
+                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                        <span>Analyzing...</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Sparkles className="w-3.5 h-3.5" />
+                                        <span>Analyze with AI</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
+
+                                {/* Show AI suggestion indicator if already analyzed but not showing */}
+                                {aiSuggestions[log.id] && showAiSuggestion !== log.id && !log.rating && (
+                                  <button
+                                    onClick={() => setShowAiSuggestion(log.id)}
+                                    className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 mt-1"
+                                  >
+                                    <Sparkles className="w-3 h-3" />
+                                    <span>View AI suggestion</span>
+                                  </button>
+                                )}
+
+                                {/* AI Suggestion Display */}
+                                {showAiSuggestion === log.id && aiSuggestions[log.id] && (
+                                  <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                    <div className="flex items-start space-x-2">
+                                      <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                      <div className="flex-1">
+                                        <p className="text-xs font-medium text-blue-900 mb-1">
+                                          AI Suggestion: {aiSuggestions[log.id].rating} stars
+                                        </p>
+                                        <p className="text-xs text-blue-700 mb-2">
+                                          {aiSuggestions[log.id].reasoning}
+                                        </p>
+                                        <div className="flex space-x-2">
+                                          <button
+                                            onClick={() => applyAiSuggestion(log.id)}
+                                            className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                                          >
+                                            Apply Rating
+                                          </button>
+                                          <button
+                                            onClick={() => setShowAiSuggestion(null)}
+                                            className="text-xs text-blue-600 hover:text-blue-700"
+                                          >
+                                            Dismiss
+                                          </button>
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
                             )}
                           </div>
                         </div>

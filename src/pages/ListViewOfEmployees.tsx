@@ -256,13 +256,13 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === (newAbsenteeData.user_id || selecteduser)
             ? {
-                ...item,
-                status: newAbsenteeData.absentee_type,
-                textColor:
-                  newAbsenteeData.absentee_type === "Absent"
-                    ? "text-red-500"
-                    : "text-blue-500",
-              }
+              ...item,
+              status: newAbsenteeData.absentee_type,
+              textColor:
+                newAbsenteeData.absentee_type === "Absent"
+                  ? "text-red-500"
+                  : "text-blue-500",
+            }
             : item
         )
       );
@@ -270,13 +270,13 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === (newAbsenteeData.user_id || selecteduser)
             ? {
-                ...item,
-                status: newAbsenteeData.absentee_type,
-                textColor:
-                  newAbsenteeData.absentee_type === "Absent"
-                    ? "text-red-500"
-                    : "text-blue-500",
-              }
+              ...item,
+              status: newAbsenteeData.absentee_type,
+              textColor:
+                newAbsenteeData.absentee_type === "Absent"
+                  ? "text-red-500"
+                  : "text-blue-500",
+            }
             : item
         )
       );
@@ -286,11 +286,11 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === selecteduser
             ? {
-                ...item,
-                status: selectedMode == "Absent" ? "Absent" : "leave",
-                textColor:
-                  selectedMode == "Absent" ? "text-red-500" : "text-blue-500",
-              }
+              ...item,
+              status: selectedMode == "Absent" ? "Absent" : "leave",
+              textColor:
+                selectedMode == "Absent" ? "text-red-500" : "text-blue-500",
+            }
             : item
         )
       );
@@ -298,11 +298,11 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === selecteduser
             ? {
-                ...item,
-                status: selectedMode == "Absent" ? "Absent" : "leave",
-                textColor:
-                  selectedMode == "Absent" ? "text-red-500" : "text-blue-500",
-              }
+              ...item,
+              status: selectedMode == "Absent" ? "Absent" : "leave",
+              textColor:
+                selectedMode == "Absent" ? "text-red-500" : "text-blue-500",
+            }
             : item
         )
       );
@@ -805,28 +805,28 @@ const EmployeeAttendanceTable = () => {
   }, [userID]);
 
   useEffect(() => {
-  // Fetch leave requests when component mounts
-  const fetchLeaveRequests = async () => {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const { data, error } = await supabase
-        .from("leave_requests")
-        .select("full_name, user_email, status, leave_type, leave_date")
-        .eq("status", "approved")
-        .eq("leave_date", today);
+    // Fetch leave requests when component mounts
+    const fetchLeaveRequests = async () => {
+      try {
+        const today = new Date().toISOString().split('T')[0];
+        const { data, error } = await supabase
+          .from("leave_requests")
+          .select("full_name, user_email, status, leave_type, leave_date")
+          .eq("status", "approved")
+          .eq("leave_date", today);
 
-      if (error) {
-        console.error("Error fetching leave requests:", error);
-      } else {
-        setLeaveRequestsData(data || []);
+        if (error) {
+          console.error("Error fetching leave requests:", error);
+        } else {
+          setLeaveRequestsData(data || []);
+        }
+      } catch (err) {
+        console.error("Error fetching leave requests:", err);
       }
-    } catch (err) {
-      console.error("Error fetching leave requests:", err);
-    }
-  };
+    };
 
-  fetchLeaveRequests();
-}, []);
+    fetchLeaveRequests();
+  }, []);
 
   useEffect(() => {
     console.log("selected tab on Leaves Fetching :", selectedTab);
@@ -1296,23 +1296,20 @@ const EmployeeAttendanceTable = () => {
         setTodayBreak([]);
       }
 
-      // Get current year and month
-      const currentYear = today.getFullYear();
-      const currentMonth = today.getMonth(); // 0-based (0 = January, 11 = December)
+      // Get selected date's year and month
+      const selectedYear = year;
+      const selectedMonth = month; // Already 0-based from parsedDate.getUTCMonth()
 
-      // Create date objects for the first and last day of the month
+      // Create date objects for the first and last day of the selected month
       // Set time to start of day (00:00:00) for the first day
       const monthStart = new Date(
-        Date.UTC(currentYear, currentMonth, 1, 0, 0, 0, 0)
+        Date.UTC(selectedYear, selectedMonth, 1, 0, 0, 0, 0)
       );
 
-      // Get the last day of the month and set time to end of day (23:59:59.999)
-      const lastDay = new Date(
-        Date.UTC(currentYear, currentMonth + 1, 0)
-      ).getDate(); // Last day of the month
+      // Get the last day of the month
       const monthEnd = new Date(
-        Date.UTC(currentYear, currentMonth, lastDay, 23, 59, 59, 999)
-      );
+        Date.UTC(selectedYear, selectedMonth + 1, 0, 0, 0, 0, -1)
+      ); // Last millisecond of the last day of the month
 
       const employeeid = id;
       const fetchtableData = async () => {
@@ -1334,16 +1331,43 @@ const EmployeeAttendanceTable = () => {
       };
 
       fetchtableData();
+      // Fetch holidays
+      const { data: holidays, error: holidaysError } = await supabase
+        .from('holidays')
+        .select('*');
 
+      if (holidaysError) {
+        console.error('Error fetching holidays:', holidaysError);
+      }
+
+      // Create set of holiday dates for faster lookup
+      const holidayDates = new Set();
+      if (holidays) {
+        holidays.forEach(holiday => {
+          holiday.dates.forEach(dateStr => {
+            const holidayDate = new Date(dateStr);
+            holidayDates.add(holidayDate.toDateString());
+          });
+        });
+      }
+      console.error("hello sir")
       // Calculate monthly statistics.
 
       const allDaysInMonth = eachDayOfInterval({
         start: monthStart,
         end: monthEnd,
       });
+
+      console.log('Month Start:', monthStart);
+      console.log('Month End:', monthEnd);
+      console.log('All days in month:', allDaysInMonth.length);
+      console.log('Selected Year:', selectedYear, 'Selected Month:', selectedMonth);
+
       const workingDaysInMonth = allDaysInMonth.filter(
-        (date) => !isWeekend(date)
+        (date) => !isWeekend(date) && !holidayDates.has(date.toDateString())
       ).length;
+
+      console.log('Working days in month (excluding holidays):', workingDaysInMonth);
 
       const { data: monthlyAttendance, error: monthlyError } = await supabase
         .from("attendance_logs")
@@ -1540,6 +1564,7 @@ const EmployeeAttendanceTable = () => {
 
         console.log("Total Overtime Hours:", totalOvertimeHours.toFixed(2));
 
+        console.log('Setting monthlyStats with workingDaysInMonth:', workingDaysInMonth);
         setMonthlyStats({
           expectedWorkingDays: workingDaysInMonth,
           totalWorkingDays: uniqueAttendance.length,
@@ -2019,8 +2044,8 @@ const EmployeeAttendanceTable = () => {
             log.status.toLowerCase() === "present"
               ? "text-green-500"
               : log.status.toLowerCase() === "late"
-              ? "text-yellow-500"
-              : "text-red-500",
+                ? "text-yellow-500"
+                : "text-red-500",
         };
       });
 
@@ -2108,58 +2133,58 @@ const EmployeeAttendanceTable = () => {
   //       setFilteredData(attendanceData);
   //   }
   // };
-const handleFilterChange = async (filter) => {
-  setCurrentFilter(filter);
-  switch (filter) {
-    case "all":
-      setFilteredData(attendanceData);
-      break;
-    case "present":
-      setFilteredData(
-        attendanceData.filter((entry) => entry.status.toLowerCase() === "present")
-      );
-      break;
-    case "absent":
-      setFilteredData(
-        attendanceData.filter((entry) => entry.status.toLowerCase() === "absent")
-      );
-      break;
-    case "late":
-      setFilteredData(
-        attendanceData.filter((entry) => entry.status.toLowerCase() === "late")
-      );
-      break;
-    case "remote":
-      setFilteredData(
-        attendanceData.filter((entry) => entry.work_mode === "remote")
-      );
-      break;
-    case "leave":
-      try {
-        const today = new Date(selectedDate).toISOString().split('T')[0];
-        const { data, error } = await supabase
-          .from("leave_requests")
-          .select("full_name, user_email, status, leave_type, leave_date")
-          .eq("status", "approved")
-          .eq("leave_date", today);
+  const handleFilterChange = async (filter) => {
+    setCurrentFilter(filter);
+    switch (filter) {
+      case "all":
+        setFilteredData(attendanceData);
+        break;
+      case "present":
+        setFilteredData(
+          attendanceData.filter((entry) => entry.status.toLowerCase() === "present")
+        );
+        break;
+      case "absent":
+        setFilteredData(
+          attendanceData.filter((entry) => entry.status.toLowerCase() === "absent")
+        );
+        break;
+      case "late":
+        setFilteredData(
+          attendanceData.filter((entry) => entry.status.toLowerCase() === "late")
+        );
+        break;
+      case "remote":
+        setFilteredData(
+          attendanceData.filter((entry) => entry.work_mode === "remote")
+        );
+        break;
+      case "leave":
+        try {
+          const today = new Date(selectedDate).toISOString().split('T')[0];
+          const { data, error } = await supabase
+            .from("leave_requests")
+            .select("full_name, user_email, status, leave_type, leave_date")
+            .eq("status", "approved")
+            .eq("leave_date", today);
 
-       if (error) {
-          setError(error.message);
+          if (error) {
+            setError(error.message);
+            setLeaveRequestsData([]);
+          } else {
+            setLeaveRequestsData(data || []);
+            // Clear the filtered data to hide regular attendance table
+            setFilteredData([]);
+          }
+        } catch (err) {
+          setError("Failed to fetch leave requests");
           setLeaveRequestsData([]);
-        } else {
-          setLeaveRequestsData(data || []);
-          // Clear the filtered data to hide regular attendance table
-          setFilteredData([]);
         }
-      } catch (err) {
-        setError("Failed to fetch leave requests");
-        setLeaveRequestsData([]);
-      }
-      break;
-    default:
-      setFilteredData(attendanceData);
-  }
-};
+        break;
+      default:
+        setFilteredData(attendanceData);
+    }
+  };
   const handlenotification = () => {
     Notification.requestPermission().then(() => {
       const notification = new Notification("Office Time Update", {
@@ -2255,41 +2280,37 @@ const handleFilterChange = async (filter) => {
 
               <button
                 onClick={() => setSelectedTab("Daily")}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === "Daily"
-                    ? "bg-blue-500 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-100"
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Daily"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100"
+                  }`}
               >
                 Daily
               </button>
               <button
                 onClick={() => setSelectedTab("Weekly")}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === "Weekly"
-                    ? "bg-blue-500 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Weekly"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-200"
+                  }`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setSelectedTab("Monthly")}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === "Monthly"
-                    ? "bg-blue-500 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Monthly"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-200"
+                  }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setSelectedTab("Filter")}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === "Filter"
-                    ? "bg-blue-500 text-white"
-                    : "bg-white text-gray-700 hover:bg-gray-200"
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === "Filter"
+                  ? "bg-blue-500 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-200"
+                  }`}
               >
                 Filter
               </button>
@@ -2558,9 +2579,8 @@ const handleFilterChange = async (filter) => {
             <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
               <button
                 onClick={() => handleFilterChange("all")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${
-                  currentFilter === "all" ? "bg-gray-200" : ""
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${currentFilter === "all" ? "bg-gray-200" : ""
+                  }`}
               >
                 <span className="md:w-4 md:h-4   bg-gray-600 rounded-full"></span>
                 <h2 className="text-gray-600 md:text-xl text-sm">
@@ -2570,592 +2590,571 @@ const handleFilterChange = async (filter) => {
               </button>
               <button
                 onClick={() => handleFilterChange("present")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${
-                  currentFilter === "present" ? "bg-green-200" : ""
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${currentFilter === "present" ? "bg-green-200" : ""
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-green-500 rounded-full"></span>
                 <h2 className="text-green-600 md:text-xl text-sm">
                   Present: <span className="font-bold">{present}</span>
                 </h2>
               </button>
-               <button
+              <button
                 onClick={() => handleFilterChange("late")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${
-                  currentFilter === "late" ? "bg-yellow-100" : ""
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${currentFilter === "late" ? "bg-yellow-100" : ""
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
                 <h2 className="text-yellow-600 md:text-xl text-sm">
                   Late: <span className="font-bold">{late}</span>
                 </h2>
               </button>
-               <button
+              <button
                 onClick={() => handleFilterChange("remote")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === "remote" ? "bg-purple-100" : ""
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === "remote" ? "bg-purple-100" : ""
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
                   Remote: <span className="font-bold">{remote}</span>
                 </h2>
               </button>
-           <button
-  onClick={() => handleFilterChange("leave")}
-  className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-    currentFilter === "leave" ? " bg-purple-100" : ""
-  }`}
->
-  <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
-  <h2 className="text-purple-600 md:text-xl text-sm">
-    Leave: <span className="font-bold">{leaveRequestsData.length}</span>
-  </h2>
-</button>
+              <button
+                onClick={() => handleFilterChange("leave")}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === "leave" ? " bg-purple-100" : ""
+                  }`}
+              >
+                <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
+                <h2 className="text-purple-600 md:text-xl text-sm">
+                  Leave: <span className="font-bold">{leaveRequestsData.length}</span>
+                </h2>
+              </button>
               <button
                 onClick={() => handleFilterChange("absent")}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${
-                  currentFilter === "absent" ? "bg-red-100" : ""
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${currentFilter === "absent" ? "bg-red-100" : ""
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-red-500 rounded-full"></span>
                 <h2 className="text-red-600 md:text-xl text-sm">
                   Absent: <span className="font-bold">{absent}</span>
                 </h2>
               </button>
-             
-             
+
+
             </div>
           </div>
-{currentFilter === "leave" ? (
-  // Leave Requests View
-  <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
-    <h2 className="text-xl font-bold mb-4 text-purple-700">Approved Leave Requests (Today)</h2>
-    {leaveRequestsData.length > 0 ? (
-      <table className="min-w-full bg-white text-sm">
-        <thead className="bg-gray-50 text-gray-700 uppercase">
-          <tr>
-            <th className="py-2 px-4 text-left">FULL NAME</th>
-            <th className="py-2 px-4 text-left">EMAIL</th>
-            <th className="py-2 px-4 text-left">TYPE</th>
-          </tr>
-        </thead>
-        <tbody>
-          {leaveRequestsData.map((req, idx) => (
-            <tr key={idx} className="border-b">
-              <td className="py-2 px-4">{req.full_name}</td>
-              <td className="py-2 px-4">{req.user_email}</td>
-              <td className="py-2 px-4">{req.leave_type}</td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    ) : (
-      <p className="text-gray-500 py-4 text-center">No approved leave requests for today</p>
-    )}
-  </div>
-) : (
-  // Regular Attendance View
-  <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
-    {error && <p className="text-red-500 text-center">{error}</p>}
-    <div className="overflow-x-auto">
-      <div className="w-full shadow-sm rounded-lg">
-        {/* Desktop Table View */}
-        <div className="hidden sm:block overflow-x-auto">
-          <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
-            <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
-              <tr>
-                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                  Name
-                </th>
-                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                  Check-in
-                </th>
-                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                  Check-out
-                </th>
-                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                  2nd Check-in
-                </th>
-                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                  Mode
-                </th>
-                <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                  Status
-                </th>
-              </tr>
-            </thead>
-                    <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
-              {filteredData.map((entry, index) => (
-                <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
-                  <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
-                    <span
-                      className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${
-                        entry.status === "present"
-                          ? "text-green-600"
-                          : entry.status === "late"
-                          ? "text-yellow-600"
-                          : "text-red-600"
-                      }`}
-                      title={entry.full_name}
-                    >
-                      {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
-                    </span>
-                  </td>
-                          <td
-                            className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleCheckinOpenModal(entry)}
-                          >
-                            {entry.check_in}
-                          </td>
-                          <td
-                            className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
-                            onClick={() => handleOpenModal(entry)}
-                          >
-                            <div className="flex items-center">
-                              <span className="truncate">
-                                {entry.check_out}
+          {currentFilter === "leave" ? (
+            // Leave Requests View
+            <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
+              <h2 className="text-xl font-bold mb-4 text-purple-700">Approved Leave Requests (Today)</h2>
+              {leaveRequestsData.length > 0 ? (
+                <table className="min-w-full bg-white text-sm">
+                  <thead className="bg-gray-50 text-gray-700 uppercase">
+                    <tr>
+                      <th className="py-2 px-4 text-left">FULL NAME</th>
+                      <th className="py-2 px-4 text-left">EMAIL</th>
+                      <th className="py-2 px-4 text-left">TYPE</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {leaveRequestsData.map((req, idx) => (
+                      <tr key={idx} className="border-b">
+                        <td className="py-2 px-4">{req.full_name}</td>
+                        <td className="py-2 px-4">{req.user_email}</td>
+                        <td className="py-2 px-4">{req.leave_type}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              ) : (
+                <p className="text-gray-500 py-4 text-center">No approved leave requests for today</p>
+              )}
+            </div>
+          ) : (
+            // Regular Attendance View
+            <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
+              {error && <p className="text-red-500 text-center">{error}</p>}
+              <div className="overflow-x-auto">
+                <div className="w-full shadow-sm rounded-lg">
+                  {/* Desktop Table View */}
+                  <div className="hidden sm:block overflow-x-auto">
+                    <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
+                      <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
+                        <tr>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Name
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Check-in
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Check-out
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            2nd Check-in
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Mode
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Status
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
+                        {filteredData.map((entry, index) => (
+                          <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
+                              <span
+                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${entry.status === "present"
+                                  ? "text-green-600"
+                                  : entry.status === "late"
+                                    ? "text-yellow-600"
+                                    : "text-red-600"
+                                  }`}
+                                title={entry.full_name}
+                              >
+                                {entry.full_name.charAt(0).toUpperCase() + entry.full_name.slice(1)}
                               </span>
-                              {entry.autocheckout ? (
-                                <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
-                                  <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
-                                    Auto
-                                  </span>
-                                  {/* Tooltip */}
-                                  <div className="hidden group-hover:block absolute bg-gray-400 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
-                                    Change CheckOut Time
+                            </td>
+                            <td
+                              className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleCheckinOpenModal(entry)}
+                            >
+                              {entry.check_in}
+                            </td>
+                            <td
+                              className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                              onClick={() => handleOpenModal(entry)}
+                            >
+                              <div className="flex items-center">
+                                <span className="truncate">
+                                  {entry.check_out}
+                                </span>
+                                {entry.autocheckout ? (
+                                  <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
+                                    <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
+                                      Auto
+                                    </span>
+                                    {/* Tooltip */}
+                                    <div className="hidden group-hover:block absolute bg-gray-400 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                      Change CheckOut Time
+                                    </div>
                                   </div>
-                                </div>
-                              ) : null}
-                            </div>
-                          </td>
-                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100">
-                            <div className="flex items-center">
-                              <span className="truncate">
-                                {getuserbreakdate(entry?.attendance_id)}
-                              </span>
-                              {entry.break_in ? (
-                                <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
-                                  <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
-                                    Auto
-                                  </span>
-                                  {/* Tooltip */}
-                                  <div className="hidden group-hover:block absolute bg-gray-400 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
-                                    Change CheckOut Time
+                                ) : null}
+                              </div>
+                            </td>
+                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100">
+                              <div className="flex items-center">
+                                <span className="truncate">
+                                  {getuserbreakdate(entry?.attendance_id)}
+                                </span>
+                                {entry.break_in ? (
+                                  <div className="relative inline-block ml-0.5 xs:ml-1 sm:ml-2">
+                                    <span className="text-yellow-600 bg-yellow-100 px-0.5 xs:px-1 sm:px-2 py-0.5 font-semibold rounded-xl text-[9px] xs:text-[10px] sm:text-xs">
+                                      Auto
+                                    </span>
+                                    {/* Tooltip */}
+                                    <div className="hidden group-hover:block absolute bg-gray-400 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                      Change CheckOut Time
+                                    </div>
                                   </div>
-                                </div>
-                              ) : null}
-                            </div>
-                          </td>
+                                ) : null}
+                              </div>
+                            </td>
 
-                          <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
-                            <button
-                              onClick={() => handleModeOpen(entry)}
-                              className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${
-                                entry.work_mode === "on_site"
+                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                              <button
+                                onClick={() => handleModeOpen(entry)}
+                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === "on_site"
                                   ? "bg-blue-100 text-blue-800"
                                   : entry.work_mode === "remote"
-                                  ? "bg-purple-100 text-purple-800"
-                                  : "bg-white text-black"
-                              }`}
-                            >
-                              {entry.work_mode === "on_site"
-                                ? "On-site"
-                                : entry.work_mode === "remote"
-                                ? "Remote"
-                                : "---"}
-                            </button>
-                          </td>
-                          <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
-                            <button
-                              type="button"
-                              onClick={() => handleopenabsentmodal(entry.id)}
-                            >
-                              <span
-                                className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${
-                                  entry.status === "present"
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-white text-black"
+                                  }`}
+                              >
+                                {entry.work_mode === "on_site"
+                                  ? "On-site"
+                                  : entry.work_mode === "remote"
+                                    ? "Remote"
+                                    : "---"}
+                              </button>
+                            </td>
+                            <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
+                              <button
+                                type="button"
+                                onClick={() => handleopenabsentmodal(entry.id)}
+                              >
+                                <span
+                                  className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === "present"
                                     ? "bg-green-100 text-green-800"
                                     : entry.status === "late"
-                                    ? "bg-yellow-100 text-yellow-800"
-                                    : entry.status === "leave"
-                                    ? "text-purple-900 bg-purple-300"
-                                    : "bg-red-100 text-red-800"
-                                }`}
-                              >
-                                {entry.status == "Full Day"
-                                  ? "Leave"
-                                  : entry.status}
-                              </span>
-                            </button>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
+                                      ? "bg-yellow-100 text-yellow-800"
+                                      : entry.status === "leave"
+                                        ? "text-purple-900 bg-purple-300"
+                                        : "bg-red-100 text-red-800"
+                                    }`}
+                                >
+                                  {entry.status == "Full Day"
+                                    ? "Leave"
+                                    : entry.status}
+                                </span>
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
 
-                {/* Card view for small screens */}
-                <div className="sm:hidden">
-                  {filteredData.map((entry, index) => (
-                    <div
-                      key={index}
-                      className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]"
-                    >
-                      <div className="flex justify-between items-center mb-2 border-b pb-2">
-                        <span
-                          className={`font-medium text-[12px] xs:text-[13px] ${
-                            entry.status === "present"
+                  {/* Card view for small screens */}
+                  <div className="sm:hidden">
+                    {filteredData.map((entry, index) => (
+                      <div
+                        key={index}
+                        className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]"
+                      >
+                        <div className="flex justify-between items-center mb-2 border-b pb-2">
+                          <span
+                            className={`font-medium text-[12px] xs:text-[13px] ${entry.status === "present"
                               ? "text-green-600"
                               : entry.status === "late"
-                              ? "text-yellow-600"
-                              : "text-red-600"
-                          }`}
-                          title={entry.full_name}
-                        >
-                          {entry.full_name.charAt(0).toUpperCase() +
-                            entry.full_name.slice(1)}
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleopenabsentmodal(entry.id)}
-                          className="focus:outline-none"
-                        >
-                          <span
-                            className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
-                              entry.status === "present"
+                                ? "text-yellow-600"
+                                : "text-red-600"
+                              }`}
+                            title={entry.full_name}
+                          >
+                            {entry.full_name.charAt(0).toUpperCase() +
+                              entry.full_name.slice(1)}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleopenabsentmodal(entry.id)}
+                            className="focus:outline-none"
+                          >
+                            <span
+                              className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === "present"
                                 ? "bg-green-100 text-green-800"
                                 : entry.status === "late"
-                                ? "bg-yellow-100 text-yellow-800"
-                                : "bg-red-100 text-red-800"
-                            }`}
-                          >
-                            {entry.status == "Full Day"
-                              ? "Leave"
-                              : entry.status}
-                          </span>
-                        </button>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
-                            Check-in
-                          </span>
-                          <div
-                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer"
-                            onClick={() => handleCheckinOpenModal(entry)}
-                          >
-                            {entry.check_in || "---"}
-                          </div>
-                        </div>
-
-                        <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
-                            Check-out
-                          </span>
-                          <div
-                            className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
-                            onClick={() => handleOpenModal(entry)}
-                          >
-                            <span className="truncate mr-1">
-                              {entry.check_out || "---"}
+                                  ? "bg-yellow-100 text-yellow-800"
+                                  : "bg-red-100 text-red-800"
+                                }`}
+                            >
+                              {entry.status == "Full Day"
+                                ? "Leave"
+                                : entry.status}
                             </span>
-                            {entry.autocheckout ? (
-                              <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
-                                Auto
-                              </span>
-                            ) : null}
-                          </div>
+                          </button>
                         </div>
 
-                        {/* Added 2nd Check-in for mobile view */}
-                        <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
-                            2nd Check-in
-                          </span>
-                          <div className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center">
-                            <span className="truncate mr-1">
-                              {getuserbreakdate(entry?.attendance_id) || "---"}
+                        <div className="grid grid-cols-2 gap-2">
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              Check-in
                             </span>
-                            {entry.break_in ? (
-                              <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
-                                Auto
-                              </span>
-                            ) : null}
+                            <div
+                              className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer"
+                              onClick={() => handleCheckinOpenModal(entry)}
+                            >
+                              {entry.check_in || "---"}
+                            </div>
                           </div>
-                        </div>
 
-                        <div className="flex flex-col">
-                          <span className="text-gray-500 text-[10px] xs:text-[11px]">
-                            Mode
-                          </span>
-                          <div className="mt-1">
-                            <button
-                              onClick={() => handleModeOpen(entry)}
-                              className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
-                                entry.work_mode === "on_site"
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              Check-out
+                            </span>
+                            <div
+                              className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center"
+                              onClick={() => handleOpenModal(entry)}
+                            >
+                              <span className="truncate mr-1">
+                                {entry.check_out || "---"}
+                              </span>
+                              {entry.autocheckout ? (
+                                <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
+                                  Auto
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          {/* Added 2nd Check-in for mobile view */}
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              2nd Check-in
+                            </span>
+                            <div className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center">
+                              <span className="truncate mr-1">
+                                {getuserbreakdate(entry?.attendance_id) || "---"}
+                              </span>
+                              {entry.break_in ? (
+                                <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
+                                  Auto
+                                </span>
+                              ) : null}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              Mode
+                            </span>
+                            <div className="mt-1">
+                              <button
+                                onClick={() => handleModeOpen(entry)}
+                                className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === "on_site"
                                   ? "bg-blue-100 text-blue-800"
                                   : entry.work_mode === "remote"
-                                  ? "bg-purple-100 text-purple-800"
-                                  : "bg-gray-100 text-gray-800"
-                              }`}
-                            >
-                              {entry.work_mode === "on_site"
-                                ? "On-site"
-                                : entry.work_mode === "remote"
-                                ? "Remote"
-                                : "---"}
-                            </button>
+                                    ? "bg-purple-100 text-purple-800"
+                                    : "bg-gray-100 text-gray-800"
+                                  }`}
+                              >
+                                {entry.work_mode === "on_site"
+                                  ? "On-site"
+                                  : entry.work_mode === "remote"
+                                    ? "Remote"
+                                    : "---"}
+                              </button>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  ))}
-                  <Transition appear show={modalVisible} as={Fragment}>
-                    <Dialog
-                      as="div"
-                      className="relative z-10"
-                      onClose={handleabsentclosemodal}
-                    >
-                      <Transition.Child
-                        as={Fragment}
-                        enter="ease-out duration-300"
-                        enterFrom="opacity-0"
-                        enterTo="opacity-100"
-                        leave="ease-in duration-200"
-                        leaveFrom="opacity-100"
-                        leaveTo="opacity-0"
+                    ))}
+                    <Transition appear show={modalVisible} as={Fragment}>
+                      <Dialog
+                        as="div"
+                        className="relative z-10"
+                        onClose={handleabsentclosemodal}
                       >
-                        <div className="fixed inset-0 bg-black bg-opacity-25" />
-                      </Transition.Child>
+                        <Transition.Child
+                          as={Fragment}
+                          enter="ease-out duration-300"
+                          enterFrom="opacity-0"
+                          enterTo="opacity-100"
+                          leave="ease-in duration-200"
+                          leaveFrom="opacity-100"
+                          leaveTo="opacity-0"
+                        >
+                          <div className="fixed inset-0 bg-black bg-opacity-25" />
+                        </Transition.Child>
 
-                      <div className="fixed inset-0 overflow-y-auto">
-                        <div className="flex min-h-full items-center justify-center p-4 text-center">
-                          <Transition.Child
-                            as={Fragment}
-                            enter="ease-out duration-300"
-                            enterFrom="opacity-0 scale-95"
-                            enterTo="opacity-100 scale-100"
-                            leave="ease-in duration-200"
-                            leaveFrom="opacity-100 scale-100"
-                            leaveTo="opacity-0 scale-95"
-                          >
-                            <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all">
-                              <Dialog.Title
-                                as="h3"
-                                className="text-lg font-medium leading-6 text-gray-900 text-center mb-6"
-                              >
-                                Mark Him Leave
-                              </Dialog.Title>
-
-                              <div className="mt-4">
-                                <RadioGroup
-                                  value={selectedMode}
-                                  onChange={setSelectedMode}
-                                  className="space-y-4"
+                        <div className="fixed inset-0 overflow-y-auto">
+                          <div className="flex min-h-full items-center justify-center p-4 text-center">
+                            <Transition.Child
+                              as={Fragment}
+                              enter="ease-out duration-300"
+                              enterFrom="opacity-0 scale-95"
+                              enterTo="opacity-100 scale-100"
+                              leave="ease-in duration-200"
+                              leaveFrom="opacity-100 scale-100"
+                              leaveTo="opacity-0 scale-95"
+                            >
+                              <Dialog.Panel className="w-full max-w-md transform overflow-hidden rounded-lg bg-white p-6 text-left align-middle shadow-xl transition-all">
+                                <Dialog.Title
+                                  as="h3"
+                                  className="text-lg font-medium leading-6 text-gray-900 text-center mb-6"
                                 >
-                                  <RadioGroup.Option value="Absent">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Absent
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                  <RadioGroup.Option value="Full Day">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Casual Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                  <RadioGroup.Option value="Half Day">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Half Day Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                  <RadioGroup.Option value="Sick Leave">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Sick Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
+                                  Mark Him Leave
+                                </Dialog.Title>
 
-                                  <RadioGroup.Option value="Emergency Leave">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
+                                <div className="mt-4">
+                                  <RadioGroup
+                                    value={selectedMode}
+                                    onChange={setSelectedMode}
+                                    className="space-y-4"
+                                  >
+                                    <RadioGroup.Option value="Absent">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
                                               ? "border-4 border-blue-500"
                                               : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Emergency Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                </RadioGroup>
-                              </div>
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Absent
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                    <RadioGroup.Option value="Full Day">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Casual Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                    <RadioGroup.Option value="Half Day">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Half Day Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                    <RadioGroup.Option value="Sick Leave">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Sick Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
 
-                              <div className="mt-4">
-                                <RadioGroup
-                                  value={selectedMode}
-                                  onChange={setSelectedMode}
-                                  className="space-y-4"
-                                >
-                                  <RadioGroup.Option value="Absent">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
+                                    <RadioGroup.Option value="Emergency Leave">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
                                               ? "border-4 border-blue-500"
                                               : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Absent
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                  <RadioGroup.Option value="Full Day">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Casual Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                  <RadioGroup.Option value="Half Day">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Half Day Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                  <RadioGroup.Option value="Sick Leave">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Sick Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Emergency Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                  </RadioGroup>
+                                </div>
 
-                                  <RadioGroup.Option value="Emergency Leave">
-                                    {({ checked }) => (
-                                      <div className="flex items-center">
-                                        <div
-                                          className={`w-5 h-5 rounded-full border ${
-                                            checked
+                                <div className="mt-4">
+                                  <RadioGroup
+                                    value={selectedMode}
+                                    onChange={setSelectedMode}
+                                    className="space-y-4"
+                                  >
+                                    <RadioGroup.Option value="Absent">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
                                               ? "border-4 border-blue-500"
                                               : "border border-gray-300"
-                                          }`}
-                                        />
-                                        <span className="ml-3 text-gray-800">
-                                          Emergency Leave
-                                        </span>
-                                      </div>
-                                    )}
-                                  </RadioGroup.Option>
-                                </RadioGroup>
-                              </div>
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Absent
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                    <RadioGroup.Option value="Full Day">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Casual Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                    <RadioGroup.Option value="Half Day">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Half Day Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                    <RadioGroup.Option value="Sick Leave">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Sick Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
 
-                              <div className="mt-8 flex justify-end space-x-3">
-                                <button
-                                  type="button"
-                                  className="inline-flex justify-center rounded-md border border-gray-300 bg-gray-500 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none"
-                                  onClick={handleabsentclosemodal}
-                                >
-                                  Cancel
-                                </button>
-                                <button
-                                  type="button"
-                                  disabled={absentloading}
-                                  className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
-                                  onClick={handleSaveChanges}
-                                >
-                                  Save
-                                </button>
-                              </div>
-                            </Dialog.Panel>
-                          </Transition.Child>
+                                    <RadioGroup.Option value="Emergency Leave">
+                                      {({ checked }) => (
+                                        <div className="flex items-center">
+                                          <div
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? "border-4 border-blue-500"
+                                              : "border border-gray-300"
+                                              }`}
+                                          />
+                                          <span className="ml-3 text-gray-800">
+                                            Emergency Leave
+                                          </span>
+                                        </div>
+                                      )}
+                                    </RadioGroup.Option>
+                                  </RadioGroup>
+                                </div>
+
+                                <div className="mt-8 flex justify-end space-x-3">
+                                  <button
+                                    type="button"
+                                    className="inline-flex justify-center rounded-md border border-gray-300 bg-gray-500 px-4 py-2 text-sm font-medium text-white hover:bg-gray-600 focus:outline-none"
+                                    onClick={handleabsentclosemodal}
+                                  >
+                                    Cancel
+                                  </button>
+                                  <button
+                                    type="button"
+                                    disabled={absentloading}
+                                    className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
+                                    onClick={handleSaveChanges}
+                                  >
+                                    Save
+                                  </button>
+                                </div>
+                              </Dialog.Panel>
+                            </Transition.Child>
+                          </div>
                         </div>
-                      </div>
-                    </Dialog>
-                  </Transition>
+                      </Dialog>
+                    </Transition>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        )}
+          )}
 
           {isModalOpen && (
             <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50">
@@ -3184,17 +3183,15 @@ const handleFilterChange = async (filter) => {
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            isAM ? "bg-blue-500 text-white" : "bg-gray-300"
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                            }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            !isAM ? "bg-blue-500 text-white" : "bg-gray-300"
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                            }`}
                         >
                           PM
                         </button>
@@ -3394,17 +3391,15 @@ const handleFilterChange = async (filter) => {
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            isinAM ? "bg-blue-500 text-white" : "bg-gray-300"
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isinAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                            }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            !isinAM ? "bg-blue-500 text-white" : "bg-gray-300"
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isinAM ? "bg-blue-500 text-white" : "bg-gray-300"
+                            }`}
                         >
                           PM
                         </button>
@@ -3432,7 +3427,7 @@ const handleFilterChange = async (filter) => {
                                 e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
-                            // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                          // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
@@ -3614,13 +3609,11 @@ const handleFilterChange = async (filter) => {
                             handleEmployeeClick(employee.id);
                             setShowEmployeeList(false); // Hide list after selection on mobile
                           }}
-                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${
-                            selectedEmployeesearch?.id === employee.id
-                              ? "bg-blue-100 text-blue-600"
-                              : "hover:bg-gray-100"
-                          } ${
-                            employeeStats[employee.id] < 6 ? "text-red-600" : ""
-                          }`}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
+                            ? "bg-blue-100 text-blue-600"
+                            : "hover:bg-gray-100"
+                            } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""
+                            }`}
                         >
                           <span className="truncate mr-2 text-sm">
                             {employee.full_name}
@@ -3662,13 +3655,11 @@ const handleFilterChange = async (filter) => {
                         setDataEmployeesearch(employee);
                         handleEmployeeClick(employee.id);
                       }}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${
-                        selectedEmployeesearch?.id === employee.id
-                          ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
-                          : "hover:bg-gray-100"
-                      } ${
-                        employeeStats[employee.id] < 6 ? "text-red-600" : ""
-                      }`}
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
+                        ? "bg-blue-100 text-blue-600 hover:bg-gray-50"
+                        : "hover:bg-gray-100"
+                        } ${employeeStats[employee.id] < 6 ? "text-red-600" : ""
+                        }`}
                     >
                       <span className="truncate mr-2 text-xs sm:text-base">
                         {employee.full_name}
@@ -3726,20 +3717,19 @@ const handleFilterChange = async (filter) => {
                                   <span>
                                     {attendanceLogs[0].check_out
                                       ? format(
-                                          new Date(attendanceLogs[0].check_out),
-                                          "h:mm a"
-                                        )
+                                        new Date(attendanceLogs[0].check_out),
+                                        "h:mm a"
+                                      )
                                       : "Not checked out"}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Work Mode:</span>
                                   <span
-                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${
-                                      attendanceLogs[0].work_mode === "on_site"
-                                        ? "bg-blue-100 text-blue-800"
-                                        : "bg-purple-100 text-purple-800"
-                                    }`}
+                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === "on_site"
+                                      ? "bg-blue-100 text-blue-800"
+                                      : "bg-purple-100 text-purple-800"
+                                      }`}
                                   >
                                     {attendanceLogs[0].work_mode}
                                   </span>
@@ -3786,9 +3776,9 @@ const handleFilterChange = async (filter) => {
                                     <span>
                                       {breakItem.end_time
                                         ? format(
-                                            new Date(breakItem.end_time),
-                                            "hh:mm a"
-                                          )
+                                          new Date(breakItem.end_time),
+                                          "hh:mm a"
+                                        )
                                         : "Ongoing"}
                                     </span>
                                   </div>
@@ -3821,6 +3811,7 @@ const handleFilterChange = async (filter) => {
                               <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-6">
                                 <div className="bg-gray-50 rounded-lg p-3 sm:p-4">
                                   <h3 className="text-xs sm:text-sm font-medium text-gray-500 mb-2 sm:mb-3">
+                                    {/* right monthly status */}
                                     Attendance Summary
                                   </h3>
                                   <div className="space-y-2 sm:space-y-3 text-xs sm:text-base">
@@ -3870,7 +3861,7 @@ const handleFilterChange = async (filter) => {
                                     </div>
                                   </div>
 
-                                  
+
                                 </div>
 
                                 <div className="bg-gray-50 rounded-lg p-3 sm:p-4">

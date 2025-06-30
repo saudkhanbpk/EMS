@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, addWeeks, addMonths, startOfMonth,startOfWeek,isAfter, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
+import { format, addWeeks, addMonths, startOfMonth, startOfWeek, isAfter, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut, CalendarIcon } from 'lucide-react';
@@ -90,61 +90,61 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
 
   const monthStart = startOfMonth(selectedDate);
   const monthEnd = endOfMonth(selectedDate);
-  console.log("selectedDate" , selectedDate);
-  console.log("todayDate" , todayDate);
-  
-  
-  
-    const fetchleaves = async () => {
-      const { count, error } = await supabase
-        .from("absentees")
-        .select("*", { count: "exact", head: true })
-        .eq('user_id', userID)
-        .eq('absentee_type', "leave")
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString())
-      if (error) {
-        console.error("Error Fetching Absentees Count", error);
+  console.log("selectedDate", selectedDate);
+  console.log("todayDate", todayDate);
+
+
+
+  const fetchleaves = async () => {
+    const { count, error } = await supabase
+      .from("absentees")
+      .select("*", { count: "exact", head: true })
+      .eq('user_id', userID)
+      .eq('absentee_type', "leave")
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString())
+    if (error) {
+      console.error("Error Fetching Absentees Count", error);
+    } else {
+      console.log("Leaves Count :", count);
+      if (count > 0) {
+        setleaves(count)
       } else {
-        console.log("Leaves Count :", count);
-        if (count > 0) {
-          setleaves(count)
-        } else {
-          setleaves(0)
-        }
+        setleaves(0)
       }
     }
-    useEffect(() => {
+  }
+  useEffect(() => {
     fetchleaves();
-  }, [userID , selectedDate ])
+  }, [userID, selectedDate])
 
 
 
 
 
 
-    const fetchabsentees = async () => {
-      const { count, error } = await supabase
-        .from("absentees")
-        .select("*", { count: "exact", head: true })
-        .eq('user_id', userID)
-        .eq('absentee_type', "Absent")
-        .gte('created_at', monthStart.toISOString())
-        .lte('created_at', monthEnd.toISOString());
-      if (error) {
-        console.error("Error Fetching Absentees Count", error);
+  const fetchabsentees = async () => {
+    const { count, error } = await supabase
+      .from("absentees")
+      .select("*", { count: "exact", head: true })
+      .eq('user_id', userID)
+      .eq('absentee_type', "Absent")
+      .gte('created_at', monthStart.toISOString())
+      .lte('created_at', monthEnd.toISOString());
+    if (error) {
+      console.error("Error Fetching Absentees Count", error);
+    } else {
+      console.log("absentees Count :", count);
+      if (count > 0) {
+        setabsentees(count)
       } else {
-        console.log("absentees Count :", count);
-        if (count > 0) {
-          setabsentees(count)
-        } else {
-          setabsentees(0)
-        }
+        setabsentees(0)
       }
     }
-    useEffect(() => {
+  }
+  useEffect(() => {
     fetchabsentees();
-  }, [userID , selectedDate])
+  }, [userID, selectedDate])
 
 
 
@@ -534,11 +534,11 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     <div className='max-w-7xl mx-auto  px-4 lg:py-8'>
       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-8">
         <div>
-          <div className={`${selectedtab === 'filter'? 'flex flex-col' :  ''} `}>
+          <div className={`${selectedtab === 'filter' ? 'flex flex-col' : ''} `}>
             <h1 className="text-2xl font-bold text-gray-900 sm:text-left text-center">
-            Welcome, {userProfile?.full_name || 'Employee'}
-          </h1>
-          <div className={`flex gap-3 mt-3 items-center  justify-center mb-2 sm:mx-0 mx-auto`}>
+              Welcome, {userProfile?.full_name || 'Employee'}
+            </h1>
+            <div className={`flex gap-3 mt-3 items-center  justify-center mb-2 sm:mx-0 mx-auto`}>
               {
                 view === 'default' && (
                   <>
@@ -563,8 +563,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                         <button
                           onClick={() => setSelectedtab("Dailydata")}
                           className={`px-3 py-1 h-[28px]  rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Dailydata"
-                              ? "bg-[#a36fd4] text-white"
-                              : "bg-white text-gray-700 hover:bg-gray-100"
+                            ? "bg-[#a36fd4] text-white"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
                             }`}
                         >
                           Daily
@@ -573,8 +573,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                         <button
                           onClick={() => setSelectedtab("Weeklydata")}
                           className={`px-3 py-1 rounded-2xl h-[28px]  hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Weeklydata"
-                              ? "bg-[#a36fd4] text-white"
-                              : "bg-white text-gray-700 hover:bg-gray-100"
+                            ? "bg-[#a36fd4] text-white"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
                             }`}
                         >
                           Weekly
@@ -583,8 +583,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                         <button
                           onClick={() => setSelectedtab("Monthlydata")}
                           className={`px-3 py-1 h-[28px] rounded-2xl hover:bg-gray-300 transition-all ease-in-out ${selectedtab === "Monthlydata"
-                              ? "bg-[#a36fd4] text-white"
-                              : "bg-white text-gray-700 hover:bg-gray-100"
+                            ? "bg-[#a36fd4] text-white"
+                            : "bg-white text-gray-700 hover:bg-gray-100"
                             }`}
                         >
                           Monthly
@@ -593,8 +593,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                         <button
                           onClick={() => setSelectedtab("Filter")}
                           className={`px-3 py-1 rounded-2xl h-[28px]  hover:bg-[#c799f3] hover:text-black transition-all ease-in-out ${selectedtab === "Filter"
-                              ? "bg-[#8c4fc5] text-white"
-                              : "bg-white text-gray-700 hover:bg-[#c799f3]"
+                            ? "bg-[#8c4fc5] text-white"
+                            : "bg-white text-gray-700 hover:bg-[#c799f3]"
                             }`}
                         >
                           Filter
@@ -746,7 +746,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                               onClick={() => {
                                 handleDateFilter()
                                 setIsDateDialogOpen(false)
-                               }}
+                              }}
                               className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700"
                             >
                               Search
@@ -1118,13 +1118,13 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center mb-6">
                 <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold">Monthly Overview - {format(selectedDate, 'MMMM yyyy')}</h2>
+                <h2 className="text-xl font-semibold">Monthly Overview hello sir  - {format(selectedDate, 'MMMM yyyy')}</h2>
               </div>
 
               {monthlyStats ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary</h3>
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary </h3>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Expected Working Days:</span>
