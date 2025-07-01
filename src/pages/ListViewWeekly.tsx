@@ -12,6 +12,7 @@ import {
 } from "date-fns";
 import { ChevronLeft, ChevronRight, DownloadIcon } from "lucide-react"; // Assuming you're using Lucide icons
 import { AttendanceContext } from "./AttendanceContext";
+import PersonAttendanceDetail from './PersonAttendanceDetail';
 
 interface User {
   id: string;
@@ -33,6 +34,8 @@ interface EmployeeStats {
   absentDays: number;
   totalHoursWorked: number;
   workingHoursPercentage: number;
+  remoteDays: number;
+  leavedays: number;
 }
 
 interface DailyAttendance {
@@ -41,13 +44,17 @@ interface DailyAttendance {
   workingHours: number;
 }
 
-const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
+interface EmployeeWeeklyAttendanceTableProps {
+  selectedDateW: Date;
+}
+
+const EmployeeWeeklyAttendanceTable: React.FC<EmployeeWeeklyAttendanceTableProps> = ({ selectedDateW }) => {
   const [attendanceDataWeekly, setattendanceDataWeekly] = useState<
     EmployeeStats[]
   >([]);
   const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]);
-
   const [loading, setLoading] = useState(true);
+  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState("all");
   const { setAttendanceDataWeekly } = useContext(AttendanceContext);
@@ -302,7 +309,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
   }, [selectedDateW]);
 
   // Handle filter change
-  const handleFilterChange = (filter) => {
+  const handleFilterChange = (filter: string) => {
     setCurrentFilter(filter);
     switch (filter) {
       case "all":
@@ -334,6 +341,16 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
       default:
         setFilteredData(attendanceDataWeekly);
     }
+  };
+
+  // Handle row click to show detailed view
+  const handleRowClick = (userId: string, userName: string) => {
+    setSelectedUser({ id: userId, name: userName });
+  };
+
+  // Handle closing the detail view
+  const handleCloseDetail = () => {
+    setSelectedUser(null);
   };
 
   const handleDownload = async (userId: string, fullName: string) => {
@@ -406,7 +423,7 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
           checkOut = formatDate(
             new Date(
               attendance.check_out ||
-                new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000)
+              new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000)
             )
           );
           // workingHours = (new Date(checkOut).getTime() - new Date(checkIn).getTime()) / (1000 * 60 * 60);
@@ -535,9 +552,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
           <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
             <button
               onClick={() => handleFilterChange("all")}
-              className={`flex items-center space-x-2 ${
-                currentFilter === "all" ? "font-bold" : ""
-              }`}
+              className={`flex items-center space-x-2 ${currentFilter === "all" ? "font-bold" : ""
+                }`}
             >
               <span className="sm:block hidden h-4 bg-gray-600 rounded-full"></span>
               <h2 className="text-gray-600 sm:text-xl text-sm">
@@ -546,9 +562,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
             </button>
             <button
               onClick={() => handleFilterChange("poor")}
-              className={`flex items-center space-x-2 ${
-                currentFilter === "poor" ? "font-bold" : ""
-              }`}
+              className={`flex items-center space-x-2 ${currentFilter === "poor" ? "font-bold" : ""
+                }`}
             >
               <span className="sm:block hidden w-4 h-4 bg-red-500 rounded-full"></span>
               <h2 className="text-red-600 sm:text-xl text-sm">
@@ -557,9 +572,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
             </button>
             <button
               onClick={() => handleFilterChange("good")}
-              className={`flex items-center space-x-2 ${
-                currentFilter === "good" ? "font-bold" : ""
-              }`}
+              className={`flex items-center space-x-2 ${currentFilter === "good" ? "font-bold" : ""
+                }`}
             >
               <span className="sm:block hidden w-4 h-4 bg-yellow-500 rounded-full"></span>
               <h2 className="text-yellow-600 sm:text-xl text-sm">
@@ -568,9 +582,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
             </button>
             <button
               onClick={() => handleFilterChange("excellent")}
-              className={`flex items-center space-x-2 ${
-                currentFilter === "excellent" ? "font-bold" : ""
-              }`}
+              className={`flex items-center space-x-2 ${currentFilter === "excellent" ? "font-bold" : ""
+                }`}
             >
               <span className="sm:block hidden  w-4 h-4 bg-green-500 rounded-full"></span>
               <h2 className="text-green-600 sm:text-xl text-sm">
@@ -608,8 +621,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                         ? "bg-red-500 text-white"
                         : entry.workingHoursPercentage >= 70 &&
                           entry.workingHoursPercentage < 80
-                        ? "bg-yellow-500 text-white"
-                        : "bg-green-500 text-white";
+                          ? "bg-yellow-500 text-white"
+                          : "bg-green-500 text-white";
 
                     const nameColor =
                       entry.workingHoursPercentage < 70
@@ -619,7 +632,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                     return (
                       <tr
                         key={index}
-                        className="border-b border-gray-200 hover:bg-gray-50 transition-all"
+                        className="border-b border-gray-200 hover:bg-gray-50 transition-all cursor-pointer"
+                        onClick={() => handleRowClick(entry.user.id, entry.user.full_name)}
                       >
                         <td className={`py-4 px-6 ${nameColor}`}>
                           {entry.user.full_name}
@@ -677,8 +691,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                         ? "bg-red-500 text-white"
                         : entry.workingHoursPercentage >= 70 &&
                           entry.workingHoursPercentage < 80
-                        ? "bg-yellow-500 text-white"
-                        : "bg-green-500 text-white";
+                          ? "bg-yellow-500 text-white"
+                          : "bg-green-500 text-white";
 
                     const nameColor =
                       entry.workingHoursPercentage < 70
@@ -688,7 +702,8 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
                     return (
                       <div
                         key={index}
-                        className="bg-white p-4 rounded-lg shadow-sm"
+                        className="bg-white p-4 rounded-lg shadow-sm cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => handleRowClick(entry.user.id, entry.user.full_name)}
                       >
                         <div className="flex justify-between items-center mb-3">
                           <h3 className={`font-medium text-lg ${nameColor}`}>
@@ -746,6 +761,16 @@ const EmployeeWeeklyAttendanceTable: React.FC = ({ selectedDateW }) => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Person Attendance Detail Modal */}
+      {selectedUser && (
+        <PersonAttendanceDetail
+          userId={selectedUser.id}
+          userName={selectedUser.name}
+          selectedMonth={selectedDateW}
+          onClose={handleCloseDetail}
+        />
       )}
     </div>
   );

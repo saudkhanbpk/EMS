@@ -3,6 +3,7 @@ import { supabase } from "../lib/supabase";
 import EmployeeMonthlyAttendanceTable from "./ListViewMonthly";
 import { useAuthStore } from "../lib/store";
 import EmployeeWeeklyAttendanceTable from "./ListViewWeekly";
+import PersonAttendanceDetail from './PersonAttendanceDetail';
 import { ChevronLeft, ChevronRight, SearchIcon } from "lucide-react"; // Assuming you're using Lucide icons
 import { format, parse, isAfter, addMonths, addWeeks, set } from "date-fns"; // Import the format function
 import { DownloadIcon } from "lucide-react";
@@ -90,6 +91,7 @@ const EmployeeAttendanceTable = () => {
   const [absentid, setabsentid] = useState<null | number>(null);
   const [selecteduser, setslecteduser] = useState<null | string>(null);
   const [filteredData, setFilteredData] = useState([]); // Filtered data for display
+  const [selectedUserForDetail, setSelectedUserForDetail] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState(null);
   const [absent, setAbsent] = useState(0);
   const [modalVisible, setModalVisible] = useState(false);
@@ -1978,6 +1980,26 @@ const EmployeeAttendanceTable = () => {
 
       if (attendanceError) throw attendanceError;
 
+      // Fetch breaks for the selected date
+      const { data: breaksData, error: breaksError } = await supabase
+        .from("breaks")
+        .select("start_time, end_time, attendance_id")
+        .gte("start_time", `${formattedDate}T00:00:00`)
+        .lte("start_time", `${formattedDate}T23:59:59`);
+
+      if (breaksError) throw breaksError;
+
+      // Create breaks map by attendance_id
+      const breaksMap = new Map();
+      if (breaksData) {
+        breaksData.forEach((breakItem) => {
+          if (!breaksMap.has(breakItem.attendance_id)) {
+            breaksMap.set(breakItem.attendance_id, []);
+          }
+          breaksMap.get(breakItem.attendance_id).push(breakItem);
+        });
+      }
+
       // Fetch absentees for the selected date
       const { data: absentees, error: absenteesError } = await supabase
         .from("absentees")
@@ -2024,9 +2046,15 @@ const EmployeeAttendanceTable = () => {
             autocheckout: "",
             work_mode: "N/A",
             status: absenteeType || "Absent", // Use absentee type if available
+            break_start: "N/A",
+            break_status: "N/A",
             textColor: absenteeType ? "text-blue-500" : "text-red-500", // Optional: different color for approved leaves
           };
         }
+
+        // Get breaks for this attendance log
+        const userBreaks = breaksMap.get(log.id) || [];
+        const firstBreak = userBreaks[0];
 
         return {
           id: user.id,
@@ -2040,6 +2068,8 @@ const EmployeeAttendanceTable = () => {
           autocheckout: log.autocheckout || "",
           work_mode: log.work_mode || "N/A",
           status: log.status || "Absent",
+          break_start: firstBreak ? formatTime(firstBreak.start_time) : "N/A",
+          break_status: firstBreak ? (firstBreak.end_time ? "ended" : "active") : "N/A",
           textColor:
             log.status.toLowerCase() === "present"
               ? "text-green-500"
@@ -2185,6 +2215,17 @@ const EmployeeAttendanceTable = () => {
         setFilteredData(attendanceData);
     }
   };
+
+  // Handle row click to show detailed view
+  const handleRowClickDaily = (userId: string, userName: string) => {
+    setSelectedUserForDetail({ id: userId, name: userName });
+  };
+
+  // Handle closing the detail view
+  const handleCloseDetailDaily = () => {
+    setSelectedUserForDetail(null);
+  };
+
   const handlenotification = () => {
     Notification.requestPermission().then(() => {
       const notification = new Notification("Office Time Update", {
@@ -2389,15 +2430,9 @@ const EmployeeAttendanceTable = () => {
               >
                 <ChevronLeft className="w-5 h-5" />
               </button>
-              {/* <span className="mx-4 text-xl font-semibold">
+              <span className="mx-4 text-xl font-semibold">
                 {format(selectedDateM, "MMMM yyyy")}
-              </span> */}
-              <input
-                className="md:text-xl ml-0 text-sm font-semibold"
-                type="date"
-                value={selectedDateM ? format(selectedDate, "MMMM yyyy") : ""}
-                onChange={(e) => setSelectedDateM(new Date(e.target.value))}
-              />
+              </span>
               <button
                 onClick={() => handleMonthChange("next")}
                 className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -2690,6 +2725,10 @@ const EmployeeAttendanceTable = () => {
                             Check-out
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Break Start
+                          </th>
+
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
                             2nd Check-in
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
@@ -2702,7 +2741,11 @@ const EmployeeAttendanceTable = () => {
                       </thead>
                       <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
                         {filteredData.map((entry, index) => (
-                          <tr key={index} className="border-b border-gray-200 hover:bg-gray-50 transition-all">
+                          <tr
+                            key={index}
+                            className="border-b border-gray-200 hover:bg-gray-50 transition-all cursor-pointer"
+                            onClick={() => handleRowClickDaily(entry.id, entry.full_name)}
+                          >
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
                               <span
                                 className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${entry.status === "present"
@@ -2743,6 +2786,10 @@ const EmployeeAttendanceTable = () => {
                                 ) : null}
                               </div>
                             </td>
+                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                              {entry.break_start || "N/A"}
+                            </td>
+
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100">
                               <div className="flex items-center">
                                 <span className="truncate">
@@ -2811,7 +2858,8 @@ const EmployeeAttendanceTable = () => {
                     {filteredData.map((entry, index) => (
                       <div
                         key={index}
-                        className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px]"
+                        className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px] cursor-pointer hover:shadow-md transition-shadow"
+                        onClick={() => handleRowClickDaily(entry.id, entry.full_name)}
                       >
                         <div className="flex justify-between items-center mb-2 border-b pb-2">
                           <span
@@ -2877,6 +2925,17 @@ const EmployeeAttendanceTable = () => {
                               ) : null}
                             </div>
                           </div>
+
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              Break Start
+                            </span>
+                            <div className="font-medium p-1">
+                              {entry.break_start || "---"}
+                            </div>
+                          </div>
+
+
 
                           {/* Added 2nd Check-in for mobile view */}
                           <div className="flex flex-col">
