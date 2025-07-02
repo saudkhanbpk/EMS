@@ -14,7 +14,7 @@ import {
   Eye,
   EyeOff,
   Calendar,
-  DollarSign 
+  DollarSign
 } from "lucide-react";
 import { FaEdit } from "react-icons/fa";
 import { useAuthStore } from "../lib/store";
@@ -95,7 +95,7 @@ const ProfileCard: React.FC = () => {
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       setFormData(prev => ({ ...prev, profile_image: e.target.files![0] }));
-    }else{
+    } else {
       setFormData(prev => ({ ...prev, profile_image: null }));
     }
   };
@@ -211,7 +211,7 @@ const ProfileCard: React.FC = () => {
           email: formData.email,
           phone_number: formData.phone_number,
           personal_email: formData.personal_email,
-          slack_id: formData.slack_id,
+          slack_id: formData.slack_id?.trim(),
           location: formData.location,
           profession: formData.profession,
           salary: formData.salary,
@@ -518,7 +518,7 @@ const ProfileCard: React.FC = () => {
               <span className="text-gray-700">{user.location || "Unknown"}</span>
             </div>
             <div className="flex items-center space-x-2 text-purple-600">
-              <Briefcase  className="w-5 h-5" />
+              <Briefcase className="w-5 h-5" />
               <span className="text-gray-700">{user.profession || "N/A"}</span>
             </div>
             <div className="flex items-center space-x-2 text-purple-600">

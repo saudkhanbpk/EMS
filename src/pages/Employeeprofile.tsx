@@ -124,7 +124,7 @@ const Employeeprofile = ({
   const [isAddingDeduction, setIsAddingDeduction] = useState(false);
   const [addDeductionLoading, setAddDeductionLoading] = useState(false);
 
-// Add this right after your imports
+  // Add this right after your imports
 
   // Function to fetch deductions data for a specific month
   const fetchDeductionsData = async (monthToFetch?: string) => {
@@ -641,18 +641,18 @@ const Employeeprofile = ({
       // Filter tasks where the employee is in the devops array or is the user_id
       const tasksData = allTasksData
         ? allTasksData.filter((task) => {
-            // Check if task is directly assigned to the employee
-            if (task.user_id === employeeid) return true;
+          // Check if task is directly assigned to the employee
+          if (task.user_id === employeeid) return true;
 
-            // Check if employee is in the devops array
-            if (task.devops && Array.isArray(task.devops)) {
-              return task.devops.some(
-                (dev) => dev && typeof dev === "object" && dev.id === employeeid
-              );
-            }
+          // Check if employee is in the devops array
+          if (task.devops && Array.isArray(task.devops)) {
+            return task.devops.some(
+              (dev) => dev && typeof dev === "object" && dev.id === employeeid
+            );
+          }
 
-            return false;
-          })
+          return false;
+        })
         : [];
 
       console.log("Monthly tasks found:", tasksData.length);
@@ -684,13 +684,13 @@ const Employeeprofile = ({
       // Filter projects where the employee is in the devops array
       const projectsData = allProjectsData
         ? allProjectsData.filter((project) => {
-            if (!project.devops || !Array.isArray(project.devops)) return false;
+          if (!project.devops || !Array.isArray(project.devops)) return false;
 
-            // Check if any devops entry has the employee's ID
-            return project.devops.some(
-              (dev) => dev && typeof dev === "object" && dev.id === employeeid
-            );
-          })
+          // Check if any devops entry has the employee's ID
+          return project.devops.some(
+            (dev) => dev && typeof dev === "object" && dev.id === employeeid
+          );
+        })
         : [];
 
       console.log("Monthly projects found:", projectsData.length);
@@ -733,35 +733,35 @@ const Employeeprofile = ({
   };
 
   // Handle month selection
- useEffect(() => {
-  // This will now run with current month on initial load
-  if (selectedmonth) {
-    try {
-      const [year, month] = selectedmonth.split('-').map(Number);
-      const workingDays = getWorkingDaysInMonth(year, month - 1);
-      const hours = workingDays * 7;
-      setExpectedHours(hours);
-      
-      if (formData.salary) {
-        setFormData(prev => ({
-          ...prev,
-          per_hour_pay: (parseFloat(prev.salary) / hours).toFixed(2)
-        }));
+  useEffect(() => {
+    // This will now run with current month on initial load
+    if (selectedmonth) {
+      try {
+        const [year, month] = selectedmonth.split('-').map(Number);
+        const workingDays = getWorkingDaysInMonth(year, month - 1);
+        const hours = workingDays * 7;
+        setExpectedHours(hours);
+
+        if (formData.salary) {
+          setFormData(prev => ({
+            ...prev,
+            per_hour_pay: (parseFloat(prev.salary) / hours).toFixed(2)
+          }));
+        }
+
+        const startOfMonthDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
+        const lastDay = new Date(Date.UTC(year, month, 0)).getDate();
+        const endOfMonthDate = new Date(Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999));
+
+        setStartdate(startOfMonthDate.toISOString());
+        setEnddate(endOfMonthDate.toISOString());
+        fetchMonthlyData(startOfMonthDate.toISOString(), endOfMonthDate.toISOString());
+
+      } catch (err) {
+        console.error("Error processing dates:", err);
       }
-
-      const startOfMonthDate = new Date(Date.UTC(year, month - 1, 1, 0, 0, 0, 0));
-      const lastDay = new Date(Date.UTC(year, month, 0)).getDate();
-      const endOfMonthDate = new Date(Date.UTC(year, month - 1, lastDay, 23, 59, 59, 999));
-
-      setStartdate(startOfMonthDate.toISOString());
-      setEnddate(endOfMonthDate.toISOString());
-      fetchMonthlyData(startOfMonthDate.toISOString(), endOfMonthDate.toISOString());
-
-    } catch (err) {
-      console.error("Error processing dates:", err);
     }
-  }
-}, [selectedmonth, employeeid]);
+  }, [selectedmonth, employeeid]);
 
   const [incrementData, setIncrementData] = useState({
     user_id: employeeid,
@@ -806,7 +806,7 @@ const Employeeprofile = ({
   const [incrementHistory, setIncrementHistory] = useState<
     IncrementHistoryItem[]
   >([]);
-const getEmploymentDuration = (joinDate) => {
+  const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
     const today = new Date();
     const diffTime = Math.abs(today - joined);
@@ -814,14 +814,14 @@ const getEmploymentDuration = (joinDate) => {
   };
 
 
- useEffect(() => {
+  useEffect(() => {
     if (selectedmonth) {
       try {
         const [year, month] = selectedmonth.split('-').map(Number);
         const workingDays = getWorkingDaysInMonth(year, month - 1);
         const hours = workingDays * 7;
         setExpectedHours(hours);
-        
+
         // Calculate per hour rate if salary exists
         if (formData.salary) {
           setFormData(prev => ({
@@ -1153,8 +1153,8 @@ const getEmploymentDuration = (joinDate) => {
         profileImageUrl = userData.profile_image.startsWith("http")
           ? userData.profile_image
           : supabase.storage
-              .from("profilepics")
-              .getPublicUrl(userData.profile_image).data.publicUrl;
+            .from("profilepics")
+            .getPublicUrl(userData.profile_image).data.publicUrl;
       }
 
       // Calculate basic per hour rate from salary and current month expected hours
@@ -1195,6 +1195,9 @@ const getEmploymentDuration = (joinDate) => {
         phone_number: userData.phone_number,
         personal_email: userData.personal_email,
         slack_id: userData.slack_id,
+
+
+
         location: userData.location,
         profession: userData.profession,
         salary: userData.salary,
@@ -1426,19 +1429,19 @@ const getEmploymentDuration = (joinDate) => {
     }
   }, [employeeid]);
 
-// Usage in your component
-useEffect(() => {
-  if (selectedmonth) {
-    const [year, month] = selectedmonth.split('-').map(Number);
-    const workingDays = getWorkingDaysInMonth(year, month - 1); // month is 0-indexed
-    const expectedHours = workingDays * 7;
-    
-    setFormData(prev => ({
-      ...prev,
-      per_hour_pay: (parseFloat(prev.salary) / expectedHours).toFixed(2)
-    }));
-  }
-}, [selectedmonth, formData.salary]);
+  // Usage in your component
+  useEffect(() => {
+    if (selectedmonth) {
+      const [year, month] = selectedmonth.split('-').map(Number);
+      const workingDays = getWorkingDaysInMonth(year, month - 1); // month is 0-indexed
+      const expectedHours = workingDays * 7;
+
+      setFormData(prev => ({
+        ...prev,
+        per_hour_pay: (parseFloat(prev.salary) / expectedHours).toFixed(2)
+      }));
+    }
+  }, [selectedmonth, formData.salary]);
 
   const handleEditClick = () => {
     // Initialize the incrementData with the lastIncrement data if available
@@ -1559,7 +1562,7 @@ useEffect(() => {
           email: formData.email,
           phone_number: formData.phone_number,
           personal_email: formData.personal_email,
-          slack_id: formData.slack_id,
+          slack_id: formData.slack_id?.trim(),
           location: formData.location,
           profession: formData.profession,
           salary: formData.salary,
@@ -1653,26 +1656,26 @@ useEffect(() => {
 
 
   const calculateWorkingDays = (year: number, month: number) => {
-  let workingDays = 0;
-  const daysInMonth = new Date(year, month + 1, 0).getDate();
-  
-  for (let day = 1; day <= daysInMonth; day++) {
-    const dayOfWeek = new Date(year, month, day).getDay();
-    // Monday to Friday (1-5), excluding Saturday (6) and Sunday (0)
-    if (dayOfWeek >= 1 && dayOfWeek <= 5) {
-      workingDays++;
+    let workingDays = 0;
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+    for (let day = 1; day <= daysInMonth; day++) {
+      const dayOfWeek = new Date(year, month, day).getDay();
+      // Monday to Friday (1-5), excluding Saturday (6) and Sunday (0)
+      if (dayOfWeek >= 1 && dayOfWeek <= 5) {
+        workingDays++;
+      }
     }
-  }
-  return workingDays;
-};
+    return workingDays;
+  };
 
-const calculateExpectedHours = (year: number, month: number) => {
-  return calculateWorkingDays(year, month) * 7; // 8 hours per working day
-};
-
+  const calculateExpectedHours = (year: number, month: number) => {
+    return calculateWorkingDays(year, month) * 7; // 8 hours per working day
+  };
 
 
-// Add this with your other useEffect hooks
+
+  // Add this with your other useEffect hooks
 
 
   return (
@@ -1736,7 +1739,7 @@ const calculateExpectedHours = (year: number, month: number) => {
               formData.profile_image
                 ? URL.createObjectURL(formData.profile_image)
                 : employeeData?.profile_image_url ||
-                  "https://via.placeholder.com/150"
+                "https://via.placeholder.com/150"
             }
             alt="Profile"
             className="w-28 h-28 sm:w-32 sm:h-32 rounded-xl object-cover"
@@ -1758,19 +1761,19 @@ const calculateExpectedHours = (year: number, month: number) => {
             {(employeeData as any)?.salary
               ? selectedmonth
                 ? (() => {
-                    // Calculate earnings as: (completed hours × basic rate) + overtime earnings
-                    const [year, month] = selectedmonth.split('-').map(Number);
-                    const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
-                    const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
-                    const completedHours = parseFloat(monthlyData.totalWorkingHours);
-                    const basicEarnings = completedHours * basicPerHourRate;
-                    const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
-                    return (basicEarnings + overtimeEarnings).toFixed(2);
-                  })()
+                  // Calculate earnings as: (completed hours × basic rate) + overtime earnings
+                  const [year, month] = selectedmonth.split('-').map(Number);
+                  const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                  const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                  const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                  const basicEarnings = completedHours * basicPerHourRate;
+                  const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                  return (basicEarnings + overtimeEarnings).toFixed(2);
+                })()
                 : (
-                    parseFloat((employeeData as any).salary) +
-                    parseFloat((employeeData as any).overtimePay || "0")
-                  ).toFixed(2)
+                  parseFloat((employeeData as any).salary) +
+                  parseFloat((employeeData as any).overtimePay || "0")
+                ).toFixed(2)
               : "0"}
           </span>
           {selectedmonth && <span className="text-xs mt-1"></span>}
@@ -1783,8 +1786,8 @@ const calculateExpectedHours = (year: number, month: number) => {
             {selectedmonth
               ? monthlyData.projectsCount
               : employeeData && employeeData.projects
-              ? employeeData.projects.length
-              : " "}
+                ? employeeData.projects.length
+                : " "}
           </p>
           <p className="text-xl font-semibold">
             {selectedmonth ? "Monthly Projects" : "Total Projects"}
@@ -1811,9 +1814,8 @@ const calculateExpectedHours = (year: number, month: number) => {
             {selectedmonth && (
               <div className="text-gray-400 text-xs mt-1">
                 {monthlyData.completedTaskCount > 0
-                  ? `${monthlyData.completedTaskCount} ${
-                      monthlyData.completedTaskCount === 1 ? "task" : "tasks"
-                    } completed this month`
+                  ? `${monthlyData.completedTaskCount} ${monthlyData.completedTaskCount === 1 ? "task" : "tasks"
+                  } completed this month`
                   : "0 task completed this month"}
               </div>
             )}
@@ -1978,8 +1980,8 @@ const calculateExpectedHours = (year: number, month: number) => {
               <span className="text-gray-600 text-sm">
                 {lastIncrement
                   ? `Rs. ${lastIncrement.increment_amount} on ${new Date(
-                      lastIncrement.increment_date
-                    ).toLocaleDateString()}`
+                    lastIncrement.increment_date
+                  ).toLocaleDateString()}`
                   : "N/A"}
               </span>
             </div>
@@ -1996,141 +1998,141 @@ const calculateExpectedHours = (year: number, month: number) => {
         </div>
 
         {/* Earnings Card */}
-     {/* Earnings Card */}
-<div className="bg-white rounded-lg shadow-md p-6 w-72">
-  <div className="flex items-center mb-4">
-    <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
-      <DollarSign className="text-purple-600 h-4 w-4" />
-    </div>
-    <h2 className="text-gray-800 font-medium">Earnings</h2>
-  </div>
+        {/* Earnings Card */}
+        <div className="bg-white rounded-lg shadow-md p-6 w-72">
+          <div className="flex items-center mb-4">
+            <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center mr-2">
+              <DollarSign className="text-purple-600 h-4 w-4" />
+            </div>
+            <h2 className="text-gray-800 font-medium">Earnings</h2>
+          </div>
 
-  <div className="space-y-4">
-    <div className="flex justify-between">
-      <span className="text-gray-500 text-sm">Basic Pay</span>
-      <span className="text-gray-600 text-sm">
-        {employeeData?.salary || "0"}
-      </span>
-    </div>
+          <div className="space-y-4">
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Basic Pay</span>
+              <span className="text-gray-600 text-sm">
+                {employeeData?.salary || "0"}
+              </span>
+            </div>
 
-    <div className="flex justify-between">
-      <span className="text-gray-600">Expected Hours</span>
-      <span className="font-semibold text-gray-800">
-        {selectedmonth 
-          ? (() => {
-              const [year, month] = selectedmonth.split('-').map(Number);
-              return getWorkingDaysInMonth(year, month - 1) * 7;
-            })()
-          : "Select a month"}
-      </span>
-    </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Expected Hours</span>
+              <span className="font-semibold text-gray-800">
+                {selectedmonth
+                  ? (() => {
+                    const [year, month] = selectedmonth.split('-').map(Number);
+                    return getWorkingDaysInMonth(year, month - 1) * 7;
+                  })()
+                  : "Select a month"}
+              </span>
+            </div>
 
-    <div className="flex justify-between">
-      <span className="text-gray-600">Completed Hours</span>
-      <span className="font-semibold text-gray-800">
-        {selectedmonth ? monthlyData.totalWorkingHours : "Select a month"}
-      </span>
-    </div>
-<div className="flex justify-between">
-  <span className="text-gray-600">Pay Per Hour</span>
-  <span className="font-semibold text-gray-800">
-    {selectedmonth && employeeData?.salary
-      ? (
-          (
-            parseFloat(employeeData.salary) / 
-            (
-              getWorkingDaysInMonth(
-                parseInt(selectedmonth.split('-')[0]), 
-                parseInt(selectedmonth.split('-')[1]) - 1
-              ) * 7
-            )
-          ).toFixed(2)
-        )
-      : "Select a month"}
-  </span>
-</div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Completed Hours</span>
+              <span className="font-semibold text-gray-800">
+                {selectedmonth ? monthlyData.totalWorkingHours : "Select a month"}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Pay Per Hour</span>
+              <span className="font-semibold text-gray-800">
+                {selectedmonth && employeeData?.salary
+                  ? (
+                    (
+                      parseFloat(employeeData.salary) /
+                      (
+                        getWorkingDaysInMonth(
+                          parseInt(selectedmonth.split('-')[0]),
+                          parseInt(selectedmonth.split('-')[1]) - 1
+                        ) * 7
+                      )
+                    ).toFixed(2)
+                  )
+                  : "Select a month"}
+              </span>
+            </div>
 
 
-    <div className="flex justify-between">
-      <span className="text-gray-500 text-sm">Overtime Hours</span>
-      <span className="text-gray-600 text-sm">
-        {selectedmonth
-          ? monthlyData.totalOvertimeHours
-          : employeeData?.totalOvertimeHours || "0"}
-        {selectedmonth && (
-          <span className="text-xs text-gray-400 ml-1">(monthly)</span>
-        )}
-      </span>
-    </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Overtime Hours</span>
+              <span className="text-gray-600 text-sm">
+                {selectedmonth
+                  ? monthlyData.totalOvertimeHours
+                  : employeeData?.totalOvertimeHours || "0"}
+                {selectedmonth && (
+                  <span className="text-xs text-gray-400 ml-1">(monthly)</span>
+                )}
+              </span>
+            </div>
 
-    {/* Overtime Rate Calculation */}
-    {selectedmonth && parseFloat(monthlyData.totalOvertimeHours) > 0 && (
-      <div className="flex justify-between">
-        <span className="text-gray-500 text-sm">Overtime Rate</span>
-        <span className="text-gray-600 text-sm">
-          {(() => {
-            const overtimeHours = parseFloat(monthlyData.totalOvertimeHours);
-            const [year, month] = selectedmonth.split('-').map(Number);
-            const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
-            const basicPerHourRate = (employeeData as any)?.salary
-              ? parseFloat((employeeData as any).salary) / expectedHours
-              : 0;
+            {/* Overtime Rate Calculation */}
+            {selectedmonth && parseFloat(monthlyData.totalOvertimeHours) > 0 && (
+              <div className="flex justify-between">
+                <span className="text-gray-500 text-sm">Overtime Rate</span>
+                <span className="text-gray-600 text-sm">
+                  {(() => {
+                    const overtimeHours = parseFloat(monthlyData.totalOvertimeHours);
+                    const [year, month] = selectedmonth.split('-').map(Number);
+                    const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                    const basicPerHourRate = (employeeData as any)?.salary
+                      ? parseFloat((employeeData as any).salary) / expectedHours
+                      : 0;
 
-            let percentage = "";
-            if (overtimeHours <= 20) {
-              percentage = "80%";
-            } else if (overtimeHours <= 40) {
-              percentage = "75%";
-            } else {
-              percentage = "70%";
-            }
+                    let percentage = "";
+                    if (overtimeHours <= 20) {
+                      percentage = "80%";
+                    } else if (overtimeHours <= 40) {
+                      percentage = "75%";
+                    } else {
+                      percentage = "70%";
+                    }
 
-            const overtimeRate = overtimeHours <= 20 ? basicPerHourRate * 0.8 :
-                               overtimeHours <= 40 ? basicPerHourRate * 0.75 :
-                               basicPerHourRate * 0.7;
+                    const overtimeRate = overtimeHours <= 20 ? basicPerHourRate * 0.8 :
+                      overtimeHours <= 40 ? basicPerHourRate * 0.75 :
+                        basicPerHourRate * 0.7;
 
-            return `${overtimeRate.toFixed(2)} (${percentage})`;
-          })()}
-        </span>
-      </div>
-    )}
+                    return `${overtimeRate.toFixed(2)} (${percentage})`;
+                  })()}
+                </span>
+              </div>
+            )}
 
-    <div className="flex justify-between">
-      <span className="text-gray-500 text-sm">Overtime Earnings</span>
-      <span className="text-gray-600 text-sm">
-        {selectedmonth
-          ? monthlyData.overtimePay
-          : employeeData?.overtimePay || "0"}
-        {selectedmonth && (
-          <span className="text-xs text-gray-400 ml-1">(monthly)</span>
-        )}
-      </span>
-    </div>
+            <div className="flex justify-between">
+              <span className="text-gray-500 text-sm">Overtime Earnings</span>
+              <span className="text-gray-600 text-sm">
+                {selectedmonth
+                  ? monthlyData.overtimePay
+                  : employeeData?.overtimePay || "0"}
+                {selectedmonth && (
+                  <span className="text-xs text-gray-400 ml-1">(monthly)</span>
+                )}
+              </span>
+            </div>
 
-    <div className="flex justify-between border-t pt-2">
-      <span className="text-gray-700 text-sm font-medium">Total Earning</span>
-      <span className="text-gray-800 text-sm font-semibold">
-        {(employeeData as any)?.salary
-          ? selectedmonth
-            ? (() => {
-                // Calculate earnings as: (completed hours × basic rate) + overtime earnings
-                const [year, month] = selectedmonth.split('-').map(Number);
-                const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
-                const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
-                const completedHours = parseFloat(monthlyData.totalWorkingHours);
-                const basicEarnings = completedHours * basicPerHourRate;
-                const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
-                return (basicEarnings + overtimeEarnings).toFixed(2);
-              })()
-            : (
-                parseFloat((employeeData as any).salary) +
-                parseFloat((employeeData as any).overtimePay || "0")
-              ).toFixed(2)
-          : "0"}
-      </span>
-    </div>
-  </div>
-</div>
+            <div className="flex justify-between border-t pt-2">
+              <span className="text-gray-700 text-sm font-medium">Total Earning</span>
+              <span className="text-gray-800 text-sm font-semibold">
+                {(employeeData as any)?.salary
+                  ? selectedmonth
+                    ? (() => {
+                      // Calculate earnings as: (completed hours × basic rate) + overtime earnings
+                      const [year, month] = selectedmonth.split('-').map(Number);
+                      const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                      const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                      const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                      const basicEarnings = completedHours * basicPerHourRate;
+                      const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                      return (basicEarnings + overtimeEarnings).toFixed(2);
+                    })()
+                    : (
+                      parseFloat((employeeData as any).salary) +
+                      parseFloat((employeeData as any).overtimePay || "0")
+                    ).toFixed(2)
+                  : "0"}
+              </span>
+            </div>
+          </div>
+        </div>
 
         {/* Deductions Card */}
         <div className="bg-white rounded-lg shadow-md p-6 w-72">
@@ -2150,11 +2152,10 @@ const calculateExpectedHours = (year: number, month: number) => {
                   }
                   setIsEditingDeductions(true);
                 }}
-                className={`text-sm font-medium ${
-                  selectedDeductionMonth
+                className={`text-sm font-medium ${selectedDeductionMonth
                     ? "text-purple-600 hover:text-purple-800"
                     : "text-gray-400 cursor-not-allowed"
-                }`}
+                  }`}
                 disabled={deductionsLoading || !selectedDeductionMonth}
               >
                 Edit
@@ -2291,19 +2292,19 @@ const calculateExpectedHours = (year: number, month: number) => {
                 {(employeeData as any)?.salary
                   ? selectedmonth
                     ? (() => {
-                        // Calculate earnings as: (completed hours × basic rate) + overtime earnings
-                        const [year, month] = selectedmonth.split('-').map(Number);
-                        const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
-                        const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
-                        const completedHours = parseFloat(monthlyData.totalWorkingHours);
-                        const basicEarnings = completedHours * basicPerHourRate;
-                        const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
-                        return (basicEarnings + overtimeEarnings).toFixed(2);
-                      })()
+                      // Calculate earnings as: (completed hours × basic rate) + overtime earnings
+                      const [year, month] = selectedmonth.split('-').map(Number);
+                      const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                      const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                      const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                      const basicEarnings = completedHours * basicPerHourRate;
+                      const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                      return (basicEarnings + overtimeEarnings).toFixed(2);
+                    })()
                     : (
-                        parseFloat((employeeData as any).salary) +
-                        parseFloat((employeeData as any).overtimePay || "0")
-                      ).toFixed(2)
+                      parseFloat((employeeData as any).salary) +
+                      parseFloat((employeeData as any).overtimePay || "0")
+                    ).toFixed(2)
                   : "0"}
               </span>
             </div>
@@ -2358,14 +2359,14 @@ const calculateExpectedHours = (year: number, month: number) => {
                   const totalEarnings = (employeeData as any)?.salary
                     ? selectedmonth
                       ? (() => {
-                          const [year, month] = selectedmonth.split('-').map(Number);
-                          const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
-                          const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
-                          const completedHours = parseFloat(monthlyData.totalWorkingHours);
-                          const basicEarnings = completedHours * basicPerHourRate;
-                          const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
-                          return basicEarnings + overtimeEarnings;
-                        })()
+                        const [year, month] = selectedmonth.split('-').map(Number);
+                        const expectedHours = getWorkingDaysInMonth(year, month - 1) * 7;
+                        const basicPerHourRate = parseFloat((employeeData as any).salary) / expectedHours;
+                        const completedHours = parseFloat(monthlyData.totalWorkingHours);
+                        const basicEarnings = completedHours * basicPerHourRate;
+                        const overtimeEarnings = parseFloat(monthlyData.overtimePay || "0");
+                        return basicEarnings + overtimeEarnings;
+                      })()
                       : parseFloat((employeeData as any).salary) + parseFloat((employeeData as any).overtimePay || "0")
                     : 0;
 
@@ -2572,22 +2573,22 @@ const calculateExpectedHours = (year: number, month: number) => {
                     formData.profile_image
                       ? URL.createObjectURL(formData.profile_image)
                       : (employeeData as any)?.profile_image_url ||
-                        "https://via.placeholder.com/150"
+                      "https://via.placeholder.com/150"
                   }
                   alt="Profile"
                   className="w-32 h-32 rounded-xl object-cover mb-4"
                 />
                 <div className="relative">
                   <label htmlFor="profile_image" className="cursor-pointer px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition-colors">
-  Change Photo
-  <input
-    type="file"
-    id="profile_image"
-    name="profile_image"
-    onChange={handleImageChange}
-    className="hidden"
-  />
-</label>
+                    Change Photo
+                    <input
+                      type="file"
+                      id="profile_image"
+                      name="profile_image"
+                      onChange={handleImageChange}
+                      className="hidden"
+                    />
+                  </label>
                 </div>
               </div>
 
@@ -2705,23 +2706,23 @@ const calculateExpectedHours = (year: number, month: number) => {
                   />
                 </div>
 
-<div className="space-y-2">
-  <label className="block text-gray-700 font-medium">
-    Per Hour Pay
-  </label>
-  <input
-    type="text"
-    name="per_hour_pay"
-    value={formData.per_hour_pay || ""}
-    readOnly
-    className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed"
-  />
-  {expectedHours !== null && (
-    <p className="text-xs text-gray-500">
-      Calculated: {formData.salary || 0} ÷ {expectedHours} hours = {formData.per_hour_pay || 0}/hr
-    </p>
-  )}
-</div>
+                <div className="space-y-2">
+                  <label className="block text-gray-700 font-medium">
+                    Per Hour Pay
+                  </label>
+                  <input
+                    type="text"
+                    name="per_hour_pay"
+                    value={formData.per_hour_pay || ""}
+                    readOnly
+                    className="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl cursor-not-allowed"
+                  />
+                  {expectedHours !== null && (
+                    <p className="text-xs text-gray-500">
+                      Calculated: {formData.salary || 0} ÷ {expectedHours} hours = {formData.per_hour_pay || 0}/hr
+                    </p>
+                  )}
+                </div>
 
                 <div className="space-y-2">
                   <label className="block text-gray-700 font-medium">
@@ -2901,8 +2902,8 @@ const calculateExpectedHours = (year: number, month: number) => {
                         <td className="py-2 px-4 border-b">
                           {increment.upcomming_increment
                             ? new Date(
-                                increment.upcomming_increment
-                              ).toLocaleDateString()
+                              increment.upcomming_increment
+                            ).toLocaleDateString()
                             : "Not scheduled"}
                         </td>
                       </tr>

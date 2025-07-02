@@ -17,27 +17,37 @@ import { fileURLToPath } from "url";
 // Convert ES module URL to file path
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-// Read Firebase credentials
-const serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-admin-sdk.json"), "utf8"));
+// Read Firebase credentials (optional)
+let serviceAccount = null;
+let firebaseInitialized = false;
 
-
+try {
+    serviceAccount = JSON.parse(fs.readFileSync(path.join(__dirname, "firebase-admin-sdk.json"), "utf8"));
+    // Initialize Firebase Admin SDK
+    admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+    });
+    firebaseInitialized = true;
+    console.log("✅ Firebase Admin SDK initialized successfully");
+} catch (error) {
+    console.log("⚠️ Firebase Admin SDK not initialized (file not found). Push notifications will be disabled.");
+    console.log("📝 To enable push notifications, add firebase-admin-sdk.json file");
+}
 
 dotenv.config(); // Load environment variables
 
 const app = express();
-const PORT = process.env.PORT || 4000; // Set a default port
+const PORT = process.env.PORT || 5000; // Set a default port
 
 app.use(cors());
 app.use(express.json());
 app.use(bodyParser.json());
 
+console.log("🚀 Starting server...");
+console.log("📡 Supabase URL:", process.env.VITE_SUPABASE_URL ? "✅ Set" : "❌ Missing");
+console.log("🔑 Slack Bot Token:", process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN ? "✅ Set" : "❌ Missing");
 
-
-// Initialize Firebase Admin SDK
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAccount),
-});
-const supabase = createClient(process.env.VITE_SUPABASE_URL , process.env.VITE_SUPABASE_ANON_KEY);
+const supabase = createClient(process.env.VITE_SUPABASE_URL, process.env.VITE_SUPABASE_ANON_KEY);
 
 // // Send notification To All Users With Fcm Token , On An Action performing API
 // app.post("/send-notifications", async (req, res) => {
@@ -70,6 +80,10 @@ const supabase = createClient(process.env.VITE_SUPABASE_URL , process.env.VITE_S
 
 app.post("/send-notifications", async (req, res) => {
     try {
+        if (!firebaseInitialized) {
+            return res.status(503).json({ error: "Push notifications are not available. Firebase Admin SDK not initialized." });
+        }
+
         const { title, body, url } = req.body;
         if (!title || !body) return res.status(400).json({ message: "Title and Body are required." });
 
@@ -563,6 +577,318 @@ app.post("/send-slackreject", async (req, res) => {
     }
 });
 
+// Send Daily Log message to Slack
+app.post("/send-dailylog-slack", async (req, res) => {
+    const { USERID, message, userName } = req.body;
+    const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
+
+    if (!SLACK_BOT_TOKEN) {
+        return res.status(500).json({ error: "Slack Bot Token is missing!" });
+    }
+
+    if (!USERID || !message) {
+        return res.status(400).json({ error: "USERID and message are required!" });
+    }
+
+    try {
+        console.log("🔍 Debug Info:");
+        console.log("📋 USERID (slack_id):", USERID);
+        console.log("👤 userName:", userName);
+        console.log("📝 message:", message);
+        console.log("🔑 Bot Token (first 10 chars):", SLACK_BOT_TOKEN.substring(0, 10) + "...");
+
+        // Use dailylogs channel ID instead of user DM
+        const channelId = "C05TPM3SH8X"; // Your dailylogs channel ID
+        const formattedMessage = `📝 *Daily Log from ${userName || 'Employee'}* (User: <@${USERID}>)\n\n${message}`;
+
+        console.log("📢 Sending to channel ID:", channelId);
+
+        const response = await fetch("https://slack.com/api/chat.postMessage", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+                channel: channelId, // Use dailylogs channel ID
+                text: formattedMessage,
+            }),
+        });
+
+        const data = await response.json();
+        console.log("📡 Full Slack API Response:", JSON.stringify(data, null, 2));
+
+        if (!data.ok) {
+            console.log("❌ Slack API Error Details:");
+            console.log("   Error:", data.error);
+            console.log("   Channel ID:", channelId);
+            console.log("   Full Response:", data);
+
+            // Check for specific errors
+            if (data.error === 'not_in_channel') {
+                console.log("🚨 Bot is not in the channel! Add the bot to the dailylogs channel.");
+            } else if (data.error === 'channel_not_found') {
+                console.log("🚨 Channel not found! Check if the channel ID is correct.");
+            } else if (data.error === 'invalid_auth') {
+                console.log("🚨 Invalid authentication! Check your bot token.");
+            }
+
+            throw new Error(data.error);
+        }
+
+        return res.status(200).json({ success: true, message: "Daily log sent to Slack successfully!" });
+    } catch (error) {
+        console.error("Error sending daily log to Slack:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// Debug endpoint to check user slack_id
+app.get("/debug-users-slack", async (req, res) => {
+    try {
+        const { data: users, error } = await supabase
+            .from('users')
+            .select('id, full_name, email, slack_id')
+            .not('slack_id', 'is', null);
+
+        if (error) throw error;
+
+        return res.status(200).json({
+            success: true,
+            users: users.map(user => ({
+                ...user,
+                slack_id_length: user.slack_id?.length,
+                slack_id_trimmed: user.slack_id?.trim(),
+                slack_id_raw: `'${user.slack_id}'`
+            }))
+        });
+    } catch (error) {
+        console.error("Error fetching users:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// Fix slack_id whitespace in database
+app.post("/fix-slack-ids", async (req, res) => {
+    try {
+        console.log("🔧 Fixing slack_id whitespace in database...");
+
+        const { data: users, error: fetchError } = await supabase
+            .from('users')
+            .select('id, slack_id')
+            .not('slack_id', 'is', null);
+
+        if (fetchError) throw fetchError;
+
+        const updates = [];
+        for (const user of users) {
+            if (user.slack_id && user.slack_id !== user.slack_id.trim()) {
+                console.log(`Fixing user ${user.id}: '${user.slack_id}' -> '${user.slack_id.trim()}'`);
+
+                const { error: updateError } = await supabase
+                    .from('users')
+                    .update({ slack_id: user.slack_id.trim() })
+                    .eq('id', user.id);
+
+                if (updateError) {
+                    console.error(`Error updating user ${user.id}:`, updateError);
+                } else {
+                    updates.push({ id: user.id, old: user.slack_id, new: user.slack_id.trim() });
+                }
+            }
+        }
+
+        return res.status(200).json({
+            success: true,
+            message: `Fixed ${updates.length} slack_id entries`,
+            updates
+        });
+    } catch (error) {
+        console.error("Error fixing slack_ids:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// Test endpoint to find your Slack User ID
+app.post("/test-slack-user", async (req, res) => {
+    const { testUserId } = req.body;
+    const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
+
+    if (!SLACK_BOT_TOKEN) {
+        return res.status(500).json({ error: "Slack Bot Token is missing!" });
+    }
+
+    try {
+        console.log("🧪 Testing Slack User ID:", testUserId);
+
+        const response = await fetch("https://slack.com/api/chat.postMessage", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+            },
+            body: JSON.stringify({
+                channel: testUserId,
+                text: "🧪 Test message - if you receive this, your Slack ID is correct!",
+            }),
+        });
+
+        const data = await response.json();
+        console.log("🧪 Test Response:", JSON.stringify(data, null, 2));
+
+        if (data.ok) {
+            return res.status(200).json({
+                success: true,
+                message: "Test message sent successfully! Check your Slack DMs.",
+                slackResponse: data
+            });
+        } else {
+            return res.status(400).json({
+                success: false,
+                error: data.error,
+                message: `Failed to send test message: ${data.error}`,
+                slackResponse: data
+            });
+        }
+    } catch (error) {
+        console.error("🧪 Test Error:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// Test endpoint to check if webhook is working
+app.get("/test-webhook", (req, res) => {
+    console.log("🧪 Test webhook endpoint called");
+    res.json({ message: "Webhook endpoint is working!", timestamp: new Date().toISOString() });
+});
+
+// API endpoint to get ALL Slack messages for a user (not limited to current month)
+app.post("/api/get-slack-messages", async (req, res) => {
+    try {
+        const { userId, channelId } = req.body;
+        const SLACK_BOT_TOKEN = process.env.VITE_SLACK_BOT_USER_OAUTH_TOKEN;
+
+        if (!SLACK_BOT_TOKEN) {
+            return res.status(500).json({ error: "Slack Bot Token is missing!" });
+        }
+
+        if (!userId || !channelId) {
+            return res.status(400).json({ error: "userId and channelId are required!" });
+        }
+
+        console.log("� Fetching ALL Slack messages for user:", userId, "in channel:", channelId);
+
+        let allUserMessages = [];
+        let cursor = null;
+        let hasMore = true;
+        let totalFetched = 0;
+
+        // Fetch all messages using pagination
+        while (hasMore && totalFetched < 1000) { // Limit to prevent infinite loops
+            try {
+                // Build URL with cursor for pagination
+                let url = `https://slack.com/api/conversations.history?channel=${channelId}&limit=200`;
+                if (cursor) {
+                    url += `&cursor=${cursor}`;
+                }
+
+                console.log("📡 Fetching batch with cursor:", cursor ? cursor.substring(0, 20) + "..." : "none");
+
+                const response = await fetch(url, {
+                    method: "GET",
+                    headers: {
+                        "Authorization": `Bearer ${SLACK_BOT_TOKEN}`,
+                        "Content-Type": "application/json",
+                    },
+                });
+
+                const data = await response.json();
+
+                if (!data.ok) {
+                    console.error("Slack API Error:", data.error);
+                    return res.status(500).json({ error: data.error });
+                }
+
+                console.log(`📱 Fetched ${data.messages?.length || 0} messages in this batch`);
+                totalFetched += data.messages?.length || 0;
+
+                // Filter messages from the specific user (exclude bot messages)
+                const batchUserMessages = data.messages?.filter(msg => {
+                    return msg.user === userId.trim() &&
+                        !msg.bot_id &&
+                        msg.type === 'message' &&
+                        msg.text && msg.text.trim().length > 0; // Only include messages with actual content
+                }) || [];
+
+                console.log(`📱 Found ${batchUserMessages.length} user messages in this batch`);
+                allUserMessages = allUserMessages.concat(batchUserMessages);
+
+                // Check if there are more messages
+                hasMore = data.has_more || false;
+                cursor = data.response_metadata?.next_cursor || null;
+
+                // Add a small delay to avoid rate limiting
+                if (hasMore) {
+                    await new Promise(resolve => setTimeout(resolve, 100));
+                }
+
+            } catch (batchError) {
+                console.error("Error fetching batch:", batchError);
+                break; // Exit the loop on error
+            }
+        }
+
+        console.log(`📱 Total messages fetched: ${totalFetched}`);
+        console.log(`📱 Total user messages found: ${allUserMessages.length}`);
+
+        // Sort messages by timestamp (newest first)
+        allUserMessages.sort((a, b) => parseFloat(b.ts) - parseFloat(a.ts));
+
+        if (allUserMessages.length > 0) {
+            console.log("📱 Sample user message:", {
+                text: allUserMessages[0].text?.substring(0, 100) + "...",
+                timestamp: new Date(parseFloat(allUserMessages[0].ts) * 1000).toISOString()
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            messages: allUserMessages,
+            total: allUserMessages.length,
+            totalFetched: totalFetched
+        });
+
+    } catch (error) {
+        console.error("Error fetching Slack messages:", error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
+// Slack webhook for URL verification only (messages are fetched via API instead)
+app.post("/slack-webhook", async (req, res) => {
+    try {
+        console.log("🚀 SLACK WEBHOOK RECEIVED!");
+        console.log("📦 Request body:", JSON.stringify(req.body, null, 2));
+
+        // Handle Slack URL verification challenge
+        if (req.body.type === 'url_verification') {
+            console.log("✅ URL verification challenge received");
+            return res.status(200).json({ challenge: req.body.challenge });
+        }
+
+        // Just acknowledge other events without processing
+        if (req.body.type === 'event_callback') {
+            console.log("📨 Event callback received - acknowledging without processing");
+            return res.status(200).json({ status: 'ok' });
+        }
+
+        return res.status(200).json({ status: 'ok' });
+    } catch (error) {
+        console.error('Error handling Slack webhook:', error);
+        return res.status(500).json({ error: error.message });
+    }
+});
+
 
 
 
@@ -594,34 +920,34 @@ const sendSlackNotification = async (message) => {
 // Schedule tasks using cron
 cron.schedule("45 8 * * *", () => {
     sendSlackNotification("🌞 Good Morning! Please Don't Forget To Check In.");
-  }, {
+}, {
     timezone: "Asia/Karachi"
-  });
+});
 
-  cron.schedule("45 16 * * *", () => {
+cron.schedule("45 16 * * *", () => {
     sendSlackNotification("Hello Everyone! Ensure You Have Checked Out From EMS.");
-  }, {
+}, {
     timezone: "Asia/Karachi"
-  });
+});
 
-  cron.schedule("45 12 * * *", () => {
+cron.schedule("45 12 * * *", () => {
     sendSlackNotification("🔔 Reminder: Please Dont Forget To start Break!");
-  }, {
+}, {
     timezone: "Asia/Karachi"
-  });
+});
 
-  cron.schedule("45 13 * * *", () => {
+cron.schedule("45 13 * * *", () => {
     sendSlackNotification("🔔 Reminder: Please Dont Forget To End Break!");
-  }, {
+}, {
     timezone: "Asia/Karachi"
-  });
+});
 
 
 
 
-  // Email sending function
-  const sendEmail = async (req, res) => {
-    const { senderEmail, recipientEmail, subject, employeeName , leaveType , startDate , endDate , reason } = req.body;
+// Email sending function
+const sendEmail = async (req, res) => {
+    const { senderEmail, recipientEmail, subject, employeeName, leaveType, startDate, endDate, reason } = req.body;
 
     // Create transporter
     let transporter = nodemailer.createTransport({
@@ -682,7 +1008,7 @@ cron.schedule("45 8 * * *", () => {
     } catch (error) {
         console.error("Error sending email:", error);
         res.status(500).json({ error: "Failed to send email" });
-    }sendEmail
+    } sendEmail
 };
 // API Route
 app.post("/send-email", sendEmail);
@@ -695,39 +1021,39 @@ app.post("/send-alertemail", async (req, res) => {
     const { recipients, subject, message } = req.body;
 
     if (!recipients || recipients.length === 0) {
-      return res.status(400).json({ error: "Recipient list is empty" });
+        return res.status(400).json({ error: "Recipient list is empty" });
     }
 
     try {
-      // Setup transporter
-      const transporter = nodemailer.createTransport({
-        service: "gmail", // or another provider
-        auth: {
-            user: process.env.VITE_EMAIL_USER, // Your email (EMS system email)
-            pass: process.env.VITE_EMAIL_PASS, // Your app password
-        },
-      });
+        // Setup transporter
+        const transporter = nodemailer.createTransport({
+            service: "gmail", // or another provider
+            auth: {
+                user: process.env.VITE_EMAIL_USER, // Your email (EMS system email)
+                pass: process.env.VITE_EMAIL_PASS, // Your app password
+            },
+        });
 
-      // Send email
-      const info = await transporter.sendMail({
-        from: process.env.VITE_EMAIL_USER, // The email that actually sends the email
-        to: "", // empty TO
-        bcc: recipients, // list of emails
-        subject,
-        text: message, // or use html: "<b>Hello</b>"
-      });
+        // Send email
+        const info = await transporter.sendMail({
+            from: process.env.VITE_EMAIL_USER, // The email that actually sends the email
+            to: "", // empty TO
+            bcc: recipients, // list of emails
+            subject,
+            text: message, // or use html: "<b>Hello</b>"
+        });
 
-      console.log("Message sent: %s", info.messageId);
-      res.json({ status: "Emails sent successfully" });
+        console.log("Message sent: %s", info.messageId);
+        res.json({ status: "Emails sent successfully" });
     } catch (error) {
-      console.error("Error sending email:", error);
-      res.status(500).json({ error: "Failed to send emails", detail: error.message });
+        console.error("Error sending email:", error);
+        res.status(500).json({ error: "Failed to send emails", detail: error.message });
     }
-  });
+});
 
 
 const sendAdminResponse = async (req, res) => {
-    const {employeeName,  userEmail, leaveType, startDate } = req.body;
+    const { employeeName, userEmail, leaveType, startDate } = req.body;
 
     let transporter = nodemailer.createTransport({
         service: "gmail",
@@ -1224,190 +1550,194 @@ app.post('/generate-pdfMonthlyOfEmployee', (req, res) => {
 const holidaydates = [];
 
 const isWorkingDay = (date) => {
-  const day = date.getDay(); // Get the day of the week (0 = Sunday, 6 = Saturday)
-  const dateStr = date.toISOString().split('T')[0];
-  if (holidaydates.includes(dateStr)) {
-    return false;
-  }
-  return day !== 0 && day !== 6; // Return true if it's not Saturday or Sunday
+    const day = date.getDay(); // Get the day of the week (0 = Sunday, 6 = Saturday)
+    const dateStr = date.toISOString().split('T')[0];
+    if (holidaydates.includes(dateStr)) {
+        return false;
+    }
+    return day !== 0 && day !== 6; // Return true if it's not Saturday or Sunday
 };
 
 async function fetchholidays() {
-  const { data, error } = await supabase
-    .from('holidays')
-    .select('date'); // Adjust to select the date field from your holidays table
+    const { data, error } = await supabase
+        .from('holidays')
+        .select('date'); // Adjust to select the date field from your holidays table
 
-  if (error) {
-    console.error('Error fetching holidays:', error);
-    return;
-  }
-
-  for (const holiday of data) {
-    const convertedDate = new Date(holiday.date);
-    const dateStr = convertedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
-
-    if (!holidaydates.includes(dateStr)) {
-      holidaydates.push(dateStr);
+    if (error) {
+        console.error('Error fetching holidays:', error);
+        return;
     }
-  }
+
+    for (const holiday of data) {
+        const convertedDate = new Date(holiday.date);
+        const dateStr = convertedDate.toISOString().split('T')[0]; // 'YYYY-MM-DD'
+
+        if (!holidaydates.includes(dateStr)) {
+            holidaydates.push(dateStr);
+        }
+    }
 }
 
 const fetchUsers = async () => {
-  const today = new Date();
-  const dateStr = today.toISOString().split('T')[0];
+    const today = new Date();
+    const dateStr = today.toISOString().split('T')[0];
 
-  if (!isWorkingDay(today) || holidaydates.includes(dateStr)) {
-    console.log('Today is not a working day or is a holiday. Skipping fetchUsers.');
-    return;
-  }
+    if (!isWorkingDay(today) || holidaydates.includes(dateStr)) {
+        console.log('Today is not a working day or is a holiday. Skipping fetchUsers.');
+        return;
+    }
 
-  try {
-    console.log('Fetching users...');
+    try {
+        console.log('Fetching users...');
 
-    // Get today's date range
-    const todayDate = today.toISOString().split('T')[0];
-    const startOfDay = `${todayDate}T00:00:00.000Z`;
-    const endOfDay = `${todayDate}T23:59:59.999Z`;
+        // Get today's date range
+        const todayDate = today.toISOString().split('T')[0];
+        const startOfDay = `${todayDate}T00:00:00.000Z`;
+        const endOfDay = `${todayDate}T23:59:59.999Z`;
 
-    // Fetch all users
-    const { data: users, error: usersError } = await supabase.from('users').select('*');
-    if (usersError) throw usersError;
+        // Fetch all users
+        const { data: users, error: usersError } = await supabase.from('users').select('*');
+        if (usersError) throw usersError;
 
-    console.log(`Total users fetched: ${users.length}`);
+        console.log(`Total users fetched: ${users.length}`);
 
-    // Fetch all today's attendance records
-    const { data: attendanceLogs, error: attendanceError } = await supabase
-      .from('attendance_logs')
-      .select('*')
-      .gte('check_in', startOfDay)
-      .lt('check_in', endOfDay);
-    if (attendanceError) throw attendanceError;
+        // Fetch all today's attendance records
+        const { data: attendanceLogs, error: attendanceError } = await supabase
+            .from('attendance_logs')
+            .select('*')
+            .gte('check_in', startOfDay)
+            .lt('check_in', endOfDay);
+        if (attendanceError) throw attendanceError;
 
-    // Fetch all today's absentee records
-    const { data: absentees, error: absenteeError } = await supabase
-      .from('absentees')
-      .select('*')
-      .gte('created_at', startOfDay)
-      .lt('created_at', endOfDay);
-    if (absenteeError) throw absenteeError;
+        // Fetch all today's absentee records
+        const { data: absentees, error: absenteeError } = await supabase
+            .from('absentees')
+            .select('*')
+            .gte('created_at', startOfDay)
+            .lt('created_at', endOfDay);
+        if (absenteeError) throw absenteeError;
 
-    // Arrays to store updates
-    let attendanceUpdates = []; // For updating checkout times in attendance_logs
-    let absenteeRecords = [];   // For inserting absentee records into absentees
+        // Arrays to store updates
+        let attendanceUpdates = []; // For updating checkout times in attendance_logs
+        let absenteeRecords = [];   // For inserting absentee records into absentees
 
-    // Loop through each user
-    for (const user of users) {
-      console.log(`Processing user: ${user.id}`);
+        // Loop through each user
+        for (const user of users) {
+            console.log(`Processing user: ${user.id}`);
 
-      // Find user's attendance for today
-      const userAttendance = attendanceLogs.find(log => log.user_id === user.id);
+            // Find user's attendance for today
+            const userAttendance = attendanceLogs.find(log => log.user_id === user.id);
 
-      // Check if the user is already marked absent
-      const existingAbsentee = absentees.find(absent => absent.user_id === user.id);
+            // Check if the user is already marked absent
+            const existingAbsentee = absentees.find(absent => absent.user_id === user.id);
 
-      // Case 1: User has NO check-in record
-      if (!userAttendance) {
-        console.log(`User ${user.id} has no check-in record.`);
+            // Case 1: User has NO check-in record
+            if (!userAttendance) {
+                console.log(`User ${user.id} has no check-in record.`);
 
-        if (existingAbsentee) {
-          console.log(`User ${user.id} is already marked absent. Skipping...`);
-          continue;
+                if (existingAbsentee) {
+                    console.log(`User ${user.id} is already marked absent. Skipping...`);
+                    continue;
+                }
+
+                console.log(`Marking user ${user.id} as absent for Full Day.`);
+                absenteeRecords.push({ user_id: user.id, absentee_type: 'Absent', absentee_Timing: 'Full Day' });
+                continue;
+            }
+
+            // Case 2: User has check-in but no check-out
+            if (userAttendance.check_in && !userAttendance.check_out) {
+                console.log(`User ${user.id} has checked in but no check-out.`);
+
+                // Set the checkout time to 4:30 PM PKT (11:30 AM UTC)
+                const checkoutTime = `${todayDate}T11:30:00.000Z`;
+
+                // Add to attendanceUpdates array
+                attendanceUpdates.push({
+                    id: userAttendance.id, // Unique ID of the attendance record
+                    check_out: checkoutTime, // New checkout time
+                    autocheckout: 'yes' // Mark as auto-checkout
+                });
+
+                console.log(`User ${user.id} checkout time will be updated to 4:30 PM PKT.`);
+                continue;
+            }
+
+            // Case 3: User has both check-in and check-out (No action needed)
+            if (userAttendance.check_in && userAttendance.check_out) {
+                console.log(`User ${user.id} has both check-in and check-out. No action needed.`);
+                absenteeRecords.push({ user_id: user.id, absentee_type: 'Not Absent' });
+                continue;
+            }
         }
 
-        console.log(`Marking user ${user.id} as absent for Full Day.`);
-        absenteeRecords.push({ user_id: user.id, absentee_type: 'Absent', absentee_Timing: 'Full Day' });
-        continue;
-      }
+        // Remove duplicate entries based on user_id for absentee records
+        const uniqueAbsenteeRecords = [];
+        const seenUserIds = new Set();
 
-      // Case 2: User has check-in but no check-out
-      if (userAttendance.check_in && !userAttendance.check_out) {
-        console.log(`User ${user.id} has checked in but no check-out.`);
-
-        // Set the checkout time to 4:30 PM PKT (11:30 AM UTC)
-        const checkoutTime = `${todayDate}T11:30:00.000Z`;
-
-        // Add to attendanceUpdates array
-        attendanceUpdates.push({
-          id: userAttendance.id, // Unique ID of the attendance record
-          check_out: checkoutTime, // New checkout time
-          autocheckout: 'yes' // Mark as auto-checkout
+        absenteeRecords.forEach(record => {
+            if (!seenUserIds.has(record.user_id)) {
+                seenUserIds.add(record.user_id);
+                uniqueAbsenteeRecords.push(record);
+            }
         });
 
-        console.log(`User ${user.id} checkout time will be updated to 4:30 PM PKT.`);
-        continue;
-      }
+        // Remove 'Not Absent' users and create a new array
+        const finalAbsentees = uniqueAbsenteeRecords.filter(record => record.absentee_type !== 'Not Absent');
 
-      // Case 3: User has both check-in and check-out (No action needed)
-      if (userAttendance.check_in && userAttendance.check_out) {
-        console.log(`User ${user.id} has both check-in and check-out. No action needed.`);
-        absenteeRecords.push({ user_id: user.id, absentee_type: 'Not Absent' });
-        continue;
-      }
-    }
+        // Log final absent users
+        console.log('Final Absent Users Data:', finalAbsentees);
 
-    // Remove duplicate entries based on user_id for absentee records
-    const uniqueAbsenteeRecords = [];
-    const seenUserIds = new Set();
+        // Perform batch updates for attendance logs
+        if (attendanceUpdates.length > 0) {
+            console.log('Updating attendance logs with checkout times...');
+            for (const update of attendanceUpdates) {
+                const { error: updateError } = await supabase
+                    .from('attendance_logs')
+                    .update({ check_out: update.check_out, autocheckout: 'yes' })
+                    .eq('id', update.id);
 
-    absenteeRecords.forEach(record => {
-      if (!seenUserIds.has(record.user_id)) {
-        seenUserIds.add(record.user_id);
-        uniqueAbsenteeRecords.push(record);
-      }
-    });
-
-    // Remove 'Not Absent' users and create a new array
-    const finalAbsentees = uniqueAbsenteeRecords.filter(record => record.absentee_type !== 'Not Absent');
-
-    // Log final absent users
-    console.log('Final Absent Users Data:', finalAbsentees);
-
-    // Perform batch updates for attendance logs
-    if (attendanceUpdates.length > 0) {
-      console.log('Updating attendance logs with checkout times...');
-      for (const update of attendanceUpdates) {
-        const { error: updateError } = await supabase
-          .from('attendance_logs')
-          .update({ check_out: update.check_out, autocheckout: 'yes' })
-          .eq('id', update.id);
-
-        if (updateError) {
-          console.error('Error updating attendance log:', updateError);
+                if (updateError) {
+                    console.error('Error updating attendance log:', updateError);
+                } else {
+                    console.log(`Updated attendance log for user ${update.id}.`);
+                }
+            }
+            console.log('Attendance logs updated successfully.');
         } else {
-          console.log(`Updated attendance log for user ${update.id}.`);
+            console.log('No attendance logs to update.');
         }
-      }
-      console.log('Attendance logs updated successfully.');
-    } else {
-      console.log('No attendance logs to update.');
-    }
 
-    // Insert absentee records into the database
-    if (finalAbsentees.length > 0) {
-      console.log('Inserting absentee records into the database...');
-      const { error: insertError } = await supabase.from('absentees').insert(finalAbsentees);
-      if (insertError) throw insertError;
-      console.log('Database updated successfully with absent users.');
-    } else {
-      console.log('No absent users to update in the database.');
+        // Insert absentee records into the database
+        if (finalAbsentees.length > 0) {
+            console.log('Inserting absentee records into the database...');
+            const { error: insertError } = await supabase.from('absentees').insert(finalAbsentees);
+            if (insertError) throw insertError;
+            console.log('Database updated successfully with absent users.');
+        } else {
+            console.log('No absent users to update in the database.');
+        }
+    } catch (error) {
+        console.error('Error fetching users:', error);
     }
-  } catch (error) {
-    console.error('Error fetching users:', error);
-  }
 };
 
 // Schedule fetchUsers to run at 9:00 PM PKT daily
 cron.schedule('0 21 * * *', async () => {
-  console.log('Running fetchUsers cron job at 9:00 PM PKT...');
-  await fetchholidays(); // Fetch holidays before running fetchUsers
-  await fetchUsers();
+    console.log('Running fetchUsers cron job at 9:00 PM PKT...');
+    await fetchholidays(); // Fetch holidays before running fetchUsers
+    await fetchUsers();
 }, {
-  timezone: 'Asia/Karachi'
+    timezone: 'Asia/Karachi'
 });
 
 // ... (Rest of your existing server.js code, including app.listen, remains unchanged)
 
 // Start the Server
 app.listen(PORT, () => {
-    console.log(` Server running on http://localhost:${PORT}`);
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`📝 Daily Logs Slack endpoint: http://localhost:${PORT}/send-dailylog-slack`);
+    console.log(`🔗 Slack webhook endpoint: http://localhost:${PORT}/slack-webhook`);
+    console.log(`🔥 Firebase Admin SDK: ${firebaseInitialized ? '✅ Enabled' : '⚠️ Disabled'}`);
+    console.log(`📡 Server ready for Slack integration!`);
 });
