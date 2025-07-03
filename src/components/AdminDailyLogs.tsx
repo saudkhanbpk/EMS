@@ -970,14 +970,17 @@ const AdminDailyLogs: React.FC = () => {
                             {/* Star Rating and AI Analysis for Employee Messages */}
                             {!isAdmin && (
                               <div className="space-y-2">
-                                <StarRating
-                                  messageId={log.id}
-                                  currentRating={log.rating}
-                                  onRate={handleRatingClick}
-                                />
+                                {/* Only show rating for non-Slack messages */}
+                                {log.source !== 'slack' && (
+                                  <StarRating
+                                    messageId={log.id}
+                                    currentRating={log.rating}
+                                    onRate={handleRatingClick}
+                                  />
+                                )}
 
-                                {/* AI Analysis Button - Only for non-Slack messages */}
-                                {!log.rating && log.source !== 'slack' && (
+                                {/* AI Analysis Button - Show for all messages including Slack */}
+                                {!log.rating && (
                                   <button
                                     onClick={() => analyzeWithAI(log.id, log.dailylog)}
                                     disabled={analyzingMessageId === log.id}
@@ -1021,12 +1024,15 @@ const AdminDailyLogs: React.FC = () => {
                                           {aiSuggestions[log.id].reasoning}
                                         </p>
                                         <div className="flex space-x-2">
-                                          <button
-                                            onClick={() => applyAiSuggestion(log.id)}
-                                            className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
-                                          >
-                                            Apply Rating
-                                          </button>
+                                          {/* Only show Apply Rating button for non-Slack messages */}
+                                          {log.source !== 'slack' && (
+                                            <button
+                                              onClick={() => applyAiSuggestion(log.id)}
+                                              className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                                            >
+                                              Apply Rating
+                                            </button>
+                                          )}
                                           <button
                                             onClick={() => setShowAiSuggestion(null)}
                                             className="text-xs text-blue-600 hover:text-blue-700"
