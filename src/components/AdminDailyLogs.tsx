@@ -278,7 +278,8 @@ const AdminDailyLogs: React.FC = () => {
 
       console.log("Fetching Slack messages for employee:", userData.slack_id.trim());
 
-      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/get-slack-messages`, {
+      const backendUrl = import.meta.env.VITE_BACKEND_URL || 'https://ems-backend-ax7d.onrender.com';
+      const response = await fetch(`${backendUrl}/api/get-slack-messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
