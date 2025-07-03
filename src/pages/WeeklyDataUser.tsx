@@ -1,124 +1,134 @@
 import React from "react";
 import { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { startOfWeek , endOfWeek } from "date-fns";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, max, min } from "date-fns";
 import Attendance from "./Attendance";
 
-const WeeklyDataUser = ({selectedDate , selectedtab}) => {
-const [Attendance , setAttendance] = useState([]);
-const [absentees , setabsentees] = useState([]);
-const [breaks , setbreaks] = useState([]);
-const [Error , setError] = useState("");
-const [loading , setLoading] = useState(false);
-const [Weeklydata , setWeeklyData] = useState([]);
+const WeeklyDataUser = ({ selectedDate, selectedtab }) => {
+  const [Attendance, setAttendance] = useState([]);
+  const [absentees, setabsentees] = useState([]);
+  const [breaks, setbreaks] = useState([]);
+  const [Error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [Weeklydata, setWeeklyData] = useState([]);
 
-const userID = localStorage.getItem("user_id")
-const weekstart = startOfWeek(selectedDate);
-const weekEnd = endOfWeek(selectedDate); 
+  const userID = localStorage.getItem("user_id")
 
-//Extracting Month From the Seletced Date
-const monthName = selectedDate.toLocaleString('default', { month: 'long' });
-const year = selectedDate.getFullYear();
+  // Calculate week boundaries
+  const weekstart = startOfWeek(selectedDate);
+  const weekEnd = endOfWeek(selectedDate);
 
-useEffect( () => {
+  // Calculate month boundaries
+  const monthStart = startOfMonth(selectedDate);
+  const monthEnd = endOfMonth(selectedDate);
+
+  // Adjust week boundaries to only include current month dates
+  const adjustedWeekStart = max([weekstart, monthStart]);
+  const adjustedWeekEnd = min([weekEnd, monthEnd]);
+
+  //Extracting Month From the Seletced Date
+  const monthName = selectedDate.toLocaleString('default', { month: 'long' });
+  const year = selectedDate.getFullYear();
+
+  useEffect(() => {
 
     const fetchattendance = async () => {
-        const {data:attendanceData , error: attendanceerror} = await supabase
+      const { data: attendanceData, error: attendanceerror } = await supabase
         .from("attendance_logs")
         .select("*")
-        .eq("user_id" , userID)
-        .gte("check_in" , weekstart.toISOString())
-        .lte("check_in" , weekEnd.toISOString());
+        .eq("user_id", userID)
+        .gte("check_in", adjustedWeekStart.toISOString())
+        .lte("check_in", adjustedWeekEnd.toISOString());
 
-        if (attendanceerror) return setError(attendanceerror);
+      if (attendanceerror) return setError(attendanceerror);
 
-        
-        setAttendance(attendanceData);
-        console.log("AttendAnceData" , attendanceData);
+
+      setAttendance(attendanceData);
+      console.log("AttendAnceData", attendanceData);
 
     }
 
     const fetchabsentees = async () => {
-        const {data:absenteesData , error:absenteesError} = await supabase 
+      const { data: absenteesData, error: absenteesError } = await supabase
         .from("absentees")
         .select("*")
-        .eq("user_id" , userID)
-        .gte("created_at" , weekstart.toISOString())
-        .lte("created_at" , weekEnd.toISOString());
+        .eq("user_id", userID)
+        .gte("created_at", adjustedWeekStart.toISOString())
+        .lte("created_at", adjustedWeekEnd.toISOString());
 
-        if(absenteesError) return setError(absenteesError)
-            setabsentees(absenteesData);
-        console.log("Absentees Data" , absenteesData);
-        
+      if (absenteesError) return setError(absenteesError)
+      setabsentees(absenteesData);
+      console.log("Absentees Data", absenteesData);
+
     }
 
     const fetchbreaks = async () => {
-        const {data:breaksData , error:breaksError} = await supabase 
+      const { data: breaksData, error: breaksError } = await supabase
         .from("breaks")
         .select("*")
-        .eq("user_id" , userID)
-        .gte("created_at" , weekstart.toISOString())
-        .lte("created_at" , weekEnd.toISOString());
+        .eq("user_id", userID)
+        .gte("created_at", adjustedWeekStart.toISOString())
+        .lte("created_at", adjustedWeekEnd.toISOString());
 
-        if(breaksError) return setError(breaksError)
-            setbreaks(breaksData);
-        console.log("Breaks" , breaksData);
-        
+      if (breaksError) return setError(breaksError)
+      setbreaks(breaksData);
+      console.log("Breaks", breaksData);
+
     }
 
     if (selectedtab === "Weeklydata") {
-    fetchattendance();
-    fetchabsentees();
-    fetchbreaks();
+      fetchattendance();
+      fetchabsentees();
+      fetchbreaks();
     }
-}, [selectedtab , userID])    
+  }, [selectedtab, userID])
 
 
-// useEffect(() => {
-//     if (!Attendance.length && !absentees.length) return;
+  // useEffect(() => {
+  //     if (!Attendance.length && !absentees.length) return;
 
-//     const newWeeklyData = [];
-// //   if (!Attendance) return;
-//     // Process Attendance Data
-//     Attendance.forEach((entry) => {
-//             const checkInTime = new Date(entry.check_in).toLocaleTimeString("en-US", {
-//                 hour: "2-digit",
-//                 minute: "2-digit",
-//                 hour12: true, // Use `false` for 24-hour format
-//             });
-        
-//             const checkOutTime = entry.check_out
-//                 ? new Date(entry.check_out).toLocaleTimeString("en-US", {
-//                     hour: "2-digit",
-//                     minute: "2-digit",
-//                     hour12: true,
-//                 })
-//                 : "N/A";
-//         newWeeklyData.push({
-//             date: entry.check_in.split("T")[0], 
-//             checkIn: checkInTime,
-//             checkOut: checkOutTime || "N/A",
-//             status: entry.status,
-//             work_mode: entry.work_mode || "N/A",
-//         });
-//     });
-    
-//     // if (!absentees) return;
-//     // Process Absentees Data
-//     absentees.forEach((entry) => {
-//         newWeeklyData.push({
-//             date: entry.created_at.split("T")[0],  
-//             checkIn: "Absent",
-//             checkOut: "Absent",
-//             status: "Absent",
-//             work_mode: "N/A",
-//         });
-//     });
+  //     const newWeeklyData = [];
+  // //   if (!Attendance) return;
+  //     // Process Attendance Data
+  //     Attendance.forEach((entry) => {
+  //             const checkInTime = new Date(entry.check_in).toLocaleTimeString("en-US", {
+  //                 hour: "2-digit",
+  //                 minute: "2-digit",
+  //                 hour12: true, // Use false for 24-hour format
+  //             });
 
-//     setWeeklyData(newWeeklyData);
-//     // console.log("Weekly Data",newWeeklyData);
-// }, [Attendance, absentees]);
-useEffect(() => {
+  //             const checkOutTime = entry.check_out
+  //                 ? new Date(entry.check_out).toLocaleTimeString("en-US", {
+  //                     hour: "2-digit",
+  //                     minute: "2-digit",
+  //                     hour12: true,
+  //                 })
+  //                 : "N/A";
+  //         newWeeklyData.push({
+  //             date: entry.check_in.split("T")[0], 
+  //             checkIn: checkInTime,
+  //             checkOut: checkOutTime || "N/A",
+  //             status: entry.status,
+  //             work_mode: entry.work_mode || "N/A",
+  //         });
+  //     });
+
+  //     // if (!absentees) return;
+  //     // Process Absentees Data
+  //     absentees.forEach((entry) => {
+  //         newWeeklyData.push({
+  //             date: entry.created_at.split("T")[0],  
+  //             checkIn: "Absent",
+  //             checkOut: "Absent",
+  //             status: "Absent",
+  //             work_mode: "N/A",
+  //         });
+  //     });
+
+  //     setWeeklyData(newWeeklyData);
+  //     // console.log("Weekly Data",newWeeklyData);
+  // }, [Attendance, absentees]);
+  useEffect(() => {
     if (!Attendance.length && !absentees.length) return;
 
     const newWeeklyData = [];
@@ -128,48 +138,48 @@ useEffect(() => {
 
     // Process Attendance Data
     Attendance.forEach((entry) => {
-        const date = entry.check_in.split("T")[0]; // Extract the date
-        const checkInTime = new Date(entry.check_in).toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true, // Use `false` for 24-hour format
-        });
+      const date = entry.check_in.split("T")[0]; // Extract the date
+      const checkInTime = new Date(entry.check_in).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true, // Use false for 24-hour format
+      });
 
-        const checkOutTime = entry.check_out
-            ? new Date(entry.check_out).toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-            })
-            : "N/A";
+      const checkOutTime = entry.check_out
+        ? new Date(entry.check_out).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+        : "N/A";
 
-        // Add or update the entry for this date
-        dataByDate.set(date, {
-            date,
-            checkIn: checkInTime,
-            checkOut: checkOutTime,
-            status: entry.status,
-            work_mode: entry.work_mode || "N/A",
-        });
+      // Add or update the entry for this date
+      dataByDate.set(date, {
+        date,
+        checkIn: checkInTime,
+        checkOut: checkOutTime,
+        status: entry.status,
+        work_mode: entry.work_mode || "N/A",
+      });
     });
 
     // Process Absentees Data
     absentees.forEach((entry) => {
-        const date = entry.created_at.split("T")[0]; // Extract the date
+      const date = entry.created_at.split("T")[0]; // Extract the date
 
-        // If there's already an attendance entry for this date, skip adding the absentee entry
-        if (dataByDate.has(date)) {
-            return;
-        }
+      // If there's already an attendance entry for this date, skip adding the absentee entry
+      if (dataByDate.has(date)) {
+        return;
+      }
 
-        // Add the absentee entry for this date
-        dataByDate.set(date, {
-            date,
-            checkIn: "Absent",
-            checkOut: "Absent",
-            status: "Absent",
-            work_mode: "N/A",
-        });
+      // Add the absentee entry for this date
+      dataByDate.set(date, {
+        date,
+        checkIn: "Absent",
+        checkOut: "Absent",
+        status: "Absent",
+        work_mode: "N/A",
+      });
     });
 
     // Convert the map values to an array
@@ -180,21 +190,21 @@ useEffect(() => {
 
     // Update the state
     setWeeklyData(mergedData);
-}, [Attendance, absentees]);
+  }, [Attendance, absentees]);
 
 
 
-  
 
-    return(
-        <>
-        <div>
-            <h3 className="mb-3 font-semibold text-xl text-gray-900">Weekly Overview - {monthName+ " " + year}</h3>
-        </div>
-        <div className="width-full bg-red rounded-3xl shadow-lg max-w-5xl">
+
+  return (
+    <>
+      <div>
+        <h3 className="mb-3 font-semibold text-xl text-gray-900">Weekly Overview - {monthName + " " + year}</h3>
+      </div>
+      <div className="width-full bg-red rounded-3xl shadow-lg max-w-7xl">
         {Error && <p className="text-red-500 text-center">{Error}</p>}
-         <div className="overflow-x-auto rounded-2xl">
-            <table className="min-w-full   bg-white">
+        <div className="overflow-x-auto overflow-y-auto max-h-96 rounded-2xl">
+          <table className="min-w-full   bg-white">
             <thead className="bg-gray-50 p-4 text-gray-900  font-semibold  text-md leading-normal">
               <td className="px-3 py-6 text-center">Date</td>
               <td className="px-3 py-6 text-center">Check-In</td>
@@ -203,44 +213,42 @@ useEffect(() => {
               <td className="px-3 py-6 text-center">Work Mode</td>
             </thead>
             <tbody>
-                {Weeklydata && Weeklydata.length > 0 ? (
+              {Weeklydata && Weeklydata.length > 0 ? (
                 Weeklydata.map((data, index) => (
-                <tr key={index} className="text-gray-700">
-                <td className="px-3 py-4 text-center">{data.date}</td> 
-                <td className="px-3 py-4 text-center">{data.checkIn}</td> 
-                <td className="px-3 py-4 text-center">{data.checkOut}</td> 
-                {/* <td className="px-3 py-4 text-center">{data.status}</td>  */}
-                <td className="px-3 py-4 text-center">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            data.status === "present"
-                              ? "bg-green-100 text-green-800"
-                              : data.status === "late"
-                              ? "bg-yellow-100 text-yellow-800"
-                              : "bg-red-100 text-red-800"
+                  <tr key={index} className="text-gray-700">
+                    <td className="px-3 py-4 text-center">{data.date}</td>
+                    <td className="px-3 py-4 text-center">{data.checkIn}</td>
+                    <td className="px-3 py-4 text-center">{data.checkOut}</td>
+                    {/* <td className="px-3 py-4 text-center">{data.status}</td>  */}
+                    <td className="px-3 py-4 text-center">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-semibold ${data.status === "present"
+                          ? "bg-green-100 text-green-800"
+                          : data.status === "late"
+                            ? "bg-yellow-100 text-yellow-800"
+                            : "bg-red-100 text-red-800"
                           }`}
-                        >
-                          {data.status}
-                        </span>
-                      </td>
-                {/* <td className="px-3 py-4 text-center">{data.work_mode}</td>  */}
-                <td className="px-3 py-4 text-center">
-                        <span
-                          className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                            data.work_mode === "on_site"
-                              ? "bg-blue-100 text-blue-800"
-                              : data.work_mode === "remote"
-                              ? "bg-purple-100 text-purple-800"
-                              : "bg-white text-black"
+                      >
+                        {data.status}
+                      </span>
+                    </td>
+                    {/* <td className="px-3 py-4 text-center">{data.work_mode}</td>  */}
+                    <td className="px-3 py-4 text-center">
+                      <span
+                        className={`px-3 py-1 rounded-full text-sm font-semibold ${data.work_mode === "on_site"
+                          ? "bg-blue-100 text-blue-800"
+                          : data.work_mode === "remote"
+                            ? "bg-purple-100 text-purple-800"
+                            : "bg-white text-black"
                           }`}
-                        >
-                          {data.work_mode === "on_site" ? "On-site" : data.work_mode === "remote" ? "Remote" : "-----"}
-                        </span>
-                      </td>
-                </tr>
-               ))            
-             ) : (
-               <tr>
+                      >
+                        {data.work_mode === "on_site" ? "On-site" : data.work_mode === "remote" ? "Remote" : "-----"}
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
                   <td colSpan={5} className="text-center text-gray-500 py-4">
                     No Data Available
                   </td>
@@ -248,10 +256,10 @@ useEffect(() => {
               )}
             </tbody>
           </table>
-         </div>
         </div>
+      </div>
 
-        </>
-    )
+    </>
+  )
 };
 export default WeeklyDataUser;

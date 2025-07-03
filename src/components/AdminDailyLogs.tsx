@@ -35,11 +35,22 @@ interface DailyLog {
   is_read?: boolean;
   rated_at?: string;
   read_at?: string;
+  source?: 'web' | 'slack';
   user?: {
     full_name: string;
     email: string;
   };
 }
+
+// Function to format Slack markdown
+const formatSlackMarkdown = (text: string) => {
+  return text
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>') // *bold*
+    .replace(/_([^_]+)_/g, '<em>$1</em>') // _italic_
+    .replace(/~([^~]+)~/g, '<del>$1</del>') // ~strikethrough~
+    .replace(/`([^`]+)`/g, '<code>$1</code>') // `code`
+    .replace(/#([\w-]+)/g, '<span style="color: #0066cc; font-weight: 500;">#$1</span>'); // #channel
+};
 
 const AdminDailyLogs: React.FC = () => {
   // Add these new state variables for AI functionality
@@ -250,10 +261,58 @@ const AdminDailyLogs: React.FC = () => {
     }
   };
 
+  // Fetch Slack messages for specific employee
+  const fetchSlackMessages = async (employeeId: string) => {
+    try {
+      // Get employee's slack_id
+      const { data: userData, error: userError } = await supabase
+        .from("users")
+        .select("slack_id")
+        .eq("id", employeeId)
+        .single();
+
+      if (userError || !userData?.slack_id) {
+        console.log("No slack_id found for employee:", employeeId);
+        return [];
+      }
+
+      console.log("Fetching Slack messages for employee:", userData.slack_id.trim());
+
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/get-slack-messages`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          userId: userData.slack_id.trim(),
+          channelId: 'C05TPM3SH8X' // dailylogs channel
+        })
+      });
+
+      if (!response.ok) {
+        console.error("Failed to fetch Slack messages:", response.status);
+        return [];
+      }
+
+      const data = await response.json();
+      console.log("Slack messages fetched:", data.messages?.length || 0);
+
+      if (data.success && data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+        return data.messages;
+      } else {
+        return [];
+      }
+    } catch (error) {
+      console.error("Error fetching Slack messages:", error);
+      return [];
+    }
+  };
+
   const fetchEmployeeLogs = async (employeeId: string) => {
     setIsLoading(true);
     try {
-      const { data, error } = await supabase
+      // Fetch database logs (web messages and admin replies)
+      const { data: dbLogs, error } = await supabase
         .from("dailylog")
         .select(
           `
@@ -262,15 +321,39 @@ const AdminDailyLogs: React.FC = () => {
         `
         )
         .or(`userid.eq.${employeeId},admin_id.eq.${employeeId}`)
+        .neq("source", "slack") // Exclude slack messages from database
         .order("created_at", { ascending: true });
 
       if (error) {
-        console.error("Error fetching logs:", error);
-      } else {
-        setLogs(data || []);
-        // Mark employee messages as read
-        await markMessagesAsRead(employeeId);
+        console.error("Error fetching database logs:", error);
       }
+
+      // Fetch Slack messages for this employee
+      const slackMessages = await fetchSlackMessages(employeeId);
+
+      // Convert Slack messages to DailyLog format
+      const formattedSlackMessages = slackMessages.map((msg: any) => ({
+        id: `slack-${msg.ts}`,
+        dailylog: msg.text,
+        userid: employeeId,
+        created_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
+        sender_type: 'employee',
+        source: 'slack'
+      }));
+
+      // Combine and sort all messages by timestamp
+      const allLogs = [...(dbLogs || []), ...formattedSlackMessages];
+      allLogs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+
+      console.log("Combined logs:", {
+        web: dbLogs?.length || 0,
+        slack: formattedSlackMessages.length,
+        total: allLogs.length
+      });
+
+      setLogs(allLogs);
+      // Mark employee messages as read
+      await markMessagesAsRead(employeeId);
     } catch (error) {
       console.error("Error:", error);
     } finally {
@@ -866,15 +949,23 @@ const AdminDailyLogs: React.FC = () => {
                               : "bg-white text-gray-800 shadow-sm border border-gray-200"
                               }`}
                           >
-                            <p className="text-sm whitespace-pre-wrap">
-                              {log.dailylog}
-                            </p>
+                            <div 
+                              className="text-sm whitespace-pre-wrap"
+                              dangerouslySetInnerHTML={{ __html: formatSlackMarkdown(log.dailylog) }}
+                            />
                             <p
                               className={`text-xs mt-1 ${isAdmin ? "text-green-100" : "text-gray-500"
                                 }`}
                             >
                               {formatTime(log.created_at)}
                             </p>
+
+                            {!isAdmin && log.source === 'slack' && (
+                              <p className="text-xs text-blue-200 font-medium mb-1 flex items-center space-x-1">
+                                <MessageCircle className="w-3 h-3" />
+                                <span>via Slack</span>
+                              </p>
+                            )}
 
                             {/* Star Rating and AI Analysis for Employee Messages */}
                             {!isAdmin && (
@@ -885,8 +976,8 @@ const AdminDailyLogs: React.FC = () => {
                                   onRate={handleRatingClick}
                                 />
 
-                                {/* AI Analysis Button */}
-                                {!log.rating && (
+                                {/* AI Analysis Button - Only for non-Slack messages */}
+                                {!log.rating && log.source !== 'slack' && (
                                   <button
                                     onClick={() => analyzeWithAI(log.id, log.dailylog)}
                                     disabled={analyzingMessageId === log.id}

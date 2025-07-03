@@ -1,64 +1,135 @@
-import React from "react";
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { supabase } from "../lib/supabase";
-import { startOfWeek , endOfWeek } from "date-fns";
-import Attendance from "./Attendance";
+import { startOfWeek, endOfWeek, startOfMonth, endOfMonth, max, min } from "date-fns";
 
-const FilterDataUser = ({startdate , enddate , search , selectedtab}) => {
-  const [Attendance , setAttendance] = useState([]);
-  const [absentees , setabsentees] = useState([]);
-  const [breaks , setbreaks] = useState([]);
-  const [Error , setError] = useState("");
-  const [loading , setLoading] = useState(false);
-  const [filtereddata , setFilteredData] = useState([]);
+
+
+const FilterDataUser = ({ selectedDate, selectedtab }) => {
+  // Tab state: "Weekly" or "Monthly" - Always show Monthly for this component
+  const [selectedTab, setSelectedTab] = useState("Monthly");
+  // Date range state
+  const [startdate, setStartdate] = useState("");
+  const [enddate, setEnddate] = useState("");
+  const [search, setSearch] = useState("");
+
+  useEffect(() => {
+    // Use the selectedDate from Dashboard instead of always using today
+    const currentDate = selectedDate || new Date();
+
+    if (selectedTab === "Weekly") {
+      // Calculate week boundaries
+      const weekStart = startOfWeek(currentDate, { weekStartsOn: 1 });
+      const weekEnd = endOfWeek(currentDate, { weekStartsOn: 1 });
+
+      // Calculate month boundaries
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      // Adjust week boundaries to only include current month dates
+      const adjustedWeekStart = max([weekStart, monthStart]);
+      const adjustedWeekEnd = min([weekEnd, monthEnd]);
+
+      setStartdate(adjustedWeekStart.toISOString().split("T")[0]);
+      setEnddate(adjustedWeekEnd.toISOString().split("T")[0]);
+    } else if (selectedTab === "Monthly") {
+      // Use date-fns functions for more reliable month boundary calculation
+      const monthStart = startOfMonth(currentDate);
+      const monthEnd = endOfMonth(currentDate);
+
+      const startDateStr = monthStart.toISOString().split("T")[0];
+      const endDateStr = monthEnd.toISOString().split("T")[0];
+
+      setStartdate(startDateStr);
+      setEnddate(endDateStr);
+    }
+  }, [selectedTab, selectedDate]);
+
+  return (
+    <div>
+      {/* <div className="flex gap-4 mb-4">
+        <button
+          className={px-4 py-2 rounded-lg font-semibold ${selectedTab === "Weekly" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}}
+          onClick={() => setSelectedTab("Weekly")}
+        >
+          Weekly
+        </button>
+        <button
+          className={px-4 py-2 rounded-lg font-semibold ${selectedTab === "Monthly" ? "bg-blue-600 text-white" : "bg-gray-200 text-gray-700"}}
+          onClick={() => setSelectedTab("Monthly")}
+        >
+          Monthly
+        </button>
+      </div> */}
+      <MonthlyOrWeeklyTable
+        startdate={startdate}
+        enddate={enddate}
+        search={search}
+        selectedtab={"Filter"}
+      />
+    </div>
+  );
+};
+
+// The original logic, renamed to MonthlyOrWeeklyTable
+const MonthlyOrWeeklyTable = ({ startdate, enddate, search, selectedtab }) => {
+  const [Attendance, setAttendance] = useState([]);
+  const [absentees, setabsentees] = useState([]);
+  const [breaks, setbreaks] = useState([]);
+  const [Error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [filtereddata, setFilteredData] = useState([]);
   const userID = localStorage.getItem("user_id");
   const [isLoading, setisLoading] = useState(false);
 
   useEffect(() => {
     setisLoading(true);
+    if (!userID || !startdate || !enddate) {
+      setisLoading(false);
+      return;
+    }
+
 
     const startDateFormatted = `${startdate}T00:00:00.000Z`;
     const endDateFormatted = `${enddate}T23:59:59.000Z`;
 
+
+
+
     const fetchattendance = async () => {
-        const {data:attendanceData , error: attendanceerror} = await supabase
+      const { data: attendanceData, error: attendanceerror } = await supabase
         .from("attendance_logs")
         .select("*")
-        .eq("user_id" , userID)
-        .gte("check_in" , startDateFormatted)
-        .lte("check_in" , endDateFormatted);
+        .eq("user_id", userID)
+        .gte("check_in", startDateFormatted)
+        .lte("check_in", endDateFormatted);
 
-        if (attendanceerror) return setError(attendanceerror);
-
-        setAttendance(attendanceData);
-        console.log("AttendAnceData" , attendanceData);
-    }
+      if (attendanceerror) return setError(attendanceerror);
+      setAttendance(attendanceData);
+    };
 
     const fetchabsentees = async () => {
-        const {data:absenteesData , error:absenteesError} = await supabase 
+      const { data: absenteesData, error: absenteesError } = await supabase
         .from("absentees")
         .select("*")
-        .eq("user_id" , userID)
-        .gte("created_at" , startDateFormatted)
-        .lte("created_at" , endDateFormatted);
+        .eq("user_id", userID)
+        .gte("created_at", startDateFormatted)
+        .lte("created_at", endDateFormatted);
 
-        if(absenteesError) return setError(absenteesError)
-        setabsentees(absenteesData);
-        console.log("Absentees Data" , absenteesData);
-    }
+      if (absenteesError) return setError(absenteesError);
+      setabsentees(absenteesData);
+    };
 
     const fetchbreaks = async () => {
-        const {data:breaksData , error:breaksError} = await supabase 
+      const { data: breaksData, error: breaksError } = await supabase
         .from("breaks")
         .select("*")
-        .eq("user_id" , userID)
-        .gte("created_at" , startDateFormatted)
-        .lte("created_at" , endDateFormatted);
+        .eq("user_id", userID)
+        .gte("created_at", startDateFormatted)
+        .lte("created_at", endDateFormatted);
 
-        if(breaksError) return setError(breaksError)
-        setbreaks(breaksData);
-        console.log("Breaks" , breaksData);
-    }
+      if (breaksError) return setError(breaksError);
+      setbreaks(breaksData);
+    };
 
     if (selectedtab === "Filter") {
       fetchattendance();
@@ -67,7 +138,7 @@ const FilterDataUser = ({startdate , enddate , search , selectedtab}) => {
     }
 
     setisLoading(false);
-  }, [search]); // Re-run when 'search' changes
+  }, [startdate, enddate, selectedtab, userID]); // Run when date range or tab changes
 
   useEffect(() => {
     if (!Attendance.length && !absentees.length) return;
@@ -78,48 +149,59 @@ const FilterDataUser = ({startdate , enddate , search , selectedtab}) => {
 
     // Process Attendance Data
     Attendance.forEach((entry) => {
-        const date = entry.check_in.split("T")[0]; // Extract the date
-        const checkInTime = new Date(entry.check_in).toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true, // Use `false` for 24-hour format
-        });
+      const date = entry.check_in.split("T")[0]; // Extract the date
 
-        const checkOutTime = entry.check_out
-            ? new Date(entry.check_out).toLocaleTimeString("en-US", {
-                hour: "2-digit",
-                minute: "2-digit",
-                hour12: true,
-            })
-            : "N/A";
+      // Additional filter: Only process dates within the queried range
+      if (date < startdate || date > enddate) {
+        return; // Skip this entry
+      }
 
-        // Add or update the entry for this date
-        dataByDate.set(date, {
-            date,
-            checkIn: checkInTime,
-            checkOut: checkOutTime,
-            status: entry.status,
-            work_mode: entry.work_mode || "N/A",
-        });
+      const checkInTime = new Date(entry.check_in).toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true, // Use false for 24-hour format
+      });
+
+      const checkOutTime = entry.check_out
+        ? new Date(entry.check_out).toLocaleTimeString("en-US", {
+          hour: "2-digit",
+          minute: "2-digit",
+          hour12: true,
+        })
+        : "N/A";
+
+      // Add or update the entry for this date
+      dataByDate.set(date, {
+        date,
+        checkIn: checkInTime,
+        checkOut: checkOutTime,
+        status: entry.status,
+        work_mode: entry.work_mode || "N/A",
+      });
     });
 
     // Process Absentees Data
     absentees.forEach((entry) => {
-        const date = entry.created_at.split("T")[0]; // Extract the date
+      const date = entry.created_at.split("T")[0]; // Extract the date
 
-        // If there's already an attendance entry for this date, skip adding the absentee entry
-        if (dataByDate.has(date)) {
-            return;
-        }
+      // Additional filter: Only process dates within the queried range
+      if (date < startdate || date > enddate) {
+        return; // Skip this entry
+      }
 
-        // Add the absentee entry for this date
-        dataByDate.set(date, {
-            date,
-            checkIn: "Absent",
-            checkOut: "Absent",
-            status: "Absent",
-            work_mode: "N/A",
-        });
+      // If there's already an attendance entry for this date, skip adding the absentee entry
+      if (dataByDate.has(date)) {
+        return;
+      }
+
+      // Add the absentee entry for this date
+      dataByDate.set(date, {
+        date,
+        checkIn: "Absent",
+        checkOut: "Absent",
+        status: "Absent",
+        work_mode: "N/A",
+      });
     });
 
     // Convert the map values to an array
@@ -131,12 +213,12 @@ const FilterDataUser = ({startdate , enddate , search , selectedtab}) => {
     // Update the state
     setFilteredData(mergedData);
     setisLoading(false);
-  }, [Attendance, absentees]);
+  }, [Attendance, absentees, startdate, enddate]);
 
   return (
     <>
-      <div className="width-full bg-red rounded-3xl shadow-lg max-w-5xl">
-        <div className="overflow-x-auto rounded-2xl">
+      <div className="width-full bg-red rounded-3xl shadow-lg max-w-7xl">
+        <div className="overflow-x-auto overflow-y-auto max-h-96 rounded-2xl">
           <table className="min-w-full bg-white">
             <thead className="bg-gray-50 p-4 text-gray-900 font-semibold text-md leading-normal">
               <td className="px-3 py-6 text-center">Date</td>
@@ -167,32 +249,30 @@ const FilterDataUser = ({startdate , enddate , search , selectedtab}) => {
                     <td className="px-3 py-4 text-center">{data.checkOut}</td>
                     <td className="px-3 py-4 text-center">
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          data.status === "present"
-                            ? "bg-green-100 text-green-800"
-                            : data.status === "late"
+                        className={`px-3 py-1 rounded-full text-sm font-semibold ${data.status === "present"
+                          ? "bg-green-100 text-green-800"
+                          : data.status === "late"
                             ? "bg-yellow-100 text-yellow-800"
                             : "bg-red-100 text-red-800"
-                        }`}
+                          }`}
                       >
                         {data.status}
                       </span>
                     </td>
                     <td className="px-3 py-4 text-center">
                       <span
-                        className={`px-3 py-1 rounded-full text-sm font-semibold ${
-                          data.work_mode === "on_site"
-                            ? "bg-blue-100 text-blue-800"
-                            : data.work_mode === "remote"
+                        className={`px-3 py-1 rounded-full text-sm font-semibold ${data.work_mode === "on_site"
+                          ? "bg-blue-100 text-blue-800"
+                          : data.work_mode === "remote"
                             ? "bg-purple-100 text-purple-800"
                             : "bg-white text-black"
-                        }`}
+                          }`}
                       >
                         {data.work_mode === "on_site"
                           ? "On-site"
                           : data.work_mode === "remote"
-                          ? "Remote"
-                          : "-----"}
+                            ? "Remote"
+                            : "-----"}
                       </span>
                     </td>
                   </tr>
@@ -212,4 +292,9 @@ const FilterDataUser = ({startdate , enddate , search , selectedtab}) => {
   );
 };
 
-export default FilterDataUser;
+// Main component that receives selectedDate from Dashboard
+const MonthlyDataUser = ({ selectedDate, selectedtab }) => {
+  return <FilterDataUser selectedDate={selectedDate} selectedtab={selectedtab} />;
+};
+
+export default MonthlyDataUser;

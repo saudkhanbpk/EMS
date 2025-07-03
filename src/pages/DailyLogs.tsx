@@ -18,6 +18,16 @@ interface DailyLog {
   source?: 'web' | 'slack';
 }
 
+// Function to format Slack markdown
+const formatSlackMarkdown = (text: string) => {
+  return text
+    .replace(/\*([^*]+)\*/g, '<strong>$1</strong>') // *bold*
+    .replace(/_([^_]+)_/g, '<em>$1</em>') // _italic_
+    .replace(/~([^~]+)~/g, '<del>$1</del>') // ~strikethrough~
+    .replace(/`([^`]+)`/g, '<code>$1</code>') // `code`
+    .replace(/#([\w-]+)/g, '<span style="color: #0066cc; font-weight: 500;">#$1</span>'); // #channel
+};
+
 const DailyLogs: React.FC = () => {
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [inputText, setInputText] = useState("");
@@ -140,7 +150,7 @@ const DailyLogs: React.FC = () => {
     try {
       console.log("📱 Starting Slack messages fetch for user:", userProfile.slack_id.trim());
 
-      const response = await fetch('http://localhost:5000/api/get-slack-messages', {
+      const response = await fetch(`${import.meta.env.VITE_BACKEND_URL}/api/get-slack-messages`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -678,9 +688,10 @@ const DailyLogs: React.FC = () => {
                         </div>
                       </div>
                     ) : (
-                      <p className="text-sm whitespace-pre-wrap">
-                        {log.dailylog}
-                      </p>
+                      <div
+                        className="text-sm whitespace-pre-wrap"
+                        dangerouslySetInnerHTML={{ __html: formatSlackMarkdown(log.dailylog) }}
+                      />
                     )}
 
                     <div className="flex items-center justify-between mt-1">
