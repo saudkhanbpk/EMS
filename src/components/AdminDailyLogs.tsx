@@ -586,39 +586,39 @@ const AdminDailyLogs: React.FC = () => {
   // Filter employees based on active filter
   const getFilteredEmployees = () => {
     const today = new Date().toISOString().split('T')[0];
-    
+
     return employees.filter((employee) => {
       // First apply search filter
       const matchesSearch = employee.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         employee.email.toLowerCase().includes(searchTerm.toLowerCase());
-      
+
       if (!matchesSearch) return false;
-      
+
       const employeeLogs = allLogs.filter(log => log.userid === employee.id && log.sender_type === 'employee');
       const lastEmployeeLog = employeeLogs[0]; // Most recent log
-      
+
       switch (activeFilter) {
         case 'all':
           return true;
-        
+
         case 'unstar':
           // Show if admin hasn't assigned rating to the last log
           return lastEmployeeLog && !lastEmployeeLog.rating;
-        
+
         case 'unread':
           // Show if person has not read the log (admin messages to this employee)
-          const adminLogsToEmployee = allLogs.filter(log => 
+          const adminLogsToEmployee = allLogs.filter(log =>
             log.admin_id === employee.id && log.sender_type === 'admin' && !log.is_read
           );
           return adminLogsToEmployee.length > 0;
-        
+
         case 'unsent':
           // Show if person hasn't sent log today
-          const todayLogs = employeeLogs.filter(log => 
+          const todayLogs = employeeLogs.filter(log =>
             log.created_at.split('T')[0] === today
           );
           return todayLogs.length === 0;
-        
+
         default:
           return true;
       }
@@ -689,47 +689,43 @@ const AdminDailyLogs: React.FC = () => {
           <div className="flex items-center justify-center space-x-1 sm:space-x-2">
             <button
               onClick={() => setActiveFilter('all')}
-              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                activeFilter === 'all'
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'all'
                   ? 'bg-gray-800 text-white shadow-md transform scale-105'
                   : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
-              }`}
+                }`}
             >
               <User className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline sm:inline">All</span>
             </button>
-            
+
             <button
               onClick={() => setActiveFilter('unstar')}
-              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                activeFilter === 'unstar'
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'unstar'
                   ? 'bg-yellow-500 text-white shadow-md transform scale-105'
                   : 'bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700'
-              }`}
+                }`}
             >
               <Star className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline sm:inline">Unstar</span>
             </button>
-            
+
             <button
               onClick={() => setActiveFilter('unread')}
-              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                activeFilter === 'unread'
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'unread'
                   ? 'bg-blue-500 text-white shadow-md transform scale-105'
                   : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
-              }`}
+                }`}
             >
               <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline sm:inline">Unread</span>
             </button>
-            
+
             <button
               onClick={() => setActiveFilter('unsent')}
-              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${
-                activeFilter === 'unsent'
+              className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'unsent'
                   ? 'bg-red-500 text-white shadow-md transform scale-105'
                   : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
-              }`}
+                }`}
             >
               <Send className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden xs:inline sm:inline">Unsent</span>
@@ -949,7 +945,7 @@ const AdminDailyLogs: React.FC = () => {
                               : "bg-white text-gray-800 shadow-sm border border-gray-200"
                               }`}
                           >
-                            <div 
+                            <div
                               className="text-sm whitespace-pre-wrap"
                               dangerouslySetInnerHTML={{ __html: formatSlackMarkdown(log.dailylog) }}
                             />
@@ -1102,7 +1098,7 @@ const AdminDailyLogs: React.FC = () => {
                     </p>
                   </>
                 )}
-                
+
                 {activeFilter === 'unstar' && (
                   <>
                     <Star className="w-16 h-16 text-yellow-400 mx-auto mb-4" />
@@ -1114,7 +1110,7 @@ const AdminDailyLogs: React.FC = () => {
                     </p>
                   </>
                 )}
-                
+
                 {activeFilter === 'unread' && (
                   <>
                     <MessageCircle className="w-16 h-16 text-blue-400 mx-auto mb-4" />
@@ -1126,7 +1122,7 @@ const AdminDailyLogs: React.FC = () => {
                     </p>
                   </>
                 )}
-                
+
                 {activeFilter === 'unsent' && (
                   <>
                     <Send className="w-16 h-16 text-red-400 mx-auto mb-4" />
@@ -1138,7 +1134,7 @@ const AdminDailyLogs: React.FC = () => {
                     </p>
                   </>
                 )}
-                
+
                 {filteredEmployees.length === 0 && (
                   <div className="mt-6 p-4 bg-green-50 rounded-lg border border-green-200">
                     <p className="text-green-700 font-medium">
