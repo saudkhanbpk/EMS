@@ -1483,7 +1483,20 @@ function ProjectsAdmin() {
                                             <div className="text-sm text-gray-900">
                                               {(expandedProjects['all'] ? employee.projects : employee.projects.slice(0, 2)).map(project => (
                                                 <div key={project.id} className="bg-gray-50 p-2 rounded-md mb-2">
-                                                  <div className="text-sm font-medium text-gray-900">{project.title}</div>
+                                                  <div 
+                                                    className="text-sm font-medium text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
+                                                    onClick={(e) => {
+                                                      e.stopPropagation();
+                                                      setSelectedTAB("taskBoard");
+                                                      setProjectId(project.id);
+                                                      const projectData = projects.find(p => p.id === project.id);
+                                                      if (projectData) {
+                                                        setdevops(projectData.devops);
+                                                      }
+                                                    }}
+                                                  >
+                                                    {project.title}
+                                                  </div>
                                                   <div className="flex items-center mt-1">
                                                     <span className="text-xs text-green-600 font-medium">{project.completedScore}</span>
                                                     <span className="mx-1 text-xs text-gray-500">/</span>
@@ -1630,7 +1643,20 @@ function ProjectsAdmin() {
                                         <div className="text-sm text-gray-900">
                                           {(expandedProjects['manager'] ? manager.projects : manager.projects.slice(0, 2)).map(project => (
                                             <div key={project.id} className="bg-gray-50 p-2 rounded-md mb-2">
-                                              <div className="text-sm font-medium text-gray-900">{project.title}</div>
+                                              <div 
+                                                className="text-sm font-medium text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setSelectedTAB("taskBoard");
+                                                  setProjectId(project.id);
+                                                  const projectData = projects.find(p => p.id === project.id);
+                                                  if (projectData) {
+                                                    setdevops(projectData.devops);
+                                                  }
+                                                }}
+                                              >
+                                                {project.title}
+                                              </div>
                                               <div className="flex items-center mt-1">
                                                 <span className="text-xs text-green-600 font-medium">{project.completedScore}</span>
                                                 <span className="mx-1 text-xs text-gray-500">/</span>

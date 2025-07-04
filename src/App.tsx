@@ -415,8 +415,7 @@ function App() {
 
         {/* Widget Demo Route */}
         <Route path="/widget-demo" element={<WidgetDemo />} />
-        <Route path='/chat-admin' element={<Adminroute> <ChatSidebar /></Adminroute>}></Route>
-        <Route path="chat-admin/:id" element={<Adminroute> <Chat /></Adminroute>}></Route>
+
 
         {/* Admin Route (Protected) */}
         <Route

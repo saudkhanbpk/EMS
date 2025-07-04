@@ -477,7 +477,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                             </div>
                             <div className="pt-10 p-4">
                                 <h3 className="font-semibold text-lg text-gray-900">{chatuser.full_name}</h3>
-                                <p className="text-sm text-gray-600 capitalize">{chatuser.role} at EMS</p>
+                                <p className="text-sm text-gray-600 capitalize">{chatuser.role} at Tech Creator</p>
                                 <p className="text-xs text-gray-500 mt-1">Active now</p>
 
                                 <div className="mt-4 flex gap-2">
@@ -488,16 +488,37 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
                                         Connect
                                     </button>
                                 </div>
+                                {(chatuser.personal_email || chatuser.phone_number) && (
+                                    <div className="mt-4 pt-4 border-t border-gray-200">
+                                        <div className="flex items-center text-sm text-gray-600">
+                                            <span className="font-medium">Contact info:</span>
+                                        </div>
 
-                                <div className="mt-4 pt-4 border-t border-gray-200">
-                                    <div className="flex items-center text-sm text-gray-600">
-                                        <span className="font-medium">Contact info:</span>
+                                        {chatuser.personal_email && (
+                                            <div className="mt-1.5 text-sm flex items-center text-gray-600">
+                                                <a
+                                                    href={`mailto:${chatuser.personal_email}`}
+                                                    className="flex items-center hover:text-gray-800 transition-colors"
+                                                >
+                                                    <ExternalLink size={14} className="mr-2" />
+                                                    <span>{chatuser.personal_email}</span>
+                                                </a>
+                                            </div>
+                                        )}
+
+                                        {chatuser.phone_number && (
+                                            <div className="mt-1.5 text-sm flex items-center text-gray-600">
+                                                <a
+                                                    href={`tel:${chatuser.phone_number}`}
+                                                    className="flex items-center hover:text-gray-800 transition-colors"
+                                                >
+                                                    <ExternalLink size={14} className="mr-2" />
+                                                    <span>{chatuser.phone_number}</span>
+                                                </a>
+                                            </div>
+                                        )}
                                     </div>
-                                    <div className="mt-1.5 text-sm flex items-center text-gray-600">
-                                        <ExternalLink size={14} className="mr-2" />
-                                        <span>example@ems.com</span>
-                                    </div>
-                                </div>
+                                )}
                             </div>
                         </div>
                     )}

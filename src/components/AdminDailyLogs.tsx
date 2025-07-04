@@ -7,6 +7,7 @@ import {
   MessageCircle,
   Star,
   Sparkles,
+  RefreshCw,
 } from "lucide-react";
 import { useAuthStore } from "../lib/store";
 import { supabase } from "../lib/supabase";
@@ -53,7 +54,18 @@ const formatSlackMarkdown = (text: string) => {
 };
 
 const AdminDailyLogs: React.FC = () => {
-  // Add these new state variables for AI functionality
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [logs, setLogs] = useState<DailyLog[]>([]);
+  const [replyText, setReplyText] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [showRatingModal, setShowRatingModal] = useState(false);
+  const [pendingRating, setPendingRating] = useState<{
+    messageId: string;
+    rating: number;
+  } | null>(null);
   const [analyzingMessageId, setAnalyzingMessageId] = useState<string | null>(null);
   const [aiSuggestions, setAiSuggestions] = useState<Record<string, {
     rating: number;
@@ -62,10 +74,51 @@ const AdminDailyLogs: React.FC = () => {
   const [showAiSuggestion, setShowAiSuggestion] = useState<string | null>(null);
   const [activeFilter, setActiveFilter] = useState<'all' | 'unstar' | 'unread' | 'unsent'>('all');
   const [allLogs, setAllLogs] = useState<DailyLog[]>([]);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const replyInputRef = useRef<HTMLTextAreaElement>(null);
+  const user = useAuthStore((state) => state.user);
 
-  // ... (keep all your existing useEffect hooks and functions)
+  // Auto-scroll to bottom when new logs arrive
+  useEffect(() => {
+    if (logs.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    }
+  }, [logs]);
 
-  // Add the AI analysis function
+  // Auto-scroll to bottom when employee is selected and logs are loaded
+  useEffect(() => {
+    if (selectedEmployee && logs.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 200);
+    }
+  }, [selectedEmployee, logs.length]);
+
+  // Additional scroll effect for when loading completes
+  useEffect(() => {
+    if (!isLoading && selectedEmployee && logs.length > 0) {
+      setTimeout(() => {
+        messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+      }, 300);
+    }
+  }, [isLoading, selectedEmployee, logs.length]);
+
+  // Fetch all employees and logs
+  useEffect(() => {
+    fetchEmployees();
+    fetchAllLogs();
+  }, []);
+
+  // Fetch logs when employee is selected
+  useEffect(() => {
+    if (selectedEmployee) {
+      fetchEmployeeLogs(selectedEmployee.id);
+    }
+  }, [selectedEmployee]);
+
+  // AI analysis function
   const analyzeWithAI = async (messageId: string, message: string) => {
     setAnalyzingMessageId(messageId);
 
@@ -88,7 +141,7 @@ const AdminDailyLogs: React.FC = () => {
     }
   };
 
-  // Add function to apply AI suggestion
+  // Apply AI suggestion
   const applyAiSuggestion = (messageId: string) => {
     const suggestion = aiSuggestions[messageId];
     if (suggestion) {
@@ -96,41 +149,6 @@ const AdminDailyLogs: React.FC = () => {
       setShowAiSuggestion(null);
     }
   };
-  const [employees, setEmployees] = useState<Employee[]>([]);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(
-    null
-  );
-  const [logs, setLogs] = useState<DailyLog[]>([]);
-  const [replyText, setReplyText] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  const [isSending, setIsSending] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-  const [showRatingModal, setShowRatingModal] = useState(false);
-  const [pendingRating, setPendingRating] = useState<{
-    messageId: string;
-    rating: number;
-  } | null>(null);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const replyInputRef = useRef<HTMLTextAreaElement>(null);
-  const user = useAuthStore((state) => state.user);
-
-  // Auto-scroll to bottom when new logs arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [logs]);
-
-  // Fetch all employees and logs
-  useEffect(() => {
-    fetchEmployees();
-    fetchAllLogs();
-  }, []);
-
-  // Fetch logs when employee is selected
-  useEffect(() => {
-    if (selectedEmployee) {
-      fetchEmployeeLogs(selectedEmployee.id);
-    }
-  }, [selectedEmployee]);
 
   const fetchEmployees = async () => {
     try {
@@ -261,6 +279,72 @@ const AdminDailyLogs: React.FC = () => {
     }
   };
 
+  // Save Slack messages to database (avoiding duplicates)
+  const saveSlackMessagesToDatabase = async (employeeId: string, slackMessages: any[]) => {
+    if (!slackMessages || slackMessages.length === 0) return [];
+
+    try {
+      // Get existing Slack messages from database for this employee using id_temp field
+      const { data: existingSlackLogs, error: fetchError } = await supabase
+        .from("dailylog")
+        .select("id_temp")
+        .eq("userid", employeeId)
+        .eq("source", "slack")
+        .not("id_temp", "is", null);
+
+      if (fetchError) {
+        console.error("Error fetching existing Slack logs:", fetchError);
+        return [];
+      }
+
+      // Create a Set of existing Slack message IDs to check for duplicates
+      const existingSlackIds = new Set(
+        existingSlackLogs?.map(log => log.id_temp).filter(Boolean) || []
+      );
+
+      // Filter out duplicate messages using client_msg_id as unique identifier
+      const newMessages = slackMessages.filter(msg => 
+        msg.client_msg_id && !existingSlackIds.has(msg.client_msg_id)
+      );
+
+      if (newMessages.length === 0) {
+        console.log("No new Slack messages to save");
+        return [];
+      }
+
+      // Prepare messages for database insertion
+      const logsToInsert = newMessages.map(msg => ({
+        userid: employeeId,
+        dailylog: msg.text,
+        sender_type: "employee",
+        source: "slack",
+        id_temp: msg.client_msg_id, // Store Slack client_msg_id as unique identifier
+        created_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
+        is_read: false,
+        rating: null,
+        reply_to_id: null,
+        admin_id: null
+      }));
+
+      // Insert new messages
+      const { data: insertedLogs, error: insertError } = await supabase
+        .from("dailylog")
+        .insert(logsToInsert)
+        .select();
+
+      if (insertError) {
+        console.error("Error inserting Slack messages:", insertError);
+        return [];
+      }
+
+      console.log(`Successfully saved ${insertedLogs?.length || 0} new Slack messages`);
+      return insertedLogs || [];
+    } catch (error) {
+      console.error("Error saving Slack messages:", error);
+      return [];
+    }
+  };
+
   // Fetch Slack messages for specific employee
   const fetchSlackMessages = async (employeeId: string) => {
     try {
@@ -299,6 +383,8 @@ const AdminDailyLogs: React.FC = () => {
       console.log("Slack messages fetched:", data.messages?.length || 0);
 
       if (data.success && data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+        // Save new messages to database
+        await saveSlackMessagesToDatabase(employeeId, data.messages);
         return data.messages;
       } else {
         return [];
@@ -309,10 +395,26 @@ const AdminDailyLogs: React.FC = () => {
     }
   };
 
+  // Function to sync Slack messages for current employee
+  const syncSlackMessages = async () => {
+    if (!selectedEmployee) return;
+    
+    setIsLoading(true);
+    try {
+      await fetchSlackMessages(selectedEmployee.id);
+      await fetchEmployeeLogs(selectedEmployee.id);
+      await fetchEmployees();
+    } catch (error) {
+      console.error('Error syncing Slack messages:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const fetchEmployeeLogs = async (employeeId: string) => {
     setIsLoading(true);
     try {
-      // Fetch database logs (web messages and admin replies)
+      // Fetch database logs
       const { data: dbLogs, error } = await supabase
         .from("dailylog")
         .select(
@@ -322,41 +424,48 @@ const AdminDailyLogs: React.FC = () => {
         `
         )
         .or(`userid.eq.${employeeId},admin_id.eq.${employeeId}`)
-        .neq("source", "slack") // Exclude slack messages from database
         .order("created_at", { ascending: true });
 
       if (error) {
         console.error("Error fetching database logs:", error);
       }
 
-      // Fetch Slack messages for this employee
+      // Fetch fresh Slack messages
       const slackMessages = await fetchSlackMessages(employeeId);
 
-      // Convert Slack messages to DailyLog format
-      const formattedSlackMessages = slackMessages.map((msg: any) => ({
-        id: `slack-${msg.ts}`,
-        dailylog: msg.text,
-        userid: employeeId,
-        created_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
-        sender_type: 'employee',
-        source: 'slack'
-      }));
+      // Convert Slack messages to DailyLog format (only if not already in database)
+      const formattedSlackMessages = slackMessages
+        .filter(msg => {
+          // Check if this Slack message is already in database using client_msg_id
+          return msg.client_msg_id && !dbLogs?.some(log => 
+            log.source === 'slack' && log.id_temp === msg.client_msg_id
+          );
+        })
+        .map((msg: any) => ({
+          id: `slack-${msg.client_msg_id}`,
+          dailylog: msg.text,
+          userid: employeeId,
+          created_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
+          sender_type: 'employee',
+          source: 'slack',
+          is_read: false,
+          rating: null,
+          user: {
+            full_name: selectedEmployee?.full_name || 'Unknown',
+            email: selectedEmployee?.email || ''
+          }
+        }));
 
       // Combine and sort all messages by timestamp
       const allLogs = [...(dbLogs || []), ...formattedSlackMessages];
       allLogs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-
-      console.log("Combined logs:", {
-        web: dbLogs?.length || 0,
-        slack: formattedSlackMessages.length,
-        total: allLogs.length
-      });
 
       setLogs(allLogs);
       // Mark employee messages as read
       await markMessagesAsRead(employeeId);
     } catch (error) {
       console.error("Error:", error);
+      setLogs([]);
     } finally {
       setIsLoading(false);
     }
@@ -390,18 +499,115 @@ const AdminDailyLogs: React.FC = () => {
     if (!pendingRating) return;
 
     try {
-      const { error } = await supabase
-        .from("dailylog")
-        .update({
-          rating: pendingRating.rating,
-          rated_at: new Date().toISOString(),
-        })
-        .eq("id", pendingRating.messageId);
+      const logToRate = logs.find(log => log.id === pendingRating.messageId);
+      
+      if (!logToRate) {
+        alert("Message not found. Please try again.");
+        return;
+      }
 
-      if (error) {
-        console.error("Error rating message:", error);
-        alert("Failed to save rating. Please try again.");
+      // Check if this is a temporary Slack message (not yet in database)
+      if (logToRate.id.startsWith('slack-')) {
+        const clientMsgId = logToRate.id.replace('slack-', '');
+        
+        // First check if this Slack message already exists in database
+        const { data: existingLog, error: findError } = await supabase
+          .from("dailylog")
+          .select("*")
+          .eq("userid", logToRate.userid)
+          .eq("source", "slack")
+          .eq("id_temp", clientMsgId)
+          .single();
+
+        if (findError && findError.code !== 'PGRST116') { // PGRST116 = no rows found
+          console.error("Error finding existing Slack message:", findError);
+          alert("Failed to save rating. Please try again.");
+          return;
+        }
+
+        if (existingLog) {
+          // Update existing Slack message with rating
+          const { error: updateError } = await supabase
+            .from("dailylog")
+            .update({
+              rating: pendingRating.rating,
+              rated_at: new Date().toISOString(),
+            })
+            .eq("id", existingLog.id);
+
+          if (updateError) {
+            console.error("Error updating existing Slack message rating:", updateError);
+            alert("Failed to save rating. Please try again.");
+            return;
+          }
+
+          // Update local state
+          setLogs((prev) =>
+            prev.map((log) =>
+              log.id === pendingRating.messageId
+                ? {
+                  ...existingLog,
+                  rating: pendingRating.rating,
+                  rated_at: new Date().toISOString(),
+                  user: logToRate.user
+                }
+                : log
+            )
+          );
+        } else {
+          // This is a new temporary Slack message, save it to database with rating
+          const { data: savedLog, error: insertError } = await supabase
+            .from("dailylog")
+            .insert({
+              userid: logToRate.userid,
+              dailylog: logToRate.dailylog,
+              sender_type: 'employee',
+              source: 'slack',
+              id_temp: clientMsgId,
+              created_at: logToRate.created_at,
+              is_read: false,
+              rating: pendingRating.rating,
+              rated_at: new Date().toISOString(),
+              reply_to_id: null,
+              admin_id: null
+            })
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error("Error saving Slack message with rating:", insertError);
+            alert("Failed to save rating. Please try again.");
+            return;
+          }
+
+          // Update local state with the saved log
+          setLogs((prev) =>
+            prev.map((log) =>
+              log.id === pendingRating.messageId
+                ? {
+                  ...savedLog,
+                  user: logToRate.user
+                }
+                : log
+            )
+          );
+        }
       } else {
+        // Regular database message, just update rating
+        const { error } = await supabase
+          .from("dailylog")
+          .update({
+            rating: pendingRating.rating,
+            rated_at: new Date().toISOString(),
+          })
+          .eq("id", pendingRating.messageId);
+
+        if (error) {
+          console.error("Error rating message:", error);
+          alert("Failed to save rating. Please try again.");
+          return;
+        }
+
         // Update local state
         setLogs((prev) =>
           prev.map((log) =>
@@ -414,11 +620,12 @@ const AdminDailyLogs: React.FC = () => {
               : log
           )
         );
-        // Refresh employee stats
-        fetchEmployees();
-        setShowRatingModal(false);
-        setPendingRating(null);
       }
+
+      // Refresh employee stats
+      fetchEmployees();
+      setShowRatingModal(false);
+      setPendingRating(null);
     } catch (error) {
       console.error("Error rating message:", error);
       alert("Failed to save rating. Please try again.");
@@ -476,14 +683,57 @@ const AdminDailyLogs: React.FC = () => {
   };
 
   const formatTime = (dateString: string) => {
-    return new Date(dateString).toLocaleTimeString([], {
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    const date = new Date(dateString);
+    const day = date.getDate();
+    const month = date.toLocaleString('en-US', { month: 'long' });
+    const year = date.getFullYear();
+    const hour = date.getHours();
+    const ampm = hour >= 12 ? 'pm' : 'am';
+    const displayHour = hour % 12 || 12;
+
+    return `${day} ${month} ${year} ${displayHour}${ampm}`;
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+
+  // Helper function to get date label (Today, Yesterday, or actual date)
+  const getDateLabel = (dateString: string) => {
+    const messageDate = new Date(dateString);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+
+    // Reset time to compare only dates
+    const messageDateOnly = new Date(messageDate.getFullYear(), messageDate.getMonth(), messageDate.getDate());
+    const todayOnly = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    const yesterdayOnly = new Date(yesterday.getFullYear(), yesterday.getMonth(), yesterday.getDate());
+
+    if (messageDateOnly.getTime() === todayOnly.getTime()) {
+      return 'Today';
+    } else if (messageDateOnly.getTime() === yesterdayOnly.getTime()) {
+      return 'Yesterday';
+    } else {
+      return messageDate.toLocaleDateString('en-US', {
+        weekday: 'long',
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      });
+    }
+  };
+
+  // Helper function to group logs by date
+  const groupLogsByDate = (logs: DailyLog[]) => {
+    const groups: { [key: string]: DailyLog[] } = {};
+
+    logs.forEach(log => {
+      const dateKey = new Date(log.created_at).toDateString();
+      if (!groups[dateKey]) {
+        groups[dateKey] = [];
+      }
+      groups[dateKey].push(log);
+    });
+
+    return groups;
   };
 
   // Star Display Component with Color Coding - Always shows 5 stars
@@ -575,11 +825,6 @@ const AdminDailyLogs: React.FC = () => {
             />
           </button>
         ))}
-        {/* {currentRating && (
-          <div className="ml-2">
-            <StarDisplay rating={currentRating} size="sm" />
-          </div>
-        )} */}
       </div>
     );
   };
@@ -691,8 +936,8 @@ const AdminDailyLogs: React.FC = () => {
             <button
               onClick={() => setActiveFilter('all')}
               className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'all'
-                  ? 'bg-gray-800 text-white shadow-md transform scale-105'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
+                ? 'bg-gray-800 text-white shadow-md transform scale-105'
+                : 'bg-gray-100 text-gray-600 hover:bg-gray-200 hover:text-gray-800'
                 }`}
             >
               <User className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -702,8 +947,8 @@ const AdminDailyLogs: React.FC = () => {
             <button
               onClick={() => setActiveFilter('unstar')}
               className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'unstar'
-                  ? 'bg-yellow-500 text-white shadow-md transform scale-105'
-                  : 'bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700'
+                ? 'bg-yellow-500 text-white shadow-md transform scale-105'
+                : 'bg-gray-100 text-gray-600 hover:bg-yellow-100 hover:text-yellow-700'
                 }`}
             >
               <Star className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -713,8 +958,8 @@ const AdminDailyLogs: React.FC = () => {
             <button
               onClick={() => setActiveFilter('unread')}
               className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'unread'
-                  ? 'bg-blue-500 text-white shadow-md transform scale-105'
-                  : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
+                ? 'bg-blue-500 text-white shadow-md transform scale-105'
+                : 'bg-gray-100 text-gray-600 hover:bg-blue-100 hover:text-blue-700'
                 }`}
             >
               <MessageCircle className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -724,8 +969,8 @@ const AdminDailyLogs: React.FC = () => {
             <button
               onClick={() => setActiveFilter('unsent')}
               className={`px-3 sm:px-6 py-2 sm:py-3 rounded-lg font-medium transition-all duration-200 flex items-center space-x-1 sm:space-x-2 text-sm sm:text-base ${activeFilter === 'unsent'
-                  ? 'bg-red-500 text-white shadow-md transform scale-105'
-                  : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
+                ? 'bg-red-500 text-white shadow-md transform scale-105'
+                : 'bg-gray-100 text-gray-600 hover:bg-red-100 hover:text-red-700'
                 }`}
             >
               <Send className="w-4 h-4 sm:w-5 sm:h-5" />
@@ -901,6 +1146,17 @@ const AdminDailyLogs: React.FC = () => {
                         Daily Logs Conversation
                       </p>
                     </div>
+
+                    {/* Sync Slack Messages Button */}
+                    <button
+                      onClick={syncSlackMessages}
+                      disabled={isLoading}
+                      className="flex items-center space-x-1 px-3 py-1.5 text-xs bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition-colors disabled:opacity-50"
+                      title="Sync Slack Messages"
+                    >
+                      <RefreshCw className={`w-3 h-3 ${isLoading ? 'animate-spin' : ''}`} />
+                      <span>Sync Slack</span>
+                    </button>
                   </div>
                 </div>
               </div>
@@ -917,137 +1173,152 @@ const AdminDailyLogs: React.FC = () => {
                     <p className="text-gray-500">
                       No daily logs yet from this employee.
                     </p>
-                  </div>
-                ) : (
-                  logs.map((log) => {
-                    const isAdmin = log.sender_type === "admin";
-                    return (
-                      <div
-                        key={log.id}
-                        className={`flex ${isAdmin ? "justify-end" : "justify-start"
-                          }`}
-                      >
-                        <div
-                          className={`flex items-start space-x-2 max-w-xs sm:max-w-sm lg:max-w-md ${isAdmin ? "flex-row-reverse space-x-reverse" : ""
-                            }`}
-                        >
-                          {/* Avatar */}
-                          <div
-                            className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdmin ? "bg-green-600" : "bg-blue-600"
-                              }`}
-                          >
-                            <User className="w-4 h-4 text-white" />
-                          </div>
+                  </div>) : (
+                  (() => {
+                    const groupedLogs = groupLogsByDate(logs);
+                    const sortedDates = Object.keys(groupedLogs).sort((a, b) =>
+                      new Date(a).getTime() - new Date(b).getTime()
+                    );
 
-                          {/* Message Bubble */}
-                          <div
-                            className={`rounded-2xl px-4 py-2 ${isAdmin
-                              ? "bg-green-600 text-white"
-                              : "bg-white text-gray-800 shadow-sm border border-gray-200"
-                              }`}
-                          >
-                            <div
-                              className="text-sm whitespace-pre-wrap"
-                              dangerouslySetInnerHTML={{ __html: formatSlackMarkdown(log.dailylog) }}
-                            />
-                            <p
-                              className={`text-xs mt-1 ${isAdmin ? "text-green-100" : "text-gray-500"
-                                }`}
-                            >
-                              {formatTime(log.created_at)}
-                            </p>
-
-                            {!isAdmin && log.source === 'slack' && (
-                              <p className="text-xs text-blue-200 font-medium mb-1 flex items-center space-x-1">
-                                <MessageCircle className="w-3 h-3" />
-                                <span>via Slack</span>
-                              </p>
-                            )}
-
-                            {/* Star Rating and AI Analysis for Employee Messages */}
-                            {!isAdmin && (
-                              <div className="space-y-2">
-                                {/* Only show rating for non-Slack messages */}
-                                {log.source !== 'slack' && (
-                                  <StarRating
-                                    messageId={log.id}
-                                    currentRating={log.rating}
-                                    onRate={handleRatingClick}
-                                  />
-                                )}
-
-                                {/* AI Analysis Button - Show for all messages including Slack */}
-                                {!log.rating && (
-                                  <button
-                                    onClick={() => analyzeWithAI(log.id, log.dailylog)}
-                                    disabled={analyzingMessageId === log.id}
-                                    className="flex items-center space-x-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors mt-2"
-                                  >
-                                    {analyzingMessageId === log.id ? (
-                                      <>
-                                        <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
-                                        <span>Analyzing...</span>
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Sparkles className="w-3.5 h-3.5" />
-                                        <span>Analyze with AI</span>
-                                      </>
-                                    )}
-                                  </button>
-                                )}
-
-                                {/* Show AI suggestion indicator if already analyzed but not showing */}
-                                {aiSuggestions[log.id] && showAiSuggestion !== log.id && !log.rating && (
-                                  <button
-                                    onClick={() => setShowAiSuggestion(log.id)}
-                                    className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 mt-1"
-                                  >
-                                    <Sparkles className="w-3 h-3" />
-                                    <span>View AI suggestion</span>
-                                  </button>
-                                )}
-
-                                {/* AI Suggestion Display */}
-                                {showAiSuggestion === log.id && aiSuggestions[log.id] && (
-                                  <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
-                                    <div className="flex items-start space-x-2">
-                                      <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-                                      <div className="flex-1">
-                                        <p className="text-xs font-medium text-blue-900 mb-1">
-                                          AI Suggestion: {aiSuggestions[log.id].rating} stars
-                                        </p>
-                                        <p className="text-xs text-blue-700 mb-2">
-                                          {aiSuggestions[log.id].reasoning}
-                                        </p>
-                                        <div className="flex space-x-2">
-                                          {/* Only show Apply Rating button for non-Slack messages */}
-                                          {log.source !== 'slack' && (
-                                            <button
-                                              onClick={() => applyAiSuggestion(log.id)}
-                                              className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
-                                            >
-                                              Apply Rating
-                                            </button>
-                                          )}
-                                          <button
-                                            onClick={() => setShowAiSuggestion(null)}
-                                            className="text-xs text-blue-600 hover:text-blue-700"
-                                          >
-                                            Dismiss
-                                          </button>
-                                        </div>
-                                      </div>
-                                    </div>
-                                  </div>
-                                )}
-                              </div>
-                            )}
+                    return sortedDates.map(dateKey => (
+                      <div key={dateKey}>
+                        {/* Date Header */}
+                        <div className="flex justify-center my-6">
+                          <div className="bg-gray-200 text-gray-600 px-4 py-2 rounded-full text-sm font-medium shadow-sm">
+                            {getDateLabel(groupedLogs[dateKey][0].created_at)}
                           </div>
                         </div>
+
+                        {/* Messages for this date */}
+                        <div className="space-y-4">
+                          {groupedLogs[dateKey].map((log) => {
+                            const isAdmin = log.sender_type === "admin";
+                            return (
+                              <div
+                                key={log.id}
+                                className={`flex ${isAdmin ? "justify-end" : "justify-start"
+                                  }`}
+                              >
+                                <div
+                                  className={`flex items-start space-x-2 max-w-xs sm:max-w-sm lg:max-w-md ${isAdmin ? "flex-row-reverse space-x-reverse" : ""
+                                    }`}
+                                >
+                                  {/* Avatar */}
+                                  <div
+                                    className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 ${isAdmin ? "bg-green-600" : "bg-blue-600"
+                                      }`}
+                                  >
+                                    <User className="w-4 h-4 text-white" />
+                                  </div>
+
+                                  {/* Message Bubble */}
+                                  <div
+                                    className={`rounded-2xl px-4 py-2 ${isAdmin
+                                      ? "bg-green-600 text-white"
+                                      : "bg-white text-gray-800 shadow-sm border border-gray-200"
+                                      }`}
+                                  >
+                                    <div
+                                      className="text-sm whitespace-pre-wrap"
+                                      dangerouslySetInnerHTML={{ __html: formatSlackMarkdown(log.dailylog) }}
+                                    />
+                                    <p
+                                      className={`text-xs mt-1 ${isAdmin ? "text-green-100" : "text-gray-500"
+                                        }`}
+                                    >
+                                      {formatTime(log.created_at)}
+                                    </p>
+
+                                    {!isAdmin && log.source === 'slack' && (
+                                      <div className="text-xs text-blue-600 font-medium mb-1 flex items-center space-x-1">
+                                        <MessageCircle className="w-3 h-3" />
+                                        <span>via Slack</span>
+                                      </div>
+                                    )}
+
+                                    {/* Star Rating and AI Analysis for Employee Messages */}
+                                    {!isAdmin && (
+                                      <div className="space-y-2">
+                                        {/* Show rating for all employee messages */}
+                                        <StarRating
+                                          messageId={log.id}
+                                          currentRating={log.rating}
+                                          onRate={handleRatingClick}
+                                        />
+
+                                        {/* AI Analysis Button - Show for all messages including Slack */}
+                                        {!log.rating && (
+                                          <button
+                                            onClick={() => analyzeWithAI(log.id, log.dailylog)}
+                                            disabled={analyzingMessageId === log.id}
+                                            className="flex items-center space-x-1.5 text-xs text-blue-600 hover:text-blue-700 transition-colors mt-2"
+                                          >
+                                            {analyzingMessageId === log.id ? (
+                                              <>
+                                                <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-blue-600"></div>
+                                                <span>Analyzing...</span>
+                                              </>
+                                            ) : (
+                                              <>
+                                                <Sparkles className="w-3.5 h-3.5" />
+                                                <span>Analyze with AI</span>
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
+
+                                        {/* Show AI suggestion indicator if already analyzed but not showing */}
+                                        {aiSuggestions[log.id] && showAiSuggestion !== log.id && !log.rating && (
+                                          <button
+                                            onClick={() => setShowAiSuggestion(log.id)}
+                                            className="text-xs text-gray-500 hover:text-gray-700 flex items-center space-x-1 mt-1"
+                                          >
+                                            <Sparkles className="w-3 h-3" />
+                                            <span>View AI suggestion</span>
+                                          </button>
+                                        )}
+
+                                        {/* AI Suggestion Display */}
+                                        {showAiSuggestion === log.id && aiSuggestions[log.id] && (
+                                          <div className="mt-2 p-3 bg-blue-50 rounded-lg border border-blue-200">
+                                            <div className="flex items-start space-x-2">
+                                              <Sparkles className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
+                                              <div className="flex-1">
+                                                <p className="text-xs font-medium text-blue-900 mb-1">
+                                                  AI Suggestion: {aiSuggestions[log.id].rating} stars
+                                                </p>
+                                                <p className="text-xs text-blue-700 mb-2">
+                                                  {aiSuggestions[log.id].reasoning}
+                                                </p>
+                                                <div className="flex space-x-2">
+                                                  <button
+                                                    onClick={() => applyAiSuggestion(log.id)}
+                                                    className="text-xs bg-blue-600 text-white px-3 py-1 rounded hover:bg-blue-700 transition-colors"
+                                                  >
+                                                    Apply Rating
+                                                  </button>
+                                                  <button
+                                                    onClick={() => setShowAiSuggestion(null)}
+                                                    className="text-xs text-blue-600 hover:text-blue-700"
+                                                  >
+                                                    Dismiss
+                                                  </button>
+                                                </div>
+                                              </div>
+                                            </div>
+                                          </div>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
                       </div>
-                    );
-                  })
+                    ));
+                  })()
                 )}
                 <div ref={messagesEndRef} />
               </div>

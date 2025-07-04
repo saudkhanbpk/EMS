@@ -4,9 +4,10 @@ const OPENROUTER_API_KEY = import.meta.env.VITE_OPENROUTER_API_KEY;
 
 const FREE_MODELS = [
     'meta-llama/llama-3.1-8b-instruct:free',
-    'google/gemma-2-9b-it:free',
     'microsoft/phi-3-medium-128k-instruct:free',
-    'qwen/qwen-2-7b-instruct:free'
+    'qwen/qwen-2-7b-instruct:free',
+    'google/gemma-2-9b-it:free',
+
 ];
 
 export async function analyzeMessageForRating(message: string): Promise<{
@@ -32,11 +33,53 @@ export async function analyzeMessageForRating(message: string): Promise<{
                     messages: [
                         {
                             role: 'system',
-                            content: 'You are an AI assistant that analyzes employee daily log messages and suggests appropriate star ratings from 1-5.\n\nRating Guidelines:\n- 5 stars: Exceptional update - detailed progress, proactive problem-solving, went above and beyond\n- 4 stars: Good update - clear progress made, good communication, met expectations\n- 3 stars: Average update - basic progress reported, adequate detail\n- 2 stars: Below average - minimal detail, unclear progress, needs improvement\n- 1 star: Poor update - very brief, no clear progress, concerning issues\n\nRespond with ONLY a JSON object in this format:\n{"rating": <number 1-5>, "reason": "<brief explanation in 1-2 sentences>"}'
+                            content: `You are an AI assistant that analyzes employee daily work logs and rates them based on actual work accomplished.
+
+Rating Guidelines based on WORK COMPLETED:
+
+5 STARS - Exceptional Work Output:
+- Completed multiple significant tasks or exceeded daily targets
+- Delivered concrete deliverables (features, reports, designs, etc.)
+- Shows measurable progress with specific outcomes
+- Includes quantifiable achievements (e.g., "completed 5 features", "resolved 10 tickets")
+
+4 STARS - Good Work Output:
+- Completed planned tasks for the day
+- Clear progress on ongoing projects
+- Specific work items mentioned with completion status
+- Shows productive use of time with tangible results
+
+3 STARS - Average Work Output:
+- Some tasks completed but not all planned work
+- Progress made but lacks specific details
+- General statements about work without clear outcomes
+- Minimal quantifiable achievements
+
+2 STARS - Below Average Work Output:
+- Little actual work completed
+- Mostly planning, meetings, or non-productive activities
+- Vague descriptions without concrete accomplishments
+- Blocked progress with no alternative tasks completed
+
+1 STAR - Poor Work Output:
+- No clear work completed
+- Only mentions being busy without specifics
+- Excuses without any actual progress
+- No tangible deliverables or achievements
+
+Focus on ACTUAL WORK DONE, not just communication quality. Look for:
+- Specific tasks completed
+- Deliverables produced
+- Problems solved
+- Progress milestones reached
+- Quantifiable achievements
+
+Respond with ONLY a JSON object in this format:
+{"rating": <number 1-5>, "reason": "<brief explanation focusing on work output>"}`
                         },
                         {
                             role: 'user',
-                            content: `Analyze this employee daily log update and suggest a star rating: "${message}"`
+                            content: `Analyze this employee's work log and rate based on actual work completed today: "${message}"`
                         }
                     ],
                     temperature: 0.3,
@@ -63,15 +106,19 @@ export async function analyzeMessageForRating(message: string): Promise<{
                 const parsed = JSON.parse(content);
                 return {
                     suggestedRating: Math.max(1, Math.min(5, parsed.rating || 3)),
-                    reasoning: parsed.reason || 'Analysis completed'
+                    reasoning: parsed.reason || 'Work output analysis completed'
                 };
             } catch (parseError) {
+                // Fallback parsing if JSON parsing fails
                 const ratingMatch = content.match(/["']?rating["']?\s*:\s*(\d)/i);
+                const reasonMatch = content.match(/["']?reason["']?\s*:\s*["']([^"']+)["']/i);
+
                 const rating = ratingMatch ? parseInt(ratingMatch[1]) : 3;
+                const reason = reasonMatch ? reasonMatch[1] : 'Work output analysis completed';
 
                 return {
                     suggestedRating: Math.max(1, Math.min(5, rating)),
-                    reasoning: 'Analysis completed with basic parsing'
+                    reasoning: reason
                 };
             }
         } catch (error) {

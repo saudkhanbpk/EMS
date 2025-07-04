@@ -140,6 +140,72 @@ const DailyLogs: React.FC = () => {
     }
   };
 
+  // Save Slack messages to database (avoiding duplicates)
+  const saveSlackMessagesToDatabase = async (slackMessages: any[]) => {
+    if (!slackMessages || slackMessages.length === 0 || !user?.id) return [];
+
+    try {
+      // Get existing Slack messages from database for this user using id_temp field
+      const { data: existingSlackLogs, error: fetchError } = await supabase
+        .from("dailylog")
+        .select("id_temp")
+        .eq("userid", user.id)
+        .eq("source", "slack")
+        .not("id_temp", "is", null);
+
+      if (fetchError) {
+        console.error("Error fetching existing Slack logs:", fetchError);
+        return [];
+      }
+
+      // Create a Set of existing Slack message IDs to check for duplicates
+      const existingSlackIds = new Set(
+        existingSlackLogs?.map(log => log.id_temp).filter(Boolean) || []
+      );
+
+      // Filter out duplicate messages using client_msg_id as unique identifier
+      const newMessages = slackMessages.filter(msg => 
+        msg.client_msg_id && !existingSlackIds.has(msg.client_msg_id)
+      );
+
+      if (newMessages.length === 0) {
+        console.log("No new Slack messages to save");
+        return [];
+      }
+
+      // Prepare messages for database insertion
+      const logsToInsert = newMessages.map(msg => ({
+        userid: user.id,
+        dailylog: msg.text,
+        sender_type: "employee",
+        source: "slack",
+        id_temp: msg.client_msg_id, // Store Slack client_msg_id as unique identifier
+        created_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
+        is_read: false,
+        rating: null,
+        reply_to_id: null,
+        admin_id: null
+      }));
+
+      // Insert new messages
+      const { data: insertedLogs, error: insertError } = await supabase
+        .from("dailylog")
+        .insert(logsToInsert)
+        .select();
+
+      if (insertError) {
+        console.error("Error inserting Slack messages:", insertError);
+        return [];
+      }
+
+      console.log(`Successfully saved ${insertedLogs?.length || 0} new Slack messages`);
+      return insertedLogs || [];
+    } catch (error) {
+      console.error("Error saving Slack messages:", error);
+      return [];
+    }
+  };
+
   // Fetch Slack messages for current user (all historical messages)
   const fetchSlackMessages = async () => {
     if (!userProfile?.slack_id) {
@@ -165,49 +231,28 @@ const DailyLogs: React.FC = () => {
       if (!response.ok) {
         const errorText = await response.text();
         console.error("Failed to fetch Slack messages:", response.status, errorText);
-
-        // Show error alert (temporarily commented out for debugging)
-        // alert(`❌ Failed to fetch Slack messages: ${response.status} - ${errorText}`);
         return [];
       }
 
       const data = await response.json();
       console.log("📱 Slack API response:", data);
       console.log("📱 Slack messages fetched:", data.messages?.length || 0);
-      console.log("📱 Total messages processed:", data.totalFetched || 0);
-      console.log("📱 Raw Slack API response structure:", JSON.stringify(data, null, 2));
 
       // Check if we have messages in the response
       if (data.success && data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
         console.log("📱 Sample Slack message:", data.messages[0]);
-        console.log("📱 All Slack messages:", data.messages);
-        console.log("📱 First message structure:", JSON.stringify(data.messages[0], null, 2));
-
-        // Show success alert with details (temporarily commented out for debugging)
-        // alert(`✅ Successfully fetched ${data.messages.length} Slack messages from ${data.totalFetched || 0} total messages processed!`);
-
+        
+        // Save new messages to database to prevent duplicates
+        await saveSlackMessagesToDatabase(data.messages);
+        
         console.log("📱 Returning Slack messages:", data.messages.length);
-        console.log("📱 fetchSlackMessages completed successfully");
         return data.messages;
       } else {
         console.log("📱 No Slack messages found for user");
-        console.log("📱 API response success:", data.success);
-        console.log("📱 API response messages:", data.messages);
-        console.log("📱 Messages is array:", Array.isArray(data.messages));
-        // Show info alert when no messages found (temporarily commented out for debugging)
-        // alert(`ℹ️ No Slack messages found for your user ID. Total messages processed: ${data.totalFetched || 0}`);
-
-        console.log("📱 Returning empty array");
-        console.log("📱 fetchSlackMessages completed with no messages");
         return [];
       }
     } catch (error) {
       console.error("❌ Error in fetchSlackMessages:", error);
-
-      // Show error alert for network/other errors (temporarily commented out for debugging)
-      // const errorMessage = error instanceof Error ? error.message : 'Network error occurred';
-      // alert(`❌ Error fetching Slack messages: ${errorMessage}`);
-      console.log("📱 fetchSlackMessages completed with error, returning empty array");
       return [];
     }
   };
@@ -224,12 +269,11 @@ const DailyLogs: React.FC = () => {
     try {
       console.log("📅 Step 1: Fetching ALL historical logs from database...");
 
-      // Fetch ALL database logs (web messages and admin replies)
+      // Fetch ALL database logs (web messages, admin replies, and saved Slack messages)
       const { data: dbLogs, error } = await supabase
         .from("dailylog")
         .select("*")
         .or(`userid.eq.${user.id},admin_id.eq.${user.id}`)
-        .neq("source", "slack") // Exclude slack messages from database
         .order("created_at", { ascending: true });
 
       console.log("📅 Step 1 completed: Database logs fetched:", dbLogs?.length || 0);
@@ -241,72 +285,31 @@ const DailyLogs: React.FC = () => {
         // return;
       }
 
-      // Fetch ALL Slack messages (historical)
-      console.log("� Step 2: About to fetch Slack messages...");
-      const slackMessages = await fetchSlackMessages();
-      console.log("� Step 2 completed: Slack messages returned:", slackMessages?.length || 0);
+      // Fetch fresh Slack messages and save new ones to database
+      console.log("📱 Step 2: About to fetch Slack messages...");
+      await fetchSlackMessages();
+      console.log("📱 Step 2 completed: Slack messages processed");
 
-      if (slackMessages && slackMessages.length > 0) {
-        console.log("🔍 First Slack message structure:", slackMessages[0]);
+      // Re-fetch database logs to include newly saved Slack messages
+      const { data: updatedDbLogs, error: refetchError } = await supabase
+        .from("dailylog")
+        .select("*")
+        .or(`userid.eq.${user.id},admin_id.eq.${user.id}`)
+        .order("created_at", { ascending: true });
+
+      if (refetchError) {
+        console.error("Error re-fetching database logs:", refetchError);
       }
 
-      // Convert Slack messages to DailyLog format
-      console.log("🔄 About to format Slack messages. Input:", slackMessages);
-      console.log("🔄 slackMessages type:", typeof slackMessages);
-      console.log("🔄 slackMessages is array:", Array.isArray(slackMessages));
-      console.log("🔄 slackMessages length:", slackMessages?.length);
-
-      // Safety check - ensure slackMessages is an array
-      if (!Array.isArray(slackMessages)) {
-        console.error("❌ slackMessages is not an array:", slackMessages);
-        return;
-      }
-
-      const formattedSlackMessages = slackMessages.map((msg: any, index: number) => {
-        console.log(`🔄 Processing Slack message ${index}:`, msg);
-        console.log(`🔄 Current user.id:`, user.id);
-        console.log(`🔄 Message timestamp:`, msg.ts);
-        console.log(`🔄 Message text:`, msg.text);
-
-        // Validate message structure
-        if (!msg.ts || !msg.text) {
-          console.warn(`⚠️ Invalid message structure at index ${index}:`, msg);
-          return null;
-        }
-
-        const formatted = {
-          id: `slack-${msg.ts}`,
-          dailylog: msg.text,
-          userid: user.id,
-          created_at: new Date(parseFloat(msg.ts) * 1000).toISOString(),
-          sender_type: 'employee',
-          source: 'slack'
-        };
-        console.log(`🔄 Formatted Slack message ${index}:`, formatted);
-        return formatted;
-      }).filter((msg: any) => msg !== null); // Remove any null messages
-
-      console.log("🔄 Formatted Slack messages:", formattedSlackMessages.length);
-
-      // Add a test Slack message to see if rendering works
-
-
-      // Combine and sort all messages by timestamp
-      const allLogs = [...(dbLogs || []), ...formattedSlackMessages];
-      allLogs.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+      const allLogs = updatedDbLogs || dbLogs || [];
 
       console.log("📋 Combined logs:", allLogs.length, "messages");
-      console.log("🔍 Logs breakdown:", {
-        web: dbLogs?.length || 0,
-        slack: formattedSlackMessages.length,
-        total: allLogs.length
-      });
-
       console.log("🔄 Step 3: About to set logs state with:", allLogs.length, "total messages");
       setLogs(allLogs);
       console.log("✅ Step 4: Logs state updated successfully");
     } catch (error) {
       console.error("❌ Error in fetchLogs:", error);
+      setLogs([]);
     } finally {
       console.log("🔄 Step 5: Setting loading to false");
       setIsLoading(false);
@@ -321,7 +324,7 @@ const DailyLogs: React.FC = () => {
     console.log("🏷️ User Name:", userName);
 
     try {
-      const response = await fetch("http://localhost:5000/send-dailylog-slack", {
+      const response = await fetch("https://ems-backend-ax7d.onrender.com/send-dailylog-slack", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
