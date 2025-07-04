@@ -716,7 +716,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                   <h1 className="text-[#9A00FF]">TO DO: {getScoreByStatus('todo')}</h1>
                   <h1 className="text-orange-600">In Progress: {getScoreByStatus('inProgress')}</h1>
                   <h1 className="text-yellow-600">Review: {getScoreByStatus('review')}</h1>
-                  <h1 className="text-[#05C815]">Done: {getScoreByStatus('done')}</h1>
+                  <h1 className="text-[#05C815]">Done: this {getScoreByStatus('done')}</h1>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">

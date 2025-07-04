@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
@@ -9,6 +9,12 @@ import { supabase } from '../lib/supabase';
 import { AttendanceContext } from '../pages/AttendanceContext';
 import Comments from '../pages/Comments';
 
+interface Developer {
+  id: string;
+  name?: string;
+  full_name?: string;
+}
+
 interface Task {
   id: string;
   title: string;
@@ -16,11 +22,12 @@ interface Task {
   status: 'todo' | 'inProgress' | 'review' | 'done';
   score: number;
   priority?: string;
-  devops?: Array<{ id: string, name: string }>;
+  devops?: Developer[];
   description?: string;
   imageurl?: string;
   comments?: Array<any>;
   commentCount?: number;
+  deadline?: string;
 }
 
 const COLUMN_IDS = {
@@ -30,8 +37,8 @@ const COLUMN_IDS = {
   done: 'done'
 };
 
-function TaskBoard({ setSelectedTAB }) {
-  const { projectIdd, devopsss } = useContext(AttendanceContext);
+function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }) {
+  const { projectIdd, devopsss, setdevopsss } = useContext(AttendanceContext);
   const user = useAuthStore();
   const { id } = useParams();
   const [tasks, setTasks] = useState<Task[]>([]);
@@ -44,6 +51,98 @@ function TaskBoard({ setSelectedTAB }) {
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [descriptionOpen, setDescriptionOpen] = useState(false);
+
+  // New state variables for task creation
+  const [userRole, setUserRole] = useState<string>('');
+  const [isProjectManager, setIsProjectManager] = useState<boolean>(false);
+  const [developersLoaded, setDevelopersLoaded] = useState<boolean>(false);
+  const [projectDevelopers, setProjectDevelopers] = useState<Developer[]>([]);
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const [newTask, setNewTask] = useState({
+    title: '',
+    description: '',
+    score: 0,
+    priority: 'Low',
+    deadline: '',
+    selectedDevs: [] as string[]
+  });
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [imageFile, setImageFile] = useState<File | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [openedTask, setOpenedTask] = useState<Task | null>(null);
+
+
+  // Fetch user role, project manager status, and project developers on component mount
+  useEffect(() => {
+    const fetchUserRoleAndProjectInfo = async () => {
+      try {
+        const userId = localStorage.getItem("user_id");
+        if (userId) {
+          // Fetch user role
+          const { data: userData, error: userError } = await supabase
+            .from('users')
+            .select('role')
+            .eq('id', userId)
+            .single();
+
+          if (userData && !userError) {
+            setUserRole(userData.role);
+          }
+
+          // Fetch project information to check if user is project manager
+          const projectId = id || projectIdd[0];
+          if (projectId) {
+            const { data: projectData, error: projectError } = await supabase
+              .from('projects')
+              .select('created_by, devops')
+              .eq('id', projectId)
+              .single();
+
+            if (projectData && !projectError) {
+              // Check if current user is the project manager (creator)
+              const isManager = projectData.created_by === userId;
+              setIsProjectManager(isManager);
+
+
+              // Set project developers for task assignment
+              if (projectData.devops && projectData.devops.length > 0) {
+                setProjectDevelopers(projectData.devops);
+                setDevelopersLoaded(true);
+
+                // Also update context if empty
+                if (devopsss.length === 0) {
+                  setdevopsss(projectData.devops);
+                }
+              } else {
+                // If project.devops is empty, fetch all users as fallback
+                const { data: allUsers, error: usersError } = await supabase
+                  .from('users')
+                  .select('id, full_name')
+                  .neq('role', 'admin'); // Exclude admins from assignment
+
+                if (allUsers && !usersError) {
+                  const formattedUsers = allUsers.map(user => ({
+                    id: user.id,
+                    name: user.full_name
+                  }));
+                  setProjectDevelopers(formattedUsers);
+                  setdevopsss(formattedUsers);
+                  setDevelopersLoaded(true);
+                }
+              }
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user role and project info:', error);
+      }
+    };
+
+    fetchUserRoleAndProjectInfo();
+  }, [id, projectIdd]); // Removed devopsss.length to avoid infinite loops
+
 
 
   // Define fetchTasks at the component level so it can be called from anywhere
@@ -106,9 +205,9 @@ function TaskBoard({ setSelectedTAB }) {
 
         const imageData = task.imageurl
           ? {
-              image_url: task.imageurl,
-              thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
-            }
+            image_url: task.imageurl,
+            thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
+          }
           : {};
 
         return {
@@ -269,9 +368,9 @@ function TaskBoard({ setSelectedTAB }) {
 
           const imageData = task.imageurl
             ? {
-                image_url: task.imageurl,
-                thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
-              }
+              image_url: task.imageurl,
+              thumbnail_url: task.imageurl, // Placeholder: customize for thumbnails
+            }
             : {};
 
           return {
@@ -288,7 +387,7 @@ function TaskBoard({ setSelectedTAB }) {
           const bPriority = b.priority || 'Other';
           return (priorityOrder[aPriority] ?? 3) - (priorityOrder[bPriority] ?? 3);
         });
-        console.log("the task is",processedTasks)
+        console.log("the task is", processedTasks)
 
         setTasks(processedTasks);
 
@@ -406,30 +505,251 @@ function TaskBoard({ setSelectedTAB }) {
     setIsAddingTask(false);
   };
 
+  // Handle developer selection for task assignment
+  const handleDeveloperChange = (e: React.ChangeEvent<HTMLSelectElement>) => {
+    const value = e.target.value;
+    if (value && !newTask.selectedDevs.includes(value)) {
+      setNewTask({
+        ...newTask,
+        selectedDevs: [...newTask.selectedDevs, value]
+      });
+    }
+  };
+
+  // Remove developer from task assignment
+  const removeDeveloper = (id: string) => {
+    setNewTask({
+      ...newTask,
+      selectedDevs: newTask.selectedDevs.filter(devId => devId !== id)
+    });
+  };
+
+  // Handle image upload
+  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setImageFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setImagePreview(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  // Upload image to Supabase storage
+  const uploadImage = async () => {
+    if (!imageFile) return null;
+
+    try {
+      const fileExt = imageFile.name.split('.').pop();
+      const fileName = `${Math.random()}.${fileExt}`;
+      const filePath = `task-images/${fileName}`;
+
+      const { error: uploadError } = await supabase
+        .storage
+        .from('newtaskimage')
+        .upload(filePath, imageFile);
+
+      if (uploadError) {
+        throw new Error(`Upload failed: ${uploadError.message}`);
+      }
+
+      const { data: { publicUrl } } = supabase
+        .storage
+        .from('newtaskimage')
+        .getPublicUrl(filePath);
+
+      return publicUrl;
+    } catch (err) {
+      console.error("Image upload error:", err);
+      throw err;
+    }
+  };
+
+  // Remove image preview
+  const removeImage = () => {
+    setImageFile(null);
+    setImagePreview(null);
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  };
+
+  // Handle task creation with role-based assignment logic
+  const handleCreateTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newTask.title.trim()) {
+      setError("Title is required");
+      return;
+    }
+
+    try {
+      setIsLoading(true);
+      setError('');
+
+      // Upload image if exists
+      let imageUrl = null;
+      if (imageFile) {
+        imageUrl = await uploadImage();
+      }
+
+      // Determine task assignment based on user role
+      let assignedDevs: Developer[] = [];
+      const currentUserId = localStorage.getItem("user_id");
+
+
+
+
+
+      if (isProjectManager || userRole === 'admin') {
+        // Managers and admins can assign to selected developers
+        if (newTask.selectedDevs.length > 0) {
+          // Fetch developer names from database
+          const { data: developersData, error: devsError } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .in('id', newTask.selectedDevs);
+
+          if (developersData && !devsError) {
+            assignedDevs = developersData.map(dev => ({
+              id: dev.id,
+              name: dev.full_name || 'Unknown'
+            } as Developer));
+          } else {
+            // Fallback to projectDevelopers data if database fetch fails
+            assignedDevs = newTask.selectedDevs.map(devId => {
+              const dev = projectDevelopers.find((d: any) => d.id === devId) ||
+                devopsss.find((d: any) => d.id === devId);
+              return {
+                id: devId,
+                name: (dev as any)?.name || (dev as any)?.full_name || 'Unknown'
+              } as Developer;
+            });
+          }
+        } else {
+          // If no developers selected, assign to self - fetch from database
+          const { data: currentUserData, error: userError } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .eq('id', currentUserId)
+            .single();
+
+          if (currentUserData && !userError) {
+            assignedDevs = [{
+              id: currentUserId!,
+              name: currentUserData.full_name || 'Unknown'
+            } as Developer];
+          }
+        }
+      } else {
+        // Regular employees can only assign tasks to themselves - fetch from database
+        const { data: currentUserData, error: userError } = await supabase
+          .from('users')
+          .select('id, full_name')
+          .eq('id', currentUserId)
+          .single();
+
+        if (currentUserData && !userError) {
+          assignedDevs = [{
+            id: currentUserId!,
+            name: currentUserData.full_name || 'Unknown'
+          } as Developer];
+        }
+      }
+
+      // Create task in database
+      const { data, error } = await supabase
+        .from("tasks_of_projects")
+        .insert([{
+          project_id: id || projectIdd[0],
+          title: newTask.title,
+          description: newTask.description,
+          devops: assignedDevs,
+          status: "todo",
+          score: newTask.score,
+          priority: newTask.priority || "Low",
+          created_at: new Date().toISOString(),
+          imageurl: imageUrl,
+          deadline: newTask.deadline || null,
+        }])
+        .select();
+
+      if (error) throw error;
+
+      // Reset form and close modal
+      setNewTask({
+        title: '',
+        description: '',
+        score: 0,
+        priority: 'Low',
+        deadline: '',
+        selectedDevs: []
+      });
+      setImageFile(null);
+      setImagePreview(null);
+      setIsCreateTaskModalOpen(false);
+
+      // Refresh tasks
+      await fetchTasks();
+
+      alert("Task created successfully!");
+    } catch (err: any) {
+      console.error("Error creating task:", err);
+      setError(err.message || "Failed to create task");
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   return (
     <div className="min-h-screen ">
       <div className="max-w-7xl mx-auto">
-        <div className="flex items-center ml-6 mb-8">
-          <Link
-            to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"}
-            className="text-gray-600 hover:text-gray-800"
-            onClick={(e) => {
-              e.preventDefault();
-              const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
-              navigate(isAdmin ? "/admin" : "/tasks");
-            }}
-          >
-            <ArrowLeft
-              className="hover:bg-gray-300 rounded-2xl"
-              size={24}
-              onClick={() => setSelectedTAB("Projects")}
-            />
-          </Link>
+        <div className="flex flex-col gap-4 p-3 rounded-2xl mb-4 bg-white shadow-sm border-b border-gray-100">
+          {/* Arrow + Heading + New Task Button */}
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <Link
+                to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"}
+                className="text-gray-600 hover:text-gray-800"
+                onClick={(e) => {
+                  e.preventDefault();
+                  const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
+                  navigate(isAdmin ? "/admin" : "/tasks");
+                }}
+              >
+                <ArrowLeft
+                  className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
+                  size={35}
+                  onClick={() => setSelectedTAB("Projects")}
+                />
+              </Link>
+              <h1 className="text-md md:text-2xl font-bold text-gray-800">Work Planner</h1>
+              {isProjectManager && (
+                <span className="ml-2 px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full">
+                  Project Manager
+                </span>
+              )}
+              {userRole === 'admin' && (
+                <span className="ml-2 px-2 py-1 bg-red-100 text-red-800 text-xs rounded-full">
+                  Admin
+                </span>
+              )}
+            </div>
+            <div>
+              <button
+                className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
+                onClick={() => setIsCreateTaskModalOpen(true)}
+              >
+                <PlusCircle size={20} className="mr-2" /> New Task
+              </button>
+            </div>
+          </div>
 
-          <div className="flex-1 flex justify-between items-center">
-            <h1 className="text-2xl font-bold">Work Planner</h1>
-            <div className="text-sm text-gray-600 flex flex-wrap">
-              <span className='font-semibold text-[13px] text-red-500 mr-2 '>Total Tasks: <strong>{totalTasks}</strong></span>
+          {/* Status Summary */}
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+            <div className="bg-white w-full lg:w-[60%] p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap justify-between gap-4 font-semibold text-sm">
+              <span className='font-semibold text-[13px] text-red-500 mr-2'>Total Tasks: <strong>{totalTasks}</strong></span>
               <span className='font-semibold text-[13px] text-yellow-600'>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
               <span className="mx-3 font-semibold text-[13px] text-green-500">Completed Tasks: <strong>{completedTasks}</strong></span>
             </div>
@@ -442,14 +762,7 @@ function TaskBoard({ setSelectedTAB }) {
             <div className="bg-white rounded-[20px] p-4 shadow-md">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="font-semibold text-xl leading-7 text-[#9A00FF]">To do</h2>
-                {user?.user.role === "admin" && (
-                  <button
-                    onClick={() => setIsAddingTask(true)}
-                    className="bg-[#9A00FF] text-white p-2 rounded-[9px] flex items-center text-[10px] font-bold"
-                  >
-                    <Plus size={16} className="mr-1" /> New Task
-                  </button>
-                )}
+                <span className="text-gray-600">{getStatusCount('todo')}</span>
               </div>
               <Droppable droppableId={COLUMN_IDS.todo}>
                 {(provided, snapshot) => (
@@ -553,83 +866,89 @@ function TaskBoard({ setSelectedTAB }) {
               </Droppable>
             </div>
 
- {/* Done Column */}
-<div className="bg-white rounded-[20px] p-4 shadow-md">
-  <div className="flex justify-between items-center mb-6">
-    <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
-    <span className="text-gray-600">{getStatusCount('done')}</span>
-  </div>
-
-  <div className="space-y-4 min-h-[100px]">
-    <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
-
-    {getTasksByStatus('done').length > 0 ? (
-      getTasksByStatus('done').map((task, index) => (
-        // Render a simplified version of TaskCard without Draggable
-        <div
-          key={task.id}
-          className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
-          onClick={() => {
-            setOpenedTask(task);
-            setDescriptionOpen(true);
-          }}
-        >
-          {/* Title */}
-          <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
-
-          {/* Priority & Score */}
-          <div className="flex flex-row items-center gap-3">
-            {task.priority && (
-              <span className={`text-[12px] text-white font-semibold rounded px-2 py-[2px] capitalize
-                ${task.priority === "High" ? "bg-red-500" :
-                  task.priority === "Medium" ? "bg-yellow-600" :
-                  task.priority === "Low" ? "bg-green-400" : ""}`}>
-                {task.priority}
-              </span>
-            )}
-            <span className="text-[13px] text-[#404142] font-medium">{task.score}</span>
-          </div>
-
-          {/* Devops Info + Comments */}
-          {task.devops?.length > 0 && (
-            <div className="flex justify-between items-center mt-1">
-              <div className="flex items-center gap-2">
-                <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-medium font-semibold flex items-center justify-center">
-                  {task.devops.map((dev) => dev.name[0].toUpperCase()).join("")}
-                </div>
-                <span className="text-[13px] text-[#404142]">
-                  {task.devops.map((dev) => dev.name.charAt(0).toUpperCase() + dev.name.slice(1)).join(", ")}
-                </span>
+            {/* Done Column */}
+            <div className="bg-white rounded-[20px] p-4 shadow-md">
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
+                <span className="text-gray-600">{getStatusCount('done')}</span>
               </div>
-              {task.commentCount > 0 && (
-                <span className="text-sm text-gray-600">
-                  {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
-                </span>
-              )}
+
+              <div className="space-y-4 min-h-[100px]">
+                <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
+
+                {getTasksByStatus('done').length > 0 ? (
+                  getTasksByStatus('done').map((task, index) => (
+                    // Render a simplified version of TaskCard without Draggable
+                    <div
+                      key={task.id}
+                      className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
+                      onClick={() => {
+                        setOpenedTask(task);
+                        setDescriptionOpen(true);
+                      }}
+                    >
+                      {/* Title */}
+                      <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
+
+                      {/* Priority & Score */}
+                      <div className="flex flex-row items-center gap-3">
+                        {task.priority && (
+                          <span className={`text-[12px] text-white font-semibold rounded px-2 py-[2px] capitalize
+                ${task.priority === "High" ? "bg-red-500" :
+                              task.priority === "Medium" ? "bg-yellow-600" :
+                                task.priority === "Low" ? "bg-green-400" : ""}`}>
+                            {task.priority}
+                          </span>
+                        )}
+                        <span className="text-[13px] text-[#404142] font-medium">{task.score}</span>
+                      </div>
+
+                      {/* Devops Info + Comments */}
+                      {task.devops && task.devops.length > 0 && (
+                        <div className="flex justify-between items-center mt-1">
+                          <div className="flex items-center gap-2">
+                            <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-semibold flex items-center justify-center">
+                              {task.devops.map((dev) => {
+                                const displayName = dev.name || dev.full_name || 'U';
+                                return displayName[0].toUpperCase();
+                              }).join("")}
+                            </div>
+                            <span className="text-[13px] text-[#404142]">
+                              {task.devops.map((dev) => {
+                                const displayName = dev.name || dev.full_name || 'Unknown';
+                                return displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                              }).join(", ")}
+                            </span>
+                          </div>
+                          {(task.commentCount || 0) > 0 && (
+                            <span className="text-sm text-gray-600">
+                              {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      {/* Time */}
+                      <div className="flex justify-between items-center">
+                        <p className="text-[12px] text-[#949597]">{formatDistanceToNow(new Date(task.created_at))} ago</p>
+                      </div>
+
+                      {/* Comments Section */}
+                      <div>
+                        <Comments
+                          taskid={task.id}
+                          onCommentAdded={fetchTasks}
+                        />
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-4 text-center text-gray-400">
+                    No completed tasks
+                  </div>
+                )}
+              </div>
             </div>
-          )}
-
-          {/* Time */}
-          <div className="flex justify-between items-center">
-            <p className="text-[12px] text-[#949597]">{formatDistanceToNow(new Date(task.created_at))} ago</p>
-          </div>
-
-          {/* Comments Section */}
-          <div>
-            <Comments
-              taskid={task.id}
-              onCommentAdded={fetchTasks}
-            />
-          </div>
-        </div>
-      ))
-    ) : (
-      <div className="p-4 text-center text-gray-400">
-        No completed tasks
-      </div>
-    )}
-  </div>
-</div>
 
           </div>
         </DragDropContext>
@@ -639,6 +958,232 @@ function TaskBoard({ setSelectedTAB }) {
         <p className='font-bold text-[13px] text-yellow-600'>Assigned KPIs: {assignedKPIs}</p>
         <p className='font-bold text-[13px] text-green-600'>Earned KPIs: {earnedKPI}</p>
       </div>
+
+      {/* Task Creation Modal */}
+      {isCreateTaskModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 overflow-y-auto py-8">
+          <div className="bg-white rounded-lg shadow-xl w-full max-w-2xl my-8 mx-4">
+            <div className="p-6">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold text-gray-800">Create New Task</h2>
+                <button
+                  onClick={() => {
+                    setIsCreateTaskModalOpen(false);
+                    setError('');
+                    setNewTask({
+                      title: '',
+                      description: '',
+                      score: 0,
+                      priority: 'Low',
+                      deadline: '',
+                      selectedDevs: []
+                    });
+                    setImageFile(null);
+                    setImagePreview(null);
+                  }}
+                  className="text-gray-500 hover:text-gray-700"
+                >
+                  <X size={24} />
+                </button>
+              </div>
+
+              {error && (
+                <div className="mb-4 p-3 bg-red-100 text-red-700 rounded">
+                  {error}
+                </div>
+              )}
+
+              <form onSubmit={handleCreateTask} className="space-y-4 max-h-[calc(100vh-200px)] overflow-y-auto pr-2">
+                {/* Title Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                  <input
+                    type="text"
+                    value={newTask.title}
+                    onChange={(e) => setNewTask({ ...newTask, title: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Enter task title"
+                    required
+                  />
+                </div>
+
+                {/* Description Input */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <textarea
+                    value={newTask.description}
+                    onChange={(e) => setNewTask({ ...newTask, description: e.target.value })}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    placeholder="Enter task description"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Score and Priority Row */}
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Task Score</label>
+                    <input
+                      type="number"
+                      value={newTask.score}
+                      onChange={(e) => setNewTask({ ...newTask, score: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      placeholder="Enter task score"
+                      min="0"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <select
+                      value={newTask.priority}
+                      onChange={(e) => setNewTask({ ...newTask, priority: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="Low">Low</option>
+                      <option value="Medium">Medium</option>
+                      <option value="High">High</option>
+                    </select>
+                  </div>
+                </div>
+
+                {/* Deadline and Image Row */}
+                <div className="flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Deadline</label>
+                    <input
+                      type="date"
+                      value={newTask.deadline}
+                      onChange={(e) => setNewTask({ ...newTask, deadline: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Task Image (Optional)</label>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept="image/*"
+                      onChange={handleImageChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Image Preview */}
+                {imagePreview && (
+                  <div className="relative">
+                    <img
+                      src={imagePreview}
+                      alt="Preview"
+                      className="h-32 object-cover rounded-md"
+                    />
+                    <button
+                      type="button"
+                      onClick={removeImage}
+                      className="absolute top-1 right-1 bg-red-500 text-white rounded-full p-1 hover:bg-red-600"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                )}
+
+
+
+                {/* Developer Assignment - Only show for project managers/admins */}
+                {(isProjectManager || userRole === 'admin') && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Assign Developers {isProjectManager ? "(Project Manager)" : "(Admin)"} (Leave empty to assign to yourself)
+                    </label>
+                    <select
+                      onChange={handleDeveloperChange}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      value=""
+                    >
+                      <option value="">
+                        {developersLoaded ? "Select Developer" : "Loading developers..."}
+                      </option>
+                      {!developersLoaded ? (
+                        <option disabled>Loading...</option>
+                      ) : (
+                        projectDevelopers?.map((dev: any) => (
+                          <option key={dev.id} value={dev.id}>
+                            {dev.name || dev.full_name || 'Unknown Developer'}
+                          </option>
+                        ))
+                      )}
+                    </select>
+
+                    {/* Selected Developers */}
+                    {newTask.selectedDevs.length > 0 && (
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {newTask.selectedDevs.map(devId => {
+                          const dev = projectDevelopers.find((d: any) => d.id === devId);
+                          return dev ? (
+                            <div key={devId} className="flex items-center bg-blue-100 px-3 py-1 rounded-full">
+                              <span className="mr-2 text-sm">{dev.name || (dev as any).full_name}</span>
+                              <button
+                                type="button"
+                                onClick={() => removeDeveloper(devId)}
+                                className="text-blue-600 hover:text-blue-800"
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ) : null;
+                        })}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {/* Role-based assignment info */}
+                {!isProjectManager && userRole !== 'admin' && (
+                  <div className="bg-blue-50 p-3 rounded-md">
+                    <p className="text-sm text-blue-700">
+                      <strong>Note:</strong> This task will be assigned to you automatically. Only the project manager can assign tasks to other developers.
+                    </p>
+                  </div>
+                )}
+
+                {/* Form Buttons */}
+                <div className="flex justify-end space-x-3 pt-4">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsCreateTaskModalOpen(false);
+                      setError('');
+                      setNewTask({
+                        title: '',
+                        description: '',
+                        score: 0,
+                        priority: 'Low',
+                        deadline: '',
+                        selectedDevs: []
+                      });
+                      setImageFile(null);
+                      setImagePreview(null);
+                    }}
+                    className="px-4 py-2 bg-gray-200 text-gray-800 rounded-md hover:bg-gray-300"
+                    disabled={isLoading}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    className="px-4 py-2 bg-[#9A00FF] text-white rounded-md hover:bg-[#8500e6] disabled:opacity-50"
+                    disabled={isLoading}
+                  >
+                    {isLoading ? "Creating..." : "Create Task"}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -672,21 +1217,22 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
           }}
         >
 
-           {/* Image Preview */}
-      {task.image_url && (
-        <div className="relative aspect-video mb-2 rounded-lg overflow-hidden bg-gray-100">
-          <img
-            src={task.image_url}
-            alt={`Preview for ${task.title}`}
-            className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
-            loading="lazy"
-            onError={(e) => {
-              e.target.onerror = null;
-              e.target.style.display = 'none';
-            }}
-          />
-        </div>
-      )}
+          {/* Image Preview */}
+          {task.imageurl && (
+            <div className="relative aspect-video mb-2 rounded-lg overflow-hidden bg-gray-100">
+              <img
+                src={task.imageurl}
+                alt={`Preview for ${task.title}`}
+                className="w-full h-full object-cover transition-transform duration-200 hover:scale-105"
+                loading="lazy"
+                onError={(e) => {
+                  const target = e.target as HTMLImageElement;
+                  target.onerror = null;
+                  target.style.display = 'none';
+                }}
+              />
+            </div>
+          )}
           {/* Title */}
           <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
 
@@ -711,17 +1257,23 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
           </div>
 
           {/* Devops Info + Comments */}
-          {task.devops?.length > 0 && (
+          {task.devops && task.devops.length > 0 && (
             <div className="flex justify-between items-center mt-1">
               <div className="flex items-center gap-2">
                 <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-semibold flex items-center justify-center">
-                  {task.devops.map((dev) => (dev.name ? dev.name[0].toUpperCase() : '')).join("")}
+                  {task.devops.map((dev) => {
+                    const displayName = dev.name || dev.full_name || 'U';
+                    return displayName[0].toUpperCase();
+                  }).join("")}
                 </div>
                 <span className="text-[13px] text-[#404142]">
-                  {task.devops.map((dev) => (dev.name ? dev.name.charAt(0).toUpperCase() + dev.name.slice(1) : 'Unknown')).join(", ")}
+                  {task.devops.map((dev) => {
+                    const displayName = dev.name || dev.full_name || 'Unknown';
+                    return displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                  }).join(", ")}
                 </span>
               </div>
-              {task.commentCount > 0 && (
+              {(task.commentCount || 0) > 0 && (
                 <span className="text-sm text-gray-600">
                   {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
                 </span>
@@ -738,97 +1290,7 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
           <div>
             <Comments
               taskid={task.id}
-              onCommentAdded={() => {
-                // Define fetchTasks function in the outer scope
-                const fetchTasks = async () => {
-                  try {
-                    const userId = localStorage.getItem("user_id");
-
-                    // Step 1: Fetch all tasks in the selected project
-                    const { data: taskData, error: taskError } = await supabase
-                      .from("tasks_of_projects")
-                      .select("*")
-                      .eq("project_id", id || projectIdd[0])
-                      .order("created_at", { ascending: true });
-
-                    if (taskError) throw taskError;
-
-                    // Step 2: Filter tasks based on devops array
-                    const filteredTasks = taskData.filter((task) => {
-                      return (
-                        (Array.isArray(task.devops) &&
-                          task.devops.some((dev) => dev.id === userId)) ||
-                        !task.devops ||
-                        task.devops.length === 0
-                      );
-                    });
-
-                    // Step 3: Fetch all comments
-                    const { data: commentsData, error: commentsError } = await supabase
-                      .from("comments")
-                      .select("*");
-
-                    if (commentsError) throw commentsError;
-
-                    // Step 4: Fetch all users
-                    const { data: usersData, error: usersError } = await supabase
-                      .from("users")
-                      .select("id, full_name");
-
-                    if (usersError) throw usersError;
-
-                    // Step 5: Create user map
-                    const userMap = usersData.reduce((acc, user) => {
-                      acc[user.id] = user.full_name;
-                      return acc;
-                    }, {});
-
-                    // Step 6: Enrich comments with user names
-                    const enrichedComments = commentsData.map((comment) => ({
-                      ...comment,
-                      commentor_name: userMap[comment.user_id] || "Unknown User",
-                    }));
-
-                    setComments(enrichedComments);
-
-                    // Step 7: Attach comments and images to tasks
-                    const processedTasks = filteredTasks.map((task) => {
-                      const taskComments = enrichedComments.filter(
-                        (comment) => comment.task_id === task.id
-                      );
-
-                      const imageData = task.imageurl
-                        ? {
-                            image_url: task.imageurl,
-                            thumbnail_url: task.imageurl,
-                          }
-                        : {};
-
-                      return {
-                        ...task,
-                        comments: taskComments,
-                        commentCount: taskComments.length,
-                        ...imageData,
-                      };
-                    });
-
-                    setTasks(processedTasks);
-
-                    // Step 8: Group comments by task ID
-                    const commentsByTask = enrichedComments.reduce((acc, comment) => {
-                      if (!acc[comment.task_id]) acc[comment.task_id] = [];
-                      acc[comment.task_id].push(comment);
-                      return acc;
-                    }, {});
-
-                    setCommentByTaskID(commentsByTask);
-                  } catch (error) {
-                    console.error("Error fetching tasks:", error);
-                  }
-                };
-
-                fetchTasks();
-              }}
+              onCommentAdded={fetchTasks}
             />
           </div>
 
