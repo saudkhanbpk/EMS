@@ -26,6 +26,99 @@ import WeeklyDataUser from './WeeklyDataUser';
 import MonthlyDataUser from './MonthlyDataUser';
 import FilterDataUser from './FilterDataUser';
 
+// Beautiful Calendar Component
+const BeautifulCalendar = ({ selectedDate, onDateSelect, onClose }) => {
+  const [currentMonth, setCurrentMonth] = useState(selectedDate);
+  const monthStart = startOfMonth(currentMonth);
+  const monthEnd = endOfMonth(currentMonth);
+  const startDate = startOfWeek(monthStart);
+  const endDate = new Date(startOfWeek(addWeeks(monthEnd, 1)).getTime() - 1);
+
+  const dateFormat = "d";
+  const rows = [];
+  let days = [];
+  let day = startDate;
+  let formattedDate = "";
+
+  while (day <= endDate) {
+    for (let i = 0; i < 7; i++) {
+      formattedDate = format(day, dateFormat);
+      const cloneDay = day;
+      const isCurrentMonth = day.getMonth() === currentMonth.getMonth();
+      const isToday = format(day, 'yyyy-MM-dd') === format(new Date(), 'yyyy-MM-dd');
+      const isSelected = format(day, 'yyyy-MM-dd') === format(selectedDate, 'yyyy-MM-dd');
+
+      days.push(
+        <div
+          className={`w-10 h-10 flex items-center justify-center cursor-pointer rounded-lg transition-all ${!isCurrentMonth
+            ? 'text-gray-300'
+            : isSelected
+              ? 'bg-blue-600 text-white'
+              : isToday
+                ? 'bg-blue-100 text-blue-600 font-semibold'
+                : 'hover:bg-gray-100'
+            }`}
+          key={day}
+          onClick={() => {
+            if (cloneDay <= new Date()) {
+              onDateSelect(cloneDay);
+              onClose();
+            }
+          }}
+        >
+          <span>{formattedDate}</span>
+        </div>
+      );
+      day = new Date(day.getTime() + 24 * 60 * 60 * 1000);
+    }
+    rows.push(
+      <div className="grid grid-cols-7 gap-1" key={day}>
+        {days}
+      </div>
+    );
+    days = [];
+  }
+
+  return (
+    <div className="bg-white rounded-lg shadow-xl p-6 w-80">
+      <div className="flex items-center justify-between mb-4">
+        <button
+          onClick={() => setCurrentMonth(addMonths(currentMonth, -1))}
+          className="p-2 hover:bg-gray-100 rounded-lg"
+        >
+          <ChevronLeft className="w-5 h-5" />
+        </button>
+        <h2 className="text-lg font-semibold">
+          {format(currentMonth, 'MMMM yyyy')}
+        </h2>
+        <button
+          onClick={() => {
+            const nextMonth = addMonths(currentMonth, 1);
+            if (nextMonth <= new Date()) {
+              setCurrentMonth(nextMonth);
+            }
+          }}
+          className="p-2 hover:bg-gray-100 rounded-lg"
+        >
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      </div>
+
+      <div className="grid grid-cols-7 gap-1 mb-2">
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(day => (
+          <div key={day} className="w-10 h-8 flex items-center justify-center text-sm font-medium text-gray-500">
+            {day}
+          </div>
+        ))}
+      </div>
+
+      <div className="space-y-1">
+        {rows}
+      </div>
+    </div>
+  );
+};
+
 
 interface AttendanceRecord {
   id: string;
@@ -65,6 +158,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
   const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
+  const [isCalendarOpen, setIsCalendarOpen] = useState(false);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   const [todayBreak, setTodayBreak] = useState<BreakRecord[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -215,9 +309,49 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           if (breakData) setTodayBreak(breakData);
           if (!breakData) setTodayBreak(null);
         }
-        // Calculate expected working days (excluding weekends)
+        // Holidays data
+        const holidays = [
+          {
+            id: "25725d2-907f-46ab-a2da-45af96e4080f",
+            created_at: "2025-04-29 04:53:47.272115+04",
+            dates: ["2025-08-14T09:06:25.000Z"],
+            name: "Independence Day of Pakistan"
+          },
+          {
+            id: "b1b83dec-3fc9-490d-a647-1b14d072e691",
+            created_at: "2025-06-05 06:14:57.458794+00",
+            dates: [
+              "2025-06-06T06:12:38.000Z",
+              "2025-06-07T06:12:38.000Z",
+              "2025-06-08T06:12:38.000Z"
+            ],
+            name: "eid-al-adha 2025"
+          }
+        ];
+
+        // Get all holiday dates in the current month and year
+        const holidayDatesInMonth = [];
+        holidays.forEach(holiday => {
+          holiday.dates.forEach(dateStr => {
+            const holidayDate = new Date(dateStr);
+            if (holidayDate.getFullYear() === selectedDate.getFullYear() &&
+              holidayDate.getMonth() === selectedDate.getMonth()) {
+              holidayDatesInMonth.push(holidayDate.toDateString());
+            }
+          });
+        });
+
+        console.log('Holiday dates in current month:', holidayDatesInMonth);
+        console.log('Selected date:', selectedDate.getFullYear(), selectedDate.getMonth());
+
+        // Calculate expected working days (excluding weekends and holidays)
         const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+        const workingDaysInMonth = allDaysInMonth.filter(date =>
+          !isWeekend(date) && !holidayDatesInMonth.includes(date.toDateString())
+        ).length;
+
+        console.log('Total days in month:', allDaysInMonth.length);
+        console.log('Working days after excluding weekends and holidays:', workingDaysInMonth);
 
         const { data: monthlyAttendance, error: monthlyError } = await supabase
           .from('attendance_logs')
@@ -325,7 +459,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     const diffInMinutes = Math.round((endTime.getTime() - startTime.getTime()) / (1000 * 60));
     const hours = Math.floor(diffInMinutes / 60);
     const minutes = diffInMinutes % 60;
-    return ${hours}h ${minutes}m;
+    return `${hours}h ${minutes}m`;
   };
 
   const getTotalBreakDuration = () => {
@@ -339,7 +473,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
     });
     const hours = Math.floor(totalMinutes / 60);
     const minutes = totalMinutes % 60;
-    return totalMinutes > 0 ? ${hours}h ${minutes}m : null;
+    return totalMinutes > 0 ? `${hours}h ${minutes}m` : null;
   };
 
   useEffect(() => {
@@ -557,7 +691,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             <h1 className="text-2xl font-bold text-gray-900 sm:text-left text-center">
               Welcome, {userProfile?.full_name || 'Employee'}
             </h1>
-            <div className={flex gap-3 mt-3 items-center  justify-center mb-2 sm:mx-0 mx-auto}>
+            <div className={`flex gap-3 mt-3 items-center  justify-center mb-2 sm:mx-0 mx-auto`}>
               {
                 view === 'default' && (
                   <>
@@ -656,11 +790,17 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                     onClick={() => handleDayPrev()}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
                   >
-                    <ChevronLeft className="w-5 h-5" />
+                    <ChevronLeft className="w-5 h-5" />left
                   </button>
-                  <span className="text-lg font-semibold">
+                  <button
+                    onClick={() => {
+                      console.log('Calendar button clicked');
+                      setIsCalendarOpen(true);
+                    }}
+                    className="text-lg font-semibold hover:bg-gray-100 px-3 py-1 rounded-lg transition-all cursor-pointer"
+                  >
                     {format(selectedDate, "MMMM d, yyyy")}
-                  </span>
+                  </button>
                   <button
                     onClick={() => handleDayNext()}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -677,9 +817,12 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="mx-4 text-lg font-semibold">
+                  <button
+                    onClick={() => setIsCalendarOpen(true)}
+                    className="mx-4 text-lg font-semibold hover:bg-gray-100 px-3 py-1 rounded-lg transition-all cursor-pointer"
+                  >
                     {format(selectedDate, "MMMM yyyy")}
-                  </span>
+                  </button>
                   <button
                     onClick={() => handleMonthChange("next")}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -696,9 +839,12 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="mx-4 text-lg font-semibold">
+                  <button
+                    onClick={() => setIsCalendarOpen(true)}
+                    className="mx-4 text-lg font-semibold hover:bg-gray-100 px-3 py-1 rounded-lg transition-all cursor-pointer"
+                  >
                     {format(selectedDate, "MMMM yyyy")}
-                  </span>
+                  </button>
                   <button
                     onClick={() => handleWeekChange("next")}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -1161,16 +1307,16 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center mb-6">
                 <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold">Monthly Overview hello sir  - {format(selectedDate, 'MMMM yyyy')}</h2>
+                <h2 className="text-xl font-semibold">Monthly Overview   - {format(selectedDate, 'MMMM yyyy')}</h2>
               </div>
 
               {monthlyStats ? (
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                   <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary </h3>
+                    <h3 className="text-sm font-medium text-gray-500 mb-3">Attendance Summary edited </h3>
                     <div className="space-y-3">
                       <div className="flex items-center justify-between">
-                        <span className="text-gray-600">Expected Working Days:</span>
+                        <span className="text-gray-600">Expected Working Days: edited</span>
                         <span className="font-medium">{monthlyStats.expectedWorkingDays}</span>
                       </div>
                       <div className="flex items-center justify-between">
@@ -1262,6 +1408,28 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           </div>
         )
       }
+
+      {/* Beautiful Calendar Modal */}
+      {isCalendarOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" onClick={() => setIsCalendarOpen(false)}>
+          <div className="relative" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={() => setIsCalendarOpen(false)}
+              className="absolute -top-2 -right-2 bg-white rounded-full p-1 shadow-lg hover:bg-gray-100 z-10"
+            >
+              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+            <BeautifulCalendar
+              selectedDate={selectedDate}
+              onDateSelect={setSelectedDate}
+              onClose={() => setIsCalendarOpen(false)}
+            />
+          </div>
+        </div>
+      )}
+      {console.log('isCalendarOpen:', isCalendarOpen)}
     </div>
   );
 };

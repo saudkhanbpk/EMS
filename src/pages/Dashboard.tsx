@@ -1,6 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { format, addWeeks, addMonths, startOfMonth, startOfWeek, isAfter, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
+import { format, addWeeks, addMonths, startOfMonth, startOfWeek, endOfWeek, isAfter, endOfMonth, isWithinInterval, isWeekend, eachDayOfInterval } from 'date-fns';
 import { useAuthStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import { Clock, Calendar, AlertCircle, Coffee, MapPin, User, BarChart, LogOut, CalendarIcon } from 'lucide-react';
@@ -10,6 +10,7 @@ import { Dialog } from "@headlessui/react";
 import DailyStatusTable from '../components/DailyStatusTable';
 import BreakRecordsTable from '../components/BreakRecordTable';
 import MonthlyRecord from '../components/MonthlyRecords';
+import DatePicker from '../components/DatePicker';
 
 import {
   AreaChart,
@@ -65,6 +66,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
   const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
+  const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
+  const datePickerTriggerRef = useRef<HTMLButtonElement>(null);
   const [todayAttendance, setTodayAttendance] = useState<AttendanceRecord | null>(null);
   const [todayBreak, setTodayBreak] = useState<BreakRecord[]>([]);
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
@@ -74,6 +77,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const [absentees, setabsentees] = useState('');
   const [view, setView] = useState('default');
   const [leaves, setleaves] = useState('');
+  const [overtimeHours, setOvertimeHours] = useState(0);
   const [weeklyData, setWeeklyData] = useState<null>(null);
   const navigate = useNavigate();
   const [viewMode, setViewMode] = useState('daily'); // 'daily' | 'weekly' | 'monthly'
@@ -114,8 +118,33 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
       }
     }
   }
+
+  const fetchOvertimeHours = async () => {
+    const { data, error } = await supabase
+      .from("extrahours")
+      .select("check_in, check_out")
+      .eq('user_id', userID)
+      .gte('check_in', monthStart.toISOString())
+      .lte('check_in', monthEnd.toISOString())
+
+    if (error) {
+      console.error("Error Fetching Overtime Hours", error);
+    } else {
+      let totalOvertimeHours = 0;
+      data?.forEach(record => {
+        if (record.check_out) {
+          const start = new Date(record.check_in);
+          const end = new Date(record.check_out);
+          const hours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
+          totalOvertimeHours += Math.max(hours, 0);
+        }
+      });
+      setOvertimeHours(totalOvertimeHours);
+    }
+  }
   useEffect(() => {
     fetchleaves();
+    fetchOvertimeHours();
   }, [userID, selectedDate])
 
 
@@ -206,9 +235,31 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           if (breakData) setTodayBreak(breakData);
           if (!breakData) setTodayBreak(null);
         }
-        // Calculate expected working days (excluding weekends)
+        // Fetch all holidays and filter dates within the month
+        const { data: holidaysData, error: holidaysError } = await supabase
+          .from('holidays')
+          .select('dates');
+
+        if (holidaysError) console.error('Error fetching holidays:', holidaysError);
+
+        // Flatten holiday dates that fall within the current month
+        const holidayDates = new Set();
+        holidaysData?.forEach(holiday => {
+          holiday.dates.forEach(dateStr => {
+            const holidayDate = new Date(dateStr);
+            if (holidayDate >= monthStart && holidayDate <= monthEnd) {
+              holidayDates.add(format(holidayDate, 'yyyy-MM-dd'));
+            }
+          });
+        });
+
+        // Calculate expected working days (excluding weekends and holidays)
         const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-        const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+        const workingDaysInMonth = allDaysInMonth.filter(date => {
+          const isWeekendDay = isWeekend(date);
+          const isHoliday = holidayDates.has(format(date, 'yyyy-MM-dd'));
+          return !isWeekendDay && !isHoliday;
+        }).length;
 
         const { data: monthlyAttendance, error: monthlyError } = await supabase
           .from('attendance_logs')
@@ -632,16 +683,23 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
 
               {/* Date Navigation - Only show in Default View */}
               {view === 'default' && selectedtab === "Dailydata" && (
-                <div className="flex items-center  space-x-4">
+                <div className="flex items-center space-x-4">
                   <button
                     onClick={() => handleDayPrev()}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="text-lg font-semibold">
-                    {format(selectedDate, "MMMM d, yyyy")}
-                  </span>
+                  <button
+                    ref={datePickerTriggerRef}
+                    onClick={() => setIsDatePickerOpen(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    <Calendar className="w-4 h-4 text-blue-600" />
+                    <span className="text-lg font-semibold">
+                      {format(selectedDate, "MMMM d, yyyy")}
+                    </span>
+                  </button>
                   <button
                     onClick={() => handleDayNext()}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -658,9 +716,16 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="mx-4 text-lg font-semibold">
-                    {format(selectedDate, "MMMM yyyy")}
-                  </span>
+                  <button
+                    ref={datePickerTriggerRef}
+                    onClick={() => setIsDatePickerOpen(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    <Calendar className="w-4 h-4 text-green-600" />
+                    <span className="mx-4 text-lg font-semibold">
+                      {format(selectedDate, "MMMM yyyy")}
+                    </span>
+                  </button>
                   <button
                     onClick={() => handleMonthChange("next")}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -677,9 +742,16 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                   >
                     <ChevronLeft className="w-5 h-5" />
                   </button>
-                  <span className="mx-4 text-lg font-semibold">
-                    {format(selectedDate, "MMMM yyyy")}
-                  </span>
+                  <button
+                    ref={datePickerTriggerRef}
+                    onClick={() => setIsDatePickerOpen(true)}
+                    className="flex items-center space-x-2 px-4 py-2 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-all shadow-sm"
+                  >
+                    <Calendar className="w-4 h-4 text-purple-600" />
+                    <span className="mx-4 text-lg font-semibold">
+                      Week of {format(startOfWeek(selectedDate), "MMM d")} - {format(endOfWeek(selectedDate), "MMM d, yyyy")}
+                    </span>
+                  </button>
                   <button
                     onClick={() => handleWeekChange("next")}
                     className="p-2 hover:bg-gray-200 rounded-full transition-all"
@@ -1118,7 +1190,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center mb-6">
                 <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold">Monthly Overview hello sir  - {format(selectedDate, 'MMMM yyyy')}</h2>
+                <h2 className="text-xl font-semibold">Monthly Overview hello sir edited  - {format(selectedDate, 'MMMM yyyy')}</h2>
               </div>
 
               {monthlyStats ? (
@@ -1163,6 +1235,10 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Remote Days:</span>
                         <span className="font-medium text-purple-600">{monthlyStats.remoteDays}</span>
+                      </div>
+                      <div className="flex items-center justify-between">
+                        <span className="text-gray-600">Overtime Hours:</span>
+                        <span className="font-medium text-orange-600">{overtimeHours.toFixed(1)}h</span>
                       </div>
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Attendance Rate:</span>
@@ -1219,6 +1295,19 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
           </div>
         )
       }
+
+      {/* Beautiful Date Picker */}
+      <DatePicker
+        selectedDate={selectedDate}
+        onDateChange={(date) => {
+          setSelectedDate(date);
+          setIsDatePickerOpen(false);
+        }}
+        mode={selectedtab === "Dailydata" ? "daily" : selectedtab === "Weeklydata" ? "weekly" : "monthly"}
+        isOpen={isDatePickerOpen}
+        onClose={() => setIsDatePickerOpen(false)}
+        triggerRef={datePickerTriggerRef}
+      />
     </div>
   );
 };

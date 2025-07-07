@@ -29,6 +29,7 @@ interface EmployeeStats {
   workingHoursPercentage: number;
   remoteDays: number;
   leavedays: number;
+  overtimeHours: number;
 }
 
 interface EmployeeMonthlyAttendanceTableProps {
@@ -93,6 +94,17 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
         .lte('created_at', monthEnd.toISOString());
 
       if (absenteesError) throw absenteesError;
+
+      // Fetch all overtime records for the selected month
+      const { data: overtimeRecords, error: overtimeError } = await supabase
+        .from('extrahours')
+        .select('*')
+        .gte('check_in', monthStart.toISOString())
+        .lte('check_in', monthEnd.toISOString());
+
+      if (overtimeError) {
+        console.warn('Error fetching overtime records:', overtimeError);
+      }
 
       // Calculate expected working days
       const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
@@ -207,6 +219,19 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
         const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
         const absentDays = absenteesCount;
 
+        // Calculate overtime hours for the user
+        const userOvertimeRecords = overtimeRecords ? overtimeRecords.filter(record => record.user_id === id) : [];
+        let totalOvertimeHours = 0;
+        
+        userOvertimeRecords.forEach(record => {
+          if (record.check_in && record.check_out) {
+            const checkIn = new Date(record.check_in);
+            const checkOut = new Date(record.check_out);
+            const overtimeHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+            totalOvertimeHours += Math.max(0, overtimeHours);
+          }
+        });
+
         // Calculate working hours percentage (using 7 hours per working day to match Employeeprofile)
         const workingHoursPercentage = (totalHours / (workingDaysInMonth * 7)) * 100; // Using 7 hours per day
 
@@ -218,6 +243,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
           totalHoursWorked: totalHours,
           workingHoursPercentage,
           leavedays: leavesCount,
+          overtimeHours: totalOvertimeHours,
         };
       }));
 
@@ -509,6 +535,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                     <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Leave Days</th>
                     <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Remote Work</th>
                     <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Total Hours Worked</th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Overtime Hours</th>
                     <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Working Hours %</th>
                     {/* <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Download</th> */}
                   </tr>
@@ -537,6 +564,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                       <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.leavedays}</td>
                       <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.remoteDays}</td>
                       <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{(entry.overtimeHours || 0).toFixed(2)} hrs</td>
                       <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                         <span
                           className={`px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.workingHoursPercentage >= 80
@@ -561,7 +589,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                   ))}
                   {filteredData.length === 0 && (
                     <tr>
-                      <td colSpan={6} className="text-center py-4 text-gray-500">
+                      <td colSpan={8} className="text-center py-4 text-gray-500">
                         No attendance records found for this month.
                       </td>
                     </tr>
@@ -618,9 +646,14 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                         <div className="font-medium">{entry.remoteDays}</div>
                       </div>
 
-                      <div className="flex flex-col col-span-2">
+                      <div className="flex flex-col">
                         <span className="text-gray-500 text-[10px] xs:text-[11px]">Total Hours Worked</span>
                         <div className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</div>
+                      </div>
+
+                      <div className="flex flex-col">
+                        <span className="text-gray-500 text-[10px] xs:text-[11px]">Overtime Hours</span>
+                        <div className="font-medium">{(entry.overtimeHours || 0).toFixed(2)} hrs</div>
                       </div>
                     </div>
 
