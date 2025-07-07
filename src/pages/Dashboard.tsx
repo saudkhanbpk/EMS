@@ -1190,7 +1190,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
             <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
               <div className="flex items-center mb-6">
                 <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                <h2 className="text-xl font-semibold">Monthly Overview hello sir edited  - {format(selectedDate, 'MMMM yyyy')}</h2>
+                <h2 className="text-xl font-semibold">Monthly Overview   - {format(selectedDate, 'MMMM yyyy')}</h2>
               </div>
 
               {monthlyStats ? (
