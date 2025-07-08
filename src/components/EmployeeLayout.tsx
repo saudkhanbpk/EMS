@@ -13,7 +13,7 @@ import {
   Building2,
   Menu,
   Banknote,
-  Notebook 
+  Notebook
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
@@ -26,9 +26,35 @@ const EmployeeLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
+  const [isloading, setisloading] = useState(false)
+  const [userData, setUserData] = useState(null);
   const setUser = useAuthStore((state) => state.setUser);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  // Fetch user from users table
+  useEffect(() => {
+    const fetchUser = async () => {
+      if (user?.id) {
+        setisloading(true);
+        const { data, error } = await supabase
+          .from('users')
+          .select('*')
+          .eq('id', user.id)
+          .single();
+
+        if (error) {
+          console.error('Error fetching user:', error);
+        } else {
+          setUserData(data);
+          console.log('User data from database:', data);
+        }
+        setisloading(false);
+      }
+    };
+
+    fetchUser();
+  }, [user?.id]);
 
   // //Checking For Session Expiry
   // useEffect(() => {
@@ -79,18 +105,23 @@ const EmployeeLayout: React.FC = () => {
 
 
 
-  const navigation = [
+  const allNavigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Attendance', href: '/attendance', icon: Clock },
     { name: 'Over Time', href: '/overtime', icon: Clock },
     { name: 'Leave', href: '/leave', icon: Calendar },
-    { name: 'Tasks', href: '/tasks', icon: ListTodo },
+    { name: 'Projects', href: '/tasks', icon: ListTodo },
     { name: 'Software Complaint', href: '/software-complaint', icon: CloudCog },
     { name: 'Office Complaint', href: '/office-complaint', icon: Building2 },
     { name: "Salary Breakdown", href: "/salary-breakdown", icon: Banknote },
     { name: "DailyLogs", href: "/Dailylogs", icon: Notebook },
-    // { name: "Widget Demo", href: "/widget-demo", icon: Clock }
   ];
+
+  const clientHiddenItems = ['Attendance', 'Over Time', 'Leave', 'Salary Breakdown', 'DailyLogs'];
+
+  const navigation = userData?.role === 'client'
+    ? allNavigation.filter(item => !clientHiddenItems.includes(item.name))
+    : allNavigation;
 
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -151,26 +182,36 @@ const EmployeeLayout: React.FC = () => {
                 </div>
 
                 <nav className="flex-1 px-4 py-8 space-y- ">
-                  {navigation.map((item) => {
-                    const Icon = item.icon;
-                    return (
-                      <Link
-                        key={item.name}
-                        to={item.href}
-                        onClick={handleScrollToTop}
-                        className={`
-                      flex items-center px-4 py-4 text-sm rounded-lg
-                      ${location.pathname === item.href
-                            ? 'bg-[#9A00FF] text-[white]'
-                            : 'text-[white] '
-                          }
-                    `}
-                      >
-                        <Icon className="w-5 h-5 mr-3" />
-                        {item.name}
-                      </Link>
-                    );
-                  })}
+                  {isloading ? (
+                    // Skeleton loading
+                    Array.from({ length: 6 }).map((_, index) => (
+                      <div key={index} className="flex items-center px-4 py-4 animate-pulse">
+                        <div className="w-5 h-5 bg-gray-600 rounded mr-3"></div>
+                        <div className="h-4 bg-gray-600 rounded w-24"></div>
+                      </div>
+                    ))
+                  ) : (
+                    navigation.map((item) => {
+                      const Icon = item.icon;
+                      return (
+                        <Link
+                          key={item.name}
+                          to={item.href}
+                          onClick={handleScrollToTop}
+                          className={`
+                        flex items-center px-4 py-4 text-sm rounded-lg
+                        ${location.pathname === item.href
+                              ? 'bg-[#9A00FF] text-[white]'
+                              : 'text-[white] '
+                            }
+                      `}
+                        >
+                          <Icon className="w-5 h-5 mr-3" />
+                          {item.name}
+                        </Link>
+                      );
+                    })
+                  )}
                 </nav>
 
                 {/* <div className="p-4 border-t">
