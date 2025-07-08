@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
+import { useUser } from '../contexts/UserContext';
 import { toDate } from 'date-fns';
 import Header from './Header';
 import TimeTrackerWidget from './TimeTrackerWidget';
@@ -26,35 +27,10 @@ const EmployeeLayout: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const user = useAuthStore((state) => state.user);
-  const [isloading, setisloading] = useState(false)
-  const [userData, setUserData] = useState(null);
+  const { userProfile, loading } = useUser();
   const setUser = useAuthStore((state) => state.setUser);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // Fetch user from users table
-  useEffect(() => {
-    const fetchUser = async () => {
-      if (user?.id) {
-        setisloading(true);
-        const { data, error } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', user.id)
-          .single();
-
-        if (error) {
-          console.error('Error fetching user:', error);
-        } else {
-          setUserData(data);
-          console.log('User data from database:', data);
-        }
-        setisloading(false);
-      }
-    };
-
-    fetchUser();
-  }, [user?.id]);
 
   // //Checking For Session Expiry
   // useEffect(() => {
@@ -119,7 +95,7 @@ const EmployeeLayout: React.FC = () => {
 
   const clientHiddenItems = ['Attendance', 'Over Time', 'Leave', 'Salary Breakdown', 'DailyLogs'];
 
-  const navigation = userData?.role === 'client'
+  const navigation = userProfile?.role === 'client'
     ? allNavigation.filter(item => !clientHiddenItems.includes(item.name))
     : allNavigation;
 
@@ -182,7 +158,7 @@ const EmployeeLayout: React.FC = () => {
                 </div>
 
                 <nav className="flex-1 px-4 py-8 space-y- ">
-                  {isloading ? (
+                  {loading ? (
                     // Skeleton loading
                     Array.from({ length: 6 }).map((_, index) => (
                       <div key={index} className="flex items-center px-4 py-4 animate-pulse">

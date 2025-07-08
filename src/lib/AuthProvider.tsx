@@ -16,6 +16,7 @@ const AuthContext = createContext<AuthContextType>({
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
+  const setStoreUser = useAuthStore((state) => state.setUser);
 
   useEffect(() => {
     // Restore session on app load
@@ -26,35 +27,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       }
       if (data?.session) {
         setUser(data.session.user);
+        setStoreUser(data.session.user);
       }
       setLoading(false);
     };
 
     restoreSession();
 
-    supabase.auth.onAuthStateChange((event, session) => {
+    // Listen for auth state changes
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
         localStorage.setItem('supabaseSession', JSON.stringify(session));
-        useAuthStore.getState().setUser(session?.user ?? null);
+        setUser(session?.user ?? null);
+        setStoreUser(session?.user ?? null);
       }
     
       if (event === 'SIGNED_OUT') {
         localStorage.removeItem('supabaseSession');
-        useAuthStore.getState().setUser(null);
+        setUser(null);
+        setStoreUser(null);
       }
-    });
-    console.log("EVENT ENENT ENENT" , event);
-    
-
-    // Listen for login/logout/session refresh
-    const {
-      data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
     });
 
     return () => subscription.unsubscribe();
-  }, []);
+  }, [setStoreUser]);
 
   return (
     <AuthContext.Provider value={{ user, loading }}>

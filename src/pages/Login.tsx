@@ -57,11 +57,9 @@ const Login: React.FC = () => {
         const isAdmin = email.endsWith('@admin.com');
         setUser(authData.user);
 
-        // Optional: Store metadata if needed
+        // Store metadata
         localStorage.setItem('user_id', authData.user.id);
-        localStorage.setItem('user_email', authData.user.email);
-
-        // Notification permission will be requested automatically by NotificationProvider
+        localStorage.setItem('user_email', authData.user.email || '');
 
         // Redirect
         navigate(isAdmin ? '/admin' : '/');

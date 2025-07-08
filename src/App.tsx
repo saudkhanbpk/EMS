@@ -306,6 +306,8 @@ import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
 import Adminroute from './components/adminroute';
 import { AnimatePresence } from 'framer-motion';
+import { AuthProvider } from './lib/AuthProvider';
+import { UserProvider } from './contexts/UserContext';
 
 
 function App() {
@@ -372,44 +374,33 @@ function App() {
     }
   };
 
-  // Auth Logic
-  useEffect(() => {
-    const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      setUser(session?.user ?? null);
-    };
-    checkSession();
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUser(session?.user ?? null);
-    });
-
-    return () => subscription.unsubscribe();
-  }, []);
 
   return (
-    <Router>
-      {/* Chat Sidebar - LinkedIn style */}
-      <AnimatePresence>
-        {ischatopen && (
-          <div className="fixed inset-0 z-50 flex pointer-events-none">
-            {/* Invisible overlay to capture clicks outside the sidebar */}
-            <div
-              className="fixed inset-0 pointer-events-auto"
-              onClick={closeChat}
-            ></div>
-            {/* The actual sidebar */}
-            <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
-              <ChatSidebar closechat={closeChat} openchatperson={openchatperson} />
-            </div>
-          </div>
-        )}
-      </AnimatePresence>
-      {chatperson && <Chat id={selecteduser} closechatperson={closechatperson} />}
-      {!ischatopen && <Chatlayout><Chatbutton openchat={openChat} /></Chatlayout>}
+    <AuthProvider>
+      <UserProvider>
+        <Router>
+          {/* Chat Sidebar - LinkedIn style */}
+          <AnimatePresence>
+            {ischatopen && (
+              <div className="fixed inset-0 z-50 flex pointer-events-none">
+                {/* Invisible overlay to capture clicks outside the sidebar */}
+                <div
+                  className="fixed inset-0 pointer-events-auto"
+                  onClick={closeChat}
+                ></div>
+                {/* The actual sidebar */}
+                <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
+                  <ChatSidebar closechat={closeChat} openchatperson={openchatperson} />
+                </div>
+              </div>
+            )}
+          </AnimatePresence>
+          {chatperson && <Chat id={selecteduser} closechatperson={closechatperson} />}
+          {!ischatopen && <Chatlayout><Chatbutton openchat={openChat} /></Chatlayout>}
 
-      {/* App Routes */}
-      <Routes>
+          {/* App Routes */}
+          <Routes>
         {/* Public Route: Login */}
         <Route path="/login" element={<Login />} />
 
@@ -456,10 +447,12 @@ function App() {
 
         </Route>
 
-        {/* Redirect unknown routes to login */}
-        <Route path="*" element={<Navigate to="/login" replace />} />
-      </Routes>
-    </Router>
+            {/* Redirect unknown routes to login */}
+            <Route path="*" element={<Navigate to="/login" replace />} />
+          </Routes>
+        </Router>
+      </UserProvider>
+    </AuthProvider>
   );
 }
 
