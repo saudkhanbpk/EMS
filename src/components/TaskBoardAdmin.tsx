@@ -66,6 +66,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const [comments, setcomments] = useState([])
   const [commentsByTaskId, setCommentByTaskID] = useState({});
   const [selectedDeveloper, setSelectedDeveloper] = useState<string>('all');
+  const [projectName, setProjectName] = useState<string>('');
   // const [tasks, setTasks] = useState<task[]>([]);
 
   // Filter tasks by selected developer
@@ -204,6 +205,25 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   };
 
 
+
+  // Fetch project name
+  useEffect(() => {
+    const fetchProjectName = async () => {
+      const { data, error } = await supabase
+        .from("projects")
+        .select("title")
+        .eq("id", ProjectId)
+        .single();
+      
+      if (!error && data) {
+        setProjectName(data.title);
+      }
+    };
+    
+    if (ProjectId) {
+      fetchProjectName();
+    }
+  }, [ProjectId]);
 
   // Current useEffect
   useEffect(() => {
@@ -665,7 +685,8 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             setselectedtab={setSelectedTab}
             ProjectId={ProjectId}
             devopss={devopss}
-            refreshTasks={fetchTasks}  // Add this prop
+            refreshTasks={fetchTasks}
+            projectName={projectName}
           />
         )}
 
