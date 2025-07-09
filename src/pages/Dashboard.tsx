@@ -26,6 +26,7 @@ import { ChevronLeft, SearchIcon, ChevronRight } from 'lucide-react';
 import WeeklyDataUser from './WeeklyDataUser';
 import MonthlyDataUser from './MonthlyDataUser';
 import FilterDataUser from './FilterDataUser';
+import { useUser } from '../contexts/UserContext';
 
 
 interface AttendanceRecord {
@@ -63,6 +64,7 @@ interface MonthlyStats {
 const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   // const user = useAuthStore((state) => state.user);
   const sessionData = localStorage.getItem('supabaseSession');
+  const { userProfile: currentUserProfile } = useUser();
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
   const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
@@ -578,6 +580,11 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         </div>
       </div>
     );
+  }
+
+
+  if(currentUserProfile?.role){
+    return <>page is underdevolpment</>
   }
 
 
