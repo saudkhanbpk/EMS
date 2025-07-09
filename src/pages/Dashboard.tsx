@@ -65,6 +65,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const sessionData = localStorage.getItem('supabaseSession');
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
+
   const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const datePickerTriggerRef = useRef<HTMLButtonElement>(null);

@@ -10,7 +10,7 @@ const Login: React.FC = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const passwordref=useRef<HTMLInputElement>(null)
+  const passwordref = useRef<HTMLInputElement>(null)
   const [error, setError] = useState<string | null>(null);
   const isFocusedRef = useRef(false);
   const navigate = useNavigate();
@@ -55,14 +55,21 @@ const Login: React.FC = () => {
         }
       } else if (authData.user) {
         const isAdmin = email.endsWith('@admin.com');
+        const isSuperAdmin = email.endsWith('@superadmin.co');
         setUser(authData.user);
 
         // Store metadata
         localStorage.setItem('user_id', authData.user.id);
         localStorage.setItem('user_email', authData.user.email || '');
 
-        // Redirect
-        navigate(isAdmin ? '/admin' : '/');
+        // Redirect based on user type
+        if (isSuperAdmin) {
+          navigate('/superadmin/dashboard');
+        } else if (isAdmin) {
+          navigate('/admin');
+        } else {
+          navigate('/');
+        }
       }
     } catch (err) {
       console.error('Authentication error:', err);
@@ -111,35 +118,35 @@ const Login: React.FC = () => {
                 Password
               </label>
               <div className="relative">
-      <input
-        id="password"
-        type={passwordVisible ? 'text' : 'password'}
-        required
-        value={password}
-        ref={passwordref}
-        onChange={(e) => setPassword(e.target.value)}
-        onFocus={() => {
-          isFocusedRef.current = true;
-        }}
-        onBlur={() => {
-          isFocusedRef.current = false;
-        }}
-        className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-        placeholder="Enter your password"
-      />
-      <span
-        onMouseDown={(e) => {
-          e.preventDefault(); // Prevents the input from losing focus
-          if (!isFocusedRef.current) {
-            passwordref.current.focus(); // Focus only if not already focused
-          }
-          setPasswordVisible(!passwordVisible); // Toggle visibility
-        }}
-        className="absolute top-1 right-2 text-slate-700 cursor-pointer"
-      >
-        {passwordVisible ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
-      </span>
-    </div>
+                <input
+                  id="password"
+                  type={passwordVisible ? 'text' : 'password'}
+                  required
+                  value={password}
+                  ref={passwordref}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={() => {
+                    isFocusedRef.current = true;
+                  }}
+                  onBlur={() => {
+                    isFocusedRef.current = false;
+                  }}
+                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  placeholder="Enter your password"
+                />
+                <span
+                  onMouseDown={(e) => {
+                    e.preventDefault(); // Prevents the input from losing focus
+                    if (!isFocusedRef.current) {
+                      passwordref.current.focus(); // Focus only if not already focused
+                    }
+                    setPasswordVisible(!passwordVisible); // Toggle visibility
+                  }}
+                  className="absolute top-1 right-2 text-slate-700 cursor-pointer"
+                >
+                  {passwordVisible ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                </span>
+              </div>
             </div>
 
             <button
