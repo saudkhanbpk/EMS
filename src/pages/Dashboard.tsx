@@ -67,6 +67,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const { userProfile: currentUserProfile } = useUser();
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
+
   const [isDateDialogOpen, setIsDateDialogOpen] = useState(false);
   const [isDatePickerOpen, setIsDatePickerOpen] = useState(false);
   const datePickerTriggerRef = useRef<HTMLButtonElement>(null);
