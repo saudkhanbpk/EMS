@@ -67,8 +67,8 @@ const EmployeeWeeklyAttendanceTable: React.FC<EmployeeWeeklyAttendanceTableProps
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
-        .select("*")
-        .neq("role", "admin");
+        .select("id, full_name")
+        .not("role", "in", "(client,admin,superadmin)");
       if (usersError) throw usersError;
 
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });

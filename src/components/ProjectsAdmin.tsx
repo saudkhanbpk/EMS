@@ -17,9 +17,11 @@ interface Project {
   created_at: string;
   start_date?: string;
   created_by?: string;
-  creatorName?: string; // Added to store the creator's full name
-  manager_id?: string; // Added to store the manager's ID
-  managerName?: string; // Added to store the manager's name
+  creatorName?: string;
+  manager_id?: string;
+  managerName?: string;
+  product_owner?: string;
+  productOwnerName?: string;
   completedScore: number;
   pendingScore: number;
   totalScore: number;
@@ -69,6 +71,7 @@ function ProjectsAdmin() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ProjectId, setProjectId] = useState("");
   const [Devs, setDevs] = useState<Dev[]>([]);
+  const [Clients, setClients] = useState<Dev[]>([]);
   const [selectedDevs, setSelectedDevs] = useState<{ id: string; name?: string; full_name?: string }[]>([]);
   // Removed unused projectmanager state
   const [projects, setProjects] = useState<Project[]>([]);
@@ -82,7 +85,10 @@ function ProjectsAdmin() {
     title: '',
     type: 'Front-End Developer' as 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer',
     manager_id: '',
-    managerName: ''
+    managerName: '',
+
+    product_owner: '',
+    productOwnerName: ''
   });
   const [editingProject, setEditingProject] = useState<Project | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
@@ -225,13 +231,16 @@ function ProjectsAdmin() {
     }
   };
 
-  // Fetch developers
+  // Fetch developers and clients
   useEffect(() => {
     const fetchDevs = async () => {
       const { data, error } = await supabase
         .from("users")
-        .select("full_name, id");
-      if (!error) setDevs(data);
+        .select("full_name, id, role");
+      if (!error) {
+        setDevs(data);
+        setClients(data.filter(user => user.role === 'client'));
+      }
     };
     fetchDevs();
   }, []);
@@ -370,7 +379,9 @@ function ProjectsAdmin() {
             completedScore,
             pendingScore,
             totalScore,
-            creatorName: project.created_by ? userMap[project.created_by] || "Unknown" : "Unknown"
+            creatorName: project.created_by ? userMap[project.created_by] || "Unknown" : "Unknown",
+            managerName: project.manager_id ? userMap[project.manager_id] || "Unknown" : null,
+            productOwnerName: project.product_owner ? userMap[project.product_owner] || "Unknown" : null
           };
         })
       );
@@ -398,11 +409,18 @@ function ProjectsAdmin() {
   };
 
   const handlemanagerchange = (selectedEmployee: { id: string, full_name: string }) => {
-    // Update the newProject state with the selected manager
     setNewProject({
       ...newProject,
       manager_id: selectedEmployee.id,
       managerName: selectedEmployee.full_name
+    });
+  };
+
+  const handleProductOwnerChange = (selectedEmployee: { id: string, full_name: string }) => {
+    setNewProject({
+      ...newProject,
+      product_owner: selectedEmployee.id,
+      productOwnerName: selectedEmployee.full_name
     });
   };
 
@@ -445,7 +463,9 @@ function ProjectsAdmin() {
       title: '',
       type: 'Front-End Developer' as 'Front-End Developer' | 'Back End Developer' | 'Full Stack Developer',
       manager_id: '',
-      managerName: ''
+      managerName: '',
+      product_owner: '',
+      productOwnerName: ''
     });
     setSelectedDevs([]);
     setEditingProject(null);
@@ -458,8 +478,10 @@ function ProjectsAdmin() {
     setNewProject({
       title: project.title,
       type: project.type,
-      manager_id: project.created_by || '',
-      managerName: project.creatorName || ''
+      manager_id: project.manager_id || project.created_by || '',
+      managerName: project.managerName || project.creatorName || '',
+      product_owner: project.product_owner || '',
+      productOwnerName: project.productOwnerName || ''
     });
 
     // Convert devops format to include both name and full_name
@@ -851,7 +873,9 @@ function ProjectsAdmin() {
             title: newProject.title,
             type: newProject.type,
             devops: normalizedDevs,
-            created_by: newProject.manager_id || editingProject.created_by // Use selected manager or keep existing
+            created_by: newProject.manager_id || null,
+            product_owner: newProject.product_owner || null,
+
           })
           .eq("id", editingProject.id);
 
@@ -874,7 +898,9 @@ function ProjectsAdmin() {
             type: newProject.type,
             devops: normalizedDevs,
             created_at: new Date().toISOString(),
-            created_by: newProject.manager_id || localStorage.getItem('user_id') // Use selected manager or current user
+            created_by: newProject.manager_id || null,
+            product_owner: newProject.product_owner || null,
+
           }]);
 
         if (error) throw error;
@@ -917,7 +943,9 @@ function ProjectsAdmin() {
                 completedScore: 0,
                 pendingScore: 0,
                 totalScore: 0,
-                creatorName: project.created_by ? userMap[project.created_by] || "Unknown" : "Unknown"
+                creatorName: project.created_by ? userMap[project.created_by] || "Unknown" : "Unknown",
+                managerName: project.manager_id ? userMap[project.manager_id] || "Unknown" : null,
+                productOwnerName: project.product_owner ? userMap[project.product_owner] || "Unknown" : null
               };
             }
 
@@ -967,7 +995,9 @@ function ProjectsAdmin() {
               completedScore,
               pendingScore,
               totalScore,
-              creatorName: project.created_by ? userMap[project.created_by] || "Unknown" : "Unknown"
+              creatorName: project.created_by ? userMap[project.created_by] || "Unknown" : "Unknown",
+              managerName: project.manager_id ? userMap[project.manager_id] || "Unknown" : null,
+              productOwnerName: project.product_owner ? userMap[project.product_owner] || "Unknown" : null
             };
           })
         );
@@ -1319,24 +1349,58 @@ function ProjectsAdmin() {
                           <label className="block text-sm font-medium text-gray-700 mb-1">
                             Add Manager
                           </label>
-
                           <Select
                             options={filteredEmployees.map((dev) => ({
                               value: dev.id,
                               label: dev.full_name,
-                              fullData: dev, // include full dev object
+                              fullData: dev,
                             }))}
+                            value={newProject.manager_id ? {
+                              value: newProject.manager_id,
+                              label: newProject.managerName
+                            } : null}
                             onChange={(selectedOption) => {
                               if (selectedOption) {
-                                handlemanagerchange(selectedOption.fullData); // Pass the full dev object
+                                handlemanagerchange(selectedOption.fullData);
+                              } else {
+                                setNewProject({ ...newProject, manager_id: '', managerName: '' });
                               }
                             }}
                             placeholder="Search or select Manager..."
                             isSearchable
+                            isClearable
                             className="w-full"
                             classNamePrefix="react-select"
                           />
+                        </div>
 
+                        <div>
+                          <label className="block text-sm font-medium text-gray-700 mb-1">
+                            Add Product Owner
+                          </label>
+                          <Select
+                            options={Clients.map((client) => ({
+                              value: client.id,
+                              label: client.full_name,
+                              fullData: client,
+                            }))}
+                            value={newProject.product_owner ? {
+                              value: newProject.product_owner,
+                              label: newProject.productOwnerName
+                            } : null}
+                            onChange={(selectedOption) => {
+                              if (selectedOption) {
+                                handleProductOwnerChange(selectedOption.fullData);
+                              } else {
+                                setNewProject({ ...newProject, product_owner: '', productOwnerName: '' });
+                              }
+                            }}
+                            placeholder="Search or select Product Owner..."
+                            isSearchable
+                            isClearable
+                            className="w-full"
+                            classNamePrefix="react-select"
+                          />
                         </div>
 
                         <div>
@@ -1483,7 +1547,7 @@ function ProjectsAdmin() {
                                             <div className="text-sm text-gray-900">
                                               {(expandedProjects['all'] ? employee.projects : employee.projects.slice(0, 2)).map(project => (
                                                 <div key={project.id} className="bg-gray-50 p-2 rounded-md mb-2">
-                                                  <div 
+                                                  <div
                                                     className="text-sm font-medium text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
                                                     onClick={(e) => {
                                                       e.stopPropagation();
@@ -1643,7 +1707,7 @@ function ProjectsAdmin() {
                                         <div className="text-sm text-gray-900">
                                           {(expandedProjects['manager'] ? manager.projects : manager.projects.slice(0, 2)).map(project => (
                                             <div key={project.id} className="bg-gray-50 p-2 rounded-md mb-2">
-                                              <div 
+                                              <div
                                                 className="text-sm font-medium text-gray-900 cursor-pointer hover:text-purple-600 transition-colors"
                                                 onClick={(e) => {
                                                   e.stopPropagation();
@@ -1744,7 +1808,8 @@ function ProjectsAdmin() {
                     </div>
                   ) : projects.filter(project =>
                     project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
-                    (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                    (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase())) ||
+                    (project.managerName && project.managerName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
                   ).length === 0 ? (
                     <div className="col-span-full text-center py-8">
                       <p className="text-gray-500 text-lg">No projects match your search.</p>
@@ -1752,7 +1817,8 @@ function ProjectsAdmin() {
                   ) : (
                     projects.filter(project =>
                       project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
-                      (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                      (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase())) ||
+                      (project.managerName && project.managerName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
                     ).map((project) => (
                       <div
                         key={project.id}
@@ -1789,11 +1855,11 @@ function ProjectsAdmin() {
                         </div>
                         <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
 
-                        {project.creatorName !== "Unknown" && (
+                        {(project.managerName || project.creatorName !== "Unknown") && (
                           <div>
                             <label className='font-semibold text-[15px] text-[#9A00FF]'>Manager: </label>
                             <span className="text-sm font-semibold text-[#9A00FF]">
-                              {project.creatorName}
+                              {project.managerName || project.creatorName}
                             </span>
                           </div>
                         )}
@@ -1834,7 +1900,8 @@ function ProjectsAdmin() {
                     <p className="text-gray-500 p-6 text-center text-sm">No projects yet. Create one!</p>
                   ) : projects.filter(project =>
                     project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
-                    (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                    (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase())) ||
+                    (project.managerName && project.managerName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
                   ).length === 0 ? (
                     <p className="text-gray-500 p-6 text-center text-sm">No projects match your search.</p>
                   ) : (
@@ -1864,7 +1931,8 @@ function ProjectsAdmin() {
                       <tbody className="divide-y divide-gray-100">
                         {projects.filter(project =>
                           project.title.toLowerCase().includes(projectSearchTerm.toLowerCase()) ||
-                          (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
+                          (project.creatorName && project.creatorName.toLowerCase().includes(projectSearchTerm.toLowerCase())) ||
+                          (project.managerName && project.managerName.toLowerCase().includes(projectSearchTerm.toLowerCase()))
                         ).map((project) => (
                           <tr
                             key={project.id}
@@ -1879,7 +1947,7 @@ function ProjectsAdmin() {
                               <div className="text-sm font-semibold text-gray-900">{project.title}</div>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="text-sm text-gray-900">{project.creatorName || "N/A"}</div>
+                              <div className="text-sm text-gray-900">{project.managerName || project.creatorName || "N/A"}</div>
                             </td>
                             <td className="px-6 py-4">
                               {project.devops && project.devops.length > 0 ? (

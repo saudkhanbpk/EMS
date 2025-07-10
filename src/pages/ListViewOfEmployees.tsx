@@ -1965,7 +1965,7 @@ const EmployeeAttendanceTable = () => {
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
-        .neq("role", "admin");
+        .not("role", "in", "(client,admin,superadmin)");
 
       if (usersError) throw usersError;
 

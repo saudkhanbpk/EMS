@@ -60,9 +60,9 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
     try {
       // Fetch all users
       const { data: users, error: usersError } = await supabase
-        .from('users')
-        .select('*')
-        .neq("role", "admin");
+        .from("users")
+        .select("id, full_name")
+        .not("role", "in", "(client,admin,superadmin)");
 
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);
@@ -222,7 +222,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
         // Calculate overtime hours for the user
         const userOvertimeRecords = overtimeRecords ? overtimeRecords.filter(record => record.user_id === id) : [];
         let totalOvertimeHours = 0;
-        
+
         userOvertimeRecords.forEach(record => {
           if (record.check_in && record.check_out) {
             const checkIn = new Date(record.check_in);
