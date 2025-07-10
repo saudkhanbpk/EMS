@@ -2153,8 +2153,8 @@ const Employeeprofile = ({
                   setIsEditingDeductions(true);
                 }}
                 className={`text-sm font-medium ${selectedDeductionMonth
-                    ? "text-purple-600 hover:text-purple-800"
-                    : "text-gray-400 cursor-not-allowed"
+                  ? "text-purple-600 hover:text-purple-800"
+                  : "text-gray-400 cursor-not-allowed"
                   }`}
                 disabled={deductionsLoading || !selectedDeductionMonth}
               >
@@ -2737,6 +2737,7 @@ const Employeeprofile = ({
                     <option value="">Select Role</option>
                     <option value="admin">Admin</option>
                     <option value="manager">Manager</option>
+                    <option value="client">Client</option>
                     <option value="employee">Employee</option>
                     <option value="project manager">Project Manager</option>
                   </select>

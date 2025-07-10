@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUser } from '../contexts/UserContext';
+import ClientDashboard from '../pages/clientdashboard';
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -9,7 +10,9 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
     const { userProfile, loading, refreshUserProfile } = useUser();
 
     if (loading) {
-        return <div>Loading...</div>;
+        return <div className="flex items-center justify-center min-h-screen">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+        </div>
     }
 
     if (!userProfile) {
@@ -18,36 +21,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
 
     if (userProfile.role === 'client') {
         return (
-            <div style={{
-                display: 'flex',
-                flexDirection: 'column',
-                alignItems: 'center',
-                justifyContent: 'center',
-                height: '100vh',
-                textAlign: 'center',
-                padding: '20px'
-            }}>
-                <img
-                    src="/construction.svg"
-                    alt="Under Construction"
-                    style={{
-                        maxWidth: '200px',
-                        marginBottom: '20px'
-                    }}
-                />
-                <h1 style={{
-                    fontSize: '2.5rem',
-                    marginBottom: '15px'
-                }}>
-                    Under Construction
-                </h1>
-                <p style={{
-                    fontSize: '1.2rem',
-                    color: '#666'
-                }}>
-                    We're working hard to bring you something amazing. Please check back soon!
-                </p>
-            </div>
+            <ClientDashboard />
         );
     }
 
