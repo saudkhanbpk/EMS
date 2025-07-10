@@ -64,7 +64,7 @@ interface MonthlyStats {
 const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   // const user = useAuthStore((state) => state.user);
   const sessionData = localStorage.getItem('supabaseSession');
-  const { userProfile: currentUserProfile } = useUser();
+
   const session = sessionData ? JSON.parse(sessionData) : null;
   const user = session?.user;
 
@@ -584,9 +584,6 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   }
 
 
-  if(currentUserProfile?.role){
-    return <>page is underdevolpment</>
-  }
 
 
   return (

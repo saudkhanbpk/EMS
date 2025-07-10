@@ -312,6 +312,7 @@ import SuperAdminPage from './pages/SuperAdminPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Organizations from './pages/Organizations';
 import OrganizationDetail from './components/OrganizationDetail';
+import DashboardLayout from './components/dashboardlayout';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -511,7 +512,7 @@ function App() {
                 </PrivateRoute>
               }
             >
-              <Route index element={<Dashboard />} />
+              <Route index element={<DashboardLayout><Dashboard /></DashboardLayout>} />
               <Route path="attendance" element={<Attendance />} />
               <Route path="leave" element={<Leave />} />
               <Route path="tasks" element={<Tasks />} />
@@ -523,8 +524,7 @@ function App() {
               <Route path="board/:id" element={<TaskBoard />} />
               <Route path="profile" element={<ProfileCard />} />
               <Route path="dailylogs" element={<DailyLogs />} />
-              <Route path='chat' element={<ChatSidebar />}></Route>
-              <Route path="chat/:id" element={<Chat />} />
+
 
             </Route>
 
