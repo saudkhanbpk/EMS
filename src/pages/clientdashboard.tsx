@@ -5,6 +5,7 @@ import React, { useEffect, useState } from 'react';
 import { ChevronLeft, ChevronRight, ChevronDown, Settings, Users } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
+import { useNavigate } from 'react-router-dom';
 
 interface TaskCardProps {
   title: string;
@@ -32,6 +33,7 @@ interface ProjectRowProps {
   totalTask: number;
   productivity: number;
   status: string;
+  projectId: string;
 }
 
 const ProjectRow: React.FC<ProjectRowProps> = ({
@@ -43,47 +45,58 @@ const ProjectRow: React.FC<ProjectRowProps> = ({
   done,
   totalTask,
   productivity,
-  status
-}) => (
-  <tr className="border-b border-gray-100 hover:bg-gray-50">
-    <td className="py-4 px-2 text-left">
-      <h3 className="font-medium text-gray-900 text-sm md:text-base">{name}</h3>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="text-purple-600 font-medium text-sm md:text-base">{inReview}</span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="text-yellow-600 font-medium text-sm md:text-base">{inProgress}</span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="text-red-600 font-medium text-sm md:text-base">{highPriority.toString().padStart(2, '0')}</span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="text-red-500 font-medium text-sm md:text-base">{pendingTask}</span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="text-green-600 font-medium text-sm md:text-base">{done}</span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="text-blue-600 font-medium text-sm md:text-base">{totalTask}</span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
-        {productivity}%
-      </span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
-        {status}
-      </span>
-    </td>
-    <td className="py-4 px-2 text-center">
-      <button className="bg-black text-white px-8 py-2 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors">
-        Open Project
-      </button>
-    </td>
-  </tr>
-);
+  status,
+  projectId
+}) => {
+  const navigate = useNavigate();
+
+  const handleOpenProject = () => {
+    navigate(`/board/${projectId}`);
+  };
+
+  return (
+    <tr className="border-b border-gray-100 hover:bg-gray-50">
+      <td className="py-4 px-2 text-left">
+        <h3 className="font-medium text-gray-900 text-sm md:text-base">{name}</h3>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="text-purple-600 font-medium text-sm md:text-base">{inReview}</span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="text-yellow-600 font-medium text-sm md:text-base">{inProgress}</span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="text-red-600 font-medium text-sm md:text-base">{highPriority.toString().padStart(2, '0')}</span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="text-red-500 font-medium text-sm md:text-base">{pendingTask}</span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="text-green-600 font-medium text-sm md:text-base">{done}</span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="text-blue-600 font-medium text-sm md:text-base">{totalTask}</span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
+          {productivity}%
+        </span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
+          {status}
+        </span>
+      </td>
+      <td className="py-4 px-2 text-center">
+        <button
+          onClick={handleOpenProject}
+          className="bg-black text-white px-8 py-2 rounded-full text-sm font-medium hover:bg-gray-800 transition-colors">
+          Open Project
+        </button>
+      </td>
+    </tr>
+  );
+};
 
 // Mobile version of ProjectRow
 const ProjectRowMobile: React.FC<ProjectRowProps> = ({
@@ -95,55 +108,66 @@ const ProjectRowMobile: React.FC<ProjectRowProps> = ({
   done,
   totalTask,
   productivity,
-  status
-}) => (
-  <div className="border-b border-gray-100 py-4">
-    <div className="mb-3">
-      <h3 className="font-medium text-gray-900 text-base">{name}</h3>
+  status,
+  projectId
+}) => {
+  const navigate = useNavigate();
+
+  const handleOpenProject = () => {
+    navigate(`/board/${projectId}`);
+  };
+
+  return (
+    <div className="border-b border-gray-100 py-4">
+      <div className="mb-3">
+        <h3 className="font-medium text-gray-900 text-base">{name}</h3>
+      </div>
+      <div className="grid grid-cols-2 gap-3 mb-4">
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">In Review:</span>
+          <span className="text-purple-600 font-medium text-sm">{inReview}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">In Progress:</span>
+          <span className="text-yellow-600 font-medium text-sm">{inProgress}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">High Priority:</span>
+          <span className="text-red-600 font-medium text-sm">{highPriority.toString().padStart(2, '0')}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">Pending Task:</span>
+          <span className="text-red-500 font-medium text-sm">{pendingTask}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">Done:</span>
+          <span className="text-green-600 font-medium text-sm">{done}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">Total Task:</span>
+          <span className="text-blue-600 font-medium text-sm">{totalTask}</span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">Productivity:</span>
+          <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
+            {productivity}%
+          </span>
+        </div>
+        <div className="flex justify-between">
+          <span className="text-xs text-gray-500">Status:</span>
+          <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
+            {status}
+          </span>
+        </div>
+      </div>
+      <button
+        onClick={handleOpenProject}
+        className="w-full bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
+        Open Project
+      </button>
     </div>
-    <div className="grid grid-cols-2 gap-3 mb-4">
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">In Review:</span>
-        <span className="text-purple-600 font-medium text-sm">{inReview}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">In Progress:</span>
-        <span className="text-yellow-600 font-medium text-sm">{inProgress}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">High Priority:</span>
-        <span className="text-red-600 font-medium text-sm">{highPriority.toString().padStart(2, '0')}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">Pending Task:</span>
-        <span className="text-red-500 font-medium text-sm">{pendingTask}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">Done:</span>
-        <span className="text-green-600 font-medium text-sm">{done}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">Total Task:</span>
-        <span className="text-blue-600 font-medium text-sm">{totalTask}</span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">Productivity:</span>
-        <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
-          {productivity}%
-        </span>
-      </div>
-      <div className="flex justify-between">
-        <span className="text-xs text-gray-500">Status:</span>
-        <span className="bg-green-800 text-white text-xs px-2 py-1 rounded-full">
-          {status}
-        </span>
-      </div>
-    </div>
-    <button className="w-full bg-black text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-gray-800 transition-colors">
-      Open Project
-    </button>
-  </div>
-);
+  );
+};
 
 interface TeamMemberProps {
   name: string;
@@ -236,31 +260,26 @@ interface TaskStats {
 
 const ClientDashboard: React.FC = () => {
   const currentUser = useAuthStore((state) => state.user);
-  
+
   interface Project {
     id: string;
-    name: string;
-    description?: string;
-    status: string;
+    title: string;
+    description?: string | null;
+    start_date?: string | null;
+    end_date?: string | null;
     created_at: string;
     created_by: string;
-    // is_active: boolean;
+    devops: Array<{ id: string, name: string }>;
+    type: string;
+    product_owner: string | null;
     [key: string]: any;
   }
 
   interface TeamMember {
     id: string;
-    user_id: string;
-    project_id: string;
-    role: string;
-    status: string;
-    profiles?: {
-      full_name: string;
-      email: string;
-    };
-    projects?: {
-      name: string;
-    };
+    name: string;
+    project_id?: string;
+    project_title?: string;
     [key: string]: any;
   }
 
@@ -303,7 +322,8 @@ const ClientDashboard: React.FC = () => {
           done: '0/0',
           totalTask: 0,
           productivity: 0,
-          status: 'Unknown'
+          status: 'Unknown',
+          projectId: projectId
         };
       }
 
@@ -314,9 +334,9 @@ const ClientDashboard: React.FC = () => {
       const inReviewTasks = taskList.filter(t => t.status === 'review').length;
       const pendingTasks = taskList.filter(t => t.status === 'todo').length;
       const highPriorityTasks = taskList.filter(t => t.priority === 'High').length;
-      
+
       const productivity = totalTasks > 0 ? Math.round((doneTasks / totalTasks) * 100) : 0;
-      
+
       let status = 'Good';
       if (productivity >= 80) status = 'Excellent';
       else if (productivity >= 60) status = 'Good';
@@ -331,7 +351,8 @@ const ClientDashboard: React.FC = () => {
         done: `${doneTasks}/${totalTasks}`,
         totalTask: totalTasks,
         productivity,
-        status
+        status,
+        projectId: projectId
       };
     } catch (err) {
       console.error('Error calculating project stats:', err);
@@ -343,15 +364,15 @@ const ClientDashboard: React.FC = () => {
         done: '0/0',
         totalTask: 0,
         productivity: 0,
-        status: 'Unknown'
+        status: 'Unknown',
+        projectId: projectId
       };
     }
   };
 
-  // Helper function to calculate member task statistics
   const calculateMemberStats = async (userId: string, projectId: string) => {
     try {
-      // Parse the devops JSON to check if this user is assigned to tasks
+      // Fetch tasks for this specific project
       const { data: tasks, error: tasksError } = await supabase
         .from('tasks_of_projects')
         .select('*')
@@ -366,14 +387,23 @@ const ClientDashboard: React.FC = () => {
         };
       }
 
-            // Filter tasks where this user is in the devops array
+      // Filter tasks where this user is in the devops array
       const userTasks = tasks?.filter(task => {
-        try {
-          const devopsArray = JSON.parse(task.devops);
-          return devopsArray.some((dev: any) => dev.id === userId);
-        } catch (e) {
-          return false;
+        if (!task.devops) return false;
+
+        // Handle devops whether it's already an array or a string that needs parsing
+        let devopsArray;
+        if (typeof task.devops === 'string') {
+          try {
+            devopsArray = JSON.parse(task.devops);
+          } catch (e) {
+            return false;
+          }
+        } else {
+          devopsArray = task.devops;
         }
+
+        return Array.isArray(devopsArray) && devopsArray.some((dev: any) => dev.id === userId);
       }) || [];
 
       const completedTasks = userTasks.filter(t => t.status === 'done').length;
@@ -431,33 +461,26 @@ const ClientDashboard: React.FC = () => {
 
       setProjects(projectsData || []);
 
-      // Fetch team members for user's projects
-      const projectIds = projectsData?.map(p => p.id) || [];
-      
-      if (projectIds.length > 0) {
-        const { data: membersData, error: membersError } = await supabase
-          .from('team_members')
-          .select(`
-            *,
-            profiles:user_id (
-              full_name,
-              email
-            ),
-            projects:project_id (
-              name
-            )
-          `)
-          .in('project_id', projectIds)
-          .eq('status', 'active');
+      // Extract team members from projects' devops arrays
+      const allTeamMembers: TeamMember[] = [];
 
-        if (membersError) {
-          console.warn('Team members fetch error:', membersError);
-        } else {
-          setTeamMembers(membersData || []);
+      projectsData?.forEach(project => {
+        if (project.devops && Array.isArray(project.devops)) {
+          project.devops.forEach((member: { id: string; name: string }) => {
+            allTeamMembers.push({
+              id: member.id,
+              name: member.name,
+              project_id: project.id,
+              project_title: project.title
+            } as TeamMember);
+          });
         }
-      }
+      });
+
+      setTeamMembers(allTeamMembers);
 
       // Fetch task statistics for all projects
+      const projectIds = projectsData?.map(p => p.id) || [];
       await fetchTaskStats(projectIds);
 
     } catch (err) {
@@ -501,7 +524,7 @@ const ClientDashboard: React.FC = () => {
       };
 
       setTaskStats(stats);
-      
+
     } catch (err) {
       console.error('Error fetching task stats:', err);
     }
@@ -522,8 +545,9 @@ const ClientDashboard: React.FC = () => {
           projects.map(async (project) => {
             const stats = await calculateProjectStats(project.id);
             return {
-              name: project.name || 'Unnamed Project',
-              ...stats
+              name: project.title || 'Unnamed Project',
+              ...stats,
+              projectId: project.id
             };
           })
         );
@@ -539,12 +563,12 @@ const ClientDashboard: React.FC = () => {
       if (teamMembers.length > 0) {
         const membersWithCalculatedStats = await Promise.all(
           teamMembers.map(async (member) => {
-            const stats = await calculateMemberStats(member.user_id, member.project_id);
+            const stats = await calculateMemberStats(member.id, member.project_id || '');
             return {
-              name: member.profiles?.full_name || 'Unknown',
-              project: member.projects?.name || 'Unknown Project',
+              name: member.name || 'Unknown',
+              project: member.project_title || 'Unknown Project',
               ...stats,
-              status: member.status === 'active' ? 'Active' : 'Inactive'
+              status: 'Active' // Assuming all devops members are active
             };
           })
         );
@@ -571,7 +595,7 @@ const ClientDashboard: React.FC = () => {
       <div className="min-h-screen bg-gray-100 flex items-center justify-center">
         <div className="text-center">
           <p className="text-red-600 mb-4">Error: {error}</p>
-          <button 
+          <button
             onClick={fetchUserData}
             className="bg-blue-500 text-white px-4 py-2 rounded-lg hover:bg-blue-600 transition-colors"
           >
@@ -597,7 +621,7 @@ const ClientDashboard: React.FC = () => {
             </div>
           </div>
         </div>
-        
+
         <div className="max-w-full lg:max-w-7xl mx-auto">
           {/* Header */}
           <div className="flex flex-col md:flex-row md:justify-between md:items-center mb-6 md:mb-8 space-y-4 md:space-y-0">
@@ -605,18 +629,18 @@ const ClientDashboard: React.FC = () => {
               Welcome {userProfile?.full_name || 'User'}!
             </h1>
             <div className="flex flex-col md:flex-row md:items-center space-y-3 md:space-y-0 md:space-x-4">
+              <span className="text-gray-600 text-sm md:text-base text-center md:text-left">
+                {new Date().toLocaleDateString('en-US', {
+                  weekday: 'long',
+                  year: 'numeric',
+                  month: 'long',
+                  day: 'numeric'
+                })}
+              </span>
               <button className="flex items-center justify-center md:justify-start space-x-2 bg-white border border-gray-300 rounded-lg px-4 py-2 hover:bg-gray-50 transition-colors">
                 <span className="text-gray-700">Table View</span>
                 <ChevronDown className="w-4 h-4 text-gray-500" />
               </button>
-              <span className="text-gray-600 text-sm md:text-base text-center md:text-left">
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
-              </span>
             </div>
           </div>
 
@@ -730,7 +754,7 @@ const ClientDashboard: React.FC = () => {
             </div>
           </div>
 
-                    {/* Team Members Section */}
+          {/* Team Members Section */}
           <div className="bg-white rounded-lg p-4 md:p-6 shadow-sm">
             <div className="flex items-center space-x-3 mb-4 md:mb-6">
               <Users className="w-5 h-5 text-gray-600" />
