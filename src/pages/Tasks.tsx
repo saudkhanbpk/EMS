@@ -1,15 +1,10 @@
-import React, { useState , useEffect, useContext } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { PlusCircle, User, Pencil, Trash2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { formatDistanceToNow } from 'date-fns';
-import { AttendanceContext } from './AttendanceContext';
-import { useAuthStore } from '../lib/store';
+import { formatDistanceToNow, format } from 'date-fns';
 import ProjectManager from '../components/ProjectManager';
-interface devops {
-  id : string;
-  full_name : string;
-}
+
 interface Project {
   id: string;
   title: string;
@@ -17,148 +12,172 @@ interface Project {
   devops: { id: string; name: string }[];
   created_at: string;
   start_date?: string;
-} 
- 
+  product_owner?: string;
+}
 
 function Task() {
   const navigate = useNavigate();
-  const [Loading , setLoading] = useState (false);
-  const [ProjectId , setProjectId] = useState('');
-  const [devops , setdevops] = useState<devops[]>([]);
-  const [descriptionopen , setDescriptionOpen] = useState(false);
-  // const [setDevs] = useContext(AttendanceContext)
-  const [projectmanager , setProjectManager] = useState(false)
+  const [loading, setLoading] = useState(false);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [descriptionOpen, setDescriptionOpen] = useState(false);
+  const [projectManager, setProjectManager] = useState(false);
 
+  const userId = localStorage.getItem('user_id');
+
+  // Check if logged-in user is a project manager
   useEffect(() => {
     const fetchUserRole = async () => {
+      if (!userId) return;
+
       const { data, error } = await supabase
         .from('users')
         .select('role')
-        .eq('id', localStorage.getItem('user_id'))
+        .eq('id', userId)
         .single();
 
-      if (data && data.role === 'project manager') {
+      if (data?.role === 'project manager') {
         setProjectManager(true);
-      } else {
-        console.error('Error fetching user role:', error);
+      } else if (error) {
+        console.error('Error fetching user role:', error.message);
       }
     };
 
     fetchUserRole();
-  })
-  
+  }, [userId]);
 
-
-  const [projects, setProjects] = useState<Project[]>([
-
-  ]);
-    // Fetch projects
-    useEffect(() => {
-      const fetchProjects = async () => {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from("projects")
-          .select("*");
-
-          if (data && data.length) {
-            const userId = localStorage.getItem("user_id");
-            console.log("User_Id:", userId);
-            
-            const filteredTasks = data.filter(task => {
-              // Check if devops array includes the current user by ID
-              return Array.isArray(task.devops) && task.devops.some(dev => dev.id === userId);
-            }); 
-            setProjects(filteredTasks);
-          } else {
-            console.log("No tasks found");
-          }
-
+  // Fetch projects where user is a dev OR product owner
+  useEffect(() => {
+    const fetchProjects = async () => {
+      setLoading(true);
+      if (!userId) {
+        console.error("Missing user ID.");
         setLoading(false);
-      };
-      fetchProjects();
-    }, []);
+        return;
+      }
 
-    
+      const { data, error } = await supabase.from("projects").select("*");
 
+      if (error) {
+        console.error("Error fetching projects:", error.message);
+        setLoading(false);
+        return;
+      }
 
+      const filteredProjects = (data || []).filter((project) => {
+        const isDev = Array.isArray(project.devops) &&
+          project.devops.some((dev: { id: string }) => dev.id === userId);
+        const isProductOwner = project.product_owner === userId;
+        return isDev || isProductOwner;
+      });
 
-    return (
-      <div className="min-h-screen">
-        <div className="max-w-7xl mx-auto">
-          {projectmanager === true ? (
-            <ProjectManager/>
-          ) : (
-            <>
-              <div className="flex justify-between items-center mb-8">
-                <h1 className="xs:text-[26px] text-sm font-bold">Your Project</h1>
+      setProjects(filteredProjects);
+      setLoading(false);
+    };
+
+    fetchProjects();
+  }, [userId]);
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-10">
+      <div className="max-w-7xl mx-auto px-4">
+        {projectManager ? (
+          <ProjectManager />
+        ) : (
+          <>
+            <div className="flex justify-between items-center mb-8">
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Your Projects</h1>
+            </div>
+
+            {loading ? (
+              <div className="text-center mt-12 text-gray-500 text-lg">Loading...</div>
+            ) : projects.length === 0 ? (
+              <div className="text-center text-gray-500 mt-20 text-lg">
+                You are not assigned to any projects.
               </div>
-              {projects.length === 0 && (
-                <div className="flex items-center justify-center h-full">
-                  <p className="text-gray-500">You are Not Assigned To Any Project.</p>
-                </div>
-              )}
+            ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project) => (
-                  <div
-                    key={project.id}
-                    className="bg-white rounded-[20px] w-[316px] min-h-[238px] p-6 shadow-xl cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => {
-                      navigate(`/board/${project.id}`);
-                    }}
-                  >
-                    <div className="flex items-center justify-between mb-4">
-                      <div className="flex items-center px-4 py-1 bg-[#F4F6FC] rounded-full">
-                        <span className="w-2 h-2 rounded-full bg-[#9A00FF]"></span>&nbsp;&nbsp;
-                        <span className="text-sm font-semibold text-[#9A00FF]">{project.type}</span>
+                {projects.map((project) => {
+                  const isProductOwner = project.product_owner === userId;
+                  const createdDate = new Date(project.created_at);
+                  const relativeTime = formatDistanceToNow(createdDate);
+                  const absoluteTime = format(createdDate, 'MMM d, yyyy');
+
+                  return (
+                    <div
+                      key={project.id}
+                      className="bg-white rounded-[20px] w-full min-h-[238px] p-6 shadow-xl transition-shadow hover:shadow-md cursor-pointer flex flex-col justify-between"
+                      onClick={() => navigate(`/board/${project.id}`)}
+                    >
+                      {/* Header */}
+                      <div className="flex flex-col mb-4">
+                        <div className="flex items-center px-4 py-1 bg-[#F4F6FC] rounded-full whitespace-nowrap self-start">
+                          <span className="w-2 h-2 rounded-full bg-[#9A00FF] mr-2 flex-shrink-0"></span>
+                          <span className="text-sm font-semibold text-[#9A00FF] truncate">{project.type}</span>
+                        </div>
+
+                        {isProductOwner && (
+                          <span className="text-xs font-bold text-blue-700 bg-blue-100 border border-blue-200 rounded-full px-3 py-0.5 shadow-sm whitespace-nowrap self-start mt-2">
+                            Product Owner
+                          </span>
+                        )}
                       </div>
-                    </div>
-                    <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
-                    <div className="flex gap-10 flex-col items-start justify-between">
-                      <div className="mb-2">
-                        <span className="leading-7 text-[#686a6d]">
-                          <label className="font-semibold">Developers: </label>
-                          <ul className="ml-2 list-disc list-inside">
-                            {project.devops.map((dev) => (
-                              <li key={dev.id}>{dev.name}</li>
-                            ))}
+
+                      {/* Title */}
+                      <h3 className="text-xl font-semibold text-[#263238] mb-4 text-ellipsis overflow-hidden whitespace-nowrap">
+                        {project.title}
+                      </h3>
+
+                      {/* Content */}
+                      <div className="flex flex-col justify-between flex-grow">
+                        {/* Developers */}
+                        <div className="mb-4">
+                          <p className="text-sm text-gray-600 font-semibold">Developers:</p>
+                          <ul className="ml-4 mt-1 list-disc text-sm text-gray-700">
+                            {project.devops?.length > 0 ? (
+                              project.devops.map((dev) => (
+                                <li key={dev.id}>{dev.name}</li>
+                              ))
+                            ) : (
+                              <li className="text-gray-400 italic">No developers</li>
+                            )}
                           </ul>
-                        </span>
-                      </div>
-                      <div>
-                        <span className="font-medium text-base leading-7 text-[#C4C7CF]">
-                          {formatDistanceToNow(new Date(project.created_at))} ago
-                        </span>
+                        </div>
+
+                        {/* Time Info */}
+                        <div className="text-sm text-gray-400 font-medium mt-auto pt-2">
+                          {relativeTime} ago &bull; <span className="italic">{absoluteTime}</span>
+                        </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
-            </>
-          )}
-        </div>
-        {/* Description Modal */}
-        {descriptionopen && (
-          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
-            <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold">Task Description</h2>
-                  <button
-                    onClick={() => setDescriptionOpen(false)}
-                    className="text-gray-400 hover:text-gray-500"
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-                {/* Add your task description content here */}
-                <p>Task description goes here...</p>
-              </div>  
-            </div>
-            </div>
+            )}
+          </>
         )}
       </div>
-    );
-    
+
+      {/* Description Modal */}
+      {descriptionOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl max-w-2xl w-full max-h-[90vh] overflow-y-auto">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-semibold">Task Description</h2>
+                <button
+                  onClick={() => setDescriptionOpen(false)}
+                  className="text-gray-400 hover:text-gray-500"
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
+              <p className="text-gray-600">Task description goes here...</p>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default Task;
