@@ -21,12 +21,14 @@ interface UserProfile {
 interface UserContextType {
   userProfile: UserProfile | null;
   loading: boolean;
+  setUserProfile: React.Dispatch<React.SetStateAction<UserProfile | null>>;
   refreshUserProfile: () => Promise<void>;
 }
 
 const UserContext = createContext<UserContextType>({
   userProfile: null,
   loading: true,
+  setUserProfile: () => { },
   refreshUserProfile: async () => { },
 });
 
@@ -73,7 +75,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [user?.id]);
 
   return (
-    <UserContext.Provider value={{ userProfile, loading, refreshUserProfile }}>
+    <UserContext.Provider value={{ userProfile, loading, refreshUserProfile, setUserProfile }}>
       {children}
     </UserContext.Provider>
   );

@@ -16,7 +16,7 @@ const Login: React.FC = () => {
   const isFocusedRef = useRef(false);
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
-  const { refreshUserProfile } = useUser();
+  const { setUserProfile } = useUser();
 
 
   // 🔁 Redirect if already logged in
@@ -37,6 +37,7 @@ const Login: React.FC = () => {
           navigate('/', { replace: true });
           return;
         }
+        setUserProfile(userProfile);
 
         // Add a small delay to ensure proper navigation
         setTimeout(() => {
@@ -96,7 +97,7 @@ const Login: React.FC = () => {
         localStorage.setItem('user_email', authData.user.email || '');
 
         // Refresh user context and wait for it to complete
-        await refreshUserProfile();
+        // await refreshUserProfile();
 
         // Navigate based on user role from freshly fetched userProfile
         if (!userProfile || !userProfile.role) {
