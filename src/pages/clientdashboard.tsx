@@ -609,18 +609,7 @@ const ClientDashboard: React.FC = () => {
   return (
     <div className="min-h-screen bg-gray-100">
       <div className="p-4 md:p-6 lg:p-8">
-        <div className="relative mb-6">
-          <div className="inline-flex items-center space-x-3 bg-gradient-to-r from-blue-50 to-purple-50 border border-blue-200 rounded-full px-4 py-2 shadow-sm">
-            <div className="relative">
-              <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
-              <div className="absolute inset-0 w-2 h-2 bg-blue-500 rounded-full animate-ping opacity-75"></div>
-            </div>
-            <span className="text-sm font-medium text-blue-700">Under Development</span>
-            <div className="bg-blue-100 text-blue-600 text-xs px-2 py-1 rounded-full font-medium">
-              Beta
-            </div>
-          </div>
-        </div>
+
 
         <div className="max-w-full lg:max-w-7xl mx-auto">
           {/* Header */}
