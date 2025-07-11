@@ -15,6 +15,7 @@ interface UserProfile {
   salary: number;
   created_at: string;
   updated_at: string;
+  organization_id: string,
 }
 
 interface UserContextType {
@@ -26,7 +27,7 @@ interface UserContextType {
 const UserContext = createContext<UserContextType>({
   userProfile: null,
   loading: true,
-  refreshUserProfile: async () => {},
+  refreshUserProfile: async () => { },
 });
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {

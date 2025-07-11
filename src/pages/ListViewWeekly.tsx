@@ -13,6 +13,7 @@ import {
 import { ChevronLeft, ChevronRight, DownloadIcon } from "lucide-react"; // Assuming you're using Lucide icons
 import { AttendanceContext } from "./AttendanceContext";
 import PersonAttendanceDetail from './PersonAttendanceDetail';
+import { useAuthStore } from "../lib/store";
 
 interface User {
   id: string;
@@ -57,6 +58,7 @@ const EmployeeWeeklyAttendanceTable: React.FC<EmployeeWeeklyAttendanceTableProps
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState("all");
+  const user = useAuthStore((state) => state.user);
   const { setAttendanceDataWeekly } = useContext(AttendanceContext);
   const [status, setStatus] = useState("");
   const [workmode, setworkmode] = useState("");
@@ -65,10 +67,15 @@ const EmployeeWeeklyAttendanceTable: React.FC<EmployeeWeeklyAttendanceTableProps
     setLoading(true);
     try {
       // Fetch all users
+      const { data: userprofile, error: userprofileerror } = await supabase.from("users").select("id, full_name,organization_id").eq("id", user?.id).single();
+      if (userprofileerror) throw userprofileerror;
+
+      // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
-        .not("role", "in", "(client,admin,superadmin)");
+        .not("role", "in", "(client,admin,superadmin)")
+        .eq("organization_id", userprofile.organization_id);
       if (usersError) throw usersError;
 
       const weekStart = startOfWeek(date, { weekStartsOn: 1 });

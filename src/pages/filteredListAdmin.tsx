@@ -3,6 +3,7 @@ import { supabase } from '../lib/supabase';
 import { format, startOfWeek, endOfWeek, eachDayOfInterval, isWeekend } from 'date-fns';
 import { DownloadIcon } from 'lucide-react'; // Assuming you're using Lucide icons
 import { AttendanceContext } from './AttendanceContext';
+import { useAuthStore } from '../lib/store';
 
 interface User {
   id: string;
@@ -38,6 +39,7 @@ const FilteredDataAdmin: React.FC = ({ startdate, enddate, search }) => {
   const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const user = useAuthStore((state) => state.user);
   const [currentFilter, setCurrentFilter] = useState('all');
   const [status, setStatus] = useState('');
   const [workmode, setworkmode] = useState('');
@@ -55,10 +57,15 @@ const FilteredDataAdmin: React.FC = ({ startdate, enddate, search }) => {
       console.log("Formatted Date", startDateFormatted)
 
       // Fetch all users
+      const { data: userprofile, error: userprofileerror } = await supabase.from("users").select("id, full_name,organization_id").eq("id", user?.id).single();
+      if (userprofileerror) throw userprofileerror;
+
+      // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
-        .not("role", "in", "(client,admin,superadmin)");
+        .not("role", "in", "(client,admin,superadmin)")
+        .eq("organization_id", userprofile.organization_id);
       if (usersError) throw usersError;
 
       //   const weekStart = startOfWeek(date, { weekStartsOn: 1 });

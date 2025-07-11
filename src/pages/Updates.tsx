@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase";
 import { Check, CheckCheck, ChevronDown, Edit, Trash2 } from "lucide-react";
+import { useUser } from "../contexts/UserContext";
 
 interface Update {
   id: number;
@@ -48,6 +49,7 @@ function Updates() {
   const [submitted, setSubmitted] = useState(false);
   const [updateval, setupdateval] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
+  const { userProfile } = useUser()
   const [emaillist, setemaillist] = useState<string[]>([]);
   const [editingId, setEditingId] = useState<number | null>(null);
   const [loading, setloading] = useState<boolean>(false)
@@ -65,7 +67,7 @@ function Updates() {
         // Update existing record
         const { data, error } = await supabase
           .from("Updates")
-          .update({ description: updateval })
+          .update({ description: updateval, organization_id: userProfile?.organization_id })
           .eq("id", editingId)
           .select("*");
 
@@ -78,7 +80,7 @@ function Updates() {
         // Create new record
         const { data, error } = await supabase
           .from("Updates")
-          .insert([{ description: updateval }])
+          .insert([{ description: updateval, organization_id: userProfile?.organization_id }])
           .select("*");
 
         if (error) throw error;
@@ -103,7 +105,8 @@ function Updates() {
       // 1. Fetch emails
       const { data, error } = await supabase
         .from("users")
-        .select("personal_email");
+        .select("personal_email")
+        .eq("organization_id", userProfile?.organization_id);
 
       if (error) throw error;
 
@@ -136,7 +139,8 @@ function Updates() {
       const { data, error } = await supabase
         .from("Updates")
         .select("*")
-        .order("created_at", { ascending: false });
+        .order("created_at", { ascending: false })
+        .eq("organization_id", userProfile?.organization_id);
 
       if (error) throw error;
 
@@ -171,7 +175,8 @@ function Updates() {
       await supabase
         .from("Updates")
         .update({ selected: false })
-        .eq("selected", true);
+        .eq("selected", true)
+        .eq("organization_id", userProfile?.organization_id);
 
       // Set new selection
       const { error } = await supabase

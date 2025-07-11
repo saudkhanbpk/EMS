@@ -10,6 +10,7 @@ import {
 } from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
 import TaskBoardAdmin from "../components/TaskBoardAdmin";
+import { useUser } from "../contexts/UserContext";
 
 interface Employee {
   id: string;
@@ -35,6 +36,7 @@ interface Project {
 const EmployeesDetails = () => {
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
+  const { userProfile, loading: userLoading, refreshUserProfile } = useUser()
   const [loading, setLoading] = useState<boolean>(true);
   const [employeeview, setEmployeeView] = useState<
     "generalview" | "detailview"
@@ -112,7 +114,8 @@ const EmployeesDetails = () => {
       // Fetch employees
       const { data: employeesData, error: employeesError } = await supabase
         .from("users")
-        .select("*");
+        .select("*")
+        .eq("organization_id", userProfile?.organization_id);
       if (employeesError) throw employeesError;
 
       // Fetch projects
@@ -176,7 +179,7 @@ const EmployeesDetails = () => {
           if (
             !latestRatings[row.userid] ||
             new Date(row.rated_at) >
-              new Date(latestRatings[row.userid].rated_at)
+            new Date(latestRatings[row.userid].rated_at)
           ) {
             latestRatings[row.userid] = row;
           }
@@ -350,15 +353,13 @@ const EmployeesDetails = () => {
             const result = await response.json();
             if (result.success) {
               console.log(
-                `Notification sent to ${userData?.full_name || "employee"} on ${
-                  result.successCount
+                `Notification sent to ${userData?.full_name || "employee"} on ${result.successCount
                 } device(s)`
               );
               console.log("Notification result:", result);
             } else {
               console.log(
-                `No notifications sent to ${
-                  userData?.full_name || "employee"
+                `No notifications sent to ${userData?.full_name || "employee"
                 } - user may not have enabled notifications`
               );
               console.log("Notification result:", result);
@@ -370,8 +371,7 @@ const EmployeesDetails = () => {
               ) {
                 // Show a message to the user that the employee needs to enable notifications
                 alert(
-                  `${
-                    userData?.full_name || "Employee"
+                  `${userData?.full_name || "Employee"
                   } needs to enable notifications. Please ask them to log in and allow notifications.`
                 );
 
@@ -406,8 +406,7 @@ const EmployeesDetails = () => {
             }
           } else {
             console.log(
-              `Failed to send notification to ${
-                userData?.full_name || "employee"
+              `Failed to send notification to ${userData?.full_name || "employee"
               } - server returned ${response.status}`
             );
             const errorText = await response.text();
@@ -432,7 +431,7 @@ const EmployeesDetails = () => {
       console.error("Error assigning task:", err);
       alert(
         "Failed to assign task: " +
-          (err instanceof Error ? err.message : String(err))
+        (err instanceof Error ? err.message : String(err))
       );
     }
   };
@@ -618,9 +617,8 @@ const EmployeesDetails = () => {
         {[1, 2, 3, 4, 5].map((i) => (
           <svg
             key={i}
-            className={`${getStarSize(size)} ${
-              i <= rating ? getStarColor(rating) : "text-gray-300 fill-gray-300"
-            }`}
+            className={`${getStarSize(size)} ${i <= rating ? getStarColor(rating) : "text-gray-300 fill-gray-300"
+              }`}
             viewBox="0 0 20 20"
             fill="currentColor"
           >
@@ -650,14 +648,12 @@ const EmployeesDetails = () => {
 
           <div className="flex mb-6">
             <div
-              className={`flex-1 border-t-2 ${
-                step >= 1 ? "border-[#9A00FF]" : "border-gray-200"
-              }`}
+              className={`flex-1 border-t-2 ${step >= 1 ? "border-[#9A00FF]" : "border-gray-200"
+                }`}
             ></div>
             <div
-              className={`flex-1 border-t-2 ${
-                step >= 2 ? "border-[#9A00FF]" : "border-gray-200"
-              }`}
+              className={`flex-1 border-t-2 ${step >= 2 ? "border-[#9A00FF]" : "border-gray-200"
+                }`}
             ></div>
           </div>
 
@@ -1199,11 +1195,10 @@ const EmployeesDetails = () => {
                                               setPerformancePeriod("daily");
                                               setShowPerformanceMenu(false);
                                             }}
-                                            className={`block w-full text-left px-4 py-2 text-xs ${
-                                              performancePeriod === "daily"
-                                                ? "bg-gray-100"
-                                                : ""
-                                            }`}
+                                            className={`block w-full text-left px-4 py-2 text-xs ${performancePeriod === "daily"
+                                              ? "bg-gray-100"
+                                              : ""
+                                              }`}
                                           >
                                             Daily
                                           </button>
@@ -1212,11 +1207,10 @@ const EmployeesDetails = () => {
                                               setPerformancePeriod("weekly");
                                               setShowPerformanceMenu(false);
                                             }}
-                                            className={`block w-full text-left px-4 py-2 text-xs ${
-                                              performancePeriod === "weekly"
-                                                ? "bg-gray-100"
-                                                : ""
-                                            }`}
+                                            className={`block w-full text-left px-4 py-2 text-xs ${performancePeriod === "weekly"
+                                              ? "bg-gray-100"
+                                              : ""
+                                              }`}
                                           >
                                             Weekly
                                           </button>
@@ -1225,11 +1219,10 @@ const EmployeesDetails = () => {
                                               setPerformancePeriod("monthly");
                                               setShowPerformanceMenu(false);
                                             }}
-                                            className={`block w-full text-left px-4 py-2 text-xs ${
-                                              performancePeriod === "monthly"
-                                                ? "bg-gray-100"
-                                                : ""
-                                            }`}
+                                            className={`block w-full text-left px-4 py-2 text-xs ${performancePeriod === "monthly"
+                                              ? "bg-gray-100"
+                                              : ""
+                                              }`}
                                           >
                                             Monthly
                                           </button>
