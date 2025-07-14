@@ -52,7 +52,7 @@ export const handleSupabaseError = (error: unknown): string => {
     if (error.message.includes('abort')) {
       return 'Request was cancelled. Please try again.';
     }
-    
+
     // Auth errors
     if (error.message.includes('auth')) {
       return 'Authentication error. Please sign in again.';
@@ -86,34 +86,34 @@ export async function withRetry<T>(
   initialDelay = 1000
 ): Promise<T> {
   let lastError: unknown;
-  
+
   for (let i = 0; i < maxRetries; i++) {
     try {
       return await operation();
     } catch (error) {
       lastError = error;
-      
+
       // Don't retry if it's not a network error
-      if (error instanceof Error && 
-          !error.message.includes('Failed to fetch') &&
-          !error.message.includes('timeout') &&
-          !error.message.includes('network')) {
+      if (error instanceof Error &&
+        !error.message.includes('Failed to fetch') &&
+        !error.message.includes('timeout') &&
+        !error.message.includes('network')) {
         throw error;
       }
-      
+
       // Calculate delay with exponential backoff
       const delay = initialDelay * Math.pow(2, i);
-      
+
       // Add some jitter to prevent thundering herd
       const jitter = Math.random() * 200;
-      
+
       // Wait before retrying, but don't wait on the last attempt
       if (i < maxRetries - 1) {
         await new Promise(resolve => setTimeout(resolve, delay + jitter));
       }
     }
   }
-  
+
   throw lastError;
 }
 
@@ -126,3 +126,13 @@ export async function checkConnection(): Promise<boolean> {
     return false;
   }
 }
+export const supabaseAdmin = createClient(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY,
+  {
+    auth: {
+      autoRefreshToken: false,
+      persistSession: false
+    }
+  }
+);

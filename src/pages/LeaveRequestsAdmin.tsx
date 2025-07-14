@@ -1,10 +1,12 @@
 import { useEffect, useState } from "react";
 import { supabase } from "../lib/supabase"; // Import supabase instance
 import { Trash2 } from "lucide-react";
+import { useUser } from "../contexts/UserContext";
 
 const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
   const [pendingRequests, setPendingRequests] = useState([]);
   const [approvedRequests, setApprovedRequests] = useState([]);
+  const { userProfile } = useUser()
   const [rejectedRequests, setRejectedRequests] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedTab, setSelectedTab] = useState("Pending");
@@ -22,7 +24,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
     const { data, error } = await supabase
       .from("leave_requests")
       .select("*, users:users!leave_requests_user_id_fkey(email, personal_email, full_name, id , slack_id , fcm_token)")
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .eq("organization_id", userProfile?.organization_id);
     if (!error) setPendingRequests(data);
     setLoading(false);
     console.log(" Pending data", data);
@@ -36,7 +39,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
     const { data, error } = await supabase
       .from("leave_requests")
       .select("*, users:users!leave_requests_user_id_fkey(personal_email, full_name , slack_id, fcm_token)")
-      .eq("status", "approved");
+      .eq("status", "approved")
+      .eq("organization_id", userProfile?.organization_id);
     if (!error) setApprovedRequests(data);
     setLoading(false);
   };
@@ -47,7 +51,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
     const { data, error } = await supabase
       .from("leave_requests")
       .select("*, users:users!leave_requests_user_id_fkey(personal_email, full_name , slack_id , fcm_token)")
-      .eq("status", "rejected");
+      .eq("status", "rejected")
+      .eq("organization_id", userProfile?.organization_id);
     if (!error) {
       setRejectedRequests(data);
     }

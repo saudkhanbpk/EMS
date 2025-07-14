@@ -188,7 +188,8 @@ const AdminPage: React.FC = () => {
     const { count, error } = await supabase
       .from("leave_requests")
       .select("*", { count: "exact", head: true }) // Fetch count only
-      .eq("status", "pending");
+      .eq("status", "pending")
+      .eq("organization_id", userProfile?.organization_id);
 
     if (error) {
       console.error("Error fetching count:", error);

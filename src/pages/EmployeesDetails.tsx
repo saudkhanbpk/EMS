@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useContext } from "react";
-import { supabase } from "../lib/supabase";
+import { supabase, supabaseAdmin } from "../lib/supabase";
+import { createClient } from '@supabase/supabase-js';
 import Employeeprofile from "./Employeeprofile";
 
 import {
@@ -34,9 +35,17 @@ interface Project {
 }
 
 const EmployeesDetails = () => {
+  // Create admin client for user creation
+
+
+  // Check if service role key is available
+  if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+    console.error('VITE_SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
+  }
+
   // State management
   const [employees, setEmployees] = useState<Employee[]>([]);
-  const { userProfile, loading: userLoading, refreshUserProfile } = useUser()
+  const { userProfile } = useUser()
   const [loading, setLoading] = useState<boolean>(true);
   const [employeeview, setEmployeeView] = useState<
     "generalview" | "detailview"
@@ -106,6 +115,7 @@ const EmployeesDetails = () => {
   });
 
   const [step, setStep] = useState(1);
+  const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
 
   // Fetch employees with their projects and tasks
   const fetchEmployees = async () => {
@@ -451,19 +461,32 @@ const EmployeesDetails = () => {
 
   const handleSubmitSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
+    setIsCreatingEmployee(true);
+
     try {
-      const { data, error } = await supabase.auth.signUp({
+      // Check if service role key is available
+      if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
+        throw new Error('Service role key is not configured. Please contact administrator.');
+      }
+
+      // Use admin client to create user without affecting current session
+      const { data, error } = await supabaseAdmin.auth.admin.createUser({
         email: signupData.email,
         password: signupData.password,
+        email_confirm: true, // Skip email confirmation
       });
 
       if (error) throw error;
       if (data.user) {
         setEmployeeId(data.user.id);
+        // Update formData with the email from signup
+        setFormData(prev => ({ ...prev, email: signupData.email }));
         setStep(2);
       }
     } catch (err) {
       alert(err instanceof Error ? err.message : String(err));
+    } finally {
+      setIsCreatingEmployee(false);
     }
   };
 
@@ -489,26 +512,71 @@ const EmployeesDetails = () => {
         profileImageUrl = publicUrl;
       }
 
+      const updateData = {
+        full_name: formData.full_name,
+        email: formData.email,
+        role: formData.role,
+        phone_number: formData.phone,
+        personal_email: formData.personal_email,
+        location: formData.location,
+        profession: formData.profession,
+        per_hour_pay: formData.per_hour_pay ? Number(formData.per_hour_pay) : null,
+        salary: formData.salary ? Number(formData.salary) : null,
+        slack_id: formData.slack_id,
+        profile_image: profileImageUrl,
+        joining_date: formData.joining_date || new Date().toISOString(),
+        organization_id: userProfile?.organization_id, // Ensure new employee belongs to same organization
+      };
+
+      console.log('Updating user with data:', updateData);
+      console.log('Employee ID:', employeeId);
+
+      // First check if user record exists
+      const { error: fetchError } = await supabase
+        .from("users")
+        .select("id")
+        .eq("id", employeeId)
+        .single();
+
+      if (fetchError) {
+        console.error('Error fetching user:', fetchError);
+        // If user doesn't exist, create it first
+        if (fetchError.code === 'PGRST116') {
+          console.log('User record does not exist, creating it...');
+          const { error: insertError } = await supabase
+            .from("users")
+            .insert({
+              id: employeeId,
+              email: formData.email,
+              full_name: formData.full_name || 'New Employee',
+              role: 'employee',
+              organization_id: userProfile?.organization_id,
+            });
+
+          if (insertError) {
+            console.error('Error creating user record:', insertError);
+            throw insertError;
+          }
+        } else {
+          throw fetchError;
+        }
+      }
+
       const { error } = await supabase
         .from("users")
-        .update([
-          {
-            ...formData,
-            phone_number: formData.phone,
-            per_hour_pay: Number(formData.per_hour_pay),
-            salary: Number(formData.salary),
-            profile_image: profileImageUrl,
-            joining_date: formData.joining_date || new Date().toISOString(),
-          },
-        ])
+        .update(updateData)
         .eq("id", employeeId);
 
-      if (error) throw error;
+      if (error) {
+        console.error('Update error:', error);
+        throw error;
+      }
 
       resetForm();
       setShowForm(false);
       setStep(1);
       fetchEmployees();
+      alert("Employee created successfully!");
     } catch (err) {
       alert(err instanceof Error ? err.message : String(err));
     }
@@ -723,6 +791,7 @@ const EmployeesDetails = () => {
                             <option value="employee">Employee</option>
                             <option value="manager">Manager</option>
                             <option value="admin">Admin</option>
+                            <option value="client">Client</option>
                           </select>
                         ) : (
                           <input

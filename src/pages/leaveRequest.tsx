@@ -4,6 +4,7 @@ import { ArrowBigLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeft } from "lucide-react";
 import { useAuthStore, useAttendanceStore } from "../lib/store";
+import { useUser } from "../contexts/UserContext";
 
 
 interface LeaveRequestProps {
@@ -16,6 +17,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
 
   const [leaveType, setLeaveType] = useState<string>("");
   const [description, setDescription] = useState<string>("");
+  const { userProfile } = useUser()
   const [fullname, setFullname] = useState<string>("");
   const [email, setEmail] = useState<string>("");
   const [selectedDate, setSelectedDate] = useState<string>("");
@@ -79,7 +81,8 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
             start_date: new Date().toISOString(),
             leave_date: selectedDate,
             full_name: fullname,
-            user_email: localStorage.getItem('user_email')
+            user_email: localStorage.getItem('user_email'),
+            organization_id: userProfile?.organization_id
           },
         ]);
 
