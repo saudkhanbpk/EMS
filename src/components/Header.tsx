@@ -102,18 +102,17 @@ function Header(
   return (
     <>
       <nav className=''>
-        <div className="flex z-10 items-center justify-end p-4 bg-black text-white">
+        <div className="flex z-10 items-center justify-end p-4 bg-gradient-to-b from-[#0216B0] to-[#01094A] text-white">
           {/* Center - Search bar */}
           <div className="hidden md:block relative max-w-[388px] w-[388px] mx-4">
-            <Search
-              size={16}
-              className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"
-            />
             <input
               type="text"
-              placeholder="Search..."
-              className="bg-[#F5F6FA] text-black rounded-full py-1.5 px-10 text-sm w-full focus:outline-none focus:ring-1 focus:ring-white"
+              placeholder="Search Project Here"
+              className="bg-white text-black rounded-full py-2 px-4 pr-12 text-sm w-full focus:outline-none focus:ring-2 focus:ring-[#C78E2C] border border-gray-200 shadow-sm"
             />
+            <button className="absolute right-0 top-0 h-full bg-[#C78E2C] hover:bg-[#B8761F] rounded-r-full px-4 transition-colors flex items-center justify-center">
+              <Search size={16} className="text-white" />
+            </button>
           </div>
           <div className="flex items-center space-x-4">
             {/* Profile Dropdown */}
@@ -164,7 +163,7 @@ function Header(
                     </Link>
                     <button
                       onClick={handleSignOut}
-                      className="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700  hover:bg-gray-100"
                     >
                       Sign Out
                     </button>

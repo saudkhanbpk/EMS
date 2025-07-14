@@ -115,19 +115,19 @@
 }
 
 .light-scroll:hover::-webkit-scrollbar-track {
-  background: rgba(0, 0, 0, 0.05);
+  background: #01094A;
   border-radius: 3px;
   margin: 8px 0;
 }
 
 .light-scroll:hover::-webkit-scrollbar-thumb {
-  background: rgba(0, 0, 0, 0.2);
+  background: #01094A;
   border-radius: 3px;
   transition: background 0.2s ease;
 }
 
 .light-scroll:hover::-webkit-scrollbar-thumb:hover {
-  background: rgba(0, 0, 0, 0.4);
+  background: #01094A;
 }
 
 .light-scroll {

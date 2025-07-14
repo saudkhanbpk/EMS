@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { X, Star, Edit3 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { formatDistanceToNow, format } from 'date-fns';
+// import { formatDistanceToNow, format } from 'date-fns';
 import ProjectManager from '../components/ProjectManager';
 
 interface Project {
@@ -77,6 +77,23 @@ function Task() {
     fetchProjects();
   }, [userId]);
 
+  // Calculate task counts (placeholder logic - you can modify based on your actual task data)
+  const getTaskCounts = (project: Project) => {
+    // This is placeholder logic - replace with actual task counting from your database
+    const totalTasks = project.devops?.length || 0;
+    const inProgress = Math.floor(totalTasks * 0.6);
+    const pending = totalTasks - inProgress;
+    return { inProgress, pending };
+  };
+
+  // Determine project status based on tasks
+  const getProjectStatus = (project: Project) => {
+    const { inProgress, pending } = getTaskCounts(project);
+    if (pending === 0) return 'COMPLETED';
+    if (inProgress > 0) return 'GOOD';
+    return 'PENDING';
+  };
+
   return (
     <div className="min-h-screen bg-gray-50 py-10">
       <div className="max-w-7xl mx-auto px-4">
@@ -85,7 +102,10 @@ function Task() {
         ) : (
           <>
             <div className="flex justify-between items-center mb-8">
-              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Your Projects</h1>
+              <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Projects</h1>
+              <button className="bg-[#F1B318] hover:bg-[#C78E2C] text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+                Create Project
+              </button>
             </div>
 
             {loading ? (
@@ -95,62 +115,103 @@ function Task() {
                 You are not assigned to any projects.
               </div>
             ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {projects.map((project) => {
-                  const isProductOwner = project.product_owner === userId;
-                  const createdDate = new Date(project.created_at);
-                  const relativeTime = formatDistanceToNow(createdDate);
-                  const absoluteTime = format(createdDate, 'MMM d, yyyy');
-
-                  return (
-                    <div
-                      key={project.id}
-                      className="bg-white rounded-[20px] w-full min-h-[238px] p-6 shadow-xl transition-shadow hover:shadow-md cursor-pointer flex flex-col justify-between"
-                      onClick={() => navigate(`/board/${project.id}`)}
-                    >
-                      {/* Header */}
-                      <div className="flex flex-col mb-4">
-                        <div className="flex items-center px-4 py-1 bg-[#F4F6FC] rounded-full whitespace-nowrap self-start">
-                          <span className="w-2 h-2 rounded-full bg-[#9A00FF] mr-2 flex-shrink-0"></span>
-                          <span className="text-sm font-semibold text-[#9A00FF] truncate">{project.type}</span>
-                        </div>
-
-                        {isProductOwner && (
-                          <span className="text-xs font-bold text-blue-700 bg-blue-100 border border-blue-200 rounded-full px-3 py-0.5 shadow-sm whitespace-nowrap self-start mt-2">
-                            Product Owner
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Title */}
-                      <h3 className="text-xl font-semibold text-[#263238] mb-4 text-ellipsis overflow-hidden whitespace-nowrap">
-                        {project.title}
-                      </h3>
-
-                      {/* Content */}
-                      <div className="flex flex-col justify-between flex-grow">
-                        {/* Developers */}
-                        <div className="mb-4">
-                          <p className="text-sm text-gray-600 font-semibold">Developers:</p>
-                          <ul className="ml-4 mt-1 list-disc text-sm text-gray-700">
-                            {project.devops?.length > 0 ? (
-                              project.devops.map((dev) => (
-                                <li key={dev.id}>{dev.name}</li>
-                              ))
-                            ) : (
-                              <li className="text-gray-400 italic">No developers</li>
-                            )}
-                          </ul>
-                        </div>
-
-                        {/* Time Info */}
-                        <div className="text-sm text-gray-400 font-medium mt-auto pt-2">
-                          {relativeTime} ago &bull; <span className="italic">{absoluteTime}</span>
-                        </div>
-                      </div>
+              <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+                {/* Table Header */}
+                <div className="bg-[#1a1f37] text-white">
+                  <div className="grid grid-cols-7 gap-4 p-4 font-semibold text-sm">
+                    <div className="flex items-center">
+                      <Star className="w-4 h-4 text-[#C78E2C] mr-2 fill-current stroke-current" />
+                      Name
                     </div>
-                  );
-                })}
+                    <div>Type</div>
+                    <div>Team Members</div>
+                    <div>In-Progress</div>
+                    <div>Pending</div>
+                    <div>Status</div>
+                    <div></div>
+                  </div>
+                </div>
+
+                {/* Table Body */}
+                <div className="divide-y divide-gray-200">
+                  {projects.map((project) => {
+                    const isProductOwner = project.product_owner === userId;
+                    const { inProgress, pending } = getTaskCounts(project);
+                    const status = getProjectStatus(project);
+                    const statusColor = status === 'COMPLETED' ? 'text-[#24D72D]' : status === 'GOOD' ? 'text-[#24D72D]' : 'text-yellow-600';
+
+                    return (
+                      <div
+                        key={project.id}
+                        className="grid grid-cols-7 gap-4 p-4 hover:bg-gray-50 transition-colors cursor-pointer"
+                        onClick={() => navigate(`/board/${project.id}`)}
+                      >
+                        {/* Name */}
+                        <div className="flex items-center">
+                          <Star className="w-4 h-4 text-[#979797] mr-2 fill-current stroke-current" />
+                          <div>
+                            <div className="font-medium text-gray-900">{project.title}</div>
+                            {isProductOwner && (
+                              <span className="text-xs text-blue-600 bg-blue-100 rounded-full px-2 py-0.5 mt-1 inline-block">
+                                Product Owner
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Type */}
+                        <div className="flex items-center">
+                          <span className="text-sm text-gray-700">
+                            {project.type === 'Front-End Developer' ? 'Software Project' :
+                              project.type === 'Back End Developer' ? 'Service Management' :
+                                project.type || 'Software Project'}
+                          </span>
+                        </div>
+
+                        {/* Team Members */}
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium text-gray-900">
+                            {project.devops?.length.toString().padStart(2, '0') || '00'}
+                          </span>
+                        </div>
+
+                        {/* In-Progress */}
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium text-[#C78E2C]">
+                            {inProgress.toString().padStart(2, '0')}
+                          </span>
+                        </div>
+
+                        {/* Pending */}
+                        <div className="flex items-center">
+                          <span className="text-sm font-medium text-[#FF0F3C]">
+                            {pending.toString().padStart(2, '0')}
+                          </span>
+                        </div>
+
+                        {/* Status */}
+                        <div className="flex items-center">
+                          <span className={`text-sm font-bold ${statusColor}`}>
+                            {status}
+                          </span>
+                        </div>
+
+                        {/* Action */}
+                        <div className="flex items-center justify-end">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              // Add edit functionality here
+                            }}
+                            className="text-[#C78E2C] hover:text-yellow-700 p-1"
+                          >
+                            <Edit3 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </>
