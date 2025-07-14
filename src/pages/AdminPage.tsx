@@ -40,6 +40,7 @@ import { error } from 'console';
 import AdminDashboard from '../components/AdminDashboard';
 import AdminHoliday from './adminHoliday';
 import AdminDailyLogs from '../components/AdminDailyLogs';
+import { useUser } from '../contexts/UserContext';
 
 interface AttendanceRecord {
   id: string;
@@ -75,7 +76,7 @@ interface SoftwareComplaint {
 
 const AdminPage: React.FC = () => {
   const [selectedEmployeeId, setSelectedEmployeeId] = useState<string>("");
-
+  const { userProfile, loading: userloading, refreshUserProfile } = useUser()
   const childRef = useRef<{ handleEmployeeClick: (id: string) => void }>(null);
 
   // Button click handler
@@ -331,11 +332,15 @@ const AdminPage: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
+      // if (!userProfile?.organization_id) {
+      //   refreshUserProfile();
+      // }
 
       const { data, error: fetchError } = await supabase
         .from('office_complaints')
         .select('*, users:users(email, full_name)') // Join users table
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .eq("organization_id", userProfile?.organization_id);
 
       if (fetchError) {
         throw fetchError;

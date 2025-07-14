@@ -7,6 +7,7 @@ import {
 } from "lucide-react";
 import { supabase } from "../lib/supabase";
 import { set } from "date-fns";
+import { useUser } from "../contexts/UserContext";
 
 // Add this CSS to your global styles or component-specific styles
 const calendarStyles = `
@@ -152,6 +153,7 @@ const yearRange = (() => {
 function AdminHoliday() {
   // State for selected dates array
   const [selectedDates, setSelectedDates] = useState<Date[]>([]);
+  const { userProfile, } = useUser()
   // State for holiday name
   const [holidayName, setHolidayName] = useState<string>("");
   // State for form submission status
@@ -172,7 +174,8 @@ function AdminHoliday() {
     setloading(true);
     const { data, error } = await supabase
       .from('holidays')           // table name
-      .select('*');
+      .select('*')
+      .eq("organization_id", userProfile?.organization_id);
     if (error) {
       console.error(error);
     }
@@ -210,7 +213,7 @@ function AdminHoliday() {
     if (editMode && currentHoliday) {
       const { error } = await supabase
         .from('holidays')
-        .update({ dates: selectedDates, name: holidayName })
+        .update({ dates: selectedDates, name: holidayName, organization_id: userProfile?.organization_id })
         .eq('id', currentHoliday.id);
       if (!error) {
         const updatedHolidays = holidays.map(holiday =>
@@ -225,7 +228,7 @@ function AdminHoliday() {
     } else {
       const { data, error } = await supabase.from('holidays')
         .insert([
-          { dates: selectedDates, name: holidayName }
+          { dates: selectedDates, name: holidayName, organization_id: userProfile?.organization_id }
         ]).select("*");
       if (!error && data && data.length > 0) {
         setHolidays([...holidays, data[0]]);

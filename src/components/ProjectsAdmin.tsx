@@ -6,6 +6,7 @@ import { supabase } from '../lib/supabase';
 import { formatDistanceToNow } from 'date-fns';
 import TaskBoardAdmin from './TaskBoardAdmin';
 import Select from "react-select";
+import { useUser } from '../contexts/UserContext';
 
 
 
@@ -70,6 +71,7 @@ function ProjectsAdmin() {
   const navigate = useNavigate();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [ProjectId, setProjectId] = useState("");
+  const { userProfile, loading: userloading, refreshUserProfile } = useUser()
   const [Devs, setDevs] = useState<Dev[]>([]);
   const [Clients, setClients] = useState<Dev[]>([]);
   const [selectedDevs, setSelectedDevs] = useState<{ id: string; name?: string; full_name?: string }[]>([]);
@@ -158,7 +160,8 @@ function ProjectsAdmin() {
       const { data: employeesData, error } = await supabase
         .from("users")
         .select("id, full_name, email, role, joining_date")
-        .in("id", employeeIds);
+        .in("id", employeeIds)
+        .eq("organization_id", userProfile?.organization_id);
 
       if (error) {
         console.error("Error fetching employees:", error);
@@ -178,7 +181,9 @@ function ProjectsAdmin() {
       // Fetch projects for these employees
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("id, title, devops");
+        .select("id, title, devops")
+        .eq("organization_id", userProfile?.organization_id)
+        ;
 
       if (projectsError) {
         console.error("Error fetching projects:", projectsError);
@@ -234,27 +239,33 @@ function ProjectsAdmin() {
   // Fetch developers and clients
   useEffect(() => {
     const fetchDevs = async () => {
+      if (!userProfile?.organization_id) return;
+
       const { data, error } = await supabase
         .from("users")
-        .select("full_name, id, role");
+        .select("full_name, id, role")
+        .eq("organization_id", userProfile.organization_id);
       if (!error) {
         setDevs(data);
         setClients(data.filter(user => user.role === 'client'));
       }
     };
     fetchDevs();
-  }, []);
+  }, [userProfile?.organization_id]);
 
 
   // Fetch projects
   useEffect(() => {
     const fetchProjects = async () => {
+      if (!userProfile?.organization_id) return;
+
       setLoading(true);
 
       // Fetch all projects
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("*");
+        .select("*")
+        .eq("organization_id", userProfile.organization_id);
 
       if (projectsError) {
         console.error("Error fetching projects:", projectsError);
@@ -265,7 +276,8 @@ function ProjectsAdmin() {
       // Fetch all users to get creator names
       const { data: usersData, error: usersError } = await supabase
         .from("users")
-        .select("id, full_name");
+        .select("id, full_name")
+        .eq("organization_id", userProfile.organization_id);
 
       if (usersError) {
         console.error("Error fetching users:", usersError);
@@ -393,7 +405,7 @@ function ProjectsAdmin() {
     };
 
     fetchProjects();
-  }, []);
+  }, [userProfile?.organization_id]);
 
   const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
     if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
@@ -507,13 +519,16 @@ function ProjectsAdmin() {
 
   // Function to fetch and process employee data with their projects
   const fetchEmployeesWithProjects = async () => {
+    if (!userProfile?.organization_id) return;
+
     setSortLoading(true);
 
     try {
       // Fetch all employees
       const { data: employeesData, error: employeesError } = await supabase
         .from("users")
-        .select("id, full_name, email, role");
+        .select("id, full_name, email, role")
+        .eq("organization_id", userProfile.organization_id);
 
       if (employeesError) {
         console.error("Error fetching employees:", employeesError);
@@ -524,7 +539,8 @@ function ProjectsAdmin() {
       // Fetch all projects
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("*");
+        .select("*")
+        .eq("organization_id", userProfile.organization_id);
 
       if (projectsError) {
         console.error("Error fetching projects:", projectsError);
@@ -608,13 +624,16 @@ function ProjectsAdmin() {
 
   // Function to fetch and process manager data with their projects
   const fetchManagersWithProjects = async () => {
+    if (!userProfile?.organization_id) return;
+
     setSortLoading(true);
 
     try {
       // Fetch all projects with their managers
       const { data: projectsData, error: projectsError } = await supabase
         .from("projects")
-        .select("*");
+        .select("*")
+        .eq("organization_id", userProfile.organization_id);
 
       if (projectsError) {
         console.error("Error fetching projects:", projectsError);
@@ -625,7 +644,8 @@ function ProjectsAdmin() {
       // Fetch all users to get manager names
       const { data: usersData, error: usersError } = await supabase
         .from("users")
-        .select("id, full_name");
+        .select("id, full_name")
+        .eq("organization_id", userProfile.organization_id);
 
       if (usersError) {
         console.error("Error fetching users:", usersError);
@@ -700,9 +720,9 @@ function ProjectsAdmin() {
   const handleSortViewChange = (view: 'projects' | 'employees' | 'managers') => {
     setSortView(view);
 
-    if (view === 'employees' && employeesWithProjects.length === 0) {
+    if (view === 'employees') {
       fetchEmployeesWithProjects();
-    } else if (view === 'managers' && managersWithProjects.length === 0) {
+    } else if (view === 'managers') {
       fetchManagersWithProjects();
     }
   };
@@ -900,20 +920,24 @@ function ProjectsAdmin() {
             created_at: new Date().toISOString(),
             created_by: newProject.manager_id || null,
             product_owner: newProject.product_owner || null,
-
+            organization_id: userProfile?.organization_id
           }]);
 
         if (error) throw error;
       }
 
       // Refresh projects list - use the same fetch logic as in the useEffect
-      const { data: projectsData, error } = await supabase.from("projects").select("*");
+      const { data: projectsData, error } = await supabase
+        .from("projects")
+        .select("*")
+        .eq("organization_id", userProfile?.organization_id);
 
       if (!error) {
         // Fetch all users to get creator names
         const { data: usersData, error: usersError } = await supabase
           .from("users")
-          .select("id, full_name");
+          .select("id, full_name")
+          .eq("organization_id", userProfile?.organization_id);
 
         if (usersError) {
           console.error("Error fetching users:", usersError);

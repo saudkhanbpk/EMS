@@ -314,6 +314,7 @@ import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Organizations from './pages/Organizations';
 import OrganizationDetail from './components/OrganizationDetail';
 import DashboardLayout from './components/dashboardlayout';
+import TaskBoardLayout from './components/taskboardlayout';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -522,9 +523,7 @@ function App() {
               <Route path="leaveRequests" element={<LeaveRequestsAdmin fetchPendingCount={undefined} />} />
               <Route path="overtime" element={<ExtraHours />} />
               <Route path="salary-breakdown" element={<SalaryBreakdown />} />
-              <Route path="board/:id" element={<TaskBoard setSelectedTAB={function (_tab: string): void {
-                throw new Error('Function not implemented.');
-              } } />} />
+              <Route path="board/:id" element={<TaskBoard />} />
               <Route path="profile" element={<ProfileCard />} />
               <Route path="dailylogs" element={<DailyLogs />} />
 

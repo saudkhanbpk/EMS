@@ -952,10 +952,14 @@ const EmployeeAttendanceTable = () => {
   // if (selectedTab === "Employees") {
   const fetchEmployees = async () => {
     try {
+
+
+      const { data: userprofile, error: usererror } = await supabase.from("users").select("id,organization_id").eq("id", user?.id).single();
       // Fetch all employees except excluded ones
       const { data: employees, error: employeesError } = await supabase
         .from("users")
-        .select("id, full_name");
+        .select("id, full_name")
+        .eq("organization_id", userprofile?.organization_id);
 
       if (employeesError) throw employeesError;
       if (!employees || employees.length === 0) {
@@ -1961,11 +1965,15 @@ const EmployeeAttendanceTable = () => {
     const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD format
 
     try {
+      const { data: userprofile, error: userprofileerror } = await supabase.from("users").select("id, full_name,organization_id").eq("id", user?.id).single();
+      if (userprofileerror) throw userprofileerror;
+
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
-        .not("role", "in", "(client,admin,superadmin)");
+        .not("role", "in", "(client,admin,superadmin)")
+        .eq("organization_id", userprofile.organization_id);
 
       if (usersError) throw usersError;
 

@@ -12,6 +12,7 @@ import {
 import { useAuthStore } from "../lib/store";
 import { supabase } from "../lib/supabase";
 import { analyzeMessageForRating } from "../lib/openrouter";
+import { useUser } from "../contexts/UserContext";
 
 interface Employee {
   id: string;
@@ -58,6 +59,7 @@ const AdminDailyLogs: React.FC = () => {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [logs, setLogs] = useState<DailyLog[]>([]);
   const [replyText, setReplyText] = useState("");
+  const { userProfile, } = useUser()
   const [isLoading, setIsLoading] = useState(false);
   const [isSending, setIsSending] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
@@ -156,7 +158,9 @@ const AdminDailyLogs: React.FC = () => {
         .from("users")
         .select("id, full_name, email")
         .not("email", "like", "%@admin.com")
-        .order("full_name");
+        .not("role", "in", "(client,admin,superadmin)")
+        .order("full_name")
+        .eq("organization_id", userProfile?.organization_id);
 
       if (error) {
         console.error("Error fetching employees:", error);
@@ -303,7 +307,7 @@ const AdminDailyLogs: React.FC = () => {
       );
 
       // Filter out duplicate messages using client_msg_id as unique identifier
-      const newMessages = slackMessages.filter(msg => 
+      const newMessages = slackMessages.filter(msg =>
         msg.client_msg_id && !existingSlackIds.has(msg.client_msg_id)
       );
 
@@ -398,7 +402,7 @@ const AdminDailyLogs: React.FC = () => {
   // Function to sync Slack messages for current employee
   const syncSlackMessages = async () => {
     if (!selectedEmployee) return;
-    
+
     setIsLoading(true);
     try {
       await fetchSlackMessages(selectedEmployee.id);
@@ -437,7 +441,7 @@ const AdminDailyLogs: React.FC = () => {
       const formattedSlackMessages = slackMessages
         .filter(msg => {
           // Check if this Slack message is already in database using client_msg_id
-          return msg.client_msg_id && !dbLogs?.some(log => 
+          return msg.client_msg_id && !dbLogs?.some(log =>
             log.source === 'slack' && log.id_temp === msg.client_msg_id
           );
         })
@@ -500,7 +504,7 @@ const AdminDailyLogs: React.FC = () => {
 
     try {
       const logToRate = logs.find(log => log.id === pendingRating.messageId);
-      
+
       if (!logToRate) {
         alert("Message not found. Please try again.");
         return;
@@ -509,7 +513,7 @@ const AdminDailyLogs: React.FC = () => {
       // Check if this is a temporary Slack message (not yet in database)
       if (logToRate.id.startsWith('slack-')) {
         const clientMsgId = logToRate.id.replace('slack-', '');
-        
+
         // First check if this Slack message already exists in database
         const { data: existingLog, error: findError } = await supabase
           .from("dailylog")

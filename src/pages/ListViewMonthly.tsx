@@ -5,6 +5,7 @@ import { ChevronLeft, ChevronRight } from 'lucide-react'; // Assuming you're usi
 import { AttendanceContext } from './AttendanceContext';
 import { DownloadIcon } from 'lucide-react';
 import PersonAttendanceDetail from './PersonAttendanceDetail';
+import { useAuthStore } from '../lib/store';
 
 interface User {
   id: string;
@@ -40,6 +41,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
   const [attendanceData, setAttendanceData] = useState<EmployeeStats[]>([]);
   const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]); // Filtered data for display
   const [loading, setLoading] = useState(true);
+  const user = useAuthStore((state) => state.user);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "bad", "better", "best"
   const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
@@ -59,10 +61,15 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
     setLoading(true);
     try {
       // Fetch all users
+      const { data: userprofile, error: userprofileerror } = await supabase.from("users").select("id, full_name,organization_id").eq("id", user?.id).single();
+      if (userprofileerror) throw userprofileerror;
+
+      // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from("users")
         .select("id, full_name")
-        .not("role", "in", "(client,admin,superadmin)");
+        .not("role", "in", "(client,admin,superadmin)")
+        .eq("organization_id", userprofile.organization_id);
 
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);

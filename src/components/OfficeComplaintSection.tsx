@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { User } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 interface Complaint {
   id: number | string;
@@ -15,6 +16,7 @@ const OfficeComplaintSection: React.FC = () => {
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
   const [complaintsList, setComplaintsList] = useState<Complaint[]>([]);
   const [editingId, setEditingId] = useState<number | string | null>(null);
+  const { userProfile } = useUser()
   const [editingText, setEditingText] = useState('');
   const setUser = useAuthStore((state) => state.setUser);
 
@@ -47,7 +49,7 @@ const OfficeComplaintSection: React.FC = () => {
       .from('office_complaints')
       .insert([{
         complaint_text: complaint,
-        // user_id: localStorage.getItem("user_id")
+        organization_id: userProfile?.organization_id,
         user_id: localStorage.getItem('user_id')
       }]);
 
