@@ -41,6 +41,7 @@ import AdminDashboard from '../components/AdminDashboard';
 import AdminHoliday from './adminHoliday';
 import AdminDailyLogs from '../components/AdminDailyLogs';
 import { useUser } from '../contexts/UserContext';
+import AdminClient from './adminclient';
 
 interface AttendanceRecord {
   id: string;
@@ -800,6 +801,19 @@ const AdminPage: React.FC = () => {
                     >
                       Employees
                     </button>
+                    <button
+                      onClick={() => {
+                        setSelectedTab("Clients");
+                        // setShowEmployeeList(!showEmployeeList);
+                        handleClose()
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "Clients"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Clients
+                    </button>
 
                     {/* Employee List (Mobile) */}
                     {/* {isSmallScreen && showEmployeeList && (
@@ -1018,6 +1032,12 @@ const AdminPage: React.FC = () => {
           <div className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <AdminHoliday />
+          </div>
+        )}
+        {selectedTab === "Clients" && (
+          <div className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
+            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
+            <AdminClient />
           </div>
         )}
         {selectedTab === 'Employees' && (

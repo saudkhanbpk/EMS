@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { supabase } from '../lib/supabase';
+import { supabase, supabaseAdmin } from '../lib/supabase';
 import {
   ArrowLeft,
   Building2,
@@ -8,10 +8,10 @@ import {
   Plus,
   Mail,
   Shield,
-  Calendar,
   CheckCircle,
   AlertCircle,
-  X
+  X,
+  Trash2
 } from 'lucide-react';
 
 interface Organization {
@@ -37,10 +37,20 @@ interface User {
 
 interface Project {
   id: string;
-  name: string;
-  description: string;
+  title: string;
+  description: string | null;
+  start_date: string | null;
+  end_date: string | null;
   created_at: string;
+  devops: Array<{
+    id: string;
+    name: string;
+    full_name?: string;
+  }>;
+  type: string;
   created_by: string;
+  product_owner: string | null;
+  organization_id: string;
 }
 
 interface OrganizationDetailProps {
@@ -61,6 +71,7 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
   });
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isCreatingAdmin, setIsCreatingAdmin] = useState(false);
 
   useEffect(() => {
     fetchOrganizationData();
@@ -80,16 +91,18 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
       if (usersError) throw usersError;
       setUsers(usersData || []);
 
-      // Fetch projects (assuming projects table has organization_id)
+      // Fetch projects
       const { data: projectsData, error: projectsError } = await supabase
         .from('projects')
-        .select('id, name, description, created_at, created_by')
+        .select('id, title, description, start_date, end_date, created_at, devops, type, created_by, product_owner, organization_id')
+        .eq('organization_id', organization.id)
         .order('created_at', { ascending: false });
 
       if (projectsError) {
         console.warn('Projects table might not have organization_id field:', projectsError);
         setProjects([]);
       } else {
+        console.error("project added successfullly")
         setProjects(projectsData || []);
       }
     } catch (err) {
@@ -112,6 +125,7 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
     }
 
     try {
+      setIsCreatingAdmin(true);
       // Get the current user's token
       const { data: { session } } = await supabase.auth.getSession();
 
@@ -140,10 +154,44 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
       setShowAddAdminModal(false);
       setSuccess('Admin user created successfully');
       setTimeout(() => setSuccess(null), 3000);
+      fetchOrganizationData();
 
     } catch (err) {
       console.error('Error creating admin user:', err);
       setError(err.message || 'Failed to create admin user');
+    } finally {
+      setIsCreatingAdmin(false);
+    }
+  };
+
+  const handleDeleteUser = async (userId: string, userEmail: string) => {
+    if (!confirm('Are you sure you want to delete this user? This action cannot be undone.')) {
+      return;
+    }
+
+    try {
+      // Delete from database
+      const { error: dbError } = await supabase
+        .from('users')
+        .delete()
+        .eq('id', userId);
+
+      if (dbError) throw dbError;
+
+      // Delete from Supabase Auth using admin client
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(userId);
+
+      if (authError) {
+        console.warn('Failed to delete from auth:', authError);
+      }
+
+      setSuccess('User deleted successfully');
+      setTimeout(() => setSuccess(null), 3000);
+      fetchOrganizationData();
+
+    } catch (err) {
+      console.error('Error deleting user:', err);
+      setError(err.message || 'Failed to delete user');
     }
   };
 
@@ -276,7 +324,7 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
                             Role
                           </th>
                           <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Joined
+                            Actions
                           </th>
                         </tr>
                       </thead>
@@ -315,10 +363,13 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
                               </span>
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                              <div className="flex items-center">
-                                <Calendar className="text-gray-400 mr-2" size={16} />
-                                {new Date(user.created_at).toLocaleDateString()}
-                              </div>
+                              <button
+                                onClick={() => handleDeleteUser(user.id, user.email)}
+                                className="text-red-600 hover:text-red-800 transition-colors p-2 rounded-lg hover:bg-red-50"
+                                title="Delete user"
+                              >
+                                <Trash2 size={16} />
+                              </button>
                             </td>
                           </tr>
                         ))}
@@ -345,10 +396,27 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
                   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                     {projects.map((project) => (
                       <div key={project.id} className="bg-gray-50 rounded-lg p-4">
-                        <h3 className="font-semibold text-gray-900 mb-2">{project.name}</h3>
-                        <p className="text-gray-600 text-sm mb-3 line-clamp-2">
+                        <h3 className="font-semibold text-gray-900 mb-2">{project.title}</h3>
+                        <p className="text-gray-600 text-sm mb-3">
                           {project.description || 'No description provided'}
                         </p>
+                        <div className="mb-2">
+                          <span className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
+                            {project.type}
+                          </span>
+                        </div>
+                        {project.devops && project.devops.length > 0 && (
+                          <div className="mb-2">
+                            <p className="text-xs text-gray-500 mb-1">DevOps:</p>
+                            <div className="flex flex-wrap gap-1">
+                              {project.devops.map((dev) => (
+                                <span key={dev.id} className="inline-flex items-center px-2 py-1 rounded-full text-xs bg-purple-100 text-purple-800">
+                                  {dev.full_name || dev.name}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        )}
                         <div className="text-xs text-gray-500">
                           Created: {new Date(project.created_at).toLocaleDateString()}
                         </div>
@@ -434,9 +502,16 @@ const OrganizationDetail: React.FC<OrganizationDetailProps> = ({ organization, o
               </button>
               <button
                 onClick={handleAddAdmin}
-                className="px-4 py-2 bg-[#9A00FF] text-white rounded-lg hover:bg-purple-700 transition-colors"
+                disabled={isCreatingAdmin}
+                className={`px-4 py-2 text-white rounded-lg transition-colors flex items-center space-x-2 ${isCreatingAdmin
+                  ? 'bg-purple-400 cursor-not-allowed'
+                  : 'bg-[#9A00FF] hover:bg-purple-700'
+                  }`}
               >
-                Create Admin
+                {isCreatingAdmin && (
+                  <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-white"></div>
+                )}
+                <span>{isCreatingAdmin ? 'Creating...' : 'Create Admin'}</span>
               </button>
             </div>
           </div>

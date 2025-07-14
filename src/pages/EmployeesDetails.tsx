@@ -68,6 +68,7 @@ const EmployeesDetails = () => {
   >("daily");
   const [showPerformanceMenu, setShowPerformanceMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [showAllProjects, setShowAllProjects] = useState<{[key: string]: boolean}>({});
 
   const { openTaskBoard } = useContext(AttendanceContext);
   const formRef = useRef<HTMLFormElement>(null);
@@ -652,6 +653,14 @@ const EmployeesDetails = () => {
     try {
       const { error } = await supabase.from("users").delete().eq("id", id);
       if (error) throw error;
+
+      const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(id);
+
+      if (authError) {
+        console.warn('Failed to delete from auth:', authError);
+      }
+
+
       setEmployees((prev) => prev.filter((emp) => emp.id !== id));
     } catch (err) {
       console.error("Error deleting employee:", err);
@@ -1356,19 +1365,31 @@ const EmployeesDetails = () => {
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                         {entry.projects && entry.projects.length > 0 ? (
                                           <div className="flex flex-wrap gap-1.5">
-                                            {entry.projects.slice(0, 2).map((project: any) => (
+                                            {(showAllProjects[entry.id] ? entry.projects : entry.projects.slice(0, 2)).map((project: any) => (
                                               <button
                                                 key={project.id}
-                                                onClick={() => openTaskBoard(project.id, project.devops)}
-                                                className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  openTaskBoard(project.id, project.devops);
+                                                }}
+                                                className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
                                               >
                                                 {project.title}
                                               </button>
                                             ))}
                                             {entry.projects.length > 2 && (
-                                              <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-                                                +{entry.projects.length - 2}
-                                              </span>
+                                              <button
+                                                onClick={(e) => {
+                                                  e.stopPropagation();
+                                                  setShowAllProjects(prev => ({
+                                                    ...prev,
+                                                    [entry.id]: !prev[entry.id]
+                                                  }));
+                                                }}
+                                                className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                              >
+                                                {showAllProjects[entry.id] ? 'Show Less' : `+${entry.projects.length - 2}`}
+                                              </button>
                                             )}
                                           </div>
                                         ) : (
@@ -1384,14 +1405,20 @@ const EmployeesDetails = () => {
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-right">
                                         <div className="flex items-center gap-2 justify-end">
                                           <button
-                                            onClick={() => handleAssignClick(entry)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleAssignClick(entry);
+                                            }}
                                             className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                                             title="Assign Task"
                                           >
                                             <FiPlusSquare className="w-4 h-4" />
                                           </button>
                                           <button
-                                            onClick={() => handleDelete(entry.id)}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              handleDelete(entry.id);
+                                            }}
                                             className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                             title="Delete"
                                           >
@@ -1443,14 +1470,20 @@ const EmployeesDetails = () => {
                                 </button>
                                 <div className="flex items-center gap-1">
                                   <button
-                                    onClick={() => handleAssignClick(entry)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleAssignClick(entry);
+                                    }}
                                     className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                                     title="Assign Task"
                                   >
                                     <FiPlusSquare className="w-3.5 h-3.5" />
                                   </button>
                                   <button
-                                    onClick={() => handleDelete(entry.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleDelete(entry.id);
+                                    }}
                                     className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                     title="Delete"
                                   >
@@ -1490,23 +1523,31 @@ const EmployeesDetails = () => {
                                   </p>
                                   {entry.projects && entry.projects.length > 0 ? (
                                     <div className="flex flex-wrap gap-1.5 mt-1">
-                                      {entry.projects
-                                        .slice(0, 2)
-                                        .map((project: any) => (
-                                          <button
-                                            key={project.id}
-                                            onClick={() =>
-                                              openTaskBoard(project.id, project.devops)
-                                            }
-                                            className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700"
-                                          >
-                                            {project.title}
-                                          </button>
-                                        ))}
+                                      {(showAllProjects[entry.id] ? entry.projects : entry.projects.slice(0, 2)).map((project: any) => (
+                                        <button
+                                          key={project.id}
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            openTaskBoard(project.id, project.devops);
+                                          }}
+                                          className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                        >
+                                          {project.title}
+                                        </button>
+                                      ))}
                                       {entry.projects.length > 2 && (
-                                        <span className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600">
-                                          +{entry.projects.length - 2}
-                                        </span>
+                                        <button
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            setShowAllProjects(prev => ({
+                                              ...prev,
+                                              [entry.id]: !prev[entry.id]
+                                            }));
+                                          }}
+                                          className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                        >
+                                          {showAllProjects[entry.id] ? 'Show Less' : `+${entry.projects.length - 2}`}
+                                        </button>
                                       )}
                                     </div>
                                   ) : (
