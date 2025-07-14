@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 // import React, { useEffect, useState } from 'react';
 // import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 // import { useAuthStore } from './lib/store';
@@ -270,7 +272,7 @@
 
 
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useParams } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
 import { useAuthStore } from './lib/store';
 import EmployeeLayout from './components/EmployeeLayout';
 import Login from './pages/Login';
@@ -292,7 +294,6 @@ import DailyLogs from './pages/DailyLogs';
 import WidgetDemo from './components/WidgetDemo';
 import { getMessaging, onMessage } from "firebase/messaging";
 import { initializeApp } from "firebase/app";
-import { messaging } from "../notifications/firebase";
 import { AttendanceProvider } from './pages/AttendanceContext';
 import { Toaster } from "./component/ui/toaster";
 import { Toaster as Sonner } from "./component/ui/sonner";
@@ -461,7 +462,7 @@ function App() {
               </div>
             )}
           </AnimatePresence>
-          {chatperson && <Chat id={selecteduser} closechatperson={closechatperson} />}
+          {chatperson && <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />}
           {!ischatopen && <Chatlayout><Chatbutton openchat={openChat} /></Chatlayout>}
 
           {/* App Routes */}
@@ -518,10 +519,12 @@ function App() {
               <Route path="tasks" element={<Tasks />} />
               <Route path="software-complaint" element={<SoftwareComplaintSection />} />
               <Route path="office-complaint" element={<OfficeComplaintSection />} />
-              <Route path="leaveRequests" element={<LeaveRequestsAdmin />} />
+              <Route path="leaveRequests" element={<LeaveRequestsAdmin fetchPendingCount={undefined} />} />
               <Route path="overtime" element={<ExtraHours />} />
               <Route path="salary-breakdown" element={<SalaryBreakdown />} />
-              <Route path="board/:id" element={<TaskBoard />} />
+              <Route path="board/:id" element={<TaskBoard setSelectedTAB={function (_tab: string): void {
+                throw new Error('Function not implemented.');
+              } } />} />
               <Route path="profile" element={<ProfileCard />} />
               <Route path="dailylogs" element={<DailyLogs />} />
 

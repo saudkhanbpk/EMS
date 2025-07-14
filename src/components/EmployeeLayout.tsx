@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
 import Chatbutton from './chatbtn';
@@ -6,7 +7,6 @@ import {
   LayoutDashboard,
   Clock,
   Calendar,
-  LogOut,
   User,
   ListTodo,
   CloudCog,
@@ -31,22 +31,6 @@ const EmployeeLayout: React.FC = () => {
   const setUser = useAuthStore((state) => state.setUser);
   const [isSmallScreen, setIsSmallScreen] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-
-  // //Checking For Session Expiry
-  // useEffect(() => {
-  //   const checksession = () => {
-  //     const sessionsExpiry = localStorage.getItem('sessionExpiresAt');
-  //     if (sessionsExpiry && Date.now() >= Number(sessionsExpiry)) {
-  //       handleSignOut();
-  //     }
-  //   }
-  //   checksession();
-  //   const interval = setInterval(checksession, 4 * 60 * 1000); // Check every 30 seconds
-  //   return () => clearInterval(interval);
-  // }, [navigate]);
-
-
-
 
   // Check screen size on mount and resize
   useEffect(() => {
@@ -79,8 +63,6 @@ const EmployeeLayout: React.FC = () => {
     navigate('/login');
   };
 
-
-
   const allNavigation = [
     { name: 'Dashboard', href: '/', icon: LayoutDashboard },
     { name: 'Attendance', href: '/attendance', icon: Clock },
@@ -103,21 +85,16 @@ const EmployeeLayout: React.FC = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
-
   return (
-
     <div className="min-h-screen bg-gray-100">
       <Header
-
         setIsSidebarOpen={setIsSidebarOpen}
         handleSignOut={handleSignOut}
       />
-      {/* <div className="flex h-screen"> */}
-      <div >
-        <div className="min-h-screen bg-gray-100 overflow-hidden ">
+      <div>
+        <div className="min-h-screen bg-gray-100 overflow-hidden">
           <Updateview />
-          <div className="flex ">
-
+          <div className="flex">
             {/* Sidebar Toggle Button (Only for Small Screens) */}
             {isSmallScreen && (
               <button
@@ -137,27 +114,27 @@ const EmployeeLayout: React.FC = () => {
 
             {/* Sidebar */}
             <div className={`bg-white p-4 shadow-lg
-          ${isSmallScreen
+                ${isSmallScreen
                 ? isSidebarOpen
                   ? 'translate-x-0'
                   : '-translate-x-full'
                 : 'translate-x-0 w-64'
               }`}></div>
             <div
-              className={`bg-[#000000] w-64 p-4 z-40 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
-          ${isSmallScreen
+              className={`bg-[#01094A] w-64 p-4 z-40 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
+                ${isSmallScreen
                   ? isSidebarOpen
                     ? 'translate-x-0'
                     : '-translate-x-full'
                   : 'translate-x-0'
                 }`}
             >
-              <div className="flex flex-col h-full overflow-y-scroll sidebar-scroll  ">
+              <div className="flex flex-col h-full overflow-y-scroll sidebar-scroll">
                 <div className="flex items-center justify-center">
-                  <h1 className="text-2xl font-poppins font-bold text-[white] mt-2">TalentSync</h1>
+                  <h1 className="text-2xl font-poppins font-bold text-[#FFFFFF] mt-2">TalentSync</h1>
                 </div>
 
-                <nav className="flex-1 px-4 py-8 space-y- ">
+                <nav className="flex-1 px-4 py-8 space-y-">
                   {loading ? (
                     // Skeleton loading
                     Array.from({ length: 6 }).map((_, index) => (
@@ -175,12 +152,12 @@ const EmployeeLayout: React.FC = () => {
                           to={item.href}
                           onClick={handleScrollToTop}
                           className={`
-                        flex items-center px-4 py-4 text-sm rounded-lg
-                        ${location.pathname === item.href
-                              ? 'bg-[#9A00FF] text-[white]'
-                              : 'text-[white] '
+                            flex items-center px-4 py-4 text-sm rounded-lg
+                            ${location.pathname === item.href
+                              ? 'bg-[#C78E2C] text-[#FFFFFF]'
+                              : 'text-[#FFFFFF] hover:bg-[#C78E2C]/20'
                             }
-                      `}
+                          `}
                         >
                           <Icon className="w-5 h-5 mr-3" />
                           {item.name}
@@ -189,28 +166,11 @@ const EmployeeLayout: React.FC = () => {
                     })
                   )}
                 </nav>
-
-                {/* <div className="p-4 border-t">
-              <div className="flex items-center mb-4">
-                <User className="w-5 h-5 mr-3 text-gray-500" />
-                <span className="text-sm text-gray-600">
-                  {JSON.parse(localStorage.getItem('supabaseSession')).user.email}
-                </span>
-              </div>
-              <button
-                onClick={handleSignOut}
-                className="flex items-center w-full px-4 py-2 text-sm text-red-600 rounded-lg hover:bg-red-50"
-              >
-                <LogOut className="w-5 h-5 mr-3" />
-                Sign Out
-              </button>
-            </div> */}
               </div>
             </div>
 
             {/* Main Content */}
-            <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out
-             `}>
+            <div className={`flex-1 overflow-auto transition-all duration-300 ease-in-out`}>
               <div className={`w-full ${isSmallScreen && !isSidebarOpen ? "pt-8 px-2" : "sm:p-8"}`}>
                 <Outlet />
               </div>
@@ -218,12 +178,10 @@ const EmployeeLayout: React.FC = () => {
           </div>
         </div>
       </div>
-      <Chatlayout><Chatbutton></Chatbutton></Chatlayout>
-
-      {/* Add TimeTrackerWidget */}
-      {/* <TimeTrackerWidget /> */}
+      <Chatlayout><Chatbutton openchat={function (): void {
+        throw new Error('Function not implemented.');
+      } }></Chatbutton></Chatlayout>
     </div>
-    // </div>
   );
 };
 
