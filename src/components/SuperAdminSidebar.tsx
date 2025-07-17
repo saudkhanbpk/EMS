@@ -28,7 +28,7 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
       localStorage.removeItem('supabaseSession');
       localStorage.removeItem('user_id');
       localStorage.removeItem('user_email');
-      navigate('/login');
+      navigate('/home');
     } catch (error) {
       console.error('Error logging out:', error);
     }

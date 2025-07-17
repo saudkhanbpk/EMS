@@ -60,7 +60,7 @@ const EmployeeLayout: React.FC = () => {
     await supabase.auth.signOut();
     setUser(null);
     localStorage.clear();
-    navigate('/login');
+    navigate('/home');
   };
 
   const allNavigation = [

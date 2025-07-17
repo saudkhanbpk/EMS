@@ -532,7 +532,7 @@ const AdminPage: React.FC = () => {
     setUser(null)
     await supabase.auth.signOut();
     localStorage.clear();
-    navigate('/login');
+    navigate('/home');
   };
 
   const calculateDuration = (start: string, end: string | null) => {
