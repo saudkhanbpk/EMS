@@ -305,7 +305,7 @@ import Chatbutton from './components/chatbtn';
 import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
-import Adminroute, { SuperAdminRoute } from './components/adminroute';
+import Adminroute, { EmployeeRoute, SuperAdminRoute, UserRoute } from './components/adminroute';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './lib/AuthProvider';
 import { UserProvider } from './contexts/UserContext';
@@ -315,6 +315,9 @@ import Organizations from './pages/Organizations';
 import OrganizationDetail from './components/OrganizationDetail';
 import DashboardLayout from './components/dashboardlayout';
 import TaskBoardLayout from './components/taskboardlayout';
+import LandingPage from './pages/landingpage';
+import UserPage from './pages/UserPage';
+import UserOrganizationDetail from './pages/UserOrganizationDetail';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -470,10 +473,26 @@ function App() {
           <Routes>
             {/* Public Route: Login */}
             <Route path="/login" element={<Login />} />
+            <Route path="/home" element={<LandingPage />} />
 
             {/* Widget Demo Route */}
             <Route path="/widget-demo" element={<WidgetDemo />} />
 
+            {/* User Routes (Protected) */}
+            <Route path="/user" element={
+              <PrivateRoute>
+                <UserRoute>
+                  <UserPage />
+                </UserRoute>
+              </PrivateRoute>
+            } />
+            <Route path="/user/:organizationId" element={
+              <PrivateRoute>
+                <UserRoute>
+                  <UserOrganizationDetail />
+                </UserRoute>
+              </PrivateRoute>
+            } />
 
             {/* SuperAdmin Routes (Protected) */}
             <Route
@@ -510,7 +529,9 @@ function App() {
               path="/"
               element={
                 <PrivateRoute>
-                  <EmployeeLayout />
+                  <EmployeeRoute>
+                    <EmployeeLayout />
+                  </EmployeeRoute>
                 </PrivateRoute>
               }
             >
@@ -523,7 +544,7 @@ function App() {
               <Route path="leaveRequests" element={<LeaveRequestsAdmin fetchPendingCount={undefined} />} />
               <Route path="overtime" element={<ExtraHours />} />
               <Route path="salary-breakdown" element={<SalaryBreakdown />} />
-              <Route path="board/:id" element={<TaskBoard />} />
+              <Route path="board/:id" element={<TaskBoardLayout />} />
               <Route path="profile" element={<ProfileCard />} />
               <Route path="dailylogs" element={<DailyLogs />} />
 
@@ -544,7 +565,7 @@ const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }>
   adminOnly
 }) => {
   const user = useAuthStore((state) => state.user);
-  if (!user) return <Navigate to="/login" replace />;
+  if (!user) return <Navigate to="/home" replace />;
   return <>{children}</>;
 };
 

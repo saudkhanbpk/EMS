@@ -9,7 +9,12 @@ function Chatlayout({ children }) {
     console.log(currentPath);
 
     // Hide children if the currentPath is "/chat" or starts with "/chat/"
-    const shouldShowChildren = user && !(currentPath === "/chat" || currentPath.startsWith("/chat/"));
+    const shouldShowChildren = user && !(
+        currentPath === "/chat" ||
+        currentPath.startsWith("/chat/") ||
+        currentPath === "/user" ||
+        currentPath.startsWith("/user")
+    );
 
     return <>{shouldShowChildren ? children : null}</>;
 }

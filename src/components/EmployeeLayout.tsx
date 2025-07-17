@@ -178,9 +178,7 @@ const EmployeeLayout: React.FC = () => {
           </div>
         </div>
       </div>
-      <Chatlayout><Chatbutton openchat={function (): void {
-        throw new Error('Function not implemented.');
-      } }></Chatbutton></Chatlayout>
+
     </div>
   );
 };

@@ -112,7 +112,10 @@ const Login: React.FC = () => {
             navigate('/superadmin', { replace: true });
           } else if (userProfile.role === 'admin') {
             navigate('/admin', { replace: true });
-          } else {
+          } else if (userProfile.role == "user") {
+            navigate('/user', { replace: true });
+          }
+          else {
             navigate('/', { replace: true });
           }
         }, 100);
