@@ -72,13 +72,26 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
       const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
         email: formData.email,
         password: formData.password,
-        email_confirm: false, // or false, depending on your flow
+        email_confirm: false, // Keep this false so user needs to confirm
       });
 
       if (authError) throw authError;
       if (!authData.user) throw new Error('Failed to create user account');
 
-      // Step 2: Update the user record in the users table with role='user'
+      // Step 2: Manually send the confirmation email
+      const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+        formData.email,
+        {
+          redirectTo: `${window.location.origin}/login`, // Optional: where to redirect after confirmation
+          data: {
+            full_name: formData.name // Pass additional user data
+          }
+        }
+      );
+
+      if (inviteError) throw inviteError;
+
+      // Step 3: Update the user record in the users table with role='user'
       const { error: updateError } = await supabase
         .from('users')
         .update({
