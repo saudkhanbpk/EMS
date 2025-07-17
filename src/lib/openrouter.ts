@@ -25,7 +25,7 @@ export async function analyzeMessageForRating(message: string): Promise<{
                 headers: {
                     'Authorization': `Bearer ${OPENROUTER_API_KEY}`,
                     'Content-Type': 'application/json',
-                    'HTTP-Referer': window.location.origin || 'http://localhost:5173',
+                    'HTTP-Referer': window.location.origin || 'http://auth/user',
                     'X-Title': 'Daily Log Analyzer'
                 },
                 body: JSON.stringify({

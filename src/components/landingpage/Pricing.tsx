@@ -9,7 +9,7 @@ const Pricing = () => {
   const plans = [
     {
       name: "1-Month Plan",
-      price: "$00.00",
+      price: "Free",
       period: "for 1 months",
       features: "Full",
       support: "Standard",
