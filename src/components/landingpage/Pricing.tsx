@@ -8,9 +8,9 @@ const Pricing = () => {
 
   const plans = [
     {
-      name: "3-Month Plan",
-      price: "$29.99",
-      period: "for 3 months",
+      name: "1-Month Plan",
+      price: "Free",
+      period: "for 1 months",
       features: "Full",
       support: "Standard",
       description: "Perfect for small teams getting started",
@@ -20,9 +20,9 @@ const Pricing = () => {
       savings: "Save 10%"
     },
     {
-      name: "6-Month Plan",
-      price: "$49.99",
-      period: "for 6 months",
+      name: "3-Month Plan",
+      price: "$10.00",
+      period: "for 3 months",
       features: "Full",
       support: "Priority",
       description: "Great for growing businesses",
@@ -32,9 +32,9 @@ const Pricing = () => {
       savings: "Save 25%"
     },
     {
-      name: "1-Year Plan",
-      price: "$79.99",
-      period: "for 12 months",
+      name: "6 Month Plan",
+      price: "$20.00",
+      period: "for 6 months",
       features: "Full",
       support: "Premium",
       description: "Best value for established companies",

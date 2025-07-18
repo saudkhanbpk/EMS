@@ -71,7 +71,7 @@ const Header = () => {
                 <Zap className="w-5 h-5 text-blue-900" />
               </motion.div>
               <span className="text-2xl font-bold text-yellow-400">
-                EMS
+                EstroWork
               </span>
             </div>
           </motion.div>
