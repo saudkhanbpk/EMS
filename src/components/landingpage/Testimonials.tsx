@@ -44,11 +44,12 @@ const Testimonials = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             viewport={{ once: true }}
           >
-            See how EMS is transforming workplaces with AI-powered insights and streamlined management.
+            Real teams. Real results. See why WhisprWork is the new favorite for project management.
           </motion.p>
         </motion.div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          {/* Testimonial 1 */}
           <motion.div
             className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/20"
             initial={{ opacity: 0, y: 50 }}
@@ -59,67 +60,133 @@ const Testimonials = () => {
           >
             <div className="flex items-center gap-4 mb-6">
               <motion.img
-                src="https://images.pexels.com/photos/3778876/pexels-photo-3778876.jpeg?auto=compress&cs=tinysrgb&w=150&h=150&fit=crop"
-                alt="Johnson"
+                src="https://images.pexels.com/photos/614810/pexels-photo-614810.jpeg?auto=compress&fit=crop&w=150&q=80"
+                alt="Adeel R."
                 className="w-16 h-16 rounded-full object-cover shadow-lg"
                 whileHover={{ scale: 1.1 }}
                 transition={{ duration: 0.3 }}
               />
               <div>
-                <h4 className="text-lg font-semibold text-gray-900">Johnson</h4>
-                <p className="text-gray-600">HR Director, TechCorp</p>
+                <h4 className="text-lg font-semibold text-gray-900">Adeel R.</h4>
+                <p className="text-gray-600">Product Lead</p>
                 <div className="flex gap-1 mt-1">
                   {[...Array(5)].map((_, i) => (
-                    <motion.div
-                      key={i}
-                      initial={{ opacity: 0, scale: 0 }}
-                      whileInView={{ opacity: 1, scale: 1 }}
-                      transition={{ duration: 0.3, delay: 0.5 + i * 0.1 }}
-                      viewport={{ once: true }}
-                    >
-                      <Star className="w-4 h-4 text-yellow-400 fill-current" />
-                    </motion.div>
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
                   ))}
                 </div>
               </div>
             </div>
-            <motion.div
-              whileHover={{ scale: 1.1, rotate: 5 }}
-              transition={{ duration: 0.3 }}
-            >
-              <Quote className="w-8 h-8 text-blue-600 mb-4" />
-            </motion.div>
+            <Quote className="w-8 h-8 text-blue-600 mb-4" />
             <p className="text-gray-700 leading-relaxed">
-              "EMS has revolutionized our employee management. The AI-powered daily log ratings provide incredible insights into productivity, and the location-based check-in system has made remote work management seamless. Our team loves the intuitive interface!"
+              “We’ve tried Trello, Asana, and ClickUp—WhisprWork just feels simpler and more focused. It’s become our daily go-to.”
             </p>
           </motion.div>
 
-          <div className="bg-white rounded-lg p-8 shadow-lg">
-            <div className="mb-6">
-              <div className="flex items-center gap-2 mb-2">
-                <div className="w-8 h-8 bg-blue-600 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-bold">AI</span>
+          {/* Testimonial 2 */}
+          <motion.div
+            className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/20"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+            viewport={{ once: true }}
+            whileHover={{ y: -5, transition: { duration: 0.3 } }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <motion.img
+                src="https://images.pexels.com/photos/1130626/pexels-photo-1130626.jpeg?auto=compress&fit=crop&w=150&q=80"
+                alt="Sana M."
+                className="w-16 h-16 rounded-full object-cover shadow-lg"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.3 }}
+              />
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900">Sana M.</h4>
+                <p className="text-gray-600">Project Manager</p>
+                <div className="flex gap-1 mt-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
                 </div>
-                <h4 className="text-lg font-semibold text-gray-900">AI Performance Insight</h4>
-              </div>
-              <div className="flex gap-1 mb-4">
-                {[...Array(5)].map((_, i) => (
-                  <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
-                ))}
               </div>
             </div>
             <Quote className="w-8 h-8 text-blue-600 mb-4" />
             <p className="text-gray-700 leading-relaxed">
-              "Based on analysis of 10,000+ daily logs, teams using EMS  show 35% improvement in task completion rates and 42% better project delivery times. The AI rating system helps identify top performers and areas for development with 94% accuracy."
+              “Managing tasks across 3 teams used to be chaotic. Now we can track everything from one clean dashboard.”
             </p>
-          </div>
+          </motion.div>
+
+          {/* Testimonial 3 */}
+          <motion.div
+            className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/20"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+            viewport={{ once: true }}
+            whileHover={{ y: -5, transition: { duration: 0.3 } }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <motion.img
+                src="https://images.pexels.com/photos/91227/pexels-photo-91227.jpeg?auto=compress&fit=crop&w=150&q=80"
+                alt="Liam T."
+                className="w-16 h-16 rounded-full object-cover shadow-lg"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.3 }}
+              />
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900">Liam T.</h4>
+                <p className="text-gray-600">Operations Lead</p>
+                <div className="flex gap-1 mt-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Quote className="w-8 h-8 text-blue-600 mb-4" />
+            <p className="text-gray-700 leading-relaxed">
+              “WhisprWork’s real-time collaboration has made our remote team feel truly connected. The learning curve was almost zero.”
+            </p>
+          </motion.div>
+
+          {/* Testimonial 4 */}
+          <motion.div
+            className="bg-white/95 backdrop-blur-sm rounded-2xl p-8 shadow-2xl border border-white/20"
+            initial={{ opacity: 0, y: 50 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4 }}
+            viewport={{ once: true }}
+            whileHover={{ y: -5, transition: { duration: 0.3 } }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <motion.img
+                src="https://images.pexels.com/photos/1181696/pexels-photo-1181696.jpeg?auto=compress&fit=crop&w=150&q=80"
+                alt="Priya S."
+                className="w-16 h-16 rounded-full object-cover shadow-lg"
+                whileHover={{ scale: 1.1 }}
+                transition={{ duration: 0.3 }}
+              />
+              <div>
+                <h4 className="text-lg font-semibold text-gray-900">Priya S.</h4>
+                <p className="text-gray-600">Client Success Manager</p>
+                <div className="flex gap-1 mt-1">
+                  {[...Array(5)].map((_, i) => (
+                    <Star key={i} className="w-4 h-4 text-yellow-400 fill-current" />
+                  ))}
+                </div>
+              </div>
+            </div>
+            <Quote className="w-8 h-8 text-blue-600 mb-4" />
+            <p className="text-gray-700 leading-relaxed">
+              “Inviting clients to specific projects is a game-changer. Feedback is instant, and everyone’s always in sync.”
+            </p>
+          </motion.div>
         </div>
 
         <div className="mt-12 text-center">
           <div className="inline-flex items-center gap-8 text-blue-100">
             <div className="text-center">
               <div className="text-2xl font-bold text-white">10,000+</div>
-              <div className="text-sm">Daily Logs Analyzed</div>
+              <div className="text-sm">Projects Managed</div>
             </div>
             <div className="text-center">
               <div className="text-2xl font-bold text-white">35%</div>

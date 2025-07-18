@@ -150,7 +150,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
               </div>
             )}
 
-            {showSuccessAlert && (
+            {showSuccessAlert ? (
               <motion.div
                 className="bg-green-50 border border-green-200 text-green-700 px-4 py-4 rounded-lg mb-4 flex flex-col items-center"
                 initial={{ opacity: 0, y: -10 }}
@@ -171,9 +171,8 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
                   OK
                 </motion.button>
               </motion.div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
+            ) : (
+              <form onSubmit={handleSubmit} className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Name
@@ -251,6 +250,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
                 )}
               </motion.button>
             </form>
+            )}
           </div>
         </motion.div>
       </motion.div>

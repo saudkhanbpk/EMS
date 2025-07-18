@@ -8,7 +8,7 @@ const Hero = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const texts = [ 'Team Productivity', ];
+    const texts = ['Work Smarter, Deliver Faster — With Estrowork',];
 
     const timeout = setTimeout(() => {
       const current = texts[currentIndex];
@@ -69,7 +69,7 @@ const Hero = () => {
           {/* Main Heading with Typewriter Effect */}
           <motion.div variants={itemVariants} className="mb-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-              <span className="block mb-2">Streamline Your</span>
+              <span className="block mb-2">Estrowork is your all-in-one workspace—</span>
               <span className="relative">
                 <span className="text-yellow-300">
                   {currentText}
@@ -88,12 +88,13 @@ const Hero = () => {
             variants={itemVariants}
             className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl mx-auto leading-relaxed"
           >
-            Comprehensive employee management platform with{' '}
-            <span className="text-yellow-300 font-semibold">AI-powered insights</span>,{' '}
-            <span className="text-yellow-300 font-semibold">location tracking</span>, and{' '}
-            <span className="text-yellow-300 font-semibold">24/7 system availability</span>.
+            Manage your team, organize your projects, assign tasks, and even invite clients to collaborate on specific projects in real-time.
+            <br /><br />
+            No need to juggle multiple tools like Jira, Asana, or Trello anymore.
             <br />
-            Transform how you manage your workforce.
+            <span className="text-yellow-300 font-semibold">Estrowork</span> brings everything together in a clean, easy-to-use platform that your entire team will love.
+            <br /><br />
+            Enjoy <span className="text-yellow-300 font-semibold">AI-powered insights</span>, <span className="text-yellow-300 font-semibold">location tracking</span>, and <span className="text-yellow-300 font-semibold">24/7 system availability</span>—all in one place.
           </motion.p>
 
           {/* Feature Pills */}

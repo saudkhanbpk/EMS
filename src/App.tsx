@@ -318,6 +318,7 @@ import TaskBoardLayout from './components/taskboardlayout';
 import LandingPage from './pages/landingpage';
 import UserPage from './pages/UserPage';
 import UserOrganizationDetail from './pages/UserOrganizationDetail';
+import SuperAdminComplaint from './pages/superadmincompalint';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -508,6 +509,7 @@ function App() {
               <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
               <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="organizations" element={<OrganizationsWrapper />} />
+              <Route path="softwarecomplaint" element={<SuperAdminComplaint />} />
               <Route path="organizations/:id" element={<OrganizationDetailWrapper />} />
             </Route>
 

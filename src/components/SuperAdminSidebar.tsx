@@ -8,7 +8,8 @@ import {
   LogOut,
   Menu,
   X,
-  Shield
+  Shield,
+  AlertCircle
 } from 'lucide-react';
 
 interface SuperAdminSidebarProps {
@@ -46,6 +47,12 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
       label: 'Organizations',
       icon: Building2,
       path: '/superadmin/organizations'
+    },
+    {
+      id: 'softwarecomplaint',
+      label: 'Software Complaints',
+      icon: AlertCircle,
+      path: '/superadmin/softwarecomplaint'
     }
   ];
 

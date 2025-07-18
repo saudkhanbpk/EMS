@@ -42,6 +42,7 @@ import AdminHoliday from './adminHoliday';
 import AdminDailyLogs from '../components/AdminDailyLogs';
 import { useUser } from '../contexts/UserContext';
 import AdminClient from './adminclient';
+import AdminSoftwareComplaint from './AdminSoftwareComplaint';
 
 interface AttendanceRecord {
   id: string;
@@ -1291,46 +1292,7 @@ const AdminPage: React.FC = () => {
         <Chatlayout><Chatbutton></Chatbutton></Chatlayout>
 
         {selectedTab === 'SoftwareComplaints' && (
-          <div className={`flex-1 sm:px-10 py-8 px-3 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
-            <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
-              Admin Dashboard
-            </h1>
-
-            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">Software Complaints</h2>
-              {loading ? <Loader /> : <>
-                {softwareComplaints.length === 0 ? (
-                  <p className="text-gray-600 text-center">No complaints found.</p>
-                ) : (
-                  <div className="grid md:grid-cols-2 gap-4">
-                    {softwareComplaints.map((softwareComplaints, index) => (
-                      <div key={index} className="bg-gray-100 p-4 rounded-lg shadow">
-                        {/* <h3 className="text-lg font-medium text-gray-900">{softwareComplaints.title}</h3> */}
-                        <p className="text-15px text-gray-700 mt-1">{softwareComplaints.complaint_text}</p>
-                        <p className="text-17px text-gray-800 mt-3">By : {softwareComplaints.users?.full_name || 'Unknown'}</p>
-                        <p className="text-17px text-gray-800 mt-0.6"> {new Date(softwareComplaints.created_at).toLocaleString('en-US', {
-                          year: 'numeric',
-                          month: 'short', // "Feb"
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true, // AM/PM format
-                        })}                               </p>
-                        <span
-                          className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${softwareComplaints.status === "Pending"
-                            ? "bg-yellow-300 text-yellow-800"
-                            : "bg-green-300 text-green-800"
-                            }`}
-                        >
-                          {softwareComplaints.status}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-              </>}
-            </div>
-          </div>
+          <AdminSoftwareComplaint />
         )}
 
 

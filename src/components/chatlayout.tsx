@@ -13,7 +13,7 @@ function Chatlayout({ children }) {
         currentPath === "/chat" ||
         currentPath.startsWith("/chat/") ||
         currentPath === "/user" ||
-        currentPath.startsWith("/user")
+        currentPath.startsWith("/user") || currentPath === "/home"
     );
 
     return <>{shouldShowChildren ? children : null}</>;
