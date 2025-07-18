@@ -72,6 +72,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState('');
   const [openedTask, setOpenedTask] = useState<Task | null>(null);
+  const [isFullImageOpen, setIsFullImageOpen] = useState(false);
+  const [fullImageUrl, setFullImageUrl] = useState("");
 
 
   // Fetch user role, project manager status, and project developers on component mount
@@ -781,6 +783,11 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                           descriptionOpen={descriptionOpen}
                           setDescriptionOpen={setDescriptionOpen}
                           fetchTasks={fetchTasks}
+                          setOpenedTask={setOpenedTask}
+                          isFullImageOpen={isFullImageOpen}
+                          setIsFullImageOpen={setIsFullImageOpen}
+                          fullImageUrl={fullImageUrl}
+                          setFullImageUrl={setFullImageUrl}
                         />
                       ))
                     ) : (
@@ -817,6 +824,11 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                           descriptionOpen={descriptionOpen}
                           setDescriptionOpen={setDescriptionOpen}
                           fetchTasks={fetchTasks}
+                          setOpenedTask={setOpenedTask}
+                          isFullImageOpen={isFullImageOpen}
+                          setIsFullImageOpen={setIsFullImageOpen}
+                          fullImageUrl={fullImageUrl}
+                          setFullImageUrl={setFullImageUrl}
                         />
                       ))
                     ) : (
@@ -853,6 +865,11 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                           descriptionOpen={descriptionOpen}
                           setDescriptionOpen={setDescriptionOpen}
                           fetchTasks={fetchTasks}
+                          setOpenedTask={setOpenedTask}
+                          isFullImageOpen={isFullImageOpen}
+                          setIsFullImageOpen={setIsFullImageOpen}
+                          fullImageUrl={fullImageUrl}
+                          setFullImageUrl={setFullImageUrl}
                         />
                       ))
                     ) : (
@@ -1195,12 +1212,14 @@ interface TaskCardProps {
   descriptionOpen: boolean;
   setDescriptionOpen: (open: boolean) => void;
   fetchTasks: () => Promise<void>;
+  setOpenedTask: (task: Task | null) => void;
+  isFullImageOpen: boolean;
+  setIsFullImageOpen: (open: boolean) => void;
+  fullImageUrl: string;
+  setFullImageUrl: (url: string) => void;
 }
 
-const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptionOpen, fetchTasks }: TaskCardProps) => {
-  const [openedTask, setOpenedTask] = useState<Task | null>(null);
-  const [isFullImageOpen, setIsFullImageOpen] = useState(false);
-  const [fullImageUrl, setFullImageUrl] = useState("");
+const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptionOpen, fetchTasks, setOpenedTask, isFullImageOpen, setIsFullImageOpen, fullImageUrl, setFullImageUrl }: TaskCardProps) => {
 
   return (
     <Draggable draggableId={task.id} index={index}>
@@ -1295,12 +1314,12 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
           </div>
 
           {/* Modal Description View */}
-          {descriptionOpen && openedTask && (
+          {descriptionOpen && task && (
             <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
               <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in p-6 relative">
                 {/* Modal Header */}
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800">{openedTask.title}</h2>
+                  <h2 className="text-xl font-semibold text-gray-800">{task.title}</h2>
                   <button
                     className="text-gray-400 hover:text-gray-600"
                     onClick={(e) => {
@@ -1313,14 +1332,14 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
                 </div>
 
                 {/* Image View */}
-                {openedTask.imageurl && (
+                {task.imageurl && (
                   <>
                     <img
-                      src={openedTask.imageurl}
+                      src={task.imageurl}
                       alt="Task"
                       className="max-w-full p-2 border-2 border-gray-200 rounded-2xl mb-4 max-h-[60vh] object-contain cursor-pointer"
                       onClick={() => {
-                        setFullImageUrl(openedTask.imageurl || "");
+                        setFullImageUrl(task.imageurl || "");
                         setIsFullImageOpen(true);
                       }}
                     />
@@ -1350,30 +1369,30 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
                 )}
 
                 {/* Description */}
-                {openedTask.description && (
-                  <p className="text-sm text-gray-700 leading-relaxed mb-4">{openedTask.description}</p>
+                {task.description && (
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4">{task.description}</p>
                 )}
 
                 {/* Info Grid */}
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600 mb-6">
-                  <div><span className="font-semibold">KPIs:</span> {openedTask.score}</div>
+                  <div><span className="font-semibold">KPIs:</span> {task.score}</div>
                   <div>
-                    <span className="font-semibold">Developer:</span> {openedTask.devops?.map((dev) => (dev.name ? dev.name : 'Unknown')).join(", ")}
+                    <span className="font-semibold">Developer:</span> {task.devops?.map((dev) => (dev.name ? dev.name : 'Unknown')).join(", ")}
                   </div>
-                  {openedTask.priority && (
+                  {task.priority && (
                     <div>
                       <span className="font-semibold">Priority:</span>{" "}
                       <span
-                        className={`${openedTask.priority === "High"
+                        className={`${task.priority === "High"
                           ? "bg-red-500"
-                          : openedTask.priority === "Medium"
+                          : task.priority === "Medium"
                             ? "bg-yellow-600"
-                            : openedTask.priority === "Low"
+                            : task.priority === "Low"
                               ? "bg-green-400"
                               : ""
                           } text-[14px] text-white font-semibold rounded px-2 py-[2px] capitalize`}
                       >
-                        {openedTask.priority}
+                        {task.priority}
                       </span>
                     </div>
                   )}
@@ -1382,12 +1401,12 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
                 {/* Comments */}
                 <div className="flex flex-col gap-4">
                   <Comments
-                    taskid={openedTask.id}
+                    taskid={task.id}
                     onCommentAdded={fetchTasks}
                   />
-                  {commentByTaskID[openedTask.id]?.length > 0 && (
+                  {commentByTaskID[task.id]?.length > 0 && (
                     <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                      {commentByTaskID[openedTask.id].map((comment) => (
+                      {commentByTaskID[task.id].map((comment) => (
                         <div
                           key={comment.comment_id}
                           className="flex items-start space-x-2 bg-gray-50 border rounded-lg p-2 shadow-sm"

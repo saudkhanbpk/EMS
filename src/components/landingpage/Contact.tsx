@@ -41,7 +41,7 @@ const Contact = () => {
             <h3 className="text-2xl font-bold text-gray-900 mb-6">
               Contact Information
             </h3>
-            
+
             <div className="space-y-6">
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
@@ -49,7 +49,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900">Email</h4>
-                  <p className="text-gray-600">contact@ems.com</p>
+                  <p className="text-gray-600">contact@techcreator.co</p>
                 </div>
               </div>
 
@@ -59,7 +59,7 @@ const Contact = () => {
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900">Phone</h4>
-                  <p className="text-gray-600">+1 (555) 123-4567</p>
+                  <p className="text-gray-600">+92 311 9265290</p>
                 </div>
               </div>
 
@@ -81,7 +81,7 @@ const Contact = () => {
               <h4 className="font-semibold text-gray-900 mb-2">Business Hours</h4>
               <p className="text-gray-600">
                 Monday - Friday: 9:00 AM - 6:00 PM<br />
-                Saturday: 10:00 AM - 4:00 PM<br />
+                Saturday: Closed<br />
                 Sunday: Closed
               </p>
             </div>
@@ -91,7 +91,7 @@ const Contact = () => {
             <h3 className="text-2xl font-bold text-gray-900 mb-6">
               Send us a Message
             </h3>
-            
+
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
                 <label htmlFor="name" className="block text-sm font-medium text-gray-700 mb-2">

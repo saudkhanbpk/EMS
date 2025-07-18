@@ -543,7 +543,6 @@ function App() {
               <Route path="tasks" element={<Tasks />} />
               <Route path="software-complaint" element={<SoftwareComplaintSection />} />
               <Route path="office-complaint" element={<OfficeComplaintSection />} />
-              <Route path="leaveRequests" element={<LeaveRequestsAdmin fetchPendingCount={undefined} />} />
               <Route path="overtime" element={<ExtraHours />} />
               <Route path="salary-breakdown" element={<SalaryBreakdown />} />
               <Route path="board/:id" element={<TaskBoardLayout />} />

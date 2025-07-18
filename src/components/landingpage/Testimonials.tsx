@@ -44,7 +44,7 @@ const Testimonials = () => {
             transition={{ duration: 0.8, delay: 0.4 }}
             viewport={{ once: true }}
           >
-            Real teams. Real results. See why WhisprWork is the new favorite for project management.
+            Real teams. Real results. See why Estrowork is the new favorite for project management.
           </motion.p>
         </motion.div>
 
@@ -78,7 +78,7 @@ const Testimonials = () => {
             </div>
             <Quote className="w-8 h-8 text-blue-600 mb-4" />
             <p className="text-gray-700 leading-relaxed">
-              “We’ve tried Trello, Asana, and ClickUp—WhisprWork just feels simpler and more focused. It’s become our daily go-to.”
+              “We’ve tried Trello, Asana, and ClickUp—Estrowork just feels simpler and more focused. It’s become our daily go-to.”
             </p>
           </motion.div>
 
@@ -144,7 +144,7 @@ const Testimonials = () => {
             </div>
             <Quote className="w-8 h-8 text-blue-600 mb-4" />
             <p className="text-gray-700 leading-relaxed">
-              “WhisprWork’s real-time collaboration has made our remote team feel truly connected. The learning curve was almost zero.”
+              “Estrowork’s real-time collaboration has made our remote team feel truly connected. The learning curve was almost zero.”
             </p>
           </motion.div>
 
