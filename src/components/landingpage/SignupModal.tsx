@@ -82,7 +82,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
       const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
         formData.email,
         {
-          redirectTo: `${window.location.origin}/confirm`, // Optional: where to redirect after confirmation
+          redirectTo: `https://ems-one-mauve.vercel.app/login`, // Optional: where to redirect after confirmation
           data: {
             full_name: formData.name // Pass additional user data
           }
@@ -107,6 +107,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
 
     } catch (error) {
       setStatus('error');
+      console.log(error)
       setError(handleSupabaseError(error));
     }
   };
