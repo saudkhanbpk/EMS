@@ -1,6 +1,6 @@
 import React, { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, MapPinIcon } from '@heroicons/react/24/outline';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useUser } from '../contexts/UserContext';
@@ -10,6 +10,7 @@ import { toast } from 'react-hot-toast';
 const AdminOrganization: React.FC = () => {
     const [isOpen, setIsOpen] = useState(false);
     const [loading, setLoading] = useState(false);
+    const [gettingLocation, setGettingLocation] = useState(false);
     const [locationExists, setLocationExists] = useState(false);
     const [locationData, setLocationData] = useState<{ longitude: string; latitude: string } | null>(null);
     const { userProfile } = useUser();
@@ -47,10 +48,14 @@ const AdminOrganization: React.FC = () => {
     const LocationSchema = Yup.object().shape({
         longitude: Yup.number()
             .required('Longitude is required')
-            .typeError('Longitude must be a number'),
+            .typeError('Longitude must be a number')
+            .min(-180, 'Longitude must be between -180 and 180')
+            .max(180, 'Longitude must be between -180 and 180'),
         latitude: Yup.number()
             .required('Latitude is required')
             .typeError('Latitude must be a number')
+            .min(-90, 'Latitude must be between -90 and 90')
+            .max(90, 'Latitude must be between -90 and 90')
     });
 
     // Initial form values
@@ -109,6 +114,49 @@ const AdminOrganization: React.FC = () => {
         }
     };
 
+    const getCurrentLocation = async (setFieldValue: any) => {
+        if (!navigator.geolocation) {
+            toast.error('Geolocation is not supported by your browser');
+            return;
+        }
+
+        setGettingLocation(true);
+
+        const options = {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+        };
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                const { longitude, latitude } = position.coords;
+                setFieldValue('longitude', longitude.toFixed(6));
+                setFieldValue('latitude', latitude.toFixed(6));
+                setGettingLocation(false);
+                toast.success('Location detected successfully');
+            },
+            (error) => {
+                setGettingLocation(false);
+                switch (error.code) {
+                    case error.PERMISSION_DENIED:
+                        toast.error('Location permission denied. Please enable location access.');
+                        break;
+                    case error.POSITION_UNAVAILABLE:
+                        toast.error('Location information is unavailable.');
+                        break;
+                    case error.TIMEOUT:
+                        toast.error('Location request timed out.');
+                        break;
+                    default:
+                        toast.error('An unknown error occurred while getting location.');
+                        break;
+                }
+            },
+            options
+        );
+    };
+
     return (
         <>
             <div className="bg-white rounded-md p-8 flex items-center justify-between mt-4 mx-auto max-w-6xl">
@@ -165,8 +213,32 @@ const AdminOrganization: React.FC = () => {
                                         onSubmit={handleSubmit}
                                         enableReinitialize
                                     >
-                                        {({ errors, touched }) => (
+                                        {({ errors, touched, setFieldValue }) => (
                                             <Form>
+                                                <div className="mb-4">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => getCurrentLocation(setFieldValue)}
+                                                        disabled={gettingLocation}
+                                                        className={`w-full flex items-center justify-center gap-2 px-4 py-2 rounded-md border border-purple-600 text-purple-600 font-medium ${gettingLocation
+                                                            ? 'opacity-70 cursor-not-allowed bg-purple-50'
+                                                            : 'hover:bg-purple-50 hover:text-purple-700'
+                                                            }`}
+                                                    >
+                                                        <MapPinIcon className="h-5 w-5" />
+                                                        {gettingLocation ? 'Getting Location...' : 'Set My Location'}
+                                                    </button>
+                                                </div>
+
+                                                <div className="relative mb-4">
+                                                    <div className="absolute inset-0 flex items-center">
+                                                        <div className="w-full border-t border-gray-300"></div>
+                                                    </div>
+                                                    <div className="relative flex justify-center text-sm">
+                                                        <span className="px-2 bg-white text-gray-500">Or enter manually</span>
+                                                    </div>
+                                                </div>
+
                                                 <div className="mb-4">
                                                     <label className="block text-sm font-medium text-gray-700 mb-1">
                                                         Longitude
@@ -201,8 +273,11 @@ const AdminOrganization: React.FC = () => {
                                                     </button>
                                                     <button
                                                         type="submit"
-                                                        disabled={loading}
-                                                        className={`px-4 py-2 rounded-md bg-purple-600 text-white font-semibold ${loading ? 'opacity-70 cursor-not-allowed' : 'hover:bg-purple-700'}`}
+                                                        disabled={loading || gettingLocation}
+                                                        className={`px-4 py-2 rounded-md bg-purple-600 text-white font-semibold ${loading || gettingLocation
+                                                            ? 'opacity-70 cursor-not-allowed'
+                                                            : 'hover:bg-purple-700'
+                                                            }`}
                                                     >
                                                         {loading ? 'Saving...' : (locationExists ? 'Update Location' : 'Set Location')}
                                                     </button>

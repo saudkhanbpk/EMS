@@ -70,7 +70,7 @@ const Attendance: React.FC = () => {
         }
 
         if (data) {
-          console.warn("office fetched  successfully", data)
+          console.warn("office fetched successfully", data)
           setOfficeLocation({
             latitude: Number(data.latitude),
             longitude: Number(data.longitude)
@@ -414,17 +414,27 @@ const Attendance: React.FC = () => {
       console.log('Distance from office:', distance, 'km');
       console.log('Geofence radius:', GEOFENCE_RADIUS, 'km');
 
+      // Determine work mode based on distance from office
+      const workMode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
+
       // Calculate status based on current time in Pakistan (Asia/Karachi)
       const nowInPakistan = toZonedTime(new Date(), 'Asia/Karachi');
       const nineThirty = new Date(nowInPakistan);
       nineThirty.setHours(9, 30, 0, 0);
       const status = nowInPakistan > nineThirty ? 'late' : 'present';
 
-      // Always set to on-site mode regardless of calculated distance
-      // This effectively bypasses the geofence check
-      const mode = 'on_site';
-      
-      // Calculate status based on time only, not location
+      // If outside office location, prompt for remote check-in confirmation
+      if (workMode === 'remote') {
+        const confirmRemote = window.confirm(
+          "Your check-in will be counted as Remote because you are currently outside the office zone. If you don't have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
+        );
+
+        if (!confirmRemote) {
+          console.log("Remote check-in aborted by user.");
+          setLoading(false);
+          return;
+        }
+      }
 
       // Insert attendance record, let Supabase set check_in to now()
       const { data, error: dbError } = await withRetry(() =>
@@ -434,7 +444,7 @@ const Attendance: React.FC = () => {
             {
               user_id: localStorage.getItem('user_id'),
               // check_in: not set, let server use now()
-              work_mode: mode,
+              work_mode: workMode,
               latitude,
               longitude,
               status, // calculated based on time in Pakistan
@@ -450,7 +460,7 @@ const Attendance: React.FC = () => {
 
       setIsCheckedIn(true);
       setCheckIn(data.check_in); // Use the value returned from the server
-      setWorkMode(mode);
+      setWorkMode(workMode);
       setAttendanceId(data.id);
       await loadAttendanceRecords();
     } catch (err) {
