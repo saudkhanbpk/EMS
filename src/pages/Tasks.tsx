@@ -4,6 +4,7 @@ import { X, Star, Edit3 } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 // import { formatDistanceToNow, format } from 'date-fns';
 import ProjectManager from '../components/ProjectManager';
+import CreateProjectModal from './CreateProjectModal';
 
 interface Project {
   id: string;
@@ -21,8 +22,23 @@ function Task() {
   const [projects, setProjects] = useState<Project[]>([]);
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [projectManager, setProjectManager] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [newTitle, setNewTitle] = useState('');
+  const [newType, setNewType] = useState('Front-End Developer');
+  const [creating, setCreating] = useState(false);
 
   const userId = localStorage.getItem('user_id');
+  const handleCreateProject = async () => {
+    setCreating(true);
+    // ...your create logic here (e.g. call supabase)
+    setTimeout(() => {
+      setCreating(false);
+      setCreateOpen(false);
+      setNewTitle('');
+      setNewType('Front-End Developer');
+      // Optionally refresh projects
+    }, 1000);
+  };
 
   // Check if logged-in user is a project manager
   useEffect(() => {
@@ -103,7 +119,10 @@ function Task() {
           <>
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Projects</h1>
-              <button className="bg-[#F1B318] hover:bg-[#C78E2C] text-white px-6 py-2 rounded-lg font-semibold transition-colors">
+              <button
+                className="bg-[#F1B318] hover:bg-[#C78E2C] text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                onClick={() => setCreateOpen(true)}
+              >
                 Create Project
               </button>
             </div>
@@ -214,6 +233,7 @@ function Task() {
                 </div>
               </div>
             )}
+
           </>
         )}
       </div>
@@ -237,6 +257,18 @@ function Task() {
           </div>
         </div>
       )}
+
+      {/* Create Project Modal */}
+      <CreateProjectModal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title={newTitle}
+        setTitle={setNewTitle}
+        type={newType}
+        setType={setNewType}
+        onCreate={handleCreateProject}
+        loading={creating}
+      />
     </div>
   );
 }
