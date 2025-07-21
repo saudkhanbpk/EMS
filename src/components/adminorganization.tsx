@@ -1,6 +1,6 @@
 import React, { useState, Fragment, useEffect } from 'react';
 import { Dialog, Transition } from '@headlessui/react';
-import { XMarkIcon, MapPinIcon } from '@heroicons/react/24/outline';
+import { XMarkIcon, MapPinIcon, UsersIcon, FolderIcon } from '@heroicons/react/24/outline';
 import { Formik, Form, Field, ErrorMessage } from 'formik';
 import * as Yup from 'yup';
 import { useUser } from '../contexts/UserContext';
@@ -13,32 +13,63 @@ const AdminOrganization: React.FC = () => {
     const [gettingLocation, setGettingLocation] = useState(false);
     const [locationExists, setLocationExists] = useState(false);
     const [locationData, setLocationData] = useState<{ longitude: string; latitude: string } | null>(null);
+    const [organizationData, setOrganizationData] = useState<any>(null);
+    const [userCount, setUserCount] = useState<number>(0);
+    const [projectCount, setProjectCount] = useState<number>(0);
     const { userProfile } = useUser();
 
-    // Check if location exists when component mounts or userProfile changes
+    // Check if location exists and fetch organization data when component mounts or userProfile changes
     useEffect(() => {
-        const checkLocationExists = async () => {
+        const fetchOrganizationData = async () => {
             if (userProfile?.organization_id) {
-                const { data } = await supabase
+                // Fetch location data
+                const { data: locationData } = await supabase
                     .from('Location')
                     .select('longitude, latitude')
                     .eq('organization_id', userProfile.organization_id)
                     .single();
 
-                if (data) {
+                if (locationData) {
                     setLocationExists(true);
                     setLocationData({
-                        longitude: data.longitude.toString(),
-                        latitude: data.latitude.toString()
+                        longitude: locationData.longitude.toString(),
+                        latitude: locationData.latitude.toString()
                     });
                 } else {
                     setLocationExists(false);
                     setLocationData(null);
                 }
+
+                // Fetch organization details
+                const { data: orgData } = await supabase
+                    .from('organizations')
+                    .select('name, slug, description, is_active')
+                    .eq('id', userProfile.organization_id)
+                    .single();
+
+                if (orgData) {
+                    setOrganizationData(orgData);
+                }
+
+                // Fetch user count - users where organization_id matches userProfile.organization_id
+                const { count: usersCount } = await supabase
+                    .from('users')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('organization_id', userProfile.organization_id);
+
+                setUserCount(usersCount || 0);
+
+                // Fetch project count - projects where organization_id matches userProfile.organization_id
+                const { count: projectsCount } = await supabase
+                    .from('projects')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('organization_id', userProfile.organization_id);
+
+                setProjectCount(projectsCount || 0);
             }
         };
 
-        checkLocationExists();
+        fetchOrganizationData();
     }, [userProfile]);
 
     const closeModal = () => setIsOpen(false);
@@ -159,17 +190,73 @@ const AdminOrganization: React.FC = () => {
 
     return (
         <>
-            <div className="bg-white rounded-md p-8 flex items-center justify-between mt-4 mx-auto max-w-6xl">
-                <div>
-                    <h2 className="text-2xl font-bold text-gray-900">Organization Detail</h2>
-                    <p className="text-gray-500 mt-1">View and manage your organization details here</p>
+            <div className="bg-white rounded-md p-8 mt-4 mx-auto max-w-6xl">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h2 className="text-2xl font-bold text-gray-900">Organization Detail</h2>
+                        <p className="text-gray-500 mt-1">View and manage your organization details here</p>
+                    </div>
+                    <button
+                        onClick={openModal}
+                        className="ml-4 px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-semibold transition"
+                    >
+                        {locationExists ? '+ Update Location' : '+ Set Location'}
+                    </button>
                 </div>
-                <button
-                    onClick={openModal}
-                    className="ml-4 px-6 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-md font-semibold transition"
-                >
-                    {locationExists ? '+ Update Location' : '+ Set Location'}
-                </button>
+
+                {organizationData && (
+                    <div className="bg-gray-50 p-6 rounded-lg mb-6">
+                        <h3 className="text-lg font-semibold text-gray-900 mb-4">Organization Information</h3>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Name</p>
+                                <p className="text-base text-gray-900">{organizationData.name || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Slug</p>
+                                <p className="text-base text-gray-900">{organizationData.slug || 'N/A'}</p>
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Status</p>
+                                <p className="text-base text-gray-900">
+                                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${organizationData.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+                                        {organizationData.is_active ? 'Active' : 'Inactive'}
+                                    </span>
+                                </p>
+                            </div>
+                        </div>
+                        <div className="mt-4">
+                            <p className="text-sm font-medium text-gray-500">Description</p>
+                            <p className="text-base text-gray-900">{organizationData.description || 'No description available'}</p>
+                        </div>
+                    </div>
+                )}
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                        <div className="flex items-center">
+                            <div className="p-3 rounded-full bg-purple-100 mr-4">
+                                <UsersIcon className="h-6 w-6 text-purple-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Total Users</p>
+                                <p className="text-2xl font-bold text-gray-900">{userCount}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                        <div className="flex items-center">
+                            <div className="p-3 rounded-full bg-blue-100 mr-4">
+                                <FolderIcon className="h-6 w-6 text-blue-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Total Projects</p>
+                                <p className="text-2xl font-bold text-gray-900">{projectCount}</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <Transition appear show={isOpen} as={Fragment}>
