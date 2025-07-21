@@ -156,10 +156,10 @@ const AdminClient: React.FC = () => {
                     >
                         + Add Client
                     </button>
-                    <AddClientModal 
-                        isOpen={modalOpen} 
-                        onClose={() => setModalOpen(false)} 
-                        onClientAdded={fetchClients} 
+                    <AddClientModal
+                        isOpen={modalOpen}
+                        onClose={() => setModalOpen(false)}
+                        onClientAdded={fetchClients}
                     />
                 </div>
             </div>
