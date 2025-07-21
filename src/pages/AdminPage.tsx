@@ -43,6 +43,7 @@ import AdminDailyLogs from '../components/AdminDailyLogs';
 import { useUser } from '../contexts/UserContext';
 import AdminClient from './adminclient';
 import AdminSoftwareComplaint from './AdminSoftwareComplaint';
+import AdminOrganization from '../components/adminorganization';
 
 interface AttendanceRecord {
   id: string;
@@ -816,6 +817,7 @@ const AdminPage: React.FC = () => {
                       Clients
                     </button>
 
+
                     {/* Employee List (Mobile) */}
                     {/* {isSmallScreen && showEmployeeList && (
         <div className="mt-2 bg-white rounded-lg shadow-md max-h-[300px] overflow-y-auto custom-scrollbar">
@@ -905,7 +907,19 @@ const AdminPage: React.FC = () => {
 
 
                     </button>
-
+                    <button
+                      onClick={() => {
+                        setSelectedTab("organization");
+                        // setShowEmployeeList(!showEmployeeList);
+                        handleClose()
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "organization"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Organization Detail
+                    </button>
                     <button
                       onClick={() => {
                         handleClose();
@@ -1033,6 +1047,12 @@ const AdminPage: React.FC = () => {
           <div className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
             <AdminHoliday />
+          </div>
+        )}
+        {selectedTab === "organization" && (
+          <div className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'}`}>
+            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
+            <AdminOrganization />
           </div>
         )}
         {selectedTab === "Clients" && (
