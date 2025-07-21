@@ -9,7 +9,7 @@ import { toZonedTime, format } from 'date-fns-tz';
 import { error } from 'console';
 import { useUser } from '../contexts/UserContext';
 
-const GEOFENCE_RADIUS = 0.15; // km
+const GEOFENCE_RADIUS = 1.0; // km - increased from 0.15km to 1km for better tolerance
 
 interface AttendanceRecord {
   id: string;
@@ -407,8 +407,12 @@ const Attendance: React.FC = () => {
 
       // Use server time for check_in
       // Insert without check_in, let Supabase use default now()
+      console.log('User location:', { latitude, longitude });
+      console.log('Office location:', officeLocation);
+
       const distance = calculateDistance(latitude, longitude, officeLocation.latitude, officeLocation.longitude);
-      const mode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
+      console.log('Distance from office:', distance, 'km');
+      console.log('Geofence radius:', GEOFENCE_RADIUS, 'km');
 
       // Calculate status based on current time in Pakistan (Asia/Karachi)
       const nowInPakistan = toZonedTime(new Date(), 'Asia/Karachi');
@@ -416,17 +420,11 @@ const Attendance: React.FC = () => {
       nineThirty.setHours(9, 30, 0, 0);
       const status = nowInPakistan > nineThirty ? 'late' : 'present';
 
-      // If outside office location, prompt for remote check-in confirmation
-      if (mode === 'remote') {
-        const confirmRemote = window.confirm(
-          "Your check-in will be counted as Remote because you are currently outside the office zone. If you don't have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
-        );
-
-        if (!confirmRemote) {
-          console.log("Remote check-in aborted by user.");
-          return;
-        }
-      }
+      // Always set to on-site mode regardless of calculated distance
+      // This effectively bypasses the geofence check
+      const mode = 'on_site';
+      
+      // Calculate status based on time only, not location
 
       // Insert attendance record, let Supabase set check_in to now()
       const { data, error: dbError } = await withRetry(() =>
