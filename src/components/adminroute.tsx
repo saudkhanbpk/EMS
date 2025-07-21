@@ -289,7 +289,7 @@ export function EmployeeRoute({ children }: EmployeeRouteProps) {
   // Use userProfile role if available, otherwise use fallback role
   const effectiveRole = userProfile?.role || userRole;
 
-  if (currentUser && (effectiveRole === "employee" || effectiveRole === "client")) {
+  if (currentUser && (effectiveRole === "employee" || effectiveRole === "client" || effectiveRole === "product manager")) {
     return <>{children}</>;
   } else {
     // Redirect based on role
