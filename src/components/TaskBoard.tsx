@@ -979,16 +979,29 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
             {/* Modal Header */}
             <div className="flex justify-between items-center mb-4">
               <h2 className="text-xl font-semibold text-gray-800">{openedTask.title}</h2>
-              <button
-                className="text-gray-400 hover:text-gray-600"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setDescriptionOpen(false);
-                  setOpenedTask(null);
-                }}
-              >
-                <X className="w-6 h-6" />
-              </button>
+              <div className="flex items-center gap-2">
+                <button
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-2 py-1 rounded text-sm flex items-center gap-1"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    const textToCopy = `${openedTask.title}\n\n${openedTask.description || ''}`;
+                    navigator.clipboard.writeText(textToCopy);
+                    alert('Title and description copied to clipboard!');
+                  }}
+                >
+                  Copy Text
+                </button>
+                <button
+                  className="text-gray-400 hover:text-gray-600"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    setDescriptionOpen(false);
+                    setOpenedTask(null);
+                  }}
+                >
+                  <X className="w-6 h-6" />
+                </button>
+              </div>
             </div>
 
             {/* Image View */}
