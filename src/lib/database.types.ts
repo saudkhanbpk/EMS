@@ -130,6 +130,41 @@ export interface Database {
           created_at?: string
         }
       }
+      laptop_states: {
+        Row: {
+          id: string
+          user_id: string
+          state: 'On' | 'Sleep' | 'Off'
+          timestamp: string
+          last_activity?: string
+          battery_level?: number
+          is_charging?: boolean
+          created_at: string
+          updated_at: string
+        }
+        Insert: {
+          id?: string
+          user_id: string
+          state?: 'On' | 'Sleep' | 'Off'
+          timestamp?: string
+          last_activity?: string
+          battery_level?: number
+          is_charging?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+        Update: {
+          id?: string
+          user_id?: string
+          state?: 'On' | 'Sleep' | 'Off'
+          timestamp?: string
+          last_activity?: string
+          battery_level?: number
+          is_charging?: boolean
+          created_at?: string
+          updated_at?: string
+        }
+      }
       software_complaints: {
         Row: {
           id: number

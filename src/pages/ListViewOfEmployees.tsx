@@ -9,6 +9,10 @@ import { format, parse, isAfter, addMonths, addWeeks, set } from "date-fns"; // 
 import { DownloadIcon } from "lucide-react";
 import { AttendanceContext } from "./AttendanceContext";
 import "./style.css";
+import { useLaptopStates } from "../hooks/use-laptop-states";
+import LaptopStateIndicator from "../components/LaptopStateIndicator";
+import { useUser } from "../contexts/UserContext";
+
 import {
   PieChart,
   Pie,
@@ -87,6 +91,7 @@ interface SoftwareComplaint {
 //   })
 // );
 const EmployeeAttendanceTable = () => {
+  const { userProfile } = useUser();
   const [attendanceData, setAttendanceData] = useState([]);
   const [absentid, setabsentid] = useState<null | number>(null);
   const [selecteduser, setslecteduser] = useState<null | string>(null);
@@ -98,6 +103,20 @@ const EmployeeAttendanceTable = () => {
   const [selectedMode, setSelectedMode] = useState("remote");
   const [present, setPresent] = useState(0);
   const [leaveRequestsData, setLeaveRequestsData] = useState([]);
+
+  // Add laptop states hook
+  const { laptopStates, loading: laptopStatesLoading, error: laptopStatesError, refreshLaptopStates } = useLaptopStates(userProfile?.organization_id);
+
+  // Debug logging
+  useEffect(() => {
+    console.log('Laptop States Debug:', {
+      organizationId: userProfile?.organization_id,
+      laptopStatesCount: Object.keys(laptopStates).length,
+      laptopStates: laptopStates,
+      loading: laptopStatesLoading,
+      error: laptopStatesError
+    });
+  }, [laptopStates, laptopStatesLoading, laptopStatesError, userProfile?.organization_id]);
 
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
@@ -1769,16 +1788,18 @@ const EmployeeAttendanceTable = () => {
     }
   };
 
-  const handleModeOpen = (entry) => {
+  // Work Mode handlers
+  const handleWorkModeOpen = (entry) => {
     setisModeOpen(true);
     setSelectedEntry(entry);
+    setWorkMode(entry.work_mode || "remote");
   };
 
-  const handleModeModal = () => {
+  const handleWorkModeModal = () => {
     setisModeOpen(false);
   };
 
-  const handleUpdateMode = () => {
+  const handleUpdateWorkMode = () => {
     const updateMode = async () => {
       const { data, error } = await supabase
         .from("attendance_logs")
@@ -1787,11 +1808,12 @@ const EmployeeAttendanceTable = () => {
         .eq("check_in", selectedEntry.check_in2);
 
       if (data) {
-        console.log("Updated data:", data); // Log success
+        console.log("Updated data:", data);
       }
 
       if (!error) {
         alert("Work Mode updated successfully.");
+        fetchAttendanceData(); // Refresh attendance data
       } else {
         console.error("Error updating Work Mode:", error);
       }
@@ -1799,6 +1821,8 @@ const EmployeeAttendanceTable = () => {
     updateMode();
     setisModeOpen(false);
   };
+
+  // Laptop State handlers removed - no longer needed since clicking is disabled
 
   // const downloadPDFFiltered = async () => {
   //   // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
@@ -2777,6 +2801,9 @@ const EmployeeAttendanceTable = () => {
                             Mode
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Laptop State
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
                             Status
                           </th>
                         </tr>
@@ -2853,7 +2880,7 @@ const EmployeeAttendanceTable = () => {
 
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                               <button
-                                onClick={() => handleModeOpen(entry)}
+                                onClick={() => handleWorkModeOpen(entry)}
                                 className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === "on_site"
                                   ? "bg-blue-100 text-blue-800"
                                   : entry.work_mode === "remote"
@@ -2867,6 +2894,21 @@ const EmployeeAttendanceTable = () => {
                                     ? "Remote"
                                     : "---"}
                               </button>
+                            </td>
+                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                              {laptopStates[entry.id] ? (
+                                <LaptopStateIndicator
+                                  state={laptopStates[entry.id].state}
+                                  timestamp={laptopStates[entry.id].timestamp}
+                                  batteryLevel={laptopStates[entry.id].battery_level}
+                                  isCharging={laptopStates[entry.id].is_charging}
+                                  className="text-[9px] xs:text-[10px] sm:text-xs md:text-sm"
+                                />
+                              ) : (
+                                <span className="px-2 py-1 bg-gray-100 text-gray-800 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold">
+                                  Unknown
+                                </span>
+                              )}
                             </td>
                             <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
                               <button
@@ -3002,7 +3044,7 @@ const EmployeeAttendanceTable = () => {
                             </span>
                             <div className="mt-1">
                               <button
-                                onClick={() => handleModeOpen(entry)}
+                                onClick={() => handleWorkModeOpen(entry)}
                                 className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === "on_site"
                                   ? "bg-blue-100 text-blue-800"
                                   : entry.work_mode === "remote"
@@ -3016,6 +3058,27 @@ const EmployeeAttendanceTable = () => {
                                     ? "Remote"
                                     : "---"}
                               </button>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              Laptop State
+                            </span>
+                            <div className="mt-1">
+                              {laptopStates[entry.id] ? (
+                                <LaptopStateIndicator
+                                  state={laptopStates[entry.id].state}
+                                  timestamp={laptopStates[entry.id].timestamp}
+                                  batteryLevel={laptopStates[entry.id].battery_level}
+                                  isCharging={laptopStates[entry.id].is_charging}
+                                  className="text-[9px] xs:text-[10px]"
+                                />
+                              ) : (
+                                <span className="px-2 py-0.5 bg-gray-100 text-gray-800 rounded-full text-[9px] xs:text-[10px] font-semibold">
+                                  Unknown
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -3426,7 +3489,7 @@ const EmployeeAttendanceTable = () => {
                       type="radio"
                       name="work_mode"
                       value="remote"
-                      // checked={work_mode === "Remote"}
+                      checked={WorkMode === "remote"}
                       onChange={(e) => setWorkMode(e.target.value)}
                       className="mr-2"
                     />
@@ -3438,7 +3501,7 @@ const EmployeeAttendanceTable = () => {
                       type="radio"
                       name="work_mode"
                       value="on_site"
-                      // checked={work_mode === "On-Site"}
+                      checked={WorkMode === "on_site"}
                       onChange={(e) => setWorkMode(e.target.value)}
                       className="mr-2"
                     />
@@ -3448,13 +3511,13 @@ const EmployeeAttendanceTable = () => {
 
                 <div className="flex justify-end mt-6">
                   <button
-                    onClick={handleModeModal}
+                    onClick={handleWorkModeModal}
                     className="bg-gray-500 text-white px-6 py-2 rounded-lg hover:bg-gray-600 transition"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={() => handleUpdateMode()}
+                    onClick={() => handleUpdateWorkMode()}
                     className="bg-blue-500 text-white px-6 py-2 rounded-lg ml-4 hover:bg-blue-600 transition"
                   >
                     Save
@@ -3463,6 +3526,8 @@ const EmployeeAttendanceTable = () => {
               </div>
             </div>
           )}
+
+
 
           {/* Checkin Time Changing Model */}
           {isCheckinModalOpen && (
