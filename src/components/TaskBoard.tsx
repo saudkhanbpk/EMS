@@ -899,10 +899,6 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                     <div
                       key={task.id}
                       className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
-                      onClick={() => {
-                        setOpenedTask(task);
-                        setDescriptionOpen(true);
-                      }}
                     >
                       {/* Title */}
                       <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
@@ -975,6 +971,126 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
         <p className='font-bold text-[13px] text-yellow-600'>Assigned KPIs: {assignedKPIs}</p>
         <p className='font-bold text-[13px] text-green-600'>Earned KPIs: {earnedKPI}</p>
       </div>
+      
+      {/* Task Detail Modal - Moved to main component level */}
+      {descriptionOpen && openedTask && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in p-6 relative">
+            {/* Modal Header */}
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold text-gray-800">{openedTask.title}</h2>
+              <button
+                className="text-gray-400 hover:text-gray-600"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setDescriptionOpen(false);
+                  setOpenedTask(null);
+                }}
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+
+            {/* Image View */}
+            {openedTask.imageurl && (
+              <>
+                <img
+                  src={openedTask.imageurl}
+                  alt="Task"
+                  className="max-w-full p-2 border-2 border-gray-200 rounded-2xl mb-4 max-h-[60vh] object-contain cursor-pointer"
+                  onClick={() => {
+                    setFullImageUrl(openedTask.imageurl || "");
+                    setIsFullImageOpen(true);
+                  }}
+                />
+                {isFullImageOpen && (
+                  <div
+                    className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
+                    onClick={() => setIsFullImageOpen(false)}
+                  >
+                    <button
+                      className="absolute top-5 right-5 text-white hover:text-gray-300"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setIsFullImageOpen(false);
+                      }}
+                    >
+                      <X className="w-7 h-7" />
+                    </button>
+                    <img
+                      src={fullImageUrl}
+                      alt="Full"
+                      className="max-w-[95vw] max-h-[90vh] object-contain"
+                      onClick={(e) => e.stopPropagation()}
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {/* Description */}
+            {openedTask.description && (
+              <p className="text-sm text-gray-700 leading-relaxed mb-4">{openedTask.description}</p>
+            )}
+
+            {/* Info Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600 mb-6">
+              <div><span className="font-semibold">KPIs:</span> {openedTask.score}</div>
+              <div>
+                <span className="font-semibold">Developer:</span> {openedTask.devops?.map((dev) => (dev.name ? dev.name : 'Unknown')).join(", ")}
+              </div>
+              {openedTask.priority && (
+                <div>
+                  <span className="font-semibold">Priority:</span>{" "}
+                  <span
+                    className={`${openedTask.priority === "High"
+                      ? "bg-red-500"
+                      : openedTask.priority === "Medium"
+                        ? "bg-yellow-600"
+                        : openedTask.priority === "Low"
+                          ? "bg-green-400"
+                          : ""
+                      } text-[14px] text-white font-semibold rounded px-2 py-[2px] capitalize`}
+                  >
+                    {openedTask.priority}
+                  </span>
+                </div>
+              )}
+            </div>
+
+            {/* Comments */}
+            <div className="flex flex-col gap-4">
+              <Comments
+                taskid={openedTask.id}
+                onCommentAdded={fetchTasks}
+              />
+              {commentByTaskID[openedTask.id]?.length > 0 && (
+                <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
+                  {commentByTaskID[openedTask.id].map((comment) => (
+                    <div
+                      key={comment.comment_id}
+                      className="flex items-start space-x-2 bg-gray-50 border rounded-lg p-2 shadow-sm"
+                    >
+                      <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold uppercase">
+                        {comment.commentor_name?.[0]}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex justify-between">
+                          <p className="text-sm font-semibold">{comment.commentor_name}</p>
+                          <span className="text-xs text-gray-400">
+                            {new Date(comment.created_at).toLocaleDateString()}
+                          </span>
+                        </div>
+                        <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment_text}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Task Creation Modal */}
       {isCreateTaskModalOpen && (
@@ -1221,6 +1337,31 @@ interface TaskCardProps {
 
 const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptionOpen, fetchTasks, setOpenedTask, isFullImageOpen, setIsFullImageOpen, fullImageUrl, setFullImageUrl }: TaskCardProps) => {
 
+  // Function to handle task card click
+  const handleTaskClick = (e: React.MouseEvent) => {
+    // Only open the task details if the user clicked on the card itself, not on interactive elements
+    const target = e.target as HTMLElement;
+    
+    // Check if the click was on a button or interactive element that should not trigger the modal
+    const isInteractiveElement = (
+      target.tagName === 'BUTTON' || 
+      target.tagName === 'INPUT' || 
+      target.tagName === 'TEXTAREA' ||
+      target.closest('button') ||
+      target.closest('input') ||
+      target.closest('textarea')
+    );
+    
+    // If it's an interactive element, don't open the task details
+    if (isInteractiveElement) {
+      return;
+    }
+    
+    // Open the task details when clicking on the card
+    setOpenedTask(task);
+    setDescriptionOpen(true);
+  };
+
   return (
     <Draggable draggableId={task.id} index={index}>
       {(provided) => (
@@ -1230,10 +1371,7 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
           {...provided.dragHandleProps}
           style={provided.draggableProps.style}
           className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3 hover:shadow-xl transition-shadow duration-300 cursor-pointer"
-          onClick={() => {
-            setOpenedTask(task);
-            setDescriptionOpen(true);
-          }}
+          onClick={handleTaskClick}
         >
 
           {/* Image Preview */}
@@ -1312,125 +1450,6 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
               onCommentAdded={fetchTasks}
             />
           </div>
-
-          {/* Modal Description View */}
-          {descriptionOpen && task && (
-            <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
-              <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in p-6 relative">
-                {/* Modal Header */}
-                <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-xl font-semibold text-gray-800">{task.title}</h2>
-                  <button
-                    className="text-gray-400 hover:text-gray-600"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      setDescriptionOpen(false);
-                    }}
-                  >
-                    <X className="w-6 h-6" />
-                  </button>
-                </div>
-
-                {/* Image View */}
-                {task.imageurl && (
-                  <>
-                    <img
-                      src={task.imageurl}
-                      alt="Task"
-                      className="max-w-full p-2 border-2 border-gray-200 rounded-2xl mb-4 max-h-[60vh] object-contain cursor-pointer"
-                      onClick={() => {
-                        setFullImageUrl(task.imageurl || "");
-                        setIsFullImageOpen(true);
-                      }}
-                    />
-                    {isFullImageOpen && (
-                      <div
-                        className="fixed inset-0 bg-black bg-opacity-90 z-50 flex items-center justify-center"
-                        onClick={() => setIsFullImageOpen(false)}
-                      >
-                        <button
-                          className="absolute top-5 right-5 text-white hover:text-gray-300"
-                          onClick={(e) => {
-                            e.stopPropagation();
-                            setIsFullImageOpen(false);
-                          }}
-                        >
-                          <X className="w-7 h-7" />
-                        </button>
-                        <img
-                          src={fullImageUrl}
-                          alt="Full"
-                          className="max-w-[95vw] max-h-[90vh] object-contain"
-                          onClick={(e) => e.stopPropagation()}
-                        />
-                      </div>
-                    )}
-                  </>
-                )}
-
-                {/* Description */}
-                {task.description && (
-                  <p className="text-sm text-gray-700 leading-relaxed mb-4">{task.description}</p>
-                )}
-
-                {/* Info Grid */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600 mb-6">
-                  <div><span className="font-semibold">KPIs:</span> {task.score}</div>
-                  <div>
-                    <span className="font-semibold">Developer:</span> {task.devops?.map((dev) => (dev.name ? dev.name : 'Unknown')).join(", ")}
-                  </div>
-                  {task.priority && (
-                    <div>
-                      <span className="font-semibold">Priority:</span>{" "}
-                      <span
-                        className={`${task.priority === "High"
-                          ? "bg-red-500"
-                          : task.priority === "Medium"
-                            ? "bg-yellow-600"
-                            : task.priority === "Low"
-                              ? "bg-green-400"
-                              : ""
-                          } text-[14px] text-white font-semibold rounded px-2 py-[2px] capitalize`}
-                      >
-                        {task.priority}
-                      </span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Comments */}
-                <div className="flex flex-col gap-4">
-                  <Comments
-                    taskid={task.id}
-                    onCommentAdded={fetchTasks}
-                  />
-                  {commentByTaskID[task.id]?.length > 0 && (
-                    <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
-                      {commentByTaskID[task.id].map((comment) => (
-                        <div
-                          key={comment.comment_id}
-                          className="flex items-start space-x-2 bg-gray-50 border rounded-lg p-2 shadow-sm"
-                        >
-                          <div className="h-10 w-10 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center font-bold uppercase">
-                            {comment.commentor_name?.[0]}
-                          </div>
-                          <div className="flex-1">
-                            <div className="flex justify-between">
-                              <p className="text-sm font-semibold">{comment.commentor_name}</p>
-                              <span className="text-xs text-gray-400">
-                                {new Date(comment.created_at).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment_text}</p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
     </Draggable>
