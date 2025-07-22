@@ -213,6 +213,40 @@ const EmployeeAttendanceTable = () => {
 
     let updateSuccess = false;
     let newAbsenteeData = null;
+    
+    // Check if the user already has an attendance record for today
+    if (selecteduser) {
+      const today = new Date(selectedDate).toISOString().split("T")[0];
+      
+      // Check for existing attendance record
+      const { data: attendanceData, error: attendanceError } = await supabase
+        .from("attendance_logs")
+        .select("id, status")
+        .eq("user_id", selecteduser)
+        .gte("check_in", `${today}T00:00:00`)
+        .lte("check_in", `${today}T23:59:59`);
+      
+      if (attendanceError) {
+        console.error("Error checking attendance record:", attendanceError);
+      } else if (attendanceData && attendanceData.length > 0) {
+        // User has an attendance record for today (present or late)
+        console.log("Found existing attendance record, deleting before marking absent/leave");
+        
+        // Delete the attendance record
+        const { error: deleteError } = await supabase
+          .from("attendance_logs")
+          .delete()
+          .eq("user_id", selecteduser)
+          .gte("check_in", `${today}T00:00:00`)
+          .lte("check_in", `${today}T23:59:59`);
+        
+        if (deleteError) {
+          console.error("Error deleting attendance record:", deleteError);
+        } else {
+          console.log("Successfully deleted attendance record");
+        }
+      }
+    }
 
     if (absentid) {
       const { data, error } = await supabase
@@ -3115,7 +3149,7 @@ const EmployeeAttendanceTable = () => {
                                     onChange={setSelectedMode}
                                     className="space-y-4"
                                   >
-                                    <RadioGroup.Option value="Absent">
+                                    {/* <RadioGroup.Option value="Absent">
                                       {({ checked }) => (
                                         <div className="flex items-center">
                                           <div
@@ -3190,7 +3224,7 @@ const EmployeeAttendanceTable = () => {
                                           </span>
                                         </div>
                                       )}
-                                    </RadioGroup.Option>
+                                    </RadioGroup.Option> */}
                                   </RadioGroup>
                                 </div>
 
