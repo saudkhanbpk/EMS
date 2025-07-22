@@ -309,6 +309,7 @@ import Adminroute, { EmployeeRoute, SuperAdminRoute, UserRoute } from './compone
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './lib/AuthProvider';
 import { UserProvider } from './contexts/UserContext';
+import { LaptopStateProvider } from './contexts/LaptopStateContext';
 import SuperAdminPage from './pages/SuperAdminPage';
 import SuperAdminDashboard from './pages/SuperAdminDashboard';
 import Organizations from './pages/Organizations';
@@ -449,6 +450,7 @@ function App() {
   return (
     <AuthProvider>
       <UserProvider>
+        <LaptopStateProvider>
         <Router>
           {/* Chat Sidebar - LinkedIn style */}
           <AnimatePresence>
@@ -555,6 +557,7 @@ function App() {
             <Route path="*" element={<Navigate to="/login" replace />} />
           </Routes>
         </Router>
+        </LaptopStateProvider>
       </UserProvider>
     </AuthProvider>
   );

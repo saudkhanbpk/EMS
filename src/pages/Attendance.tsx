@@ -7,6 +7,7 @@ import teaImage from './../assets/Tea.png'
 import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
 import { toZonedTime, format } from 'date-fns-tz';
 import { error } from 'console';
+import { startLaptopTracking, stopLaptopTracking } from "../services/attendanceLaptopStatus";
 
 
 
@@ -420,6 +421,14 @@ const Attendance: React.FC = () => {
       setCheckIn(data.check_in); // Use the value returned from the server
       setWorkMode(mode);
       setAttendanceId(data.id);
+
+      // Start laptop tracking when user checks in
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await startLaptopTracking(user.id);
+        console.log(`🚀 Started laptop tracking for user: ${user.id}`);
+      }
+
       await loadAttendanceRecords();
     } catch (err) {
       setError(handleSupabaseError(err));
@@ -503,6 +512,13 @@ const Attendance: React.FC = () => {
       );
 
       if (dbError) throw dbError;
+
+      // Stop laptop tracking when user checks out
+      const { data: { user } } = await supabase.auth.getUser();
+      if (user) {
+        await stopLaptopTracking(user.id);
+        console.log(`🛑 Stopped laptop tracking for user: ${user.id}`);
+      }
 
       // Reset all states
       setIsCheckedIn(false);
