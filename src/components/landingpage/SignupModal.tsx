@@ -81,6 +81,9 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
         return;
       }
 
+      let createdUserId: string | null = null;
+      let createdOrgId: string | null = null;
+
       try {
         setStatus('loading');
 
@@ -88,12 +91,113 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
         const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
           email: formData.email,
           password: formData.password,
-          email_confirm: false, // Keep this false so user needs to confirm
+          email_confirm: false,
         });
 
         if (authError) throw authError;
         if (!authData.user) throw new Error('Failed to create user account');
 
+        createdUserId = authData.user.id;
+
+        try {
+          // Step 2: Manually send the confirmation email
+          const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
+            formData.email,
+            {
+              redirectTo: `https://ems-one-mauve.vercel.app/login`,
+              data: {
+                full_name: formData.name,
+              }
+            }
+          );
+
+          if (inviteError) throw inviteError;
+
+          try {
+            // Step 3: Create organization in organizations table
+            const { data: orgData, error: orgError } = await supabase
+              .from('organizations')
+              .insert([
+                {
+                  name: formData.organizationName,
+                  slug: formData.organizationSlug,
+                  created_by: createdUserId
+                }
+              ])
+              .select();
+
+            if (orgError) throw orgError;
+            if (!orgData || orgData.length === 0) throw new Error('Failed to create organization');
+
+            createdOrgId = orgData[0].id;
+
+            try {
+              // Step 4: Update the user record with role='admin' and organization_id
+              const { error: updateError } = await supabase
+                .from('users')
+                .update({
+                  full_name: formData.name,
+                  role: 'admin',
+                  organization_id: createdOrgId
+                })
+                .eq('id', createdUserId);
+
+              if (updateError) throw updateError;
+
+              setStatus('success');
+              setShowSuccessAlert(true);
+
+            } catch (updateError) {
+              // Rollback: Delete the organization if user update fails
+              if (createdOrgId) {
+                await supabase
+                  .from('organizations')
+                  .delete()
+                  .eq('id', createdOrgId);
+              }
+              throw updateError;
+            }
+
+          } catch (orgError) {
+            // Organization creation or user update failed, no need to delete org as it wasn't created
+            throw orgError;
+          }
+
+        } catch (emailOrOrgError) {
+          // Rollback: Delete the user if email sending or any subsequent step fails
+          if (createdUserId) {
+            await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+          }
+          throw emailOrOrgError;
+        }
+
+      } catch (error) {
+        setStatus('error');
+        console.log(error);
+        setError(handleSupabaseError(error));
+      }
+      return;
+    }
+
+    // Only proceed with user creation for personal account type
+    let createdUserId: string | null = null;
+
+    try {
+      setStatus('loading');
+
+      // Step 1: Create the user with Supabase Admin (service role)
+      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
+        email: formData.email,
+        password: formData.password,
+        email_confirm: false,
+      });
+
+      if (authError) throw authError;
+      if (!authData.user) throw new Error('Failed to create user account');
+
+      createdUserId = authData.user.id;
+
+      try {
         // Step 2: Manually send the confirmation email
         const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
           formData.email,
@@ -107,89 +211,39 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
 
         if (inviteError) throw inviteError;
 
-        // Step 3: Create organization in organizations table
-        const { data: orgData, error: orgError } = await supabase
-          .from('organizations')
-          .insert([
-            { 
-              name: formData.organizationName, 
-              slug: formData.organizationSlug,
-              created_by: authData.user.id
-            }
-          ])
-          .select();
-
-        if (orgError) throw orgError;
-        if (!orgData || orgData.length === 0) throw new Error('Failed to create organization');
-
-        // Step 4: Update the user record with role='admin' and organization_id
-        const { error: updateError } = await supabase
-          .from('users')
-          .update({
+        try {
+          // Step 3: Update the user record in the users table
+          const updateData: any = {
             full_name: formData.name,
-            role: 'admin',
-            organization_id: orgData[0].id
-          })
-          .eq('id', authData.user.id);
+            role: 'product manager',
+          };
 
-        if (updateError) throw updateError;
+          const { error: updateError } = await supabase
+            .from('users')
+            .update(updateData)
+            .eq('id', createdUserId);
 
-        setStatus('success');
-        setShowSuccessAlert(true);
-      } catch (error) {
-        setStatus('error');
-        console.log(error);
-        setError(handleSupabaseError(error));
-      }
-      return;
-    }
+          if (updateError) throw updateError;
 
-    // Only proceed with user creation for personal account type
-    try {
-      setStatus('loading');
+          setStatus('success');
+          setShowSuccessAlert(true);
 
-      // Step 1: Create the user with Supabase Admin (service role)
-      const { data: authData, error: authError } = await supabaseAdmin.auth.admin.createUser({
-        email: formData.email,
-        password: formData.password,
-        email_confirm: false, // Keep this false so user needs to confirm
-      });
-
-      if (authError) throw authError;
-      if (!authData.user) throw new Error('Failed to create user account');
-
-      // Step 2: Manually send the confirmation email
-      const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
-        formData.email,
-        {
-          redirectTo: `https://ems-one-mauve.vercel.app/login`, // Optional: where to redirect after confirmation
-          data: {
-            full_name: formData.name,
-          }
+        } catch (updateError) {
+          // User update failed, but user and email were sent
+          throw updateError;
         }
-      );
 
-      if (inviteError) throw inviteError;
-
-      // Step 3: Update the user record in the users table with role='user' and additional data
-      const updateData: any = {
-        full_name: formData.name,
-        role: 'product manager',
-      };
-
-      const { error: updateError } = await supabase
-        .from('users')
-        .update(updateData)
-        .eq('id', authData.user.id);
-
-      if (updateError) throw updateError;
-
-      setStatus('success');
-      setShowSuccessAlert(true);
+      } catch (emailOrUpdateError) {
+        // Rollback: Delete the user if email sending or update fails
+        if (createdUserId) {
+          await supabaseAdmin.auth.admin.deleteUser(createdUserId);
+        }
+        throw emailOrUpdateError;
+      }
 
     } catch (error) {
       setStatus('error');
-      console.log(error)
+      console.log(error);
       setError(handleSupabaseError(error));
     }
   };

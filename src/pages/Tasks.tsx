@@ -5,6 +5,7 @@ import { supabase } from '../lib/supabase';
 // import { formatDistanceToNow, format } from 'date-fns';
 import ProjectManager from '../components/ProjectManager';
 import CreateProjectModal from './CreateProjectModal';
+import { useUser } from '../contexts/UserContext';
 
 interface Project {
   id: string;
@@ -23,21 +24,48 @@ function Task() {
   const [descriptionOpen, setDescriptionOpen] = useState(false);
   const [projectManager, setProjectManager] = useState(false);
   const [createOpen, setCreateOpen] = useState(false);
+  const { userProfile } = useUser()
   const [newTitle, setNewTitle] = useState('');
   const [newType, setNewType] = useState('Front-End Developer');
   const [creating, setCreating] = useState(false);
 
   const userId = localStorage.getItem('user_id');
-  const handleCreateProject = async () => {
-    setCreating(true);
-    // ...your create logic here (e.g. call supabase)
-    setTimeout(() => {
-      setCreating(false);
-      setCreateOpen(false);
-      setNewTitle('');
-      setNewType('Front-End Developer');
-      // Optionally refresh projects
-    }, 1000);
+  
+  // Fetch projects function that can be called whenever needed
+  const fetchProjects = async () => {
+    setLoading(true);
+    if (!userId) {
+      console.error("Missing user ID.");
+      setLoading(false);
+      return;
+    }
+
+    const { data, error } = await supabase.from("projects").select("*");
+
+    if (error) {
+      console.error("Error fetching projects:", error.message);
+      setLoading(false);
+      return;
+    }
+
+    const filteredProjects = (data || []).filter((project) => {
+      const isDev = Array.isArray(project.devops) &&
+        project.devops.some((dev: { id: string }) => dev.id === userId);
+      const isProductOwner = project.product_owner === userId;
+      return isDev || isProductOwner;
+    });
+
+    setProjects(filteredProjects);
+    setLoading(false);
+  };
+  
+  const handleCreateProject = async (projectData: any) => {
+    setCreating(false);
+    setCreateOpen(false);
+    setNewTitle('');
+    setNewType('Front-End Developer');
+    // Refresh projects list
+    fetchProjects();
   };
 
   // Check if logged-in user is a project manager
@@ -63,33 +91,6 @@ function Task() {
 
   // Fetch projects where user is a dev OR product owner
   useEffect(() => {
-    const fetchProjects = async () => {
-      setLoading(true);
-      if (!userId) {
-        console.error("Missing user ID.");
-        setLoading(false);
-        return;
-      }
-
-      const { data, error } = await supabase.from("projects").select("*");
-
-      if (error) {
-        console.error("Error fetching projects:", error.message);
-        setLoading(false);
-        return;
-      }
-
-      const filteredProjects = (data || []).filter((project) => {
-        const isDev = Array.isArray(project.devops) &&
-          project.devops.some((dev: { id: string }) => dev.id === userId);
-        const isProductOwner = project.product_owner === userId;
-        return isDev || isProductOwner;
-      });
-
-      setProjects(filteredProjects);
-      setLoading(false);
-    };
-
     fetchProjects();
   }, [userId]);
 
@@ -119,14 +120,15 @@ function Task() {
           <>
             <div className="flex justify-between items-center mb-8">
               <h1 className="text-2xl md:text-3xl font-bold text-gray-800">Projects</h1>
-              <button
-                className="bg-[#F1B318] hover:bg-[#C78E2C] text-white px-6 py-2 rounded-lg font-semibold transition-colors"
-                onClick={() => setCreateOpen(true)}
-              >
-                Create Project
-              </button>
+              {(userProfile?.role == "client" || userProfile?.role == "product manager") && (
+                <button
+                  className="bg-[#F1B318] hover:bg-[#C78E2C] text-white px-6 py-2 rounded-lg font-semibold transition-colors"
+                  onClick={() => setCreateOpen(true)}
+                >
+                  Create Project
+                </button>
+              )}
             </div>
-
             {loading ? (
               <div className="text-center mt-12 text-gray-500 text-lg">Loading...</div>
             ) : projects.length === 0 ? (

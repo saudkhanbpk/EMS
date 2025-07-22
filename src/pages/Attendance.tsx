@@ -9,7 +9,7 @@ import { toZonedTime, format } from 'date-fns-tz';
 import { error } from 'console';
 import { useUser } from '../contexts/UserContext';
 
-const GEOFENCE_RADIUS = 1.0; // km - increased from 0.15km to 1km for better tolerance
+const GEOFENCE_RADIUS = 0.15; // km - increased from 0.15km to 1km for better tolerance
 
 interface AttendanceRecord {
   id: string;
