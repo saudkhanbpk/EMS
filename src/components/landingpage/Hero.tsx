@@ -8,7 +8,7 @@ const Hero = () => {
   const [isDeleting, setIsDeleting] = useState(false);
 
   useEffect(() => {
-    const texts = [ 'Team Productivity', ];
+    const texts = ['Work Smarter, Deliver Faster — With Estrowork'];
 
     const timeout = setTimeout(() => {
       const current = texts[currentIndex];
@@ -52,8 +52,6 @@ const Hero = () => {
     }
   };
 
-
-
   return (
     <section id="home" className="relative min-h-screen pt-16 bg-gradient-to-br from-blue-600 to-purple-700">
       {/* Simple Background */}
@@ -69,9 +67,9 @@ const Hero = () => {
           {/* Main Heading with Typewriter Effect */}
           <motion.div variants={itemVariants} className="mb-6">
             <h1 className="text-4xl md:text-6xl lg:text-7xl font-bold text-white leading-tight">
-              <span className="block mb-2">Streamline Your</span>
+              <span className="block mb-2">Estrowork is your all-in-one workspace—</span>
               <span className="relative">
-                <span className="text-yellow-300">
+                <span className="text-yellow-300 text-1xl md:text-3xl lg:text-4xl">
                   {currentText}
                 </span>
                 <motion.span
@@ -88,12 +86,7 @@ const Hero = () => {
             variants={itemVariants}
             className="text-xl md:text-2xl text-blue-100 mb-8 max-w-4xl mx-auto leading-relaxed"
           >
-            Comprehensive employee management platform with{' '}
-            <span className="text-yellow-300 font-semibold">AI-powered insights</span>,{' '}
-            <span className="text-yellow-300 font-semibold">location tracking</span>, and{' '}
-            <span className="text-yellow-300 font-semibold">24/7 system availability</span>.
-            <br />
-            Transform how you manage your workforce.
+            Manage your team, organize your projects, assign tasks, and even invite clients to collaborate on specific projects in real-time.
           </motion.p>
 
           {/* Feature Pills */}
@@ -160,7 +153,7 @@ const Hero = () => {
             </motion.button>
           </motion.div>
 
-          {/* Dashboard Preview */}
+          {/* Dashboard Preview with Overlaid Text */}
           <motion.div
             variants={itemVariants}
             className="relative max-w-5xl mx-auto"
@@ -174,6 +167,7 @@ const Hero = () => {
               {/* Glowing border effect */}
               <div className="absolute inset-0 bg-gradient-to-r from-blue-500/20 via-purple-500/20 to-indigo-500/20 rounded-2xl blur-xl"></div>
 
+              {/* Image */}
               <motion.img
                 src="https://images.pexels.com/photos/7688336/pexels-photo-7688336.jpeg?auto=compress&cs=tinysrgb&w=1200&h=700&fit=crop"
                 alt="EMS Dashboard"
@@ -183,14 +177,26 @@ const Hero = () => {
                 transition={{ delay: 1.5, duration: 0.8 }}
               />
 
-              {/* Static UI Elements */}
-              <div className="absolute -top-4 -right-4 bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                99.9% Uptime
-              </div>
+          {/* Text Over Image */}
+<div className="absolute inset-0 flex items-center justify-center px-4 sm:px-6 md:px-8 lg:px-12 text-center">
+  <p className="text-white text-sm sm:text-base md:text-lg lg:text-2xl font-semibold bg-black/50 p-4 sm:p-6 md:p-8 rounded-xl backdrop-blur-md max-w-xl sm:max-w-2xl lg:max-w-4xl">
+    No need to juggle multiple tools like Jira, Asana, or Trello anymore.
+    <br />
+    <span className="text-yellow-300">Estrowork</span> brings everything together in a clean, easy-to-use platform that your entire team will love.
+    <br /><br />
+    Enjoy <span className="text-yellow-300">AI-powered insights</span>, <span className="text-yellow-300">location tracking</span>, and <span className="text-yellow-300">24/7 system availability</span>—all in one place.
+  </p>
+</div>
 
-              <div className="absolute -bottom-4 -left-4 bg-yellow-400 text-blue-900 px-3 py-1 rounded-full text-sm font-bold shadow-lg">
-                Real-time Analytics
-              </div>
+{/* Static UI Elements */}
+<div className="absolute -top-2 sm:-top-4 -right-2 sm:-right-4 bg-yellow-400 text-blue-900 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+  99.9% Uptime
+</div>
+
+<div className="absolute -bottom-2 sm:-bottom-4 -left-2 sm:-left-4 bg-yellow-400 text-blue-900 px-2 sm:px-3 py-1 rounded-full text-xs sm:text-sm font-bold shadow-lg">
+  Real-time Analytics
+</div>
+
             </motion.div>
           </motion.div>
         </div>

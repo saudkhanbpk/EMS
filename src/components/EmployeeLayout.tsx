@@ -60,7 +60,7 @@ const EmployeeLayout: React.FC = () => {
     await supabase.auth.signOut();
     setUser(null);
     localStorage.clear();
-    navigate('/login');
+    navigate('/home');
   };
 
   const allNavigation = [
@@ -76,10 +76,13 @@ const EmployeeLayout: React.FC = () => {
   ];
 
   const clientHiddenItems = ['Attendance', 'Over Time', 'Leave', 'Salary Breakdown', 'DailyLogs'];
+  const productManagerHiddenItems = ['Office Complaint', ...clientHiddenItems];
 
   const navigation = userProfile?.role === 'client'
     ? allNavigation.filter(item => !clientHiddenItems.includes(item.name))
-    : allNavigation;
+    : userProfile?.role == 'product manager'
+      ? allNavigation.filter(item => !productManagerHiddenItems.includes(item.name))
+      : allNavigation;
 
   const handleScrollToTop = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

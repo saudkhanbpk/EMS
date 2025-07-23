@@ -8,7 +8,8 @@ import {
   LogOut,
   Menu,
   X,
-  Shield
+  Shield,
+  AlertCircle
 } from 'lucide-react';
 
 interface SuperAdminSidebarProps {
@@ -28,7 +29,7 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
       localStorage.removeItem('supabaseSession');
       localStorage.removeItem('user_id');
       localStorage.removeItem('user_email');
-      navigate('/login');
+      navigate('/home');
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -46,6 +47,12 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
       label: 'Organizations',
       icon: Building2,
       path: '/superadmin/organizations'
+    },
+    {
+      id: 'softwarecomplaint',
+      label: 'Software Complaints',
+      icon: AlertCircle,
+      path: '/superadmin/softwarecomplaint'
     }
   ];
 

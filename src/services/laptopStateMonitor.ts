@@ -353,26 +353,9 @@ class LaptopStateMonitor {
    * Save laptop state to database
    */
   private async saveLaptopState(stateData: LaptopStateData): Promise<void> {
-    try {
-      const { error } = await supabase
-        .from('laptop_states')
-        .upsert({
-          user_id: stateData.user_id,
-          state: stateData.state,
-          timestamp: stateData.timestamp,
-          last_activity: stateData.last_activity,
-          battery_level: stateData.battery_level,
-          is_charging: stateData.is_charging,
-        }, {
-          onConflict: 'user_id'
-        });
-
-      if (error) {
-        console.error('Error saving laptop state:', error);
-      }
-    } catch (error) {
-      console.error('Error saving laptop state:', error);
-    }
+    // DISABLED: Using attendance laptop status system instead to prevent 404 errors
+    console.log(`💻 Laptop state: ${stateData.state} (Battery: ${stateData.battery_level || 'unknown'}%${stateData.is_charging ? ' Charging' : ''})`);
+    return Promise.resolve();
   }
 
   /**

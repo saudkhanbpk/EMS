@@ -19,7 +19,7 @@ const DashboardLayout: React.FC<DashboardLayoutProps> = ({ children }) => {
         return refreshUserProfile()
     }
 
-    if (userProfile.role === 'client') {
+    if (userProfile.role === 'client' || userProfile.role == "product manager") {
         return (
             <ClientDashboard />
         );

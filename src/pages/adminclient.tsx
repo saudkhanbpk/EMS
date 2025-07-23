@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import AddClientModal from '../components/addclientModal';
 import { supabase, supabaseAdmin } from '../lib/supabase';
+import { useUser } from '../contexts/UserContext';
 
 interface Client {
     id: string;
@@ -23,6 +24,7 @@ const AdminClient: React.FC = () => {
     const [clients, setClients] = useState<Client[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState('');
+    const { userProfile } = useUser();
     const [error, setError] = useState<string | null>(null);
 
     // Fetch clients and their projects
@@ -36,6 +38,7 @@ const AdminClient: React.FC = () => {
                 .from('users')
                 .select('id, full_name, email, created_at')
                 .eq('role', 'client')
+                .eq("organization_id", userProfile?.organization_id)
                 .order('created_at', { ascending: false });
 
             if (clientError) {
@@ -153,7 +156,11 @@ const AdminClient: React.FC = () => {
                     >
                         + Add Client
                     </button>
-                    <AddClientModal isOpen={modalOpen} onClose={() => setModalOpen(false)} />
+                    <AddClientModal
+                        isOpen={modalOpen}
+                        onClose={() => setModalOpen(false)}
+                        onClientAdded={fetchClients}
+                    />
                 </div>
             </div>
 
@@ -206,7 +213,7 @@ const AdminClient: React.FC = () => {
                                                 <div className="text-sm text-gray-500">{client.email}</div>
                                             </div>
                                         </td>
-                                        
+
                                         {/* Projects */}
                                         <td className="px-6 py-4">
                                             <div className="text-sm text-gray-900">
@@ -226,14 +233,14 @@ const AdminClient: React.FC = () => {
                                                 )}
                                             </div>
                                         </td>
-                                        
+
                                         {/* Project Count */}
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
                                                 {client.projects.length}
                                             </span>
                                         </td>
-                                        
+
                                         {/* Actions */}
                                         <td className="px-6 py-4 whitespace-nowrap text-center">
                                             <button

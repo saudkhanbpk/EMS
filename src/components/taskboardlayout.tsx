@@ -95,7 +95,7 @@ const TaskBoardLayout: React.FC = () => {
     }
 
     // If user role is "client", render TaskBoardAdmin
-    if (userRole === "client") {
+    if (userRole === "client" || userRole === "product manager") {
         console.log('Passing devops to TaskBoardAdmin:', devops);
         return (
             <TaskBoardAdmin

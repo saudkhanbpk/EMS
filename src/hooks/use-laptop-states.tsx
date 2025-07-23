@@ -35,107 +35,48 @@ export const useLaptopStates = (organizationId?: string): UseLaptopStatesReturn 
       setLoading(true);
       setError(null);
 
-      // Get current user ID from auth
-      const { data: { user } } = await supabase.auth.getUser();
-      const currentUserId = user?.id;
-
       // Setup activity tracking for all users
       setupActivityTracking();
 
-      // Get all laptop statuses based on attendance
+      // Get all laptop statuses based on attendance - SIMPLIFIED APPROACH
       const laptopStatuses = await getAllLaptopStatuses(organizationId);
+      console.log('🔍 Raw laptop statuses from service:', laptopStatuses);
 
-      // Get user details
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, full_name, email')
-        .eq('organization_id', organizationId);
-
-      if (usersError) {
-        console.error('Error fetching users:', usersError);
-        setLaptopStates({});
-        return;
-      }
-
-      // Create states map with REAL data for current user, realistic for others
+      // Convert to the format expected by the UI
       const statesMap: Record<string, LaptopStateRecord> = {};
 
-      for (const userData of usersData || []) {
-        const laptopStatus = laptopStatuses[userData.id];
-
-        if (laptopStatus && laptopStatus.is_checked_in) {
-          // User is checked in - show their laptop status
-          if (userData.id === currentUserId) {
-            // FOR CURRENT USER: Show real-time status with real battery
-            let realBatteryLevel: number | undefined;
-            let realIsCharging: boolean | undefined;
-
-            try {
-              // @ts-ignore - Battery API is experimental
-              if ('getBattery' in navigator) {
-                // @ts-ignore
-                const battery = await navigator.getBattery();
-                realBatteryLevel = Math.round(battery.level * 100);
-                realIsCharging = battery.charging;
-              }
-            } catch (error) {
-              console.log('Battery API not available');
-            }
-
-            // Get REAL current status (only if checked in)
-            let realState: LaptopState;
-            if (!navigator.onLine) {
-              realState = 'Off';
-              console.log('🔴 YOU ARE OFFLINE');
-            } else if (document.hidden) {
-              realState = 'Sleep';
-              console.log('🟡 YOU ARE AWAY (tab hidden)');
-            } else {
-              realState = 'On';
-              console.log('🟢 YOU ARE ONLINE (active)');
-            }
-
-            statesMap[userData.id] = {
-              user_id: userData.id,
-              full_name: userData.full_name,
-              email: userData.email,
-              state: realState,
-              timestamp: new Date().toISOString(),
-              last_activity: new Date().toISOString(),
-              battery_level: realBatteryLevel,
-              is_charging: realIsCharging,
-            };
-
-            console.log(`🔥 YOUR REAL STATUS (CHECKED IN): ${realState} | Battery: ${realBatteryLevel}%${realIsCharging ? ' (Charging)' : ''}`);
-          } else {
-            // FOR OTHER CHECKED-IN USERS: Use their laptop status
-            statesMap[userData.id] = {
-              user_id: userData.id,
-              full_name: userData.full_name,
-              email: userData.email,
-              state: laptopStatus.laptop_state,
-              timestamp: laptopStatus.last_activity,
-              last_activity: laptopStatus.last_activity,
-              battery_level: laptopStatus.battery_level || 75,
-              is_charging: laptopStatus.is_charging || false,
-            };
-          }
-        } else {
-          // User is NOT checked in - show as offline
-          statesMap[userData.id] = {
-            user_id: userData.id,
-            full_name: userData.full_name,
-            email: userData.email,
-            state: 'Off',
-            timestamp: new Date().toISOString(),
-            last_activity: new Date().toISOString(),
-            battery_level: 0,
-            is_charging: false,
-          };
+      Object.entries(laptopStatuses).forEach(([userId, status]) => {
+        // Map laptop state to display state
+        let displayState: LaptopState;
+        switch (status.laptop_state) {
+          case 'On':
+            displayState = 'On';
+            break;
+          case 'Sleep':
+            displayState = 'Sleep';
+            break;
+          case 'Off':
+          default:
+            displayState = 'Off';
+            break;
         }
-      }
+
+        statesMap[userId] = {
+          user_id: userId,
+          full_name: '', // Will be filled by component
+          email: '',
+          state: displayState,
+          timestamp: status.last_activity,
+          last_activity: status.last_activity,
+          battery_level: status.battery_level || 0,
+          is_charging: status.is_charging || false,
+        };
+
+        console.log(`✅ Mapped user ${userId}: ${displayState} | Battery: ${status.battery_level}%`);
+      });
 
       console.log(`📊 Loaded laptop states for ${Object.keys(statesMap).length} users (including real data)`);
+      console.log('🔍 Final states map:', statesMap);
       setLaptopStates(statesMap);
 
       // Store checked-in users for periodic updates
@@ -161,8 +102,9 @@ export const useLaptopStates = (organizationId?: string): UseLaptopStatesReturn 
   }, [fetchLaptopStates]);
 
   useEffect(() => {
-    // Clear wrong cached data to show correct status
+    // Always clear cache to ensure fresh realistic data
     clearAllLaptopStatusCache();
+    console.log('🔄 Refreshing laptop status data...');
     fetchLaptopStates();
   }, [fetchLaptopStates]);
 

@@ -14,12 +14,12 @@ const FAQ = () => {
       answer: "The AI analyzes daily logs for productivity patterns, task completion rates, quality of work descriptions, and time management. It provides ratings and suggestions to help employees improve their performance and managers make informed decisions."
     },
     {
-      question: "Is my data secure with EMS ?",
+      question: "Is my data secure with Estrowork ?",
       answer: "Yes, we use enterprise-grade security with end-to-end encryption, regular security audits, and compliance with GDPR and SOC 2 standards. Your data is stored securely and never shared with third parties."
     },
     {
-      question: "Can I integrate EMS  with other software?",
-      answer: "EMS  offers API integrations with popular tools like Slack, Microsoft Teams, Google Workspace, and various project management platforms. We also provide custom integration support for enterprise clients."
+      question: "Can I integrate Estrowork  with other software?",
+      answer: "Estrowork  offers API integrations with popular tools like Slack, Microsoft Teams, Google Workspace, and various project management platforms. We also provide custom integration support for enterprise clients."
     },
     {
       question: "What's included in the different support tiers?",
@@ -43,7 +43,7 @@ const FAQ = () => {
             Frequently Asked Questions
           </h2>
           <p className="text-xl text-gray-600">
-            Get answers to common questions about EMS 
+            Get answers to common questions about Estrowork
           </p>
         </div>
 

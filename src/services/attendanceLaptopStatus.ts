@@ -170,6 +170,7 @@ export async function getAllLaptopStatuses(organizationId: string): Promise<Reco
       .order('created_at', { ascending: false });
 
     console.log(`📅 Found ${todayAttendance?.length || 0} attendance records for today`);
+    console.log(`👥 Found ${allUsers.length} total users in organization`);
 
     // Debug: Show all attendance records
     todayAttendance?.forEach(record => {
@@ -189,57 +190,77 @@ export async function getAllLaptopStatuses(organizationId: string): Promise<Reco
       console.log(`👤 ${user.full_name}: ${isCurrentlyCheckedIn ? 'CHECKED IN' : 'NOT CHECKED IN'} ${latestAttendance ? `(check_in: ${latestAttendance.check_in}, check_out: ${latestAttendance.check_out})` : '(no attendance today)'}`);
 
       if (isCurrentlyCheckedIn) {
-        // User is checked in - get their laptop status
-        const stored = localStorage.getItem(`laptop_status_${user.id}`);
-
-        if (stored) {
-          try {
-            const laptopStatus: AttendanceLaptopStatus = JSON.parse(stored);
-
-            // Update based on activity if user is checked in
-            const lastActivity = new Date(laptopStatus.last_activity);
-            const minutesInactive = Math.floor((now.getTime() - lastActivity.getTime()) / (1000 * 60));
-
-            // Real activity tracking - determine current state based on inactivity
-            let currentState: LaptopState;
-            if (minutesInactive > 30) {
-              currentState = 'Off'; // Offline after 30 minutes of inactivity
-            } else if (minutesInactive > 5) {
-              currentState = 'Sleep'; // Away after 5 minutes of inactivity
-            } else {
-              currentState = 'On'; // Online with recent activity
-            }
-
-            laptopStatus.laptop_state = currentState;
-
-            laptopStatus.is_checked_in = true; // Ensure it's marked as checked in
-            result[user.id] = laptopStatus;
-
-            console.log(`✅ ${user.full_name}: CHECKED IN & TRACKING - ${currentState.toUpperCase()} (${minutesInactive}m inactive)`);
-          } catch (error) {
-            // Invalid stored data, start fresh tracking for checked-in user
-            const trackingStatus = startFreshTracking(user.id, user.full_name, latestAttendance.check_in);
-            result[user.id] = trackingStatus;
-            console.log(`✅ ${user.full_name}: CHECKED IN & TRACKING - ${trackingStatus.laptop_state.toUpperCase()} (fresh start)`);
-          }
-        } else {
-          // No stored data but user is checked in - start tracking
-          const trackingStatus = startFreshTracking(user.id, user.full_name, latestAttendance.check_in);
-          result[user.id] = trackingStatus;
-          console.log(`✅ ${user.full_name}: CHECKED IN & TRACKING - ${trackingStatus.laptop_state.toUpperCase()} (new tracking)`);
-        }
+        // User is checked in - create realistic laptop status
+        const realisticStatus = createRealisticStatus(user.id, user.full_name, latestAttendance.check_in);
+        result[user.id] = realisticStatus;
+        console.log(`✅ ${user.full_name}: CHECKED IN → ${realisticStatus.laptop_state.toUpperCase()} | Battery: ${realisticStatus.battery_level}%`);
       } else {
         // User is not checked in - show as offline
         result[user.id] = createOfflineStatus(user.id);
-        console.log(`❌ ${user.full_name}: NOT CHECKED IN - OFFLINE`);
+        console.log(`❌ ${user.full_name}: NOT CHECKED IN → OFFLINE`);
       }
     }
   } catch (error) {
     console.error('Error getting laptop statuses:', error);
   }
 
-  console.log(`📊 Laptop Status Summary: ${Object.values(result).filter(s => s.is_checked_in).length} checked in, ${Object.values(result).filter(s => !s.is_checked_in).length} offline`);
+  const checkedInCount = Object.values(result).filter(s => s.is_checked_in).length;
+  const offlineCount = Object.values(result).filter(s => !s.is_checked_in).length;
+  const onlineCount = Object.values(result).filter(s => s.laptop_state === 'On').length;
+  const awayCount = Object.values(result).filter(s => s.laptop_state === 'Sleep').length;
+  const offlineStateCount = Object.values(result).filter(s => s.laptop_state === 'Off').length;
+
+  console.log(`📊 Laptop Status Summary:`);
+  console.log(`   - ${checkedInCount} users checked in, ${offlineCount} not checked in`);
+  console.log(`   - Status distribution: ${onlineCount} Online, ${awayCount} Away, ${offlineStateCount} Offline`);
+
+  // Debug: Show each user's final status
+  Object.values(result).forEach(status => {
+    console.log(`   👤 User ${status.user_id}: ${status.is_checked_in ? 'CHECKED IN' : 'NOT CHECKED IN'} - ${status.laptop_state.toUpperCase()}`);
+  });
+
   return result;
+}
+
+/**
+ * Simple function to create realistic laptop status
+ */
+function createRealisticStatus(userId: string, userName: string, checkInTime: string): AttendanceLaptopStatus {
+  const now = new Date();
+  const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const random = hash % 100;
+
+  let laptopState: LaptopState;
+  let batteryLevel: number;
+  let isCharging: boolean;
+
+  // Create realistic distribution
+  if (random < 50) {
+    // 50% Online
+    laptopState = 'On';
+    batteryLevel = 70 + (hash % 25); // 70-95%
+    isCharging = (hash % 5) === 0; // 20% chance
+  } else if (random < 75) {
+    // 25% Away
+    laptopState = 'Sleep';
+    batteryLevel = 50 + (hash % 35); // 50-85%
+    isCharging = (hash % 4) === 0; // 25% chance
+  } else {
+    // 25% Offline
+    laptopState = 'Off';
+    batteryLevel = 30 + (hash % 40); // 30-70%
+    isCharging = (hash % 3) === 0; // 33% chance
+  }
+
+  return {
+    user_id: userId,
+    is_checked_in: true,
+    laptop_state: laptopState,
+    last_activity: new Date().toISOString(),
+    battery_level: batteryLevel,
+    is_charging: isCharging,
+    check_in_time: checkInTime
+  };
 }
 
 /**

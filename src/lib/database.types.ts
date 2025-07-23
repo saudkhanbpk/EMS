@@ -130,6 +130,7 @@ export interface Database {
           created_at?: string
         }
       }
+<<<<<<< HEAD
       laptop_states: {
         Row: {
           id: string
@@ -163,6 +164,75 @@ export interface Database {
           is_charging?: boolean
           created_at?: string
           updated_at?: string
+=======
+      software_complaints: {
+        Row: {
+          id: number
+          created_at: string
+          complaint_text: string
+          user_id: string
+          organization_id: string
+        }
+        Insert: {
+          id?: number
+          created_at?: string
+          complaint_text: string
+          user_id: string
+          organization_id?: string
+        }
+        Update: {
+          id?: number
+          created_at?: string
+          complaint_text?: string
+          user_id?: string
+          organization_id?: string
+        }
+      }
+      complaint_comments: {
+        Row: {
+          id: number
+          complaint_id: number
+          user_id: string
+          comment_text: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          complaint_id: number
+          user_id: string
+          comment_text: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          complaint_id?: number
+          user_id?: string
+          comment_text?: string
+          created_at?: string
+        }
+      }
+      complaint_reactions: {
+        Row: {
+          id: number
+          complaint_id: number
+          user_id: string
+          reaction_type: string
+          created_at: string
+        }
+        Insert: {
+          id?: number
+          complaint_id: number
+          user_id: string
+          reaction_type: string
+          created_at?: string
+        }
+        Update: {
+          id?: number
+          complaint_id?: number
+          user_id?: string
+          reaction_type?: string
+          created_at?: string
+>>>>>>> dfc3fa6e6cd41ff18cfffa9da75daf12f0f573c5
         }
       }
       // Add other tables as needed
