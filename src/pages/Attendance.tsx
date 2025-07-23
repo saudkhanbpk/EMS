@@ -4,10 +4,12 @@ import { useAuthStore, useAttendanceStore } from '../lib/store';
 import { supabase, withRetry, handleSupabaseError } from '../lib/supabase';
 import timeImage from './../assets/Time.png'
 import teaImage from './../assets/Tea.png'
-import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut } from 'lucide-react';
+import { Clock, Coffee, Calendar, ChevronLeft, ChevronRight, LogOut, FileText, MapPin, X } from 'lucide-react';
 import { toZonedTime, format } from 'date-fns-tz';
 import { error } from 'console';
 import { useUser } from '../contexts/UserContext';
+import TaskModal from '../component/TaskModal';
+import CheckoutModal from '../component/CheckOutModal';
 
 const GEOFENCE_RADIUS = 0.15; // km - increased from 0.15km to 1km for better tolerance
 
@@ -17,6 +19,9 @@ interface AttendanceRecord {
   check_out: string | null;
   work_mode: 'on_site' | 'remote';
   status: string;
+  tasks?: DailyTask[];
+  latitude?: number;
+  longitude?: number;
 }
 
 interface BreakRecord {
@@ -26,10 +31,38 @@ interface BreakRecord {
   status: string | null;
 }
 
+interface DailyTask {
+  id: string;
+  attendance_id: string;
+  user_id: string;
+  task_date: string;
+  task_description: string;
+  created_at: string;
+}
+
+interface TaskOfProject {
+  id: string;
+  created_at: string;
+  project_id?: string;
+  taskname: string;
+  description?: string;
+  assignee?: any;
+  status: string;
+  score?: number;
+  position?: string;
+  priority?: string;
+  important?: string;
+  deadline?: string;
+  action_date: string;
+  daily_task?: string;
+  daily_log?: string;
+  user_id: string;
+}
+
 type ViewType = 'daily' | 'weekly' | 'monthly';
 
 const calculateDistance = (lat1: number, lon1: number, lat2: number, lon2: number) => {
-  const R = 6371; // Earth's radius in km
+  const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
   const dLon = (lon2 - lon1) * Math.PI / 180;
   const a =
@@ -46,6 +79,10 @@ const Attendance: React.FC = () => {
   const { userProfile } = useUser();
   const [officeLocation, setOfficeLocation] = useState({ latitude: 0, longitude: 0 });
   const [isLocationLoading, setIsLocationLoading] = useState(true);
+
+  // Add modal states
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  const [isCheckoutModalOpen, setIsCheckoutModalOpen] = useState(false);
 
   useEffect(() => {
     initializeUser();
@@ -112,15 +149,242 @@ const Attendance: React.FC = () => {
   const [alreadycheckedin, setalreadycheckedin] = useState(false)
   const [alreadybreak, setalreadybreak] = useState<boolean>(false)
   const [isbreak, setisbreak] = useState<boolean>(true);
+  const [selectedTask, setSelectedTask] = useState<string | null>(null);
 
+  // Function to handle initial check-in button click
+  const handleCheckInClick = () => {
+    setIsTaskModalOpen(true);
+  };
+  
+  // Function to handle applying tasks and proceeding with check-in
+  const handleApplyTasks = async (tasks: string) => {
+    setIsTaskModalOpen(false);
+    
+    try {
+      setLoading(true);
+      setError(null);
 
+      // 1. Get user location
+      const position = await getCurrentLocation();
+      const { latitude, longitude } = position.coords;
+      setCurrentLocation({ lat: latitude, lng: longitude });
+
+      // 2. Calculate distance and work mode
+      const distance = calculateDistance(latitude, longitude, officeLocation.latitude, officeLocation.longitude);
+      const workMode = distance <= GEOFENCE_RADIUS ? 'on_site' : 'remote';
+
+      // 3. Calculate status based on time
+      const nowInPakistan = toZonedTime(new Date(), 'Asia/Karachi');
+      const nineThirty = new Date(nowInPakistan);
+      nineThirty.setHours(9, 30, 0, 0);
+      const status = nowInPakistan > nineThirty ? 'late' : 'present';
+
+      // 4. Check for remote work confirmation if needed
+      if (workMode === 'remote') {
+        const confirmRemote = window.confirm(
+          "Your check-in will be counted as Remote because you are currently outside the office zone. If you don't have approval for remote work, you will be marked Absent. Do you want to proceed with remote check-in?"
+        );
+
+        if (!confirmRemote) {
+          console.log("Remote check-in aborted by user.");
+          setLoading(false);
+          return;
+        }
+      }
+
+      // 5. Create attendance record first
+      const { data: attendanceData, error: attendanceError } = await withRetry(() =>
+        supabase
+          .from('attendance_logs')
+          .insert([
+            {
+              user_id: localStorage.getItem('user_id'),
+              work_mode: workMode,
+              latitude,
+              longitude,
+              status,
+            }
+          ])
+          .select()
+          .single()
+      );
+
+      if (attendanceError) throw attendanceError;
+
+      // 6. Now save the tasks with the attendance ID
+      if (tasks.trim()) {
+        const { error: tasksError } = await supabase
+          .from('daily_tasks')
+          .insert([
+            {
+              user_id: localStorage.getItem('user_id'),
+              attendance_id: attendanceData.id, // Link to the attendance record
+              task_date: new Date().toISOString().split('T')[0],
+              task_description: tasks,
+            }
+          ]);
+
+        if (tasksError) {
+          console.error('Error saving tasks:', tasksError);
+          // We won't throw this error, as we want to continue even if task saving fails
+        }
+        
+        // 7. ADDED: Save to tasks_of_projects table - daily_task field
+        const today = new Date().toISOString().split('T')[0];
+        
+        // Check if a task record already exists for today
+        const { data: existingTask, error: existingTaskError } = await supabase
+          .from('tasks_of_projects')
+          .select('id')
+          .eq('user_id', localStorage.getItem('user_id'))
+          .eq('action_date', today)
+          .maybeSingle();
+          
+        if (existingTaskError) {
+          console.error('Error checking for existing task:', existingTaskError);
+        }
+        
+        if (existingTask) {
+          // Update existing task with daily_task
+          const { error: updateError } = await supabase
+            .from('tasks_of_projects')
+            .update({
+              daily_task: tasks.trim(),
+              updated_at: new Date().toISOString()
+            })
+            .eq('id', existingTask.id);
+            
+          if (updateError) {
+            console.error('Error updating daily_task:', updateError);
+          }
+        } else {
+          // Create new task entry for today
+          const { error: insertError } = await supabase
+            .from('tasks_of_projects')
+            .insert([{
+              id: crypto.randomUUID(), // Generate UUID
+              created_at: new Date().toISOString(),
+              action_date: today,
+              taskname: `Daily Task - ${today}`,
+              status: 'inprogress',
+              daily_task: tasks.trim(),
+              user_id: localStorage.getItem('user_id') // Adding user_id to track ownership
+            }]);
+            
+          if (insertError) {
+            console.error('Error inserting daily_task:', insertError);
+          }
+        }
+      }
+
+      // 8. Update state with attendance data
+      setIsCheckedIn(true);
+      setCheckIn(attendanceData.check_in);
+      setWorkMode(workMode);
+      setAttendanceId(attendanceData.id);
+      
+      // 9. Reload attendance records
+      await loadAttendanceRecords();
+    } catch (err) {
+      setError(handleSupabaseError(err));
+    } finally {
+      setLoading(false);
+    }
+  };
+  
+  // Function to skip task input and proceed with check-in
+  const handleSkipTasks = () => {
+    setIsTaskModalOpen(false);
+    handleCheckIn();
+  };
+
+  // Function to handle checkout task submission
+  const handleCheckoutTaskSubmit = async (taskUpdate: string) => {
+    if (!taskUpdate.trim() || !user?.id) return;
+    
+    try {
+      // Save to dailylog table
+      const { error } = await supabase
+        .from("dailylog")
+        .insert([
+          {
+            userid: localStorage.getItem('user_id'),
+            dailylog: taskUpdate.trim(),
+            sender_type: "employee",
+            source: "web",
+            is_read: false,
+            rating: null,
+            reply_to_id: null,
+            admin_id: null
+          }
+        ]);
+        
+      if (error) throw error;
+      
+      // ADDED: Save to tasks_of_projects table - daily_log field
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if a task record already exists for today
+      const { data: existingTask, error: existingTaskError } = await supabase
+        .from('tasks_of_projects')
+        .select('id')
+        .eq('user_id', localStorage.getItem('user_id'))
+        .eq('action_date', today)
+        .maybeSingle();
+        
+      if (existingTaskError) {
+        console.error('Error checking for existing task:', existingTaskError);
+      }
+      
+      if (existingTask) {
+        // Update existing task with daily_log
+        const { error: updateError } = await supabase
+          .from('tasks_of_projects')
+          .update({
+            daily_log: taskUpdate.trim(),
+            updated_at: new Date().toISOString(),
+            status: 'done' // Update status to done on checkout
+          })
+          .eq('id', existingTask.id);
+          
+        if (updateError) {
+          console.error('Error updating daily_log:', updateError);
+        }
+      } else {
+        // Create new task entry for today
+        const { error: insertError } = await supabase
+          .from('tasks_of_projects')
+          .insert([{
+            id: crypto.randomUUID(), // Generate UUID
+            created_at: new Date().toISOString(),
+            action_date: today,
+            taskname: `Daily Summary - ${today}`,
+            status: 'done',
+            daily_log: taskUpdate.trim(),
+            user_id: localStorage.getItem('user_id') // Adding user_id to track ownership
+          }]);
+          
+        if (insertError) {
+          console.error('Error inserting daily_log:', insertError);
+        }
+      }
+      
+      // Close modal and proceed with checkout
+      setIsCheckoutModalOpen(false);
+      await processCheckout();
+    } catch (err) {
+      console.error('Error saving daily update:', err);
+      alert('Failed to save your daily update. Checkout will still proceed.');
+      // Still proceed with checkout even if saving update fails
+      setIsCheckoutModalOpen(false);
+      await processCheckout();
+    }
+  };
 
   // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
   useEffect(() => {
-
     const loadCurrentAttendance = async () => {
       if (!user) return;
-      // || !isCheckedIn
       try {
         setisButtonLoading(true)
         setalreadycheckedin(false)
@@ -136,7 +400,6 @@ const Attendance: React.FC = () => {
             .eq('user_id', localStorage.getItem('user_id'))
             .gte('check_in', startOfDay.toISOString())
             .lte('check_in', endOfDay.toISOString())
-            // .is('check_out', null)
             .order('check_in', { ascending: false })
             .limit(1)
             .single()
@@ -154,7 +417,6 @@ const Attendance: React.FC = () => {
         if (data) {
           setisButtonLoading(false)
 
-          // if (data.check_in) { setalreadycheckedin(true) }
           if (data.check_in && localStorage.getItem("user_id") !== "759960d6-9ada-4dcc-b385-9e2da0a862be") {
             setalreadycheckedin(true);
           }
@@ -175,13 +437,13 @@ const Attendance: React.FC = () => {
       } catch (err) {
         console.error('Error in loadCurrentAttendance:', err);
         setError(handleSupabaseError(err));
+      } finally {
+        setisButtonLoading(false);
       }
     };
 
     loadCurrentAttendance();
   }, []);
-
-
 
   // Checking Today Leave For the User , If the User is Leave For Today , then Disable Its Checkin Button
   const checkAbsenteeStatus = async () => {
@@ -199,16 +461,12 @@ const Attendance: React.FC = () => {
       console.error("Error fetching absentee data:", error);
       return;
     }
-    // console.log("Data from absentees" , data);
-
 
     // If there's at least one record, disable the button
-    if (data.length > 0) {
+    if (data?.length > 0) {
       setIsDisabled(true);
     }
   };
-
-
 
   const fetchAttendanceStatus = async () => {
     if (!user) return;
@@ -249,7 +507,6 @@ const Attendance: React.FC = () => {
     }
   }
 
-
   useEffect(() => {
     const runSequentialChecks = async () => {
       await fetchAttendanceStatus();  // Check for active extrahours sessions
@@ -258,12 +515,6 @@ const Attendance: React.FC = () => {
 
     runSequentialChecks();
   }, [user]);
-
-
-
-
-
-
 
   const loadAttendanceRecords = async () => {
     if (!user) return;
@@ -286,21 +537,41 @@ const Attendance: React.FC = () => {
           break;
       }
 
+      // Fetch attendance records
       const { data: records, error: recordsError } = await withRetry(() =>
         supabase
           .from('attendance_logs')
           .select('*')
           .eq('user_id', localStorage.getItem('user_id'))
-          .gte('check_in', `${startDate}T00:00:00Z`) // Corrected here
-          .lt('check_in', `${endDate}T23:59:59Z`)  // Corrected here
+          .gte('check_in', `${startDate}T00:00:00Z`)
+          .lt('check_in', `${endDate}T23:59:59Z`)
           .order('check_in', { ascending: false })
       );
-
 
       if (recordsError) throw recordsError;
 
       if (records && records.length > 0) {
-        setAttendanceRecords(records);
+        // Fetch daily tasks for all attendance records
+        const attendanceIds = records.map(record => record.id);
+        const { data: taskData, error: tasksError } = await supabase
+          .from('daily_tasks')
+          .select('*')
+          .in('attendance_id', attendanceIds);
+
+        if (tasksError) {
+          console.error('Error fetching tasks:', tasksError);
+        }
+
+        // Map tasks to attendance records
+        const recordsWithTasks = records.map(record => {
+          const relatedTasks = taskData?.filter(task => task.attendance_id === record.id) || [];
+          return {
+            ...record,
+            tasks: relatedTasks
+          };
+        });
+
+        setAttendanceRecords(recordsWithTasks);
 
         // Use the most recent attendance record to determine break status
         const latestRecord = records[0];
@@ -364,8 +635,6 @@ const Attendance: React.FC = () => {
     loadAttendanceRecords();
   }, [user, view, selectedDate]);
 
-
-
   const getCurrentLocation = (): Promise<GeolocationPosition> => {
     return new Promise((resolve, reject) => {
       if (!navigator.geolocation) {
@@ -376,16 +645,6 @@ const Attendance: React.FC = () => {
       navigator.geolocation.getCurrentPosition(resolve, reject);
     });
   };
-
-  getCurrentLocation()
-    .then((position) => {
-      // console.log(position.coords.latitude);
-      // console.log(position.coords.longitude);
-
-    }).catch(() => {
-      console.log("User Location Undefined");
-
-    })
 
   //Handle Check in
   const handleCheckIn = async () => {
@@ -398,15 +657,12 @@ const Attendance: React.FC = () => {
       setLoading(true);
       setError(null);
 
-
       const position = await getCurrentLocation();
       const { latitude, longitude } = position.coords;
 
       setCurrentLocation({ lat: latitude, lng: longitude });
 
-
       // Use server time for check_in
-      // Insert without check_in, let Supabase use default now()
       console.log('User location:', { latitude, longitude });
       console.log('Office location:', officeLocation);
 
@@ -436,30 +692,27 @@ const Attendance: React.FC = () => {
         }
       }
 
-      // Insert attendance record, let Supabase set check_in to now()
+      // Insert attendance record
       const { data, error: dbError } = await withRetry(() =>
         supabase
           .from('attendance_logs')
           .insert([
             {
               user_id: localStorage.getItem('user_id'),
-              // check_in: not set, let server use now()
               work_mode: workMode,
               latitude,
               longitude,
-              status, // calculated based on time in Pakistan
+              status,
             }
           ])
           .select()
           .single()
       );
 
-
-
       if (dbError) throw dbError;
 
       setIsCheckedIn(true);
-      setCheckIn(data.check_in); // Use the value returned from the server
+      setCheckIn(data.check_in);
       setWorkMode(workMode);
       setAttendanceId(data.id);
       await loadAttendanceRecords();
@@ -470,20 +723,19 @@ const Attendance: React.FC = () => {
     }
   }
 
+  // Handle checkout button click - show modal first
+  const handleCheckOutClick = () => {
+    setIsCheckoutModalOpen(true);
+  };
 
-  const handleCheckOut = async () => {
+  // Process the actual checkout after modal interaction
+  const processCheckout = async () => {
     if (!user || !attendanceId) {
       setError('No active attendance record found');
       return;
     }
 
     try {
-      const userConfirmed = confirm("You are about to check out. Please confirm your action.");
-      if (!userConfirmed) {
-        console.log("User canceled the action.");
-        return; // User canceled, exit the function early
-      }
-
       setLoading(true);
       setError(null);
 
@@ -497,7 +749,6 @@ const Attendance: React.FC = () => {
             .update({
               end_time: now.toISOString(),
               status: 'on_time',
-
               ending: "auto"
             })
             .eq('attendance_id', attendanceId)
@@ -527,7 +778,7 @@ const Attendance: React.FC = () => {
       if (attendanceError) throw attendanceError;
 
       // If both check_in and check_out exist for today, skip further actions
-      if (attendanceData.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
+      if (attendanceData?.length > 0 && attendanceData[0].check_in && attendanceData[0].check_out) {
         console.log("Both check-in and check-out available for today. No further action needed.");
         setLoading(false);
         return;
@@ -573,7 +824,7 @@ const Attendance: React.FC = () => {
       const checkOutTime = new Date(now.toISOString());
 
       // Calculate total attendance duration (in hours)
-      const attendanceDuration = (checkOutTime - checkInTime) / (1000 * 60 * 60); // Convert ms to hours
+      const attendanceDuration = (checkOutTime.getTime() - checkInTime.getTime()) / (1000 * 60 * 60); // Convert ms to hours
       console.log(`Attendance duration: ${attendanceDuration.toFixed(2)} hours`);
 
       // If attendance duration is sufficient, skip further actions
@@ -595,7 +846,7 @@ const Attendance: React.FC = () => {
       }
 
       // If a leave record exists, skip further actions
-      if (absenteeData.length > 0) {
+      if (absenteeData?.length > 0) {
         console.log("User is on leave today. No action needed.");
         return;
       }
@@ -624,7 +875,6 @@ const Attendance: React.FC = () => {
       setLoading(false);
     }
   };
-
 
   const handleBreak = async () => {
     if (!attendanceId) {
@@ -664,7 +914,6 @@ const Attendance: React.FC = () => {
           breakStatus = 'late';
         }
 
-
         const { error: dbError } = await withRetry(() =>
           supabase
             .from('breaks')
@@ -689,8 +938,10 @@ const Attendance: React.FC = () => {
     }
   };
 
-
-
+  // Handle viewing a task in a modal
+  const handleViewTask = (taskDescription: string) => {
+    setSelectedTask(taskDescription);
+  };
 
   const renderAttendanceRecords = () => {
     return (
@@ -698,12 +949,9 @@ const Attendance: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center space-x-2">
-              {/* <Calendar className="w-6 h-6 text-blue-600" /> */}
               <h2 className="text-xl font-semibold">
                 Monthly Overview - &nbsp;
-                {
-                  format(selectedDate, 'MMMM yyyy')
-                }
+                {format(selectedDate, 'MMMM yyyy')}
               </h2>
             </div>
             <select className="text-sm rounded-lg px-3 py-1 border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
@@ -714,31 +962,6 @@ const Attendance: React.FC = () => {
               <option value="weekly">Weekly</option>
               <option value="monthly">Monthly</option>
             </select>
-
-
-            {/* <div className="flex items-center space-x-4">
-              <button
-                onClick={() => setView('daily')}
-                className={`px-3 py-1 rounded-lg ${view === 'daily' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                Daily
-              </button>
-              <button
-                onClick={() => setView('weekly')}
-                className={`px-3 py-1 rounded-lg ${view === 'weekly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                Weekly
-              </button>
-              <button
-                onClick={() => setView('monthly')}
-                className={`px-3 py-1 rounded-lg ${view === 'monthly' ? 'bg-blue-100 text-blue-600' : 'text-gray-600 hover:bg-gray-100'
-                  }`}
-              >
-                Monthly
-              </button>
-            </div> */}
           </div>
 
           <div className="flex items-center justify-between mb-4">
@@ -751,6 +974,8 @@ const Attendance: React.FC = () => {
                     return addMinutes(prev, -7 * 24 * 60);
                   case 'monthly':
                     return addMinutes(prev, -30 * 24 * 60);
+                  default:
+                    return prev;
                 }
               })}
               className="p-2 hover:bg-gray-100 rounded-full"
@@ -769,6 +994,8 @@ const Attendance: React.FC = () => {
                     return addMinutes(prev, 7 * 24 * 60);
                   case 'monthly':
                     return addMinutes(prev, 30 * 24 * 60);
+                  default:
+                    return prev;
                 }
               })}
               className="p-2 hover:bg-gray-100 rounded-full"
@@ -780,64 +1007,103 @@ const Attendance: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="min-w-full border-collapse border-2 border-[#F5F5F9]">
               <thead>
-                <tr className=" text-gray-700 text-sm">
+                <tr className="text-gray-700 text-sm">
                   <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Date</th>
                   <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Check In</th>
                   <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Check Out</th>
                   <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Status</th>
                   <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Work Mode</th>
+                  <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Today's Tasks</th>
                   <th className="border p-6 border-gray-200 font-medium text-sm leading-5 text-[#344054] uppercase">Breaks</th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
-                {attendanceRecords.map((record) => (
-                  <tr key={record.id}>
-                    <td className="px-6 py-4 border whitespace-nowrap  tex-[#666666] text-xs leading-5 font-normal">
-                      {format(new Date(record.check_in), 'MMM d, yyyy')}
-                    </td>
-                    <td className="px-6 py-4 border whitespace-nowrap  tex-[#666666] text-xs leading-5 font-normal">
-                      {format(new Date(record.check_in), 'hh:mm a')}
-                    </td>
-                    <td className="px-6 py-4 border whitespace-nowrap text-xs leading-5 font-normal tex-[#666666]">
-                      {record.check_out ? format(new Date(record.check_out), 'hh:mm a') : '-'}
-                    </td>
-                    <td className="px-6 py-4 border whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.status === 'present'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
+                {attendanceRecords.length > 0 ? (
+                  attendanceRecords.map((record) => (
+                    <tr key={record.id}>
+                      <td className="px-6 py-4 border whitespace-nowrap tex-[#666666] text-xs leading-5 font-normal">
+                        {format(new Date(record.check_in), 'MMM d, yyyy')}
+                      </td>
+                      <td className="px-6 py-4 border whitespace-nowrap tex-[#666666] text-xs leading-5 font-normal">
+                        {format(new Date(record.check_in), 'hh:mm a')}
+                      </td>
+                      <td className="px-6 py-4 border whitespace-nowrap text-xs leading-5 font-normal tex-[#666666]">
+                        {record.check_out ? format(new Date(record.check_out), 'hh:mm a') : '-'}
+                      </td>
+                      <td className="px-6 py-4 border whitespace-nowrap">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                          record.status === 'present' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
                         }`}>
-                        {record.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 border whitespace-nowrap">
-                      <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.work_mode === 'on_site'
-                        ? 'bg-blue-100 text-blue-800'
-                        : 'bg-purple-100 text-purple-800'
-                        }`}>
-                        {record.work_mode}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 border whitespace-nowrap text-sm text-gray-500">
-                      {breakRecords[record.id]?.map((breakRecord, index) => (
-                        <div key={breakRecord.id} className="mb-1">
-                          <span className="text-gray-600">Break {index + 1}: </span>
-                          {format(new Date(breakRecord.start_time), 'hh:mm a')}
-                          {breakRecord.end_time && (
-                            <> - {format(new Date(breakRecord.end_time), 'hh:mm a')}</>
-                          )}
-                          {breakRecord.status && (
-                            <span className={`ml-2 px-2 text-xs rounded-full ${breakRecord.status === 'on_time'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                              }`}>
-                              {breakRecord.status}
-                            </span>
+                          {record.status}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 border whitespace-nowrap">
+                        <div className="flex flex-col space-y-1">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                            record.work_mode === 'on_site' ? 'bg-blue-100 text-blue-800' : 'bg-purple-100 text-purple-800'
+                          }`}>
+                            {record.work_mode}
+                          </span>
+                          {record.latitude && record.longitude && (
+                            <div className="flex items-center text-gray-500 text-xs mt-1">
+                              <MapPin className="w-3 h-3 mr-1" />
+                              <span className="truncate">{record.latitude.toFixed(6)}, {record.longitude.toFixed(6)}</span>
+                            </div>
                           )}
                         </div>
-                      ))}
+                      </td>
+                      {/* Task column */}
+                      <td className="px-6 py-4 border">
+                        {record.tasks && record.tasks.length > 0 ? (
+                          <div className="max-h-24 overflow-y-auto text-xs leading-5 text-gray-700">
+                            <div className="flex items-start">
+                              <FileText className="w-4 h-4 text-blue-500 mr-2 mt-0.5 flex-shrink-0" />
+                              <div>
+                                <p className="whitespace-pre-wrap line-clamp-2">
+                                  {record.tasks[0].task_description}
+                                </p>
+                                {record.tasks[0].task_description.length > 100 && (
+                                  <button 
+                                    onClick={() => handleViewTask(record.tasks[0].task_description)}
+                                    className="text-blue-600 hover:text-blue-800 text-xs mt-1"
+                                  >
+                                    Show more
+                                  </button>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-xs text-gray-400 italic">No tasks recorded</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 border whitespace-nowrap text-sm text-gray-500">
+                        {breakRecords[record.id]?.map((breakRecord, index) => (
+                          <div key={breakRecord.id} className="mb-1">
+                            <span className="text-gray-600">Break {index + 1}: </span>
+                            {format(new Date(breakRecord.start_time), 'hh:mm a')}
+                            {breakRecord.end_time && (
+                              <> - {format(new Date(breakRecord.end_time), 'hh:mm a')}</>
+                            )}
+                            {breakRecord.status && (
+                              <span className={`ml-2 px-2 text-xs rounded-full ${
+                                breakRecord.status === 'on_time' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'
+                              }`}>
+                                {breakRecord.status}
+                              </span>
+                            )}
+                          </div>
+                        ))}
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan={7} className="px-6 py-10 text-center text-gray-500">
+                      No attendance records found for this period
                     </td>
                   </tr>
-                ))}
+                )}
               </tbody>
             </table>
           </div>
@@ -846,17 +1112,66 @@ const Attendance: React.FC = () => {
     );
   };
 
+  // Task detail modal
+  const renderTaskDetailModal = () => {
+    if (!selectedTask) return null;
+    
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center">
+        <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={() => setSelectedTask(null)} />
+        <div className="bg-white rounded-lg shadow-xl w-full max-w-md mx-4 z-10 relative p-6">
+          <div className="flex justify-between items-center mb-4">
+            <h3 className="text-lg font-semibold">Task Details</h3>
+            <button onClick={() => setSelectedTask(null)} className="text-gray-500 hover:text-gray-700">
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+          <div className="overflow-y-auto max-h-96">
+            <p className="whitespace-pre-wrap text-sm text-gray-700">{selectedTask}</p>
+          </div>
+          <div className="mt-4 flex justify-end">
+            <button 
+              onClick={() => setSelectedTask(null)}
+              className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+            >
+              Close
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="max-w-7xl mx-auto">
       <h1 className="text-2xl font-bold mb-6">Attendance</h1>
+
+      {/* Check-in Task Modal */}
+      <TaskModal
+        isOpen={isTaskModalOpen}
+        onClose={() => setIsTaskModalOpen(false)}
+        onApply={handleApplyTasks}
+        onSkip={handleSkipTasks}
+      />
+
+      {/* Checkout Daily Update Modal */}
+      <CheckoutModal
+        isOpen={isCheckoutModalOpen}
+        onClose={() => {
+          setIsCheckoutModalOpen(false);
+          processCheckout(); // Still proceed with checkout if modal is closed
+        }}
+        onSubmit={handleCheckoutTaskSubmit}
+      />
+
+      {/* Task Detail Modal */}
+      {renderTaskDetailModal()}
 
       <div className="grid grid-cols-1 md:grid-cols-2 mb-5 gap-6">
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center justify-between mb-6">
             <div className="flex items-center">
               <img src={timeImage} alt="clock" className='w-8 h-8' />&nbsp;&nbsp;
-              {/* <Clock className="w-6 h-6 text-blue-600 mr-2" /> */}
               <h2 className="text-[22px] leading-7 text-[#000000] font-semibold">Check-in Status</h2>
             </div>
             {workMode && (
@@ -872,7 +1187,6 @@ const Attendance: React.FC = () => {
               {error}
             </div>
           )}
-
 
           {isDisabled && (
             <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-4">
@@ -894,7 +1208,7 @@ const Attendance: React.FC = () => {
           {isCheckedIn ? (
             <div className="space-y-4">
               <button
-                onClick={handleCheckOut}
+                onClick={handleCheckOutClick} // Changed to open checkout modal first
                 disabled={loading}
                 className="w-full flex items-center justify-center bg-[#FF2828] text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
               >
@@ -907,7 +1221,7 @@ const Attendance: React.FC = () => {
             </div>
           ) : (
             <button
-              onClick={handleCheckIn}
+              onClick={handleCheckInClick} // Opens check-in modal first
               disabled={loading || isDisabled || alreadycheckedin || isButtonLoading || isLocationLoading} // Also disable if location is still loading
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
@@ -919,7 +1233,6 @@ const Attendance: React.FC = () => {
         <div className="bg-white rounded-lg shadow-md p-6">
           <div className="flex items-center mb-6">
             <img src={teaImage} alt="teaImage" className='w-8 h-8' /> &nbsp;&nbsp;
-            {/* <Coffee className="w-6 h-6 text-blue-600 mr-2" /> */}
             <h2 className="text-[22px] leading-7 text-[#000000] font-semibold">Break Time</h2>
           </div>
 
