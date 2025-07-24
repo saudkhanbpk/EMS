@@ -1598,6 +1598,9 @@ function ProjectsAdmin() {
                                                       ></div>
                                                     </div>
                                                   </div>
+                                                  <div className="text-xs text-gray-500 mt-1">
+                                                    Completed: {project.completedScore} | Pending: {project.pendingScore}
+                                                  </div>
                                                 </div>
                                               ))}
                                               {employee.projects.length > 2 && !expandedProjects['all'] && (
@@ -1645,7 +1648,7 @@ function ProjectsAdmin() {
                                       ></div>
                                     </div>
                                     <div className="text-xs text-gray-500 mt-1">
-                                      {employee.pendingKPI} pending
+                                      Completed: {employee.completedKPI} | Pending: {employee.pendingKPI}
                                     </div>
                                   </td>
                                 </tr>
@@ -1758,6 +1761,9 @@ function ProjectsAdmin() {
                                                   ></div>
                                                 </div>
                                               </div>
+                                              <div className="text-xs text-gray-500 mt-1">
+                                                Completed: {project.completedScore} | Pending: {project.pendingScore}
+                                              </div>
                                             </div>
                                           ))}
                                           {manager.projects.length > 2 && !expandedProjects['manager'] && (
@@ -1812,7 +1818,7 @@ function ProjectsAdmin() {
                                   ></div>
                                 </div>
                                 <div className="text-xs text-gray-500 mt-1">
-                                  {manager.projects.reduce((sum, project) => sum + project.pendingScore, 0)} pending
+                                  Completed: {manager.projects.reduce((sum, project) => sum + project.completedScore, 0)} | Pending: {manager.projects.reduce((sum, project) => sum + project.pendingScore, 0)}
                                 </div>
                               </td>
                             </tr>
@@ -1854,13 +1860,16 @@ function ProjectsAdmin() {
                         }}
                       >
                         <div className="flex items-center justify-between mb-4">
-                          <div className="flex items-center pl-2 pr-4 py-1 bg-[#f7eaff] rounded-full">
-                            <span className="text-sm font-semibold ml-2">
+                          <div className="flex flex-col items-start pl-2 pr-4 py-2 bg-[#f7eaff] rounded-lg">
+                            <span className="text-sm font-semibold">
                               <label>Story Points : </label>
                               <span className="text-green-600">{project.completedScore}</span>
                               <span className="text-gray-500"> / </span>
                               <span className="text-red-500">{project.totalScore}</span>
                             </span>
+                            <div className="text-xs text-gray-600 mt-1">
+                              Completed: {project.completedScore} | Pending: {project.pendingScore}
+                            </div>
                           </div>
                           <div className="flex space-x-2">
                             <button
@@ -2012,12 +2021,15 @@ function ProjectsAdmin() {
                               )}
                             </td>
                             <td className="px-6 py-4 whitespace-nowrap">
-                              <div className="flex items-center space-x-1">
+                              <div className="flex items-center space-x-1 mb-1">
                                 <span className="text-green-600 font-semibold">{project.completedScore}</span>
                                 <span className="text-gray-400">/</span>
                                 <span className="text-red-500 font-semibold">{project.totalScore}</span>
                               </div>
-                              <div className="w-full bg-gray-200 rounded-full h-2 mt-2 overflow-hidden">
+                              <div className="text-xs text-gray-500 mb-2">
+                                Completed: {project.completedScore} | Pending: {project.pendingScore}
+                              </div>
+                              <div className="w-full bg-gray-200 rounded-full h-2 overflow-hidden">
                                 <div
                                   className="bg-gradient-to-r from-green-400 to-green-600 h-2 rounded-full transition-all duration-300"
                                   style={{

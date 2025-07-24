@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import AddClientModal from '../components/addclientModal';
 import { supabase, supabaseAdmin } from '../lib/supabase';
@@ -26,72 +26,86 @@ const AdminClient: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const { userProfile } = useUser();
     const [error, setError] = useState<string | null>(null);
+    const [isDeleting, setIsDeleting] = useState<string | null>(null);
 
-    // Fetch clients and their projects
-    const fetchClients = async () => {
-        try {
-            setLoading(true);
-            setError(null);
-
-            // Fetch users with client role
-            const { data: clientUsers, error: clientError } = await supabase
-                .from('users')
-                .select('id, full_name, email, created_at')
-                .eq('role', 'client')
-                .eq("organization_id", userProfile?.organization_id)
-                .order('created_at', { ascending: false });
-
-            if (clientError) {
-                setError('Failed to fetch clients. Please try again.');
-                setLoading(false);
-                return;
-            }
-
-            if (!clientUsers || clientUsers.length === 0) {
-                setClients([]);
-                setLoading(false);
-                return;
-            }
-
-            // Fetch projects for each client (where client is product_owner)
-            const clientsWithProjects = await Promise.all(
-                clientUsers.map(async (client) => {
-                    const { data: projects } = await supabase
-                        .from('projects')
-                        .select('id, title, description, created_at')
-                        .eq('product_owner', client.id)
-                        .order('created_at', { ascending: false });
-
-                    return {
-                        ...client,
-                        projects: projects || []
-                    };
-                })
-            );
-
-            setClients(clientsWithProjects);
-        } catch (error) {
-            setError('An unexpected error occurred while fetching clients.');
-        } finally {
+    // Fetch clients and their projects - optimized with single query
+    const fetchClients = useCallback(async () => {
+        // Don't fetch if no organization_id
+        if (!userProfile?.organization_id) {
             setLoading(false);
-        }
-    };
-
-    // Delete client and all associated data
-    const handleDeleteClient = async (clientId: string) => {
-        if (!confirm('Are you sure you want to delete this client? This will also delete all their projects and remove them from authentication.')) {
             return;
         }
 
         try {
-            // First, delete from users table (this will cascade to related data due to foreign keys)
+            setLoading(true);
+            setError(null);
+
+            // Single query to fetch clients with their projects
+            const { data: clientsData, error: clientError } = await supabase
+                .from('users')
+                .select(`
+                    id,
+                    full_name,
+                    email,
+                    created_at,
+                    projects!product_owner (
+                        id,
+                        title,
+                        description,
+                        created_at
+                    )
+                `)
+                .eq('role', 'client')
+                .eq('organization_id', userProfile.organization_id)
+                .order('created_at', { ascending: false });
+
+            if (clientError) {
+                console.error('Error fetching clients:', clientError);
+                setError('Failed to fetch clients. Please try again.');
+                return;
+            }
+
+            // Transform the data to match our interface
+            const transformedClients: Client[] = (clientsData || []).map(client => ({
+                id: client.id,
+                full_name: client.full_name,
+                email: client.email,
+                created_at: client.created_at,
+                projects: client.projects || []
+            }));
+
+            setClients(transformedClients);
+        } catch (error) {
+            console.error('Unexpected error:', error);
+            setError('An unexpected error occurred while fetching clients.');
+        } finally {
+            setLoading(false);
+        }
+    }, [userProfile?.organization_id]);
+
+    // Delete client with optimistic update
+    const handleDeleteClient = useCallback(async (clientId: string) => {
+        if (!confirm('Are you sure you want to delete this client? This will also delete all their projects and remove them from authentication.')) {
+            return;
+        }
+
+        setIsDeleting(clientId);
+
+        // Optimistic update - remove client from UI immediately
+        const previousClients = clients;
+        setClients(prev => prev.filter(client => client.id !== clientId));
+
+        try {
+            // Delete from users table (this will cascade to related data)
             const { error: userError } = await supabase
                 .from('users')
                 .delete()
                 .eq('id', clientId);
 
             if (userError) {
-                alert('Failed to delete client from users table');
+                // Revert optimistic update on error
+                setClients(previousClients);
+                setError('Failed to delete client from users table');
                 return;
             }
 
@@ -99,33 +113,89 @@ const AdminClient: React.FC = () => {
             const { error: authError } = await supabaseAdmin.auth.admin.deleteUser(clientId);
 
             if (authError) {
-                alert('Client deleted from database but failed to remove from authentication');
-            } else {
-                alert('Client deleted successfully');
+                console.error('Auth deletion error:', authError);
+                setError('Client deleted from database but failed to remove from authentication');
             }
 
-            // Refresh the clients list
-            await fetchClients();
+            // Success - no need to refetch as we already updated the UI
         } catch (error) {
-            alert('An error occurred while deleting the client');
+            console.error('Delete error:', error);
+            // Revert optimistic update on error
+            setClients(previousClients);
+            setError('An error occurred while deleting the client');
+        } finally {
+            setIsDeleting(null);
         }
-    };
+    }, [clients]);
 
     // Filter clients based on search term
     const filteredClients = useMemo(() => {
         if (!searchTerm.trim()) {
             return clients;
         }
+
+        const lowerSearchTerm = searchTerm.toLowerCase();
         return clients.filter(client =>
-            client.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-            client.email.toLowerCase().includes(searchTerm.toLowerCase())
+            client.full_name.toLowerCase().includes(lowerSearchTerm) ||
+            client.email.toLowerCase().includes(lowerSearchTerm)
         );
     }, [clients, searchTerm]);
 
-    // Load clients on component mount
+    // Handle client added - optimized to only add the new client
+    const handleClientAdded = useCallback(async (newClientId?: string) => {
+        if (!newClientId || !userProfile?.organization_id) {
+            // If no ID provided, refetch all
+            await fetchClients();
+            return;
+        }
+
+        try {
+            // Fetch only the new client
+            const { data: newClient, error } = await supabase
+                .from('users')
+                .select(`
+                    id,
+                    full_name,
+                    email,
+                    created_at,
+                    projects!product_owner (
+                        id,
+                        title,
+                        description,
+                        created_at
+                    )
+                `)
+                .eq('id', newClientId)
+                .eq('organization_id', userProfile.organization_id)
+                .single();
+
+            if (!error && newClient) {
+                const transformedClient: Client = {
+                    id: newClient.id,
+                    full_name: newClient.full_name,
+                    email: newClient.email,
+                    created_at: newClient.created_at,
+                    projects: newClient.projects || []
+                };
+
+                // Add to the beginning of the list
+                setClients(prev => [transformedClient, ...prev]);
+            } else {
+                // Fallback to full refetch if single fetch fails
+                await fetchClients();
+            }
+        } catch (error) {
+            console.error('Error adding new client:', error);
+            await fetchClients();
+        }
+    }, [fetchClients, userProfile?.organization_id]);
+
+    // Load clients on component mount and when organization changes
     useEffect(() => {
-        fetchClients();
-    }, []); // Empty dependency array - only run on mount
+        if (userProfile?.organization_id) {
+            fetchClients();
+        }
+    }, [userProfile?.organization_id, fetchClients]);
 
     if (loading) {
         return (
@@ -159,7 +229,7 @@ const AdminClient: React.FC = () => {
                     <AddClientModal
                         isOpen={modalOpen}
                         onClose={() => setModalOpen(false)}
-                        onClientAdded={fetchClients}
+                        onClientAdded={handleClientAdded}
                     />
                 </div>
             </div>
@@ -248,9 +318,15 @@ const AdminClient: React.FC = () => {
                                                     e.stopPropagation();
                                                     handleDeleteClient(client.id);
                                                 }}
-                                                className="text-red-600 hover:text-red-900"
+                                                disabled={isDeleting === client.id}
+                                                className={`text-red-600 hover:text-red-900 ${isDeleting === client.id ? 'opacity-50 cursor-not-allowed' : ''
+                                                    }`}
                                             >
-                                                <FiTrash2 className="h-4 w-4" />
+                                                {isDeleting === client.id ? (
+                                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
+                                                ) : (
+                                                    <FiTrash2 className="h-4 w-4" />
+                                                )}
                                             </button>
                                         </td>
                                     </tr>

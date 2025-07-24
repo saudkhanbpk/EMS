@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import React, { useState, useEffect } from 'react';
 import { Outlet, Link, useLocation, useNavigate } from 'react-router-dom';
+
 import Chatbutton from './chatbtn';
 import Chatlayout from './chatlayout';
 import {
@@ -134,7 +135,7 @@ const EmployeeLayout: React.FC = () => {
             >
               <div className="flex flex-col h-full overflow-y-scroll sidebar-scroll">
                 <div className="flex items-center justify-center">
-                  <h1 className="text-2xl font-poppins font-bold text-[#FFFFFF] mt-2">TalentSync</h1>
+                  <h1 className="text-2xl font-poppins font-bold text-[#FFFFFF] mt-2">Estrowork</h1>
                 </div>
 
                 <nav className="flex-1 px-4 py-8 space-y-">
