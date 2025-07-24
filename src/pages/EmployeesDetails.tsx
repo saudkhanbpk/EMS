@@ -8,6 +8,8 @@ import {
   FiTrash2,
   FiX,
   FiPlusSquare,
+  FiChevronDown,
+  FiChevronUp,
 } from "react-icons/fi";
 import { AttendanceContext } from "./AttendanceContext";
 import TaskBoardAdmin from "../components/TaskBoardAdmin";
@@ -26,6 +28,7 @@ interface Employee {
   lastincrement?: string | null; // Last increment date (nullable)
   upcomingincrement?: string | null; // Upcoming increment date (nullable)
   rating?: number; // Employee rating (nullable)
+  daily_log?: string | null; // Add daily log property
 }
 
 interface Project {
@@ -35,9 +38,6 @@ interface Project {
 }
 
 const EmployeesDetails = () => {
-  // Create admin client for user creation
-
-
   // Check if service role key is available
   if (!import.meta.env.VITE_SUPABASE_SERVICE_ROLE_KEY) {
     console.error('VITE_SUPABASE_SERVICE_ROLE_KEY is not set in environment variables');
@@ -68,7 +68,12 @@ const EmployeesDetails = () => {
   >("daily");
   const [showPerformanceMenu, setShowPerformanceMenu] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [showAllProjects, setShowAllProjects] = useState<{[key: string]: boolean}>({});
+  const [showAllProjects, setShowAllProjects] = useState<{ [key: string]: boolean }>({});
+  const [showLogModal, setShowLogModal] = useState(false);
+  const [modalLogText, setModalLogText] = useState("");
+  
+  // Add state to track expanded daily logs
+  const [expandedLogs, setExpandedLogs] = useState<{ [key: string]: boolean }>({});
 
   const { openTaskBoard } = useContext(AttendanceContext);
   const formRef = useRef<HTMLFormElement>(null);
@@ -115,6 +120,31 @@ const EmployeesDetails = () => {
     profile_image: null,
   });
 
+  // Function to toggle expanded state for daily log
+  const toggleLogExpanded = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation(); // Prevent row click event
+    setExpandedLogs(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
+  };
+
+  // Function to get daily log display text
+  const getLogDisplayText = (log: string | null, isExpanded: boolean) => {
+    if (!log) return "No log";
+    
+    // Split log into lines
+    const lines = log.split('\n');
+    
+    // If expanded or fewer than 2 lines, show all
+    if (isExpanded || lines.length <= 2) {
+      return log;
+    }
+    
+    // Otherwise show first 2 lines
+    return lines.slice(0, 2).join('\n') + '...';
+  };
+
   const [step, setStep] = useState(1);
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
 
@@ -151,6 +181,29 @@ const EmployeesDetails = () => {
           increamenterror.message
         );
       }
+
+      // Fetch latest daily_log for each employee from tasks_of_projects
+      const { data: dailyLogsData, error: dailyLogsError } = await supabase
+        .from("tasks_of_projects")
+        .select("user_id, daily_log, action_date")
+        .not("daily_log", "is", null)
+        .order("action_date", { ascending: false });
+
+      if (dailyLogsError) {
+        console.error("Error fetching daily logs:", dailyLogsError.message);
+      }
+
+      // Map: user_id -> latest daily_log
+      const latestDailyLogs: { [key: string]: any } = {};
+      if (dailyLogsData) {
+        dailyLogsData.forEach((row) => {
+          if (!row.user_id) return;
+          if (!latestDailyLogs[row.user_id]) {
+            latestDailyLogs[row.user_id] = row.daily_log;
+          }
+        });
+      }
+      
       // Calculate date range for selected period
       let startDate;
       const today = new Date();
@@ -252,6 +305,7 @@ const EmployeesDetails = () => {
           activeTaskCount: employeeTasks.length,
           completedKPI: completedKPI,
           rating: latestRating,
+          daily_log: latestDailyLogs[employee.id] || null,
         };
       });
       setEmployees(employeesWithProjects);
@@ -660,12 +714,28 @@ const EmployeesDetails = () => {
         console.warn('Failed to delete from auth:', authError);
       }
 
-
       setEmployees((prev) => prev.filter((emp) => emp.id !== id));
     } catch (err) {
       console.error("Error deleting employee:", err);
     }
   };
+
+  // Log Modal Component
+  const LogModal = () => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
+      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-lg font-bold">Daily Log</h2>
+          <button onClick={() => setShowLogModal(false)} className="text-gray-400 hover:text-gray-600">
+            <FiX className="w-5 h-5" />
+          </button>
+        </div>
+        <div className="text-gray-700 whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
+          {modalLogText}
+        </div>
+      </div>
+    </div>
+  );
 
   // Inline StarDisplay component for ratings
   const StarDisplay: React.FC<{
@@ -985,6 +1055,7 @@ const EmployeesDetails = () => {
         <>
           {showForm && renderEmployeeForm()}
           {showModal && renderAssignTaskModal()}
+          {showLogModal && <LogModal />}
 
           {employeeview === "detailview" ? (
             <Employeeprofile
@@ -1233,6 +1304,9 @@ const EmployeesDetails = () => {
                                 >
                                   Workload
                                 </th>
+                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                  Daily Log
+                                </th>
                                 <th
                                   scope="col"
                                   className="  px-4 lg:px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -1330,6 +1404,7 @@ const EmployeesDetails = () => {
                                     entry.email?.toLowerCase().includes(searchQuery.toLowerCase())
                                 )
                                 .map((entry) => {
+                                  const isLogExpanded = expandedLogs[entry.id] || false;
                                   return (
                                     <tr
                                       key={entry.id}
@@ -1399,6 +1474,35 @@ const EmployeesDetails = () => {
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                         <span className="font-medium">{entry.TotalKPI ?? 0}</span>
                                       </td>
+                                      <td className="px-4 lg:px-4 py-4 text-sm text-gray-700 max-w-xs">
+                                        {entry.daily_log ? (
+                                          <div>
+                                            <div className={`${isLogExpanded ? '' : 'line-clamp-2'} text-gray-700`}>
+                                              {entry.daily_log}
+                                            </div>
+                                            {entry.daily_log.split('\n').length > 2 && (
+                                              <button
+                                                onClick={(e) => toggleLogExpanded(entry.id, e)}
+                                                className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                                              >
+                                                {isLogExpanded ? (
+                                                  <>
+                                                    <FiChevronUp className="mr-1" />
+                                                    Show less
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <FiChevronDown className="mr-1" />
+                                                    Show more
+                                                  </>
+                                                )}
+                                              </button>
+                                            )}
+                                          </div>
+                                        ) : (
+                                          <span className="text-xs text-gray-400">No log</span>
+                                        )}
+                                      </td>
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-center">
                                         <StarDisplay rating={typeof entry.rating === 'number' ? entry.rating : 0} size="md" />
                                       </td>
@@ -1443,137 +1547,172 @@ const EmployeesDetails = () => {
                             entry.full_name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
                             entry.email?.toLowerCase().includes(searchQuery.toLowerCase())
                         )
-                        .map((entry) => (
-                          <div
-                            key={entry.id}
-                            className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden border border-gray-200"
-                          >
-                            <div className="p-4">
-                              <div className="flex items-center justify-between mb-3">
-                                <button
-                                  onClick={() => {
-                                    setEmployee(entry);
-                                    setEmployeeId(entry.id);
-                                    setEmployeeView("detailview");
-                                  }}
-                                  className="flex items-center gap-3 group"
-                                >
-                                  <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs">
-                                    {entry.full_name?.charAt(0) || '?'}
-                                  </div>
-                                  <div className="text-left">
-                                    <div className="font-semibold text-gray-800 text-sm">
-                                      {entry.full_name || 'N/A'}
+                        .map((entry) => {
+                          const isLogExpanded = expandedLogs[entry.id] || false;
+                          return (
+                            <div
+                              key={entry.id}
+                              className="bg-white rounded-lg shadow-sm mb-4 overflow-hidden border border-gray-200"
+                            >
+                              <div className="p-4">
+                                <div className="flex items-center justify-between mb-3">
+                                  <button
+                                    onClick={() => {
+                                      setEmployee(entry);
+                                      setEmployeeId(entry.id);
+                                      setEmployeeView("detailview");
+                                    }}
+                                    className="flex items-center gap-3 group"
+                                  >
+                                    <div className="flex-shrink-0 h-8 w-8 rounded-full bg-gradient-to-r from-[#9A00FF] to-[#5A00B4] flex items-center justify-center text-white font-medium text-xs">
+                                      {entry.full_name?.charAt(0) || '?'}
                                     </div>
-                                    <div className="text-xs text-gray-500">{entry.email || 'N/A'}</div>
+                                    <div className="text-left">
+                                      <div className="font-semibold text-gray-800 text-sm">
+                                        {entry.full_name || 'N/A'}
+                                      </div>
+                                      <div className="text-xs text-gray-500">{entry.email || 'N/A'}</div>
+                                    </div>
+                                  </button>
+                                  <div className="flex items-center gap-1">
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleAssignClick(entry);
+                                      }}
+                                      className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
+                                      title="Assign Task"
+                                    >
+                                      <FiPlusSquare className="w-3.5 h-3.5" />
+                                    </button>
+                                    <button
+                                      onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDelete(entry.id);
+                                      }}
+                                      className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
+                                      title="Delete"
+                                    >
+                                      <FiTrash2 className="w-3.5 h-3.5" />
+                                    </button>
                                   </div>
-                                </button>
-                                <div className="flex items-center gap-1">
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleAssignClick(entry);
-                                    }}
-                                    className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
-                                    title="Assign Task"
-                                  >
-                                    <FiPlusSquare className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDelete(entry.id);
-                                    }}
-                                    className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
-                                    title="Delete"
-                                  >
-                                    <FiTrash2 className="w-3.5 h-3.5" />
-                                  </button>
                                 </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-2 text-xs">
-                                <div className="space-y-0.5">
-                                  <p className="text-gray-500 font-medium">
-                                    Joined
-                                  </p>
-                                  <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
-                                    {entry.joining_date && entry.joining_date !== 'NA' ? new Date(entry.joining_date).toLocaleDateString() : 'N/A'}
-                                  </p>
-                                </div>
+                                <div className="grid grid-cols-2 gap-2 text-xs">
+                                  <div className="space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Joined
+                                    </p>
+                                    <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
+                                      {entry.joining_date && entry.joining_date !== 'NA' ? new Date(entry.joining_date).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                  </div>
 
-                                <div className="space-y-0.5">
-                                  <p className="text-gray-500 font-medium">
-                                    Last Increment
-                                  </p>
-                                  <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
-                                    {entry.lastincrement && entry.lastincrement !== 'N/A' ? new Date(entry.lastincrement).toLocaleDateString() : 'N/A'}
-                                  </p>
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-gray-500 font-medium">
-                                    Upcoming Increment
-                                  </p>
-                                  <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
-                                    {entry.upcomingincrement && entry.upcomingincrement !== 'N/A' ? new Date(entry.upcomingincrement).toLocaleDateString() : 'N/A'}
-                                  </p>
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-gray-500 font-medium">
-                                    Projects
-                                  </p>
-                                  {entry.projects && entry.projects.length > 0 ? (
-                                    <div className="flex flex-wrap gap-1.5 mt-1">
-                                      {(showAllProjects[entry.id] ? entry.projects : entry.projects.slice(0, 2)).map((project: any) => (
-                                        <button
-                                          key={project.id}
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            openTaskBoard(project.id, project.devops);
-                                          }}
-                                          className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
-                                        >
-                                          {project.title}
-                                        </button>
-                                      ))}
-                                      {entry.projects.length > 2 && (
-                                        <button
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            setShowAllProjects(prev => ({
-                                              ...prev,
-                                              [entry.id]: !prev[entry.id]
-                                            }));
-                                          }}
-                                          className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
-                                        >
-                                          {showAllProjects[entry.id] ? 'Show Less' : `+${entry.projects.length - 2}`}
-                                        </button>
-                                      )}
-                                    </div>
-                                  ) : (
-                                    <span className="text-xs text-gray-400">
-                                      Not assigned
+                                  <div className="space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Last Increment
+                                    </p>
+                                    <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
+                                      {entry.lastincrement && entry.lastincrement !== 'N/A' ? new Date(entry.lastincrement).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Upcoming Increment
+                                    </p>
+                                    <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
+                                      {entry.upcomingincrement && entry.upcomingincrement !== 'N/A' ? new Date(entry.upcomingincrement).toLocaleDateString() : 'N/A'}
+                                    </p>
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Projects
+                                    </p>
+                                    {entry.projects && entry.projects.length > 0 ? (
+                                      <div className="flex flex-wrap gap-1.5 mt-1">
+                                        {(showAllProjects[entry.id] ? entry.projects : entry.projects.slice(0, 2)).map((project: any) => (
+                                          <button
+                                            key={project.id}
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              openTaskBoard(project.id, project.devops);
+                                            }}
+                                            className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
+                                          >
+                                            {project.title}
+                                          </button>
+                                        ))}
+                                        {entry.projects.length > 2 && (
+                                          <button
+                                            onClick={(e) => {
+                                              e.stopPropagation();
+                                              setShowAllProjects(prev => ({
+                                                ...prev,
+                                                [entry.id]: !prev[entry.id]
+                                              }));
+                                            }}
+                                            className="px-2 py-0.5 text-xs rounded-full bg-gray-100 text-gray-600 hover:bg-gray-200 transition-colors"
+                                          >
+                                            {showAllProjects[entry.id] ? 'Show Less' : `+${entry.projects.length - 2}`}
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">
+                                        Not assigned
+                                      </span>
+                                    )}
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Workload
+                                    </p>
+                                    <span className="text-xs font-medium">
+                                      {entry.TotalKPI ?? 0}
                                     </span>
-                                  )}
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-gray-500 font-medium">
-                                    Workload
-                                  </p>
-                                  <span className="text-xs font-medium">
-                                    {entry.TotalKPI ?? 0}
-                                  </span>
-                                </div>
-                                <div className="space-y-0.5">
-                                  <p className="text-gray-500 font-medium">
-                                    Performance
-                                  </p>
-                                  <StarDisplay rating={typeof entry.rating === 'number' ? entry.rating : 0} size="md" />
+                                  </div>
+                                  <div className="col-span-2 space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Daily Log
+                                    </p>
+                                    {entry.daily_log ? (
+                                      <div>
+                                        <div className={`${isLogExpanded ? '' : 'line-clamp-2'} text-gray-700 text-xs`}>
+                                          {entry.daily_log}
+                                        </div>
+                                        {entry.daily_log.split('\n').length > 2 && (
+                                          <button
+                                            onClick={(e) => toggleLogExpanded(entry.id, e)}
+                                            className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center"
+                                          >
+                                            {isLogExpanded ? (
+                                              <>
+                                                <FiChevronUp className="mr-1" />
+                                                Show less
+                                              </>
+                                            ) : (
+                                              <>
+                                                <FiChevronDown className="mr-1" />
+                                                Show more
+                                              </>
+                                            )}
+                                          </button>
+                                        )}
+                                      </div>
+                                    ) : (
+                                      <span className="text-xs text-gray-400">No log</span>
+                                    )}
+                                  </div>
+                                  <div className="space-y-0.5">
+                                    <p className="text-gray-500 font-medium">
+                                      Performance
+                                    </p>
+                                    <StarDisplay rating={typeof entry.rating === 'number' ? entry.rating : 0} size="md" />
+                                  </div>
                                 </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                     </div>
                   </div>
                 )}
