@@ -9,6 +9,7 @@ import Testimonials from "../components/landingpage/Testimonials";
 import FAQ from "../components/landingpage/FAQ";
 import Contact from "../components/landingpage/Contact";
 import Footer from "../components/landingpage/Footer";
+import ImageWithTextBlock from "../components/landingpage/ImageWithTextBlock";
 const LandingPage: React.FC = () => {
     useEffect(() => {
         AOS.init({
@@ -24,6 +25,7 @@ const LandingPage: React.FC = () => {
             <Header />
             <Hero />
             <Features />
+            <ImageWithTextBlock />
             <Pricing />
             <Testimonials />
             <FAQ></FAQ>

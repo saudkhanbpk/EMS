@@ -44,7 +44,7 @@ const Contact = () => {
 
             <div className="space-y-6">
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+               <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-700 rounded-lg flex items-center justify-center shadow-md">
                   <Mail className="w-6 h-6 text-white" />
                 </div>
                 <div>
@@ -54,26 +54,18 @@ const Contact = () => {
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
+              <div className="w-12 h-12 bg-gradient-to-r from-blue-600 to-purple-700 rounded-lg flex items-center justify-center shadow-md">
                   <Phone className="w-6 h-6 text-white" />
                 </div>
                 <div>
                   <h4 className="font-semibold text-gray-900">Phone</h4>
-                  <p className="text-gray-600">+92 311 9265290</p>
+                  <p className="text-gray-600">+1(321)364-6803</p>
                 </div>
               </div>
 
               <div className="flex items-center gap-4">
-                <div className="w-12 h-12 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <h4 className="font-semibold text-gray-900">Address</h4>
-                  <p className="text-gray-600">
-                    123 Business Avenue<br />
-                    Suite 100, Tech City, TC 12345
-                  </p>
-                </div>
+               
+              
               </div>
             </div>
 
@@ -154,7 +146,7 @@ const Contact = () => {
 
               <button
                 type="submit"
-                className="w-full bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition-colors duration-200 flex items-center justify-center gap-2"
+                  className="relative w-full py-4 px-6 rounded-xl font-semibold transition-all duration-300 overflow-hidden bg-gradient-to-r from-blue-600 to-purple-700 text-white shadow-lg hover:shadow-xl flex items-center justify-center gap-2"
               >
                 <Send className="w-5 h-5" />
                 Send Message

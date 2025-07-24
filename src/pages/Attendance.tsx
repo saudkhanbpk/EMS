@@ -13,6 +13,12 @@ import CheckoutModal from '../component/CheckOutModal';
 
 const GEOFENCE_RADIUS = 0.15; // km - increased from 0.15km to 1km for better tolerance
 
+
+
+const OFFICE_LATITUDE = 34.1298;
+const OFFICE_LONGITUDE =  72.4656;
+
+
 interface AttendanceRecord {
   id: string;
   check_in: string;
