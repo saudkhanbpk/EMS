@@ -816,7 +816,7 @@ const AdminPage: React.FC = () => {
                         : "text-white hover:bg-[#9A00FF]"
                         }`}
                     >
-                      Employees
+                      Members
                     </button>
                     <button
                       onClick={() => {

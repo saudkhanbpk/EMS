@@ -851,6 +851,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                           </svg>
                         </div>
                       </div>
+                      <ViewToggle view={view} setView={setView} />
                     </div>
                     {selectedDeveloper !== 'all' && (
                       <>
@@ -886,9 +887,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             </div>
 
             {/* View Toggle */}
-            <div className="flex justify-end mb-4">
-              <ViewToggle view={view} setView={setView} />
-            </div>
+
 
             {view === "card" ? (
               <DragDropContext onDragEnd={handleDragEnd}>
