@@ -16,9 +16,9 @@ const AdminOrganization: React.FC = () => {
     const [organizationData, setOrganizationData] = useState<any>(null);
     const [userCount, setUserCount] = useState<number>(0);
     const [projectCount, setProjectCount] = useState<number>(0);
+    const [clientCount, setClientCount] = useState<number>(0); // <-- Added for clients
     const { userProfile } = useUser();
 
-    // Check if location exists and fetch organization data when component mounts or userProfile changes
     useEffect(() => {
         const fetchOrganizationData = async () => {
             if (userProfile?.organization_id) {
@@ -51,7 +51,7 @@ const AdminOrganization: React.FC = () => {
                     setOrganizationData(orgData);
                 }
 
-                // Fetch user count - users where organization_id matches userProfile.organization_id
+                // Fetch user count
                 const { count: usersCount } = await supabase
                     .from('users')
                     .select('*', { count: 'exact', head: true })
@@ -59,13 +59,22 @@ const AdminOrganization: React.FC = () => {
 
                 setUserCount(usersCount || 0);
 
-                // Fetch project count - projects where organization_id matches userProfile.organization_id
+                // Fetch project count
                 const { count: projectsCount } = await supabase
                     .from('projects')
                     .select('*', { count: 'exact', head: true })
                     .eq('organization_id', userProfile.organization_id);
 
                 setProjectCount(projectsCount || 0);
+
+                // Fetch client count (users with role 'client')
+                const { count: clientsCount } = await supabase
+                    .from('users')
+                    .select('*', { count: 'exact', head: true })
+                    .eq('organization_id', userProfile.organization_id)
+                    .eq('role', 'client');
+
+                setClientCount(clientsCount || 0);
             }
         };
 
@@ -232,14 +241,15 @@ const AdminOrganization: React.FC = () => {
                     </div>
                 )}
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {/* Updated grid to 3 columns for the new card */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                     <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
                         <div className="flex items-center">
                             <div className="p-3 rounded-full bg-purple-100 mr-4">
                                 <UsersIcon className="h-6 w-6 text-purple-600" />
                             </div>
                             <div>
-                                <p className="text-sm font-medium text-gray-500">Total Users</p>
+                                <p className="text-sm font-medium text-gray-500">Total Member</p>
                                 <p className="text-2xl font-bold text-gray-900">{userCount}</p>
                             </div>
                         </div>
@@ -253,6 +263,19 @@ const AdminOrganization: React.FC = () => {
                             <div>
                                 <p className="text-sm font-medium text-gray-500">Total Projects</p>
                                 <p className="text-2xl font-bold text-gray-900">{projectCount}</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* New Card for Total Clients */}
+                    <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-sm">
+                        <div className="flex items-center">
+                            <div className="p-3 rounded-full bg-green-100 mr-4">
+                                <UsersIcon className="h-6 w-6 text-green-600" />
+                            </div>
+                            <div>
+                                <p className="text-sm font-medium text-gray-500">Total Clients</p>
+                                <p className="text-2xl font-bold text-gray-900">{clientCount}</p>
                             </div>
                         </div>
                     </div>
