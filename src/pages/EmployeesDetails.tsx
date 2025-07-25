@@ -149,171 +149,180 @@ const EmployeesDetails = () => {
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
 
   // Fetch employees with their projects and tasks
-  const fetchEmployees = async () => {
-    setLoading(true);
-    try {
-      // Fetch employees
-      const { data: employeesData, error: employeesError } = await supabase
-        .from("users")
-        .select("*")
-        .eq("organization_id", userProfile?.organization_id);
-      if (employeesError) throw employeesError;
+const fetchEmployees = async () => {
+  setLoading(true);
+  try {
+    // Fetch employees
+    const { data: employeesData, error: employeesError } = await supabase
+      .from("users")
+      .select("*")
+      .eq("organization_id", userProfile?.organization_id);
+    if (employeesError) throw employeesError;
 
-      // Fetch projects
-      const { data: projectsData, error: projectsError } = await supabase
-        .from("projects")
-        .select("id, title, devops");
-      if (projectsError) throw projectsError;
+    // Fetch projects
+    const { data: projectsData, error: projectsError } = await supabase
+      .from("projects")
+      .select("id, title, devops");
+    if (projectsError) throw projectsError;
 
-      // Fetch tasks
-      const { data: tasksData, error: tasksError } = await supabase
-        .from("tasks_of_projects")
-        .select("*");
-      if (tasksError) throw tasksError;
+    // Fetch tasks
+    const { data: tasksData, error: tasksError } = await supabase
+      .from("tasks_of_projects")
+      .select("*");
+    if (tasksError) throw tasksError;
 
-      // Fetch increments
-      const { data: increamentdata, error: increamenterror } = await supabase
-        .from("sallery_increment")
-        .select("*");
-      if (increamenterror) {
-        console.error(
-          "Error fetching increament data:",
-          increamenterror.message
-        );
-      }
-
-      // Fetch latest daily_log for each employee from tasks_of_projects
-      const { data: dailyLogsData, error: dailyLogsError } = await supabase
-        .from("tasks_of_projects")
-        .select("user_id, daily_log, action_date")
-        .not("daily_log", "is", null)
-        .order("action_date", { ascending: false });
-
-      if (dailyLogsError) {
-        console.error("Error fetching daily logs:", dailyLogsError.message);
-      }
-
-      // Map: user_id -> latest daily_log
-      const latestDailyLogs: { [key: string]: any } = {};
-      if (dailyLogsData) {
-        dailyLogsData.forEach((row) => {
-          if (!row.user_id) return;
-          if (!latestDailyLogs[row.user_id]) {
-            latestDailyLogs[row.user_id] = row.daily_log;
-          }
-        });
-      }
-      
-      // Calculate date range for selected period
-      let startDate;
-      const today = new Date();
-      if (performancePeriod === "daily") {
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate()
-        );
-      } else if (performancePeriod === "weekly") {
-        const dayOfWeek = today.getDay();
-        startDate = new Date(
-          today.getFullYear(),
-          today.getMonth(),
-          today.getDate() - dayOfWeek
-        );
-      } else if (performancePeriod === "monthly") {
-        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-      }
-      // Add check for startDate before using .toISOString()
-      if (!startDate) return;
-      // Fetch ratings for all employees from dailylog (latest rating per employee in period)
-      const { data: ratingsData, error: ratingsError } = await supabase
-        .from("dailylog")
-        .select("userid, rating, rated_at")
-        .not("rating", "is", null)
-        .gte("rated_at", startDate.toISOString());
-      if (ratingsError) {
-        console.error("Error fetching ratings:", ratingsError.message);
-      }
-      // Map: userid -> latest rating in period
-      const latestRatings: { [key: string]: any } = {};
-      if (ratingsData) {
-        // For each user, find the latest rating in the period
-        ratingsData.forEach((row) => {
-          if (!row.userid) return;
-          if (
-            !latestRatings[row.userid] ||
-            new Date(row.rated_at) >
-            new Date(latestRatings[row.userid].rated_at)
-          ) {
-            latestRatings[row.userid] = row;
-          }
-        });
-      }
-      // Process employee data
-      const employeesWithProjects = employeesData.map((employee) => {
-        const employeeProjects = projectsData.filter((project) =>
-          project.devops?.some((dev: any) => dev.id === employee.id)
-        );
-        // Get last increment date
-        let increamentdataone = "N/A";
-        let upcomingIncrementDate = "N/A";
-        const incrementone = increamentdata?.filter(
-          (increament) => increament.user_id === employee.id
-        );
-        const sortedIncrements = [...(incrementone || [])].sort(
-          (a, b) =>
-            new Date(b.created_at || 0).getTime() -
-            new Date(a.created_at || 0).getTime()
-        );
-        if (sortedIncrements.length > 0) {
-          const latestIncrement = sortedIncrements[0];
-          if (latestIncrement.increment_date) {
-            increamentdataone = latestIncrement.increment_date;
-          }
-          if (latestIncrement.upcomming_increment) {
-            upcomingIncrementDate = latestIncrement.upcomming_increment;
-          }
-        }
-        const employeeTasks = tasksData.filter(
-          (task) =>
-            task.devops?.some((dev: any) => dev.id === employee.id) &&
-            task.status?.toLowerCase() !== "done"
-        );
-        const totalKPI = employeeTasks.reduce(
-          (sum, task) => sum + (Number(task.score) || 0),
-          0
-        );
-        const employeeTaskscompleted = tasksData.filter(
-          (task) =>
-            task.devops?.some((dev: any) => dev.id === employee.id) &&
-            task.status?.toLowerCase() == "done"
-        );
-        const completedKPI = employeeTaskscompleted.reduce(
-          (sum, task) => sum + (Number(task.score) || 0),
-          0
-        );
-        // Get latest rating from dailylog
-        const latestRating = latestRatings[employee.id]?.rating || null;
-        return {
-          ...employee,
-          joining_date: employee.joining_date || "NA",
-          lastincrement: increamentdataone,
-          upcomingincrement: upcomingIncrementDate.split("T")[0] || "N/A",
-          projects: employeeProjects,
-          projectid: employeeProjects.map((project) => project.id),
-          TotalKPI: totalKPI,
-          activeTaskCount: employeeTasks.length,
-          completedKPI: completedKPI,
-          rating: latestRating,
-          daily_log: latestDailyLogs[employee.id] || null,
-        };
-      });
-      setEmployees(employeesWithProjects);
-      setLoading(false);
-    } catch (error) {
-      console.error("Error fetching data:", error);
+    // Fetch increments
+    const { data: increamentdata, error: increamenterror } = await supabase
+      .from("sallery_increment")
+      .select("*");
+    if (increamenterror) {
+      console.error("Error fetching increment data:", increamenterror.message);
     }
-  };
+
+    // Fetch daily logs from tasks_of_projects
+    const { data: dailyLogsData, error: dailyLogsError } = await supabase
+      .from("tasks_of_projects")
+      .select("userid, daily_log, action_date")
+      .not("daily_log", "is", null)
+      .order("action_date", { ascending: false });
+    if (dailyLogsError) {
+      console.error("Error fetching daily logs:", dailyLogsError.message);
+    }
+
+    const latestDailyLogs: { [key: string]: any } = {};
+    if (dailyLogsData) {
+      dailyLogsData.forEach((row) => {
+        if (!row.userid) return;
+        if (!latestDailyLogs[row.userid]) {
+          latestDailyLogs[row.userid] = row.daily_log;
+        }
+      });
+    }
+
+    // Calculate period start date
+    let startDate;
+    const today = new Date();
+    if (performancePeriod === "daily") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+    } else if (performancePeriod === "weekly") {
+      const dayOfWeek = today.getDay();
+      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
+    } else if (performancePeriod === "monthly") {
+      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+    }
+
+    if (!startDate) return;
+
+    // Fetch ratings
+    const { data: ratingsData, error: ratingsError } = await supabase
+      .from("dailylog")
+      .select("userid, rating, rated_at")
+      .not("rating", "is", null)
+      .gte("rated_at", startDate.toISOString());
+    if (ratingsError) {
+      console.error("Error fetching ratings:", ratingsError.message);
+    }
+
+    const latestRatings: { [key: string]: any } = {};
+    if (ratingsData) {
+      ratingsData.forEach((row) => {
+        if (!row.userid) return;
+        if (
+          !latestRatings[row.userid] ||
+          new Date(row.rated_at) > new Date(latestRatings[row.userid]?.rated_at)
+        ) {
+          latestRatings[row.userid] = row;
+        }
+      });
+    }
+
+    // === ✅ Fetch today's daily logs using `userid` ===
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const tomorrowStart = new Date(todayStart);
+    tomorrowStart.setDate(todayStart.getDate() + 1);
+
+    const { data: todayLogs, error: todayLogsError } = await supabase
+      .from("dailylog")
+      .select("userid, dailylog")
+      .gte("created_at", todayStart.toISOString())
+      .lt("created_at", tomorrowStart.toISOString());
+
+    if (todayLogsError) {
+      console.error("Error fetching today's logs:", todayLogsError.message);
+    }
+
+    const dailyLogMap: { [key: string]: string } = {};
+    todayLogs?.forEach((log) => {
+      if (log.userid && !dailyLogMap[log.userid]) {
+        dailyLogMap[log.userid] = log.dailylog;
+      }
+    });
+
+    // Final processing
+    const employeesWithProjects = employeesData.map((employee) => {
+      const employeeProjects = projectsData.filter((project) =>
+        project.devops?.some((dev: any) => dev.id === employee.id)
+      );
+
+      let increamentdataone = "N/A";
+      let upcomingIncrementDate = "N/A";
+      const incrementone = increamentdata?.filter((increament) => increament.user_id === employee.id);
+      const sortedIncrements = [...(incrementone || [])].sort(
+        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
+      );
+      if (sortedIncrements.length > 0) {
+        const latestIncrement = sortedIncrements[0];
+        if (latestIncrement.increment_date) {
+          increamentdataone = latestIncrement.increment_date;
+        }
+        if (latestIncrement.upcomming_increment) {
+          upcomingIncrementDate = latestIncrement.upcomming_increment;
+        }
+      }
+
+      const employeeTasks = tasksData.filter(
+        (task) =>
+          task.devops?.some((dev: any) => dev.id === employee.id) &&
+          task.status?.toLowerCase() !== "done"
+      );
+
+      const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      const employeeTaskscompleted = tasksData.filter(
+        (task) =>
+          task.devops?.some((dev: any) => dev.id === employee.id) &&
+          task.status?.toLowerCase() === "done"
+      );
+
+      const completedKPI = employeeTaskscompleted.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      const latestRating = latestRatings[employee.id]?.rating || null;
+
+      return {
+        ...employee,
+        joining_date: employee.joining_date || "NA",
+        lastincrement: increamentdataone,
+        upcomingincrement: upcomingIncrementDate.split("T")[0] || "N/A",
+        projects: employeeProjects,
+        projectid: employeeProjects.map((project) => project.id),
+        TotalKPI: totalKPI,
+        activeTaskCount: employeeTasks.length,
+        completedKPI: completedKPI,
+        rating: latestRating,
+        daily_log: dailyLogMap[employee.id] || "No task today",
+      };
+    });
+
+    setEmployees(employeesWithProjects);
+    setLoading(false);
+  } catch (error) {
+    console.error("Error fetching data:", error);
+    setLoading(false);
+  }
+};
+
+
 
   useEffect(() => {
     fetchEmployees();

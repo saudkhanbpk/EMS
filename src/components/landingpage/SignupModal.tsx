@@ -104,7 +104,7 @@ const SignupModal: React.FC<SignupModalProps> = ({ isOpen, onClose }) => {
           const { error: inviteError } = await supabaseAdmin.auth.admin.inviteUserByEmail(
             formData.email,
             {
-              redirectTo: `https://ems-one-mauve.vercel.app/login`,
+              redirectTo: `https://estrowork.vercel.app//login`,
               data: {
                 full_name: formData.name,
               }

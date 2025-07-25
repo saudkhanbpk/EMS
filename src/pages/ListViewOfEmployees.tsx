@@ -62,15 +62,15 @@ const TaskCell = ({ task }) => {
 // --- Utility to fetch daily tasks ---
 async function fetchDailyTasks(date) {
   const { data, error } = await supabase
-    .from("daily_tasks")
-    .select("user_id, task_description, created_at")
+    .from("daily check_in task")
+    .select("user_id, content, created_at")
     .gte("created_at", `${date}T00:00:00`)
     .lte("created_at", `${date}T23:59:59`);
   if (error) throw error;
   const dailyTasksMap = new Map();
   if (data) {
     data.forEach(task => {
-      dailyTasksMap.set(task.user_id, task.task_description);
+      dailyTasksMap.set(task.user_id, task.content);
     });
   }
   return dailyTasksMap;
@@ -717,12 +717,15 @@ const EmployeeAttendanceTable = () => {
     // Fetch leave requests when component mounts
     const fetchLeaveRequests = async () => {
       try {
+        const { data: userprofile, error: usererror } = await supabase.from("users").select("id,organization_id").eq("id", user?.id).single();
+
         const today = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
           .from("leave_requests")
-          .select("full_name, user_email, status, leave_type, leave_date")
+          .select("full_name, user_email, status, leave_type, leave_date, users!inner(organization_id)")
           .eq("status", "approved")
-          .eq("leave_date", today);
+          .eq("leave_date", today)
+          .eq("users.organization_id", userprofile?.organization_id);
 
         if (error) {
           console.error("Error fetching leave requests:", error);
@@ -823,159 +826,147 @@ const EmployeeAttendanceTable = () => {
   const handleOfficeComplaintsClick = () => {
     fetchofficeComplaints();
   };
-  const fetchEmployees = async () => {
-    try {
-      const { data: userprofile, error: usererror } = await supabase.from("users").select("id,organization_id").eq("id", user?.id).single();
-      // Fetch all employees except excluded ones
-      const { data: employees, error: employeesError } = await supabase
-        .from("users")
-        .select("id, full_name")
-        .eq("organization_id", userprofile?.organization_id);
+  
 
-      if (employeesError) throw employeesError;
-      if (!employees || employees.length === 0) {
-        console.warn("No employees found.");
-        return;
-      }
+const fetchEmployees = async () => {
+  try {
+    // Fetch the current user's organization ID
+    const { data: userprofile, error: usererror } = await supabase
+      .from("users")
+      .select("id, organization_id")
+      .eq("id", user?.id)
+      .single();
 
-      setEmployees(employees);
-      const today = new Date();
-      const monthStart = startOfMonth(today);
-      const monthEnd = endOfMonth(today);
-      const allDaysInMonth = eachDayOfInterval({
-        start: monthStart,
-        end: monthEnd,
-      });
-      const workingDaysInMonth = allDaysInMonth.filter(
-        (date) => !isWeekend(date)
-      ).length;
+    if (usererror) throw usererror;
 
-      // Fetch all attendance logs for all employees in one query
-      const { data: attendanceLogs, error: attendanceError } = await supabase
-        .from("attendance_logs")
-        .select("id, user_id, check_in, check_out")
-        .gte("check_in", monthStart.toISOString())
-        .lte("check_in", monthEnd.toISOString())
-        .order("check_in", { ascending: true });
+    // Fetch all employees in the same organization
+    const { data: employees, error: employeesError } = await supabase
+      .from("users")
+      .select("id, full_name")
+      .eq("organization_id", userprofile?.organization_id);
 
-      if (attendanceError) throw attendanceError;
-
-      // Process data to compute stats for each employee
-      const employeeStats = {};
-
-      // Fetch all breaks for all attendance records in one query
-      const { data: allBreaksData, error: allBreaksError } = await supabase
-        .from("breaks")
-        .select("start_time, end_time, attendance_id");
-
-      if (allBreaksError) {
-        console.error("Error fetching all breaks:", allBreaksError);
-      }
-
-      // Group all breaks by attendance_id
-      const allBreaksByAttendance = {};
-      if (allBreaksData) {
-        allBreaksData.forEach((b) => {
-          if (!allBreaksByAttendance[b.attendance_id])
-            allBreaksByAttendance[b.attendance_id] = [];
-          allBreaksByAttendance[b.attendance_id].push(b);
-        });
-      }
-
-      for (const employee of employees) {
-        const employeeLogs = attendanceLogs.filter(
-          (log) => log.user_id === employee.id
-        );
-
-        // Group attendance by date (earliest record per day)
-        const attendanceByDate = employeeLogs.reduce((acc, curr) => {
-          const date = format(new Date(curr.check_in), "yyyy-MM-dd");
-          if (
-            !acc[date] ||
-            new Date(curr.check_in) < new Date(acc[date].check_in)
-          ) {
-            acc[date] = curr;
-          }
-          return acc;
-        }, {});
-
-        const uniqueAttendance = Object.values(
-          attendanceByDate
-        ) as AttendanceRecord[];
-
-        let totalHours = 0;
-
-        uniqueAttendance.forEach((attendance: AttendanceRecord) => {
-          const start = new Date(attendance.check_in);
-
-          // For no checkout, use current time but cap at 8 hours after check-in
-          let end: Date;
-          if (attendance.check_out) {
-            end = new Date(attendance.check_out);
-          } else {
-            const currentTime = new Date();
-            const maxEndTime = new Date(start);
-            maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
-
-            // Use the earlier of current time or max end time (8 hours after check-in)
-            end = currentTime < maxEndTime ? currentTime : maxEndTime;
-          }
-
-          // Calculate hours worked (ensure it's not negative)
-          let hoursWorked = Math.max(
-            0,
-            (end.getTime() - start.getTime()) / (1000 * 60 * 60)
-          );
-
-          // Subtract breaks
-          const breaks = allBreaksByAttendance[attendance.id] || [];
-          let breakHours = 0;
-
-          breaks.forEach((b: any) => {
-            if (b.start_time) {
-              const breakStart = new Date(b.start_time);
-              // If end_time is missing, calculate only 1 hour of break
-              const breakEnd = b.end_time
-                ? new Date(b.end_time)
-                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
-
-              breakHours +=
-                (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
-            }
-          });
-
-          totalHours += Math.min(Math.max(0, hoursWorked - breakHours), 12);
-        });
-
-        // Store stats for each employee
-        employeeStats[employee.id] = uniqueAttendance.length
-          ? totalHours / uniqueAttendance.length
-          : 0;
-      }
-
-      // Fetch daily tasks for the selected date
-      const { data: dailyTasksData, error: dailyTasksError } = await supabase
-        .from("daily_tasks")
-        .select("user_id, task_description, created_at")
-        .gte("created_at", `${formattedDate}T00:00:00`)
-        .lte("created_at", `${formattedDate}T23:59:59`);
-
-      if (dailyTasksError) throw dailyTasksError;
-
-      // Create a map for quick lookup
-      const dailyTasksMap = new Map();
-      if (dailyTasksData) {
-        dailyTasksData.forEach(task => {
-          dailyTasksMap.set(task.user_id, task.task_description);
-        });
-      }
-
-      setEmployeeStats(employeeStats);
-      console.log("Employee Stats:", employeeStats);
-    } catch (error) {
-      console.error("Error fetching employees and stats:", error);
+    if (employeesError) throw employeesError;
+    if (!employees || employees.length === 0) {
+      console.warn("No employees found.");
+      return;
     }
-  };
+
+    setEmployees(employees);
+
+    const today = new Date();
+    const formattedDate = format(today, "yyyy-MM-dd"); // for daily task
+    const monthStart = startOfMonth(today);
+    const monthEnd = endOfMonth(today);
+    const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+    const workingDaysInMonth = allDaysInMonth.filter((date) => !isWeekend(date)).length;
+
+    // Fetch all attendance logs for the month
+    const { data: attendanceLogs, error: attendanceError } = await supabase
+      .from("attendance_logs")
+      .select("id, user_id, check_in, check_out")
+      .gte("check_in", monthStart.toISOString())
+      .lte("check_in", monthEnd.toISOString())
+      .order("check_in", { ascending: true });
+
+    if (attendanceError) throw attendanceError;
+
+    // Fetch all breaks
+    const { data: allBreaksData, error: allBreaksError } = await supabase
+      .from("breaks")
+      .select("start_time, end_time, attendance_id");
+
+    if (allBreaksError) {
+      console.error("Error fetching all breaks:", allBreaksError);
+    }
+
+    // Organize breaks by attendance ID
+    const allBreaksByAttendance = {};
+    if (allBreaksData) {
+      allBreaksData.forEach((b) => {
+        if (!allBreaksByAttendance[b.attendance_id])
+          allBreaksByAttendance[b.attendance_id] = [];
+        allBreaksByAttendance[b.attendance_id].push(b);
+      });
+    }
+
+    const employeeStats = {};
+
+    for (const employee of employees) {
+      const employeeLogs = attendanceLogs.filter((log) => log.user_id === employee.id);
+
+      const attendanceByDate = employeeLogs.reduce((acc, curr) => {
+        const date = format(new Date(curr.check_in), "yyyy-MM-dd");
+        if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
+          acc[date] = curr;
+        }
+        return acc;
+      }, {});
+
+      const uniqueAttendance = Object.values(attendanceByDate);
+
+      let totalHours = 0;
+
+      uniqueAttendance.forEach((attendance) => {
+        const start = new Date(attendance.check_in);
+
+        let end;
+        if (attendance.check_out) {
+          end = new Date(attendance.check_out);
+        } else {
+          const currentTime = new Date();
+          const maxEndTime = new Date(start);
+          maxEndTime.setHours(maxEndTime.getHours() + 8);
+          end = currentTime < maxEndTime ? currentTime : maxEndTime;
+        }
+
+        let hoursWorked = Math.max(0, (end.getTime() - start.getTime()) / (1000 * 60 * 60));
+
+        const breaks = allBreaksByAttendance[attendance.id] || [];
+        let breakHours = 0;
+
+        breaks.forEach((b) => {
+          if (b.start_time) {
+            const breakStart = new Date(b.start_time);
+            const breakEnd = b.end_time
+              ? new Date(b.end_time)
+              : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000);
+            breakHours += (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
+          }
+        });
+
+        totalHours += Math.min(Math.max(0, hoursWorked - breakHours), 12);
+      });
+
+      employeeStats[employee.id] = uniqueAttendance.length
+        ? totalHours / uniqueAttendance.length
+        : 0;
+    }
+
+    // ✅ Fetch today's daily check-in tasks
+    const { data: dailyTasksData, error: dailyTasksError } = await supabase
+      .from("daily check_in task") // Keep this if your table name has spaces
+      .select("id, user_id, content, created_at")
+      .gte("created_at", `${formattedDate}T00:00:00`)
+      .lte("created_at", `${formattedDate}T23:59:59`);
+
+    if (dailyTasksError) throw dailyTasksError;
+
+    const dailyTasksMap = new Map();
+    if (dailyTasksData) {
+      dailyTasksData.forEach((task) => {
+        dailyTasksMap.set(task.user_id, task.content);
+      });
+    }
+
+    setEmployeeStats(employeeStats);
+    console.log("Employee Stats:", employeeStats);
+    console.log("Daily Tasks:", dailyTasksMap);
+
+  } catch (error) {
+    console.error("Error fetching employees and stats:", error);
+  }
+};
+
 
   useEffect(
     () => {
@@ -1780,160 +1771,186 @@ const EmployeeAttendanceTable = () => {
   }, [selectedDate]);
 
   // Fetch attendance data
-  const fetchAttendanceData = async (date) => {
-    setLoading(true);
-    const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD format
+const fetchAttendanceData = async (date) => {
+  setLoading(true);
+  const formattedDate = date.toISOString().split("T")[0]; // YYYY-MM-DD
 
-    try {
-      const { data: userprofile, error: userprofileerror } = await supabase.from("users").select("id, full_name,organization_id").eq("id", user?.id).single();
-      if (userprofileerror) throw userprofileerror;
+  try {
+    // Get current user profile
+    const { data: userprofile, error: userprofileerror } = await supabase
+      .from("users")
+      .select("id, full_name, organization_id")
+      .eq("id", user?.id)
+      .single();
+    if (userprofileerror) throw userprofileerror;
 
-      // Fetch all users
-      const { data: users, error: usersError } = await supabase
-        .from("users")
-        .select("id, full_name")
-        .not("role", "in", "(client,admin,superadmin)")
-        .eq("organization_id", userprofile.organization_id);
+    // Fetch all users in same organization
+    const { data: users, error: usersError } = await supabase
+      .from("users")
+      .select("id, full_name")
+      .not("role", "in", "(client,admin,superadmin)")
+      .eq("organization_id", userprofile.organization_id);
+    if (usersError) throw usersError;
 
-      if (usersError) throw usersError;
+    // Fetch attendance logs for the selected date
+    const { data: attendanceLogs, error: attendanceError } = await supabase
+      .from("attendance_logs")
+      .select(
+        "user_id, check_in, check_out, work_mode, status, created_at, autocheckout, id"
+      )
+      .gte("check_in", `${formattedDate}T00:00:00`)
+      .lte("check_in", `${formattedDate}T23:59:59`);
+    if (attendanceError) throw attendanceError;
 
-      // Fetch attendance logs for the selected date
-      const { data: attendanceLogs, error: attendanceError } = await supabase
-        .from("attendance_logs")
-        .select(
-          "user_id, check_in, check_out, work_mode, status, created_at, autocheckout, id"
-        )
-        .gte("check_in", `${formattedDate}T00:00:00`)
-        .lte("check_in", `${formattedDate}T23:59:59`);
+    // Fetch breaks for the selected date
+    const { data: breaksData, error: breaksError } = await supabase
+      .from("breaks")
+      .select("start_time, end_time, attendance_id")
+      .gte("start_time", `${formattedDate}T00:00:00`)
+      .lte("start_time", `${formattedDate}T23:59:59`);
+    if (breaksError) throw breaksError;
 
-      if (attendanceError) throw attendanceError;
-
-      // Fetch breaks for the selected date
-      const { data: breaksData, error: breaksError } = await supabase
-        .from("breaks")
-        .select("start_time, end_time, attendance_id")
-        .gte("start_time", `${formattedDate}T00:00:00`)
-        .lte("start_time", `${formattedDate}T23:59:59`);
-
-      if (breaksError) throw breaksError;
-
-      // Create breaks map by attendance_id
-      const breaksMap = new Map();
-      if (breaksData) {
-        breaksData.forEach((breakItem) => {
-          if (!breaksMap.has(breakItem.attendance_id)) {
-            breaksMap.set(breakItem.attendance_id, []);
-          }
-          breaksMap.get(breakItem.attendance_id).push(breakItem);
-        });
-      }
-
-      // Fetch absentees for the selected date
-      const { data: absentees, error: absenteesError } = await supabase
-        .from("absentees")
-        .select("user_id, absentee_type")
-        .gte("created_at", `${formattedDate}T00:00:00`)
-        .lte("created_at", `${formattedDate}T23:59:59`);
-
-      if (absenteesError) throw absenteesError;
-
-      // Create Maps
-      const attendanceMap = new Map(
-        attendanceLogs.map((log) => [log.user_id, log])
-      );
-      const absenteesMap = new Map(
-        absentees.map((absent) => [absent.user_id, absent.absentee_type])
-      );
-
-      // Build final list
-      const finalAttendanceData = users.map((user) => {
-        const log = attendanceMap.get(user.id);
-
-        const formatTime = (dateString) => {
-          if (!dateString || dateString === "N/A") return "N/A";
-
-          const date = new Date(dateString);
-          return date.toLocaleTimeString("en-US", {
-            hour: "2-digit",
-            minute: "2-digit",
-            hour12: true,
-          });
-        };
-
-        if (!log) {
-          const absenteeType = absenteesMap.get(user.id); // Check if absentee record exists
-
-          return {
-            id: user.id,
-            full_name: user.full_name,
-            check_in: "N/A",
-            check_in2: "N/A",
-            created_at: "N/A",
-            check_out2: "N/A",
-            check_out: "N/A",
-            autocheckout: "",
-            work_mode: "N/A",
-            status: absenteeType || "Absent", // Use absentee type if available
-            break_start: "N/A",
-            break_status: "N/A",
-            textColor: absenteeType ? "text-blue-500" : "text-red-500", // Optional: different color for approved leaves
-          };
+    // Create breaks map
+    const breaksMap = new Map();
+    if (breaksData) {
+      breaksData.forEach((breakItem) => {
+        if (!breaksMap.has(breakItem.attendance_id)) {
+          breaksMap.set(breakItem.attendance_id, []);
         }
+        breaksMap.get(breakItem.attendance_id).push(breakItem);
+      });
+    }
 
-        // Get breaks for this attendance log
-        const userBreaks = breaksMap.get(log.id) || [];
-        const firstBreak = userBreaks[0];
+    // Fetch absentees for the selected date
+    const { data: absentees, error: absenteesError } = await supabase
+      .from("absentees")
+      .select("user_id, absentee_type")
+      .gte("created_at", `${formattedDate}T00:00:00`)
+      .lte("created_at", `${formattedDate}T23:59:59`);
+    if (absenteesError) throw absenteesError;
 
+    // ✅ Fetch daily tasks for the selected date
+    const { data: dailyTasks, error: taskError } = await supabase
+      .from("daily check_in task")
+      .select("user_id, content, created_at")
+      .gte("created_at", `${formattedDate}T00:00:00`)
+      .lte("created_at", `${formattedDate}T23:59:59`);
+    if (taskError) throw taskError;
+
+    // Map attendance, absentees, and tasks
+    const attendanceMap = new Map(
+      attendanceLogs.map((log) => [log.user_id, log])
+    );
+    const absenteesMap = new Map(
+      absentees.map((absent) => [absent.user_id, absent.absentee_type])
+    );
+    const tasksMap = new Map();
+    dailyTasks.forEach((task) => {
+      if (!tasksMap.has(task.user_id)) {
+        tasksMap.set(task.user_id, task.content); // Use latest task if needed
+      }
+    });
+
+    // Format time helper
+    const formatTime = (dateString) => {
+      if (!dateString || dateString === "N/A") return "N/A";
+      const date = new Date(dateString);
+      return date.toLocaleTimeString("en-US", {
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: true,
+      });
+    };
+
+    // Final data map
+    const finalAttendanceData = users.map((user) => {
+      const log = attendanceMap.get(user.id);
+      const task = tasksMap.get(user.id) || "No Task";
+
+      if (!log) {
+        const absenteeType = absenteesMap.get(user.id);
         return {
           id: user.id,
           full_name: user.full_name,
-          attendance_id: log.id,
-          check_in2: log.check_in ? log.check_in : "N/A",
-          check_out2: log.check_out ? log.check_out : "",
-          created_at: log.created_at ? log.created_at : "N/A",
-          check_in: log.check_in ? formatTime(log.check_in) : "N/A",
-          check_out: log.check_out ? formatTime(log.check_out) : "N/A",
-          autocheckout: log.autocheckout || "",
-          work_mode: log.work_mode || "N/A",
-          status: log.status || "Absent",
-          break_start: firstBreak ? formatTime(firstBreak.start_time) : "N/A",
-          break_status: firstBreak ? (firstBreak.end_time ? "ended" : "active") : "N/A",
-          textColor:
-            log.status.toLowerCase() === "present"
-              ? "text-green-500"
-              : log.status.toLowerCase() === "late"
-                ? "text-yellow-500"
-                : "text-red-500",
+          check_in: "N/A",
+          check_in2: "N/A",
+          created_at: "N/A",
+          check_out2: "N/A",
+          check_out: "N/A",
+          autocheckout: "",
+          work_mode: "N/A",
+          today_task: task,
+          status: absenteeType || "Absent",
+          break_start: "N/A",
+          break_status: "N/A",
+          textColor: absenteeType ? "text-blue-500" : "text-red-500",
         };
-      });
+      }
 
+      const userBreaks = breaksMap.get(log.id) || [];
+      const firstBreak = userBreaks[0];
 
-      setAttendanceData(finalAttendanceData);
-      setFilteredData(finalAttendanceData); // Initialize filtered data with all data
-      // Calculate counts
-      const lateCount = finalAttendanceData.filter(
-        (entry) => entry.status.toLowerCase() === "late"
-      ).length;
-      setLate(lateCount);
-      const presentCount = finalAttendanceData.filter(
-        (entry) => entry.status.toLowerCase() === "present"
-      ).length;
-      setPresent(presentCount);
-      const absentCount = finalAttendanceData.filter(
-        (entry) => entry.status.toLowerCase() === "absent"
-      ).length;
-      setAbsent(absentCount);
-      const remoteCount = finalAttendanceData.filter(
-        (entry) => entry.work_mode === "remote"
-      ).length;
-      setRemote(remoteCount);
-    } catch (error) {
-      setError(error.message);
-      console.error("Error fetching data:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+      return {
+        id: user.id,
+        full_name: user.full_name,
+        attendance_id: log.id,
+        check_in2: log.check_in || "N/A",
+        check_out2: log.check_out || "",
+        created_at: log.created_at || "N/A",
+        check_in: formatTime(log.check_in),
+        check_out: log.check_out ? formatTime(log.check_out) : "N/A",
+        autocheckout: log.autocheckout || "",
+        work_mode: log.work_mode || "N/A",
+        today_task: task,
+        status: log.status || "Absent",
+        break_start: firstBreak
+          ? formatTime(firstBreak.start_time)
+          : "N/A",
+        break_status: firstBreak
+          ? firstBreak.end_time
+            ? "ended"
+            : "active"
+          : "N/A",
+        textColor:
+          log.status?.toLowerCase() === "present"
+            ? "text-green-500"
+            : log.status?.toLowerCase() === "late"
+            ? "text-yellow-500"
+            : "text-red-500",
+      };
+    });
+
+    // Set data and stats
+    setAttendanceData(finalAttendanceData);
+    setFilteredData(finalAttendanceData);
+
+    const lateCount = finalAttendanceData.filter(
+      (entry) => entry.status.toLowerCase() === "late"
+    ).length;
+    setLate(lateCount);
+
+    const presentCount = finalAttendanceData.filter(
+      (entry) => entry.status.toLowerCase() === "present"
+    ).length;
+    setPresent(presentCount);
+
+    const absentCount = finalAttendanceData.filter(
+      (entry) => entry.status.toLowerCase() === "absent"
+    ).length;
+    setAbsent(absentCount);
+
+    const remoteCount = finalAttendanceData.filter(
+      (entry) => entry.work_mode === "remote"
+    ).length;
+    setRemote(remoteCount);
+  } catch (error) {
+    setError(error.message);
+    console.error("Error fetching data:", error);
+  } finally {
+    setLoading(false);
+  }
+};
+
 
   const now = new Date();
   const [fetchingid, setfetchingid] = useState("");
