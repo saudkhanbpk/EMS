@@ -115,6 +115,7 @@ function ProjectsAdmin() {
 
   // Story points filter state
   const [storyPointsFilter, setStoryPointsFilter] = useState<'all' | 'weekly' | 'monthly'>('all');
+  const [projectFilters, setProjectFilters] = useState<Record<string, 'all' | 'weekly' | 'monthly'>>({});
 
   const toggleExpandProjects = (projectId) => {
     setExpandedProjects((prev) => ({
@@ -128,6 +129,38 @@ function ProjectsAdmin() {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  // Function to handle individual project filter change
+  const handleProjectFilterChange = async (projectId: string, newFilter: 'all' | 'weekly' | 'monthly') => {
+    setProjectFilters(prev => ({ ...prev, [projectId]: newFilter }));
+
+    // Recalculate scores for this specific project
+    const { data: tasksData, error: tasksError } = await supabase
+      .from("tasks_of_projects")
+      .select("score, status, created_at, action_date")
+      .eq("project_id", projectId);
+
+    if (!tasksError && tasksData) {
+      const filteredTasks = filterTasksByTimePeriod(tasksData, newFilter);
+
+      const completedScore = filteredTasks
+        .filter(task => task.status === "done")
+        .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      const pendingScore = filteredTasks
+        .filter(task => task.status !== "done")
+        .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      const totalScore = completedScore + pendingScore;
+
+      // Update only this project's scores
+      setProjects(prev => prev.map(project =>
+        project.id === projectId
+          ? { ...project, completedScore, pendingScore, totalScore }
+          : project
+      ));
+    }
   };
 
   const filterTasksByTimePeriod = (tasks: any[], filter: 'all' | 'weekly' | 'monthly') => {
@@ -1938,15 +1971,31 @@ function ProjectsAdmin() {
                           setProjectId(project.id);
                         }}
                       >
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex flex-col items-start pl-2 pr-4 py-2 bg-[#f7eaff] rounded-lg">
+                        <div className="flex flex-col mb-4">
+                          <div className="flex items-center justify-end mb-2">
+                            <div className="flex space-x-2">
+                              <button
+                                className="text-gray-400 hover:text-gray-600"
+                                onClick={(e) => openEditModal(project, e)}
+                              >
+                                <Pencil size={16} color='#667085' />
+                              </button>
+                              <button
+                                className="text-gray-400 hover:text-red-600"
+                                onClick={(e) => handleDeleteProject(project.id, e)}
+                              >
+                                <Trash2 size={16} color='#667085' />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="w-full flex justify-between items-center pl-2 pr-2 py-2 bg-[#f7eaff] rounded-lg">
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-semibold">Story Points:</span>
                               <select
-                                value={storyPointsFilter}
+                                value={projectFilters[project.id] || 'all'}
                                 onChange={(e) => {
                                   e.stopPropagation();
-                                  setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly');
+                                  handleProjectFilterChange(project.id, e.target.value as 'all' | 'weekly' | 'monthly');
                                 }}
                                 className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500"
                                 onClick={(e) => e.stopPropagation()}
@@ -1964,20 +2013,6 @@ function ProjectsAdmin() {
                             <div className="text-xs text-gray-600 mt-1">
                               Completed: {project.completedScore} | Pending: {project.pendingScore}
                             </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <button
-                              className="text-gray-400 hover:text-gray-600"
-                              onClick={(e) => openEditModal(project, e)}
-                            >
-                              <Pencil size={16} color='#667085' />
-                            </button>
-                            <button
-                              className="text-gray-400 hover:text-red-600"
-                              onClick={(e) => handleDeleteProject(project.id, e)}
-                            >
-                              <Trash2 size={16} color='#667085' />
-                            </button>
                           </div>
                         </div>
                         <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
