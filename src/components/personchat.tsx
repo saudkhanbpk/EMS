@@ -277,7 +277,7 @@ const Chat = ({ id, closechatperson }: { id: string, closechatperson: () => void
 
         markAsSeen();
 
-        const intervalId = setInterval(markAsSeen, 5000);
+        const intervalId = setInterval(markAsSeen, 30000); // Reduced frequency from 5s to 30s
 
         return () => {
             clearInterval(intervalId);

@@ -14,11 +14,12 @@ interface UserActivity {
 }
 
 /**
- * Update current user's activity
+ * Update current user's activity (using cached user data)
  */
 export async function updateUserActivity(): Promise<void> {
   try {
-    const { data: { user } } = await supabase.auth.getUser();
+    // Get user from auth store (no API call needed)
+    const user = useAuthStore.getState().user;
     if (!user) return;
 
     const now = new Date().toISOString();

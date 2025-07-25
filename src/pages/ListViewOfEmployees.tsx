@@ -117,40 +117,18 @@ const EmployeeAttendanceTable = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      // Get YOUR real battery
-      let realBattery = 85;
-      let realCharging = false;
 
-      try {
-        // @ts-ignore
-        if ('getBattery' in navigator) {
-          // @ts-ignore
-          const battery = await navigator.getBattery();
-          realBattery = Math.round(battery.level * 100);
-          realCharging = battery.charging;
-        }
-      } catch (error) {
-        console.log('Battery API not available');
-      }
 
-      // YOU are always Online if you're actively using the system
-      // Override any "Sleep" detection since you're clearly active
-      const yourState = 'Online';
+      // Force save real laptop status immediately
+      console.log('🔄 Manually triggering real laptop status update...');
 
-      // Update YOUR status specifically
-      setDirectLaptopStates(prev => ({
-        ...prev,
-        [user.id]: {
-          state: yourState,
-          batteryLevel: realBattery,
-          isCharging: realCharging,
-          displayText: yourState
-        }
-      }));
+      // Import and call the real status function
+      const { saveRealLaptopStatus } = await import('../services/realLaptopTracking');
+      await saveRealLaptopStatus();
 
-      console.log(`🔥 YOUR REAL STATUS: ${yourState} | Battery: ${realBattery}%${realCharging ? ' (Charging)' : ''}`);
+      console.log('✅ Real laptop status updated successfully');
     } catch (error) {
-      console.error('Error getting your status:', error);
+      console.error('Error updating real laptop status:', error);
     }
   };
 
@@ -160,12 +138,25 @@ const EmployeeAttendanceTable = () => {
 
     console.log('🚀 Starting REAL laptop tracking for current user');
 
-    // Start real tracking
+    // Start real tracking for current user
     const cleanup = startRealLaptopTracking();
 
-    // Also update your status display
+    // Also immediately save current real status
+    const saveImmediateStatus = async () => {
+      try {
+        const { saveRealLaptopStatus } = await import('../services/realLaptopTracking');
+        await saveRealLaptopStatus();
+        console.log('✅ Immediate real status saved');
+      } catch (error) {
+        console.error('Error saving immediate status:', error);
+      }
+    };
+
+    saveImmediateStatus();
+
+    // Also update your status display (reduced frequency)
     updateYourRealStatus();
-    const interval = setInterval(updateYourRealStatus, 10000);
+    const interval = setInterval(updateYourRealStatus, 600000); // Changed to 10 minutes
 
     return () => {
       clearInterval(interval);
@@ -188,37 +179,89 @@ const EmployeeAttendanceTable = () => {
       };
     }
 
-    // Rule 2: If checked in = Show as Online (since they're at work)
-    // Create some variety but mostly online
-    const hash = userId.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-    const random = hash % 10; // 0-9
+    // Rule 2: If checked in, get their REAL status from shared storage
+    console.log(`🔍 Checking real status for ${userName} (${userId})`);
 
-    let state, batteryLevel, isCharging;
+    // Get real status data from shared storage
+    let realStatusData = null;
+    try {
+      // Check individual storage first
+      const individual = localStorage.getItem(`real_laptop_${userId}`);
+      if (individual) {
+        const parsed = JSON.parse(individual);
+        const lastUpdate = new Date(parsed.updated_at);
+        const now = new Date();
+        const minutesAgo = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60));
 
-    if (random < 7) {
-      // 70% Online - most checked-in users are working
-      state = 'Online';
-      batteryLevel = 70 + (hash % 25); // 70-95%
-      isCharging = (hash % 4) === 0; // 25% chance
-    } else if (random < 9) {
-      // 20% Away - some users in meetings/breaks
-      state = 'Away';
-      batteryLevel = 50 + (hash % 35); // 50-85%
-      isCharging = (hash % 3) === 0; // 33% chance
-    } else {
-      // 10% Offline - few users with technical issues
-      state = 'Offline';
-      batteryLevel = 30 + (hash % 40); // 30-70%
-      isCharging = (hash % 2) === 0; // 50% chance
+        if (minutesAgo < 10) { // Data is recent
+          realStatusData = {
+            ...parsed,
+            minutesAgo,
+            isRecent: true
+          };
+        }
+      }
+
+      // Check shared storage if no individual data
+      if (!realStatusData) {
+        const allUsersData = JSON.parse(localStorage.getItem('all_users_real_status') || '{}');
+        if (allUsersData[userId]) {
+          const parsed = allUsersData[userId];
+          const lastUpdate = new Date(parsed.updated_at);
+          const now = new Date();
+          const minutesAgo = Math.floor((now.getTime() - lastUpdate.getTime()) / (1000 * 60));
+
+          realStatusData = {
+            ...parsed,
+            minutesAgo,
+            isRecent: minutesAgo < 10
+          };
+        }
+      }
+    } catch (error) {
+      console.error('Error getting real status:', error);
     }
 
-    console.log(`✅ ${userName}: CHECKED IN → ${state} | Battery: ${batteryLevel}%${isCharging ? ' (Charging)' : ''}`);
+    if (realStatusData) {
+      console.log(`📊 ${userName} Real Data:`, {
+        laptop_state: realStatusData.laptop_state,
+        battery_level: realStatusData.battery_level,
+        is_charging: realStatusData.is_charging,
+        minutesAgo: realStatusData.minutesAgo,
+        isRecent: realStatusData.isRecent,
+        updated_at: realStatusData.updated_at
+      });
 
+      // If data is recent (less than 10 minutes), use it
+      if (realStatusData.isRecent) {
+        const displayState = realStatusData.laptop_state === 'On' ? 'Online' :
+                            realStatusData.laptop_state === 'Sleep' ? 'Away' : 'Offline';
+
+        console.log(`✅ ${userName}: USING REAL DATA → ${displayState} (${realStatusData.minutesAgo}m ago) | Battery: ${realStatusData.battery_level}%`);
+        return {
+          state: displayState,
+          batteryLevel: realStatusData.battery_level,
+          isCharging: realStatusData.is_charging,
+          displayText: displayState
+        };
+      } else {
+        console.log(`⏰ ${userName}: DATA TOO OLD → Away (${realStatusData.minutesAgo}m ago)`);
+        return {
+          state: 'Away',
+          batteryLevel: realStatusData.battery_level || 50,
+          isCharging: realStatusData.is_charging || false,
+          displayText: 'Away (Old Data)'
+        };
+      }
+    }
+
+    // Rule 3: No real data but checked in = Show as Away (waiting for real data)
+    console.log(`⏳ ${userName}: NO REAL DATA YET → Waiting for data...`);
     return {
-      state,
-      batteryLevel,
-      isCharging,
-      displayText: state
+      state: 'Away',
+      batteryLevel: 0,
+      isCharging: false,
+      displayText: 'Waiting...'
     };
   };
 
@@ -2272,14 +2315,24 @@ const EmployeeAttendanceTable = () => {
 
           const realLaptopStatuses = await getAllRealLaptopStatus(userProfile.organization_id);
 
-          // Convert to display format
+          // Convert to display format - REAL DATA ONLY
           const laptopStatusMap = {};
           Object.entries(realLaptopStatuses).forEach(([userId, status]) => {
+            const displayState = status.laptop_state === 'On' ? 'Online' :
+                               status.laptop_state === 'Sleep' ? 'Away' : 'Offline';
+
+            // Determine if this is real data or just attendance-based
+            const hasRealData = status.battery_level > 0 ||
+                               (status.laptop_state === 'On' && status.is_checked_in);
+
             laptopStatusMap[userId] = {
-              state: status.laptop_state === 'On' ? 'Online' : status.laptop_state === 'Sleep' ? 'Away' : 'Offline',
+              state: displayState,
               batteryLevel: status.battery_level,
               isCharging: status.is_charging,
-              displayText: status.laptop_state === 'On' ? 'Online' : status.laptop_state === 'Sleep' ? 'Away' : 'Offline'
+              displayText: hasRealData ? displayState : 'Offline',
+              isRealData: hasRealData,
+              lastActivity: status.last_activity,
+              dataType: hasRealData ? 'Real-time' : 'No data'
             };
           });
 
@@ -3061,7 +3114,7 @@ const EmployeeAttendanceTable = () => {
                                       ? 'bg-yellow-100 text-yellow-800'
                                       : 'bg-red-100 text-red-800'
                                   }`}
-                                  title={`${directLaptopStates[entry.id].displayText} • Battery: ${directLaptopStates[entry.id].batteryLevel}%${directLaptopStates[entry.id].isCharging ? ' (Charging)' : ''} • Live monitoring active`}
+                                  title={`${directLaptopStates[entry.id].displayText} • Battery: ${directLaptopStates[entry.id].batteryLevel}%${directLaptopStates[entry.id].isCharging ? ' (Charging)' : ''} • ${directLaptopStates[entry.id].dataType || 'No data'}`}
                                 >
                                   {directLaptopStates[entry.id].displayText}
                                 </span>

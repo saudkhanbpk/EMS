@@ -184,7 +184,7 @@ export const useLaptopStates = (organizationId?: string): UseLaptopStatesReturn 
       console.log('🔄 Simulating user activity changes...');
       simulateUserActivity(checkedInUsers);
       fetchLaptopStates(); // Refresh display
-    }, 2 * 60 * 1000); // Every 2 minutes
+    }, 30 * 60 * 1000); // Every 30 minutes (further reduced frequency)
 
     return () => {
       clearInterval(interval);
@@ -237,8 +237,8 @@ export const useLaptopStates = (organizationId?: string): UseLaptopStatesReturn 
       setLoading(true);
       setError(null);
 
-      // Get current user ID from auth
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get current user ID from auth store (no API call)
+      const user = useAuthStore.getState().user;
       const currentUserId = user?.id;
 
       // Setup activity tracking for all users
@@ -444,7 +444,7 @@ export const useLaptopStates = (organizationId?: string): UseLaptopStatesReturn 
       console.log('🔄 Simulating user activity changes...');
       simulateUserActivity(checkedInUsers);
       fetchLaptopStates(); // Refresh display
-    }, 2 * 60 * 1000); // Every 2 minutes
+    }, 30 * 60 * 1000); // Every 30 minutes (further reduced frequency)
 
     return () => {
       clearInterval(interval);

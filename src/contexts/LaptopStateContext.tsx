@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { updateLaptopActivity } from '../services/attendanceLaptopStatus';
 import { useUser } from './UserContext';
 
 interface LaptopStateContextType {
@@ -71,8 +70,9 @@ export const LaptopStateProvider: React.FC<LaptopStateProviderProps> = ({ childr
         setIsOnline(navigator.onLine);
         setLastActivity(new Date());
 
-        // Update the attendance laptop status
-        await updateLaptopActivity();
+        // Update the REAL laptop status instead of fake attendance data
+        const { saveRealLaptopStatus } = await import('../services/realLaptopTracking');
+        await saveRealLaptopStatus();
 
         console.log(`✅ Updated activity: Online=${navigator.onLine}, Battery=${realBattery}%${realCharging ? ' (Charging)' : ''}`);
       } catch (error) {
@@ -83,13 +83,20 @@ export const LaptopStateProvider: React.FC<LaptopStateProviderProps> = ({ childr
     // Update immediately
     updateActivity();
 
-    // Update every 30 seconds
-    const interval = setInterval(updateActivity, 30000);
+    // Update every 15 minutes (further reduced frequency)
+    const interval = setInterval(updateActivity, 900000);
 
-    // Activity listeners
+    // Activity listeners with throttling to prevent excessive calls
+    let lastActivityCall = 0;
     const handleActivity = () => {
+      const now = Date.now();
       setLastActivity(new Date());
-      updateActivity();
+
+      // Only call updateActivity every 5 minutes max to prevent excessive API calls
+      if (now - lastActivityCall > 300000) {
+        lastActivityCall = now;
+        updateActivity();
+      }
     };
 
     const handleOnlineChange = () => {
@@ -97,22 +104,18 @@ export const LaptopStateProvider: React.FC<LaptopStateProviderProps> = ({ childr
       updateActivity();
     };
 
-    // Add event listeners
+    // Add event listeners (reduced to essential only)
     document.addEventListener('mousedown', handleActivity);
-    document.addEventListener('mousemove', handleActivity);
     document.addEventListener('keydown', handleActivity);
-    document.addEventListener('scroll', handleActivity);
-    document.addEventListener('touchstart', handleActivity);
+    document.addEventListener('visibilitychange', handleActivity);
     window.addEventListener('online', handleOnlineChange);
     window.addEventListener('offline', handleOnlineChange);
 
     return () => {
       clearInterval(interval);
       document.removeEventListener('mousedown', handleActivity);
-      document.removeEventListener('mousemove', handleActivity);
       document.removeEventListener('keydown', handleActivity);
-      document.removeEventListener('scroll', handleActivity);
-      document.removeEventListener('touchstart', handleActivity);
+      document.removeEventListener('visibilitychange', handleActivity);
       window.removeEventListener('online', handleOnlineChange);
       window.removeEventListener('offline', handleOnlineChange);
     };

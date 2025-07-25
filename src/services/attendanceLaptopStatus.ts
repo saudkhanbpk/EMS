@@ -413,7 +413,7 @@ export function setupActivityTracking(): void {
   let lastUpdate = 0;
   const throttledUpdate = () => {
     const now = Date.now();
-    if (now - lastUpdate > 30000) { // Update every 30 seconds max
+    if (now - lastUpdate > 300000) { // Update every 5 minutes max
       lastUpdate = now;
       updateLaptopActivity();
     }
