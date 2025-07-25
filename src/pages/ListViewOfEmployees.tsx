@@ -41,6 +41,7 @@ import {
 import { AttendanceProvider } from "./AttendanceContext";
 import FilteredDataAdmin from "./filteredListAdmin";
 import { id } from "date-fns/locale/id";
+import { useUser } from "../contexts/UserContext";
 
 interface AttendanceRecord {
   id: string;
@@ -286,6 +287,7 @@ const EmployeeAttendanceTable = () => {
   const [selectedDateW, setselectedDateW] = useState(new Date());
   const [currentFilter, setCurrentFilter] = useState("all"); // Filter state: "all", "present", "absent", "late", "remote"
   const [dataFromWeeklyChild, setDataFromWeeklyChild] = useState("");
+  const { userProfile } = useUser()
   const [selectedEntry, setSelectedEntry] = useState(null);
   // const [newCheckOutTime, setNewCheckOutTime] = useState('00 : 00');
   const [hour, setHour] = useState(12); // Default hour
@@ -390,11 +392,11 @@ const EmployeeAttendanceTable = () => {
 
     let updateSuccess = false;
     let newAbsenteeData = null;
-    
+
     // Check if the user already has an attendance record for today
     if (selecteduser) {
       const today = new Date(selectedDate).toISOString().split("T")[0];
-      
+
       // Check for existing attendance record
       const { data: attendanceData, error: attendanceError } = await supabase
         .from("attendance_logs")
@@ -402,13 +404,13 @@ const EmployeeAttendanceTable = () => {
         .eq("user_id", selecteduser)
         .gte("check_in", `${today}T00:00:00`)
         .lte("check_in", `${today}T23:59:59`);
-      
+
       if (attendanceError) {
         console.error("Error checking attendance record:", attendanceError);
       } else if (attendanceData && attendanceData.length > 0) {
         // User has an attendance record for today (present or late)
         console.log("Found existing attendance record, deleting before marking absent/leave");
-        
+
         // Delete the attendance record
         const { error: deleteError } = await supabase
           .from("attendance_logs")
@@ -416,7 +418,7 @@ const EmployeeAttendanceTable = () => {
           .eq("user_id", selecteduser)
           .gte("check_in", `${today}T00:00:00`)
           .lte("check_in", `${today}T23:59:59`);
-        
+
         if (deleteError) {
           console.error("Error deleting attendance record:", deleteError);
         } else {
@@ -1551,7 +1553,7 @@ const EmployeeAttendanceTable = () => {
       // Fetch holidays
       const { data: holidays, error: holidaysError } = await supabase
         .from('holidays')
-        .select('*');
+        .select('*').eq("organization_id", userProfile?.organization_id);
 
       if (holidaysError) {
         console.error('Error fetching holidays:', holidaysError);
@@ -2997,7 +2999,7 @@ const EmployeeAttendanceTable = () => {
                             Check-in
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Check-out
+                            Check-out edited
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
                             Break Start
@@ -4187,7 +4189,7 @@ const EmployeeAttendanceTable = () => {
                             <div className="flex items-center mb-4 sm:mb-6">
                               <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
                               <h2 className="text-base sm:text-xl font-semibold">
-                                Monthly Overview -{" "}
+                                Monthly Overview  -{" "}
                                 {format(new Date(), "MMMM yyyy")}
                               </h2>
                             </div>

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
 import { format, startOfMonth, endOfMonth, eachDayOfInterval } from 'date-fns';
 import { X, Clock, Coffee, Calendar } from 'lucide-react';
+import { useUser } from '../contexts/UserContext';
 
 interface PersonAttendanceDetailProps {
   userId: string;
@@ -28,6 +29,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
 }) => {
   const [attendanceDetails, setAttendanceDetails] = useState<AttendanceDetailRecord[]>([]);
   const [loading, setLoading] = useState(true);
+  const { userProfile } = useUser()
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -37,7 +39,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
   const fetchAttendanceDetails = async () => {
     setLoading(true);
     setError(null);
-    
+
     try {
       const monthStart = startOfMonth(selectedMonth);
       const monthEnd = endOfMonth(selectedMonth);
@@ -75,19 +77,20 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
       // Fetch holidays
       const { data: holidays, error: holidaysError } = await supabase
         .from('holidays')
-        .select('*');
+        .select('*')
+        .eq("organization_id", userProfile?.organization_id);
 
       if (holidaysError) throw holidaysError;
 
       // Get all days in the month (excluding weekends and future dates)
       const today = new Date();
       today.setHours(23, 59, 59, 999); // Set to end of today
-      
+
       const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
         .filter(date => {
           const dayOfWeek = date.getDay();
           if (dayOfWeek === 0 || dayOfWeek === 6) return false; // Exclude weekends
-          
+
           // Only show today and past dates
           return date <= today;
         });
@@ -95,7 +98,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
       // Process each day
       const dailyDetails: AttendanceDetailRecord[] = allDaysInMonth.map((date) => {
         const dateStr = format(date, 'yyyy-MM-dd');
-        
+
         // Find attendance record for this date
         const attendance = attendanceRecords?.find(
           (record) => format(new Date(record.check_in), 'yyyy-MM-dd') === dateStr
@@ -107,8 +110,8 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
         );
 
         // Check if this date is a holiday
-        const isHoliday = holidays?.some(holiday => 
-          holiday.dates?.some((holidayDate: string) => 
+        const isHoliday = holidays?.some(holiday =>
+          holiday.dates?.some((holidayDate: string) =>
             format(new Date(holidayDate), 'yyyy-MM-dd') === dateStr
           )
         );
@@ -122,8 +125,8 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
 
         if (attendance) {
           checkIn = format(new Date(attendance.check_in), 'h:mm a');
-          checkOut = attendance.check_out 
-            ? format(new Date(attendance.check_out), 'h:mm a') 
+          checkOut = attendance.check_out
+            ? format(new Date(attendance.check_out), 'h:mm a')
             : null;
           status = attendance.status || 'Present';
           workMode = attendance.work_mode || 'N/A';
@@ -215,7 +218,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{userName}</h2>
             <p className="text-gray-600">
-              Attendance Details - {format(selectedMonth, 'MMMM yyyy')}
+              Attendance Details  - {format(selectedMonth, 'MMMM yyyy')}
             </p>
           </div>
           <button
@@ -323,16 +326,15 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
-                          record.workMode === 'remote' 
-                            ? 'bg-purple-100 text-purple-800' 
-                            : record.workMode === 'on_site'
+                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${record.workMode === 'remote'
+                          ? 'bg-purple-100 text-purple-800'
+                          : record.workMode === 'on_site'
                             ? 'bg-green-100 text-green-800'
                             : 'bg-gray-100 text-gray-800'
-                        }`}>
-                          {record.workMode === 'on_site' ? 'On-site' : 
-                           record.workMode === 'remote' ? 'Remote' : 
-                           record.workMode}
+                          }`}>
+                          {record.workMode === 'on_site' ? 'On-site' :
+                            record.workMode === 'remote' ? 'Remote' :
+                              record.workMode}
                         </span>
                       </td>
                     </tr>

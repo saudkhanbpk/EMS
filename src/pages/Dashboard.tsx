@@ -80,6 +80,7 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
   const [absentees, setabsentees] = useState('');
   const [view, setView] = useState('default');
   const [leaves, setleaves] = useState('');
+  const { userProfile: currentuser } = useUser()
   const [overtimeHours, setOvertimeHours] = useState(0);
   const [weeklyData, setWeeklyData] = useState<null>(null);
   const navigate = useNavigate();
@@ -241,7 +242,8 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
         // Fetch all holidays and filter dates within the month
         const { data: holidaysData, error: holidaysError } = await supabase
           .from('holidays')
-          .select('dates');
+          .select('dates')
+          .eq("organization_id", currentuser?.organization_id);
 
         if (holidaysError) console.error('Error fetching holidays:', holidaysError);
 

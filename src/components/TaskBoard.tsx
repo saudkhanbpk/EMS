@@ -76,6 +76,7 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
   const [fullImageUrl, setFullImageUrl] = useState("");
 
 
+
   // Fetch user role, project manager status, and project developers on component mount
   useEffect(() => {
     const fetchUserRoleAndProjectInfo = async () => {
@@ -578,6 +579,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
     }
   };
 
+
+
   // Handle task creation with role-based assignment logic
   const handleCreateTask = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -761,8 +764,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
         <DragDropContext onDragEnd={handleDragEnd}>
           <div className="grid grid-cols-[repeat(auto-fit,_minmax(200px,_1fr))] gap-6">
             {/* Todo Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <h2 className="font-semibold text-xl leading-7 text-[#9A00FF]">To do</h2>
                 <span className="text-gray-600">{getStatusCount('todo')}</span>
               </div>
@@ -771,7 +774,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-4 min-h-[100px] ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                    className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                    style={{ minHeight: '100px' }}
                   >
                     {getTasksByStatus('todo').length > 0 ? (
                       getTasksByStatus('todo').map((task, index) => (
@@ -796,14 +800,25 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                       </div>
                     )}
                     {provided.placeholder}
+                    
+                    {/* Quick Add Task Button */}
+                    <div className="mt-2">
+                      <button
+                        onClick={() => setIsCreateTaskModalOpen(true)}
+                        className="w-full flex items-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                      >
+                        <Plus size={16} />
+                        <span className="text-sm">Add a task</span>
+                      </button>
+                    </div>
                   </div>
                 )}
               </Droppable>
             </div>
 
 
-            <div className="bg-white rounded-[20px] p-4 shadow-md">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>
                 <span className="text-gray-600">{getStatusCount('inProgress')}</span>
               </div>
@@ -812,7 +827,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-4 min-h-[100px] ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                    className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                    style={{ minHeight: '100px' }}
                   >
                     {getTasksByStatus('inProgress').length > 0 ? (
                       getTasksByStatus('inProgress').map((task, index) => (
@@ -843,8 +859,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
             </div>
 
             {/* Review Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <h2 className="font-semibold text-xl leading-7 text-yellow-600">Review</h2>
                 <span className="text-gray-600">{String(getStatusCount('review')).padStart(2, '0')}</span>
               </div>
@@ -853,7 +869,8 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
                   <div
                     ref={provided.innerRef}
                     {...provided.droppableProps}
-                    className={`space-y-4 min-h-[100px] ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                    className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                    style={{ minHeight: '100px' }}
                   >
                     {getTasksByStatus('review').length > 0 ? (
                       getTasksByStatus('review').map((task, index) => (
@@ -884,13 +901,13 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
             </div>
 
             {/* Done Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md">
-              <div className="flex justify-between items-center mb-6">
+            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+              <div className="flex justify-between items-center mb-6 flex-shrink-0">
                 <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
                 <span className="text-gray-600">{getStatusCount('done')}</span>
               </div>
 
-              <div className="space-y-4 min-h-[100px]">
+              <div className="flex-1 overflow-y-auto space-y-4 pr-2 task-scroll" style={{ minHeight: '100px' }}>
                 <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
 
                 {getTasksByStatus('done').length > 0 ? (

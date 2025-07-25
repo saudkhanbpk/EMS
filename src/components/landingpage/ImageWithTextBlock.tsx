@@ -1,5 +1,9 @@
+<<<<<<< HEAD
 import React from 'react';
 import ImageWithText from './ImagewithText';
+=======
+import ImageWithText from './ImageWithText';
+>>>>>>> 41b6e6ff779f4478928ee17eb5b219f5a3719ae7
 import block1 from '../../assets/block1.png';
 import block2 from '../../assets/block2.png';
 import block3 from '../../assets/block3.png';
@@ -49,4 +53,8 @@ const blocks = [
   );
 };
 
+<<<<<<< HEAD
 export default ImageWithTextBlock;
+=======
+export default ImageWithTextBlock;
+>>>>>>> 41b6e6ff779f4478928ee17eb5b219f5a3719ae7

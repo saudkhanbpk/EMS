@@ -5,7 +5,10 @@ import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2, Minus } 
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import { formatDistanceToNow } from 'date-fns';
+import toast, { Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
+import { LayoutGrid, Table2 } from "lucide-react";
+import NotionTableView from './NotionTableView';
 import { supabase } from '../lib/supabase';
 import AddNewTask from '../AddNewTask';
 import { AttendanceContext } from '../pages/AttendanceContext';
@@ -67,8 +70,43 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const [commentsByTaskId, setCommentByTaskID] = useState({});
   const [selectedDeveloper, setSelectedDeveloper] = useState<string>('all');
   const [projectName, setProjectName] = useState<string>('');
+  const [view, setView] = useState<"card" | "table">("card");
   // const [tasks, setTasks] = useState<task[]>([]);
+  // Add this function inside TaskBoardAdmin component
+  const handleQuickAddTask = async (title: string) => {
+    try {
+      // Create new task with default values
+      const newTask = {
+        title: title,
+        project_id: ProjectId,
+        status: 'todo',
+        score: 0,
+        priority: 'Medium',
+        devops: [], // Empty by default, user can assign later
+        description: '',
+        created_at: new Date().toISOString(),
+      };
 
+      // Save to database
+      const { data, error } = await supabase
+        .from('tasks_of_projects')
+        .insert([newTask])
+        .select()
+        .single();
+
+      if (error) throw error;
+
+      // Refresh tasks to show the new one
+      await fetchTasks();
+
+      // Show success toast notification
+      toast.success('Task created from clipboard!');
+    } catch (error) {
+      console.error('Error creating task:', error);
+      // Show error toast notification
+      toast.error('Failed to create task. Please try again.');
+    }
+  };
   // Filter tasks by selected developer
   const filteredTasks = useMemo(() => {
     if (selectedDeveloper === 'all') {
@@ -214,12 +252,12 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
         .select("title")
         .eq("id", ProjectId)
         .single();
-      
+
       if (!error && data) {
         setProjectName(data.title);
       }
     };
-    
+
     if (ProjectId) {
       fetchProjectName();
     }
@@ -254,20 +292,40 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
     setTasks(newTasks);
 
+    // Update in database
+    const { error } = await supabase
+      .from('tasks_of_projects')
+      .update({ status: draggedTask.status })
+      .eq('id', draggableId);
 
-    try {
-      const { error } = await supabase
-        .from('tasks_of_projects')
-        .update({ status: destination.droppableId, action_date: new Date().toISOString() })
-        .eq('id', draggedTask.id);
-
-      if (error) console.error('Error updating task status:', error.message);
-    } catch (err) {
-      console.error('Unexpected error:', err);
+    if (error) {
+      console.error('Error updating task status:', error);
+      fetchTasks(); // Revert on error
     }
-    fetchTasks();
-
   };
+
+  const ViewToggle = ({ view, setView }) => (
+    <div className="flex items-center gap-2 bg-[#232326] rounded-lg p-1">
+      <button
+        className={`flex items-center gap-1 px-3 py-1 rounded-md transition-colors duration-200
+          ${view === "card" ? "bg-[#9A00FF] text-white" : "text-gray-300 hover:bg-[#18181A]"}
+        `}
+        onClick={() => setView("card")}
+      >
+        <LayoutGrid size={18} />
+        <span className="hidden sm:inline">Card</span>
+      </button>
+      <button
+        className={`flex items-center gap-1 px-3 py-1 rounded-md transition-colors duration-200
+          ${view === "table" ? "bg-[#9A00FF] text-white" : "text-gray-300 hover:bg-[#18181A]"}
+        `}
+        onClick={() => setView("table")}
+      >
+        <Table2 size={18} />
+        <span className="hidden sm:inline">Table</span>
+      </button>
+    </div>
+  );
 
   const handleAddTask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -366,6 +424,23 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       setIsEditModalOpen(false);
     } catch (err) {
       console.error('Error deleting task:', err);
+    }
+  };
+
+  const handleTaskStatusChange = async (taskId: string, newStatus: 'done' | Task['status']) => {
+    try {
+      const { error } = await supabase
+        .from('tasks_of_projects')
+        .update({ status: newStatus })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      setTasks(tasks.map(task =>
+        task.id === taskId ? { ...task, status: newStatus } : task
+      ));
+    } catch (error) {
+      console.error('Error updating task status:', error);
     }
   };
   console.log("Developer Scores:", devopsScores);
@@ -654,8 +729,8 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     const tasksInColumn = filteredTasks.filter(task => task.status === COLUMN_IDS[status]);
 
     return (
-      <div className="bg-white lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md">
-        <div className="flex justify-between items-center mb-6">
+      <div className="bg-white lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+        <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <h2 className={`font-semibold text-xl leading-7 text-${color}`}>{title}</h2>
           <span className="text-gray-600">{tasksInColumn.length}</span>
         </div>
@@ -664,12 +739,22 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="min-h-[100px] space-y-4"
+              className="flex-1 overflow-y-auto space-y-4 pr-2 task-scroll"
+              style={{ minHeight: '100px' }}
             >
               {tasksInColumn.map((task, index) => (
                 <TaskCard key={task.id} task={task} index={index} />
               ))}
               {provided.placeholder}
+              {status === 'todo' && (
+                <button
+                  onClick={() => setSelectedTab("addtask")}
+                  className="mt-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                >
+                  <Plus size={16} />
+                  <span className="text-sm">New</span>
+                </button>
+              )}
             </div>
           )}
         </Droppable>
@@ -679,6 +764,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
   return (
     <div className="min-h-screen px-0">
+      <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto">
         {selectedTab === "addtask" && (
           <AddNewTask
@@ -765,6 +851,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                           </svg>
                         </div>
                       </div>
+                      <ViewToggle view={view} setView={setView} />
                     </div>
                     {selectedDeveloper !== 'all' && (
                       <>
@@ -799,16 +886,27 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               </div>
             </div>
 
+            {/* View Toggle */}
 
 
-            <DragDropContext onDragEnd={handleDragEnd}>
-              <div className="grid grid-cols-4 gap-6">
-                {renderColumn('todo', 'To do', '[#9A00FF]')}
-                {renderColumn('inProgress', 'In Progress', 'orange-600')}
-                {renderColumn('review', 'Review', 'yellow-600')}
-                {renderColumn('done', 'Done', '[#05C815]')}
-              </div>
-            </DragDropContext>
+            {view === "card" ? (
+              <DragDropContext onDragEnd={handleDragEnd}>
+                <div className="grid grid-cols-4 gap-6">
+                  {renderColumn('todo', 'To do', '[#9A00FF]')}
+                  {renderColumn('inProgress', 'In Progress', 'orange-600')}
+                  {renderColumn('review', 'Review', 'yellow-600')}
+                  {renderColumn('done', 'Done', '[#05C815]')}
+                </div>
+              </DragDropContext>
+            ) : (
+              <NotionTableView
+                tasks={filteredTasks}
+                developers={devopss}
+                onAddTask={() => setSelectedTab("addtask")}
+                onTaskStatusChange={handleTaskStatusChange}
+                onQuickAddTask={handleQuickAddTask} // Add this line
+              />
+            )}
           </>
         )}
         <div className="w-[95%] mx-auto mt-3 p-2 rounded-2xl bg-white shadow-md flex flex-wrap justify-end gap-2">

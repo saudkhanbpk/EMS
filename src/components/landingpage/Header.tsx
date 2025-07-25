@@ -64,11 +64,15 @@ const Header = () => {
           >
             <div className="flex-shrink-0 flex items-center gap-2">
               <motion.div
-                className="w-8 h-8 bg-yellow-400 rounded-lg flex items-center justify-center"
+                className="w-8 h-8 rounded-lg flex items-center justify-center overflow-hidden"
                 whileHover={{ rotate: 360 }}
                 transition={{ duration: 0.5 }}
               >
-                <Zap className="w-5 h-5 text-blue-900" />
+                <img
+                  src="/ems icon.png"
+                  alt="EstroWork Logo"
+                  className="w-full h-full object-contain"
+                />
               </motion.div>
               <span className="text-2xl font-bold text-yellow-400">
                 EstroWork

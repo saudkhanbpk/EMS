@@ -756,7 +756,7 @@ const AdminPage: React.FC = () => {
                 {/* Logo */}
                 <div className="mb-8 flex justify-between items-center">
 
-                  <h1 className='font-semibold text-[26px]'>Talent Sync</h1>
+                  <h1 className='font-semibold text-[26px]'>Estrowork</h1>
                   <PanelRightClose className={`${permanentopen ? "hidden" : "display-block"}`}
                     onClick={() => setPermanentopen(true)}
                   />
@@ -773,6 +773,21 @@ const AdminPage: React.FC = () => {
                   }}>
                   <div className="space-y-4">
 
+
+
+                    <button
+                      onClick={() => {
+                        setSelectedTab("organization");
+                        // setShowEmployeeList(!showEmployeeList);
+                        handleClose()
+                      }}
+                      className={`w-full text-left p-2 rounded ${selectedTab === "organization"
+                        ? "bg-[#9A00FF] text-White"
+                        : "text-white hover:bg-[#9A00FF]"
+                        }`}
+                    >
+                      Dashboard
+                    </button>
                     <button
                       onClick={() => {
                         setSelectedTab("ListView");
@@ -787,7 +802,7 @@ const AdminPage: React.FC = () => {
                         ///////////////
                         }`}
                     >
-                      Dashboard
+                      Attendence
                     </button>
 
                     <button
@@ -801,7 +816,7 @@ const AdminPage: React.FC = () => {
                         : "text-white hover:bg-[#9A00FF]"
                         }`}
                     >
-                      Employees
+                      Members
                     </button>
                     <button
                       onClick={() => {
@@ -907,19 +922,7 @@ const AdminPage: React.FC = () => {
 
 
                     </button>
-                    <button
-                      onClick={() => {
-                        setSelectedTab("organization");
-                        // setShowEmployeeList(!showEmployeeList);
-                        handleClose()
-                      }}
-                      className={`w-full text-left p-2 rounded ${selectedTab === "organization"
-                        ? "bg-[#9A00FF] text-White"
-                        : "text-white hover:bg-[#9A00FF]"
-                        }`}
-                    >
-                      Organization Detail
-                    </button>
+
                     <button
                       onClick={() => {
                         handleClose();

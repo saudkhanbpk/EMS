@@ -133,3 +133,30 @@
 .light-scroll {
   scroll-behavior: smooth;
 }
+
+/* Beautiful Task Column Scrollbar */
+.task-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: #9A00FF #f1f5f9;
+}
+
+.task-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-scroll::-webkit-scrollbar-track {
+  background: #f1f5f9;
+  border-radius: 10px;
+  margin: 4px 0;
+}
+
+.task-scroll::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #9A00FF 0%, #7c3aed 100%);
+  border-radius: 10px;
+  transition: all 0.3s ease;
+}
+
+.task-scroll::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #8500e6 0%, #6d28d9 100%);
+  transform: scale(1.1);
+}
