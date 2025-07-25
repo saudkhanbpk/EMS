@@ -36,8 +36,45 @@ import {
 import { AttendanceProvider } from "./AttendanceContext";
 import FilteredDataAdmin from "./filteredListAdmin";
 import { id } from "date-fns/locale/id";
-import { useUser } from "../contexts/UserContext";
+// --- TaskCell Component ---
+const TaskCell = ({ task }) => {
+  const [showAll, setShowAll] = useState(false);
+  if (!task) return <span className="text-gray-400 italic">No task</span>;
+  const shortTask = task.length > 60 ? task.slice(0, 60) + "..." : task;
+  return (
+    <div>
+      <span>{showAll ? task : shortTask}</span>
+      {task.length > 60 && (
+        <button
+          className="text-blue-600 ml-2 text-xs underline"
+          onClick={e => {
+            e.stopPropagation();
+            setShowAll(!showAll);
+          }}
+        >
+          {showAll ? "See less" : "See more"}
+        </button>
+      )}
+    </div>
+  );
+};
 
+// --- Utility to fetch daily tasks ---
+async function fetchDailyTasks(date) {
+  const { data, error } = await supabase
+    .from("daily_tasks")
+    .select("user_id, task_description, created_at")
+    .gte("created_at", `${date}T00:00:00`)
+    .lte("created_at", `${date}T23:59:59`);
+  if (error) throw error;
+  const dailyTasksMap = new Map();
+  if (data) {
+    data.forEach(task => {
+      dailyTasksMap.set(task.user_id, task.task_description);
+    });
+  }
+  return dailyTasksMap;
+}
 interface AttendanceRecord {
   id: string;
   check_in: string;
@@ -71,7 +108,7 @@ interface SoftwareComplaint {
   created_at: string;
   user_id: string;
 }
-// const EmployeeAttendanceTable = forwardRef(
+
 //   ({
 //   selectedEmployeeId,
 //   onEmployeeSelect
@@ -110,7 +147,6 @@ const EmployeeAttendanceTable = () => {
   const [selectedDateW, setselectedDateW] = useState(new Date());
   const [currentFilter, setCurrentFilter] = useState("all"); // Filter state: "all", "present", "absent", "late", "remote"
   const [dataFromWeeklyChild, setDataFromWeeklyChild] = useState("");
-  const { userProfile } = useUser()
   const [selectedEntry, setSelectedEntry] = useState(null);
   // const [newCheckOutTime, setNewCheckOutTime] = useState('00 : 00');
   const [hour, setHour] = useState(12); // Default hour
@@ -418,169 +454,9 @@ const EmployeeAttendanceTable = () => {
     console.log("entry", entry);
     setSelectedEntry(entry);
     parseCheckOutTime(entry.check_out);
-    // setNewCheckOutTime(entry.check_out || ''); // Set default time
     setIsModalOpen(true);
   };
-
-  // const handleUpdateCheckInTime = async () => {
-  //   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
-
-  //   // Format hour and minute to two digits
-  //   const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
-  //   const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
-
-  //   // Decode the encoded string (if coming from URL/query param)
-  //   const decodedDateString = decodeURIComponent(selectedEntry.check_out2);
-
-  //   // Parse the date (local time) or default to today if invalid
-  //   let originalDate = decodedDateString && decodedDateString !== "N/A"
-  //     ? new Date(decodedDateString)
-  //     : new Date();
-
-  //   // Convert to UTC format "YYYY-MM-DD"
-  //   const formattedUTC = originalDate.toISOString().split("T")[0];
-
-  //   console.log("FormattedUTCCCCCCCCCC Date:", formattedUTC);
-
-  //   // Check for invalid date format
-  //   if (isNaN(originalDate.getTime())) {
-  //     console.error("Invalid check-out date:", selectedEntry.check_out2);
-  //     alert("Error: Invalid check-out date format.");
-  //     return;
-  //   }
-
-  //   // Convert hour to 24-hour format if PM
-  //   const adjustedHourin = isinAM
-  //     ? parseInt(formattedHourin, 10)
-  //     : (parseInt(formattedHourin, 10) + 12) % 24;
-
-  //   // Construct new date with adjusted time
-  //   const newDate = new Date(
-  //     originalDate.getFullYear(),
-  //     originalDate.getMonth(),
-  //     originalDate.getDate(),
-  //     adjustedHourin,
-  //     parseInt(formattedMinutein, 10),
-  //     0,
-  //     0
-  //   );
-
-  //   // Format the final timestamp as "YYYY-MM-DD HH:mm:ss+00"
-  //   const formattedTimestamp = newDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
-  //   settimestamp(formattedTimestamp.split(" ")[0]); // Store only the date part
-
-  //   console.log("Formatted Timestamp:", formattedTimestamp);
-
-  //   // Compare against attendance time limit
-  //   const now = new Date(formattedTimestamp);
-  //   const checkInTimeLimit = parse("09:30", "HH:mm", now);
-  //   const attendanceStatus = isAfter(now, checkInTimeLimit) ? "late" : "present";
-
-  //   setupdatedCheckInTime(formattedTimestamp);
-  //   console.log("Check-in Limit:", checkInTimeLimit);
-  //   console.log("Attendance Status:", attendanceStatus);
-
-  //   // Update the database by matching only the date
-  //   const { data, error } = await supabase
-  //     .from("attendance_logs")
-  //     .update({
-  //       check_in: formattedTimestamp,
-  //       status: attendanceStatus,
-  //     })
-  //     .eq("user_id", selectedEntry.id)
-  //     .eq("check_out", selectedEntry.check_out2);
-  //   if (error) {
-  //     console.error("Error updating check-in time:", error);
-  //     alert("Failed to update check-in time.");
-  //   } else {
-  //     console.log("Update successful:", data);
-  //     alert("Check-in time updated successfully.");
-  //   }
-
-  //   setisCheckinModalOpen(false);
-  // };
-
-  // const handleUpdateCheckInTime = async () => {
-  //   console.log("selectedEntry.check_out2:", selectedEntry.check_out2);
-
-  //   // Format hour and minute to ensure two digits
-  //   const formattedHourin = hourin < 10 ? `0${hourin}` : hourin;
-  //   const formattedMinutein = minutein < 10 ? `0${minutein}` : minutein;
-
-  //   // Parse original date from selectedEntry.check_out2 or default to today
-  //   let originalDate;
-  //   if (selectedEntry.check_out2 && selectedEntry.check_out2 !== "N/A") {
-  //     // Decode and parse the date string
-  //     const decodedDateString = decodeURIComponent(selectedEntry.check_out2);
-  //     originalDate = new Date(decodedDateString);
-  //   } else {
-  //     originalDate = new Date();
-  //   }
-
-  //   // Ensure originalDate is valid
-  //   if (isNaN(originalDate.getTime())) {
-  //     console.error("Invalid check-out date:", selectedEntry.check_out2);
-  //     alert("Error: Invalid check-out date format.");
-  //     return;
-  //   }
-
-  //   // Convert hour to 24-hour format if PM
-  //   const adjustedHourin = isinAM
-  //     ? parseInt(formattedHourin, 10)
-  //     : (parseInt(formattedHourin, 10) + 12) % 24;
-
-  //   // Construct new date with adjusted time
-  //   const newDate = new Date(
-  //     originalDate.getFullYear(),
-  //     originalDate.getMonth(),
-  //     originalDate.getDate(),
-  //     adjustedHourin,
-  //     parseInt(formattedMinutein, 10),
-  //     0,
-  //     0
-  //   );
-
-  //   // Convert to UTC ISO string and format as "YYYY-MM-DD HH:mm:ss+00"
-  //   const formattedTimestamp = newDate.toISOString().replace("T", " ").split(".")[0] + ".000+00";
-  //   settimestamp(formattedTimestamp.split(" ")[0]);
-
-  //   console.log("Formatted Timestamp:", formattedTimestamp);
-
-  //   // Compare against attendance time limit
-  //   const now = new Date(formattedTimestamp);
-  //   const checkInTimeLimit = parse("09:30", "HH:mm", now);
-  //   const attendanceStatus = isAfter(now, checkInTimeLimit) ? "late" : "present";
-
-  //   setupdatedCheckInTime(formattedTimestamp);
-
-  //   console.log("Check-in Limit:", checkInTimeLimit);
-  //   console.log("Attendance Status:", attendanceStatus);
-
-  //   // Update database
-  //   const { data, error } = await supabase
-  //     .from("attendance_logs")
-  //     .update({
-  //       check_in: formattedTimestamp,
-  //       // status: attendanceStatus,
-  //     })
-  //     .eq("user_id", selectedEntry.id)
-  //     .eq("created_at::Date", originalDate.toISOString().split("T")[0]); // Match only the date
-
-  //   if (error) {
-  //     console.error("Error updating check-in time:", error);
-  //     alert("Failed to update check-in time.");
-  //   } else {
-  //     console.log("Update successful:", data);
-  //     alert("Check-in time updated successfully.");
-  //   }
-
-  //   setisCheckinModalOpen(false);
-  // };
-
   const handleUpdateCheckInTime = async () => {
-    // Get original created_at date
-    // const originalDate = new Date(selectedEntry.created_at);
-    // Original local date: Wed Apr 09 2025 09:36:43 GMT+0500
     const originalDate = new Date(selectedEntry.created_at);
 
     // Get UTC date components
@@ -632,11 +508,6 @@ const EmployeeAttendanceTable = () => {
     const { data, error } = await supabase
       .from("attendance_logs")
       .select("*")
-      // .update({
-      //   check_in: formattedTimestamp,
-      //   status: attendanceStatus
-      // })
-      // .eq("user_id", selectedEntry.id)
       .eq("created_at::date", utcDateString);
     console.log("Fetched Data ", data);
 
@@ -952,44 +823,8 @@ const EmployeeAttendanceTable = () => {
   const handleOfficeComplaintsClick = () => {
     fetchofficeComplaints();
   };
-
-  //  useEffect(() => {
-  //    const fetching = async () => {
-  //      try {
-  //        // Fetch employees from the database
-  //        const { data: employees, error: employeesError } = await supabase
-  //          .from("users")
-  //          .select("id, full_name")
-  //         //  .not('full_name', 'in', '("Admin")')
-  //         //  .not('full_name', 'in', '("saud")');
-
-  //        if (employeesError) throw employeesError;
-  //        if (!employees || employees.length === 0) {
-  //          console.warn("No employees found.");
-  //          return;
-  //        }
-
-  //        // Update state with the fetched employees
-  //        setEmployees(employees);
-  //        if (DataEmployee === null || DataEmployee === undefined || DataEmployee === "") {
-  //         setDataEmployee(employees[0].id);
-  //         handleEmployeeClick();
-  //       }
-
-  //      } catch (error) {
-  //        console.error("Error fetching employees:", error);
-  //      }
-  //    };
-
-  //    fetching(); // Call the async function
-
-  //  }, [userID]); // Empty dependency array to run only on mount
-
-  // if (selectedTab === "Employees") {
   const fetchEmployees = async () => {
     try {
-
-
       const { data: userprofile, error: usererror } = await supabase.from("users").select("id,organization_id").eq("id", user?.id).single();
       // Fetch all employees except excluded ones
       const { data: employees, error: employeesError } = await supabase
@@ -1004,16 +839,9 @@ const EmployeeAttendanceTable = () => {
       }
 
       setEmployees(employees);
-
-      // if (DataEmployee === null) {
-      //   setDataEmployee(employees[0].id);
-      //   handleEmployeeClick();
-      // }
-
       const today = new Date();
       const monthStart = startOfMonth(today);
       const monthEnd = endOfMonth(today);
-
       const allDaysInMonth = eachDayOfInterval({
         start: monthStart,
         end: monthEnd,
@@ -1123,6 +951,23 @@ const EmployeeAttendanceTable = () => {
         employeeStats[employee.id] = uniqueAttendance.length
           ? totalHours / uniqueAttendance.length
           : 0;
+      }
+
+      // Fetch daily tasks for the selected date
+      const { data: dailyTasksData, error: dailyTasksError } = await supabase
+        .from("daily_tasks")
+        .select("user_id, task_description, created_at")
+        .gte("created_at", `${formattedDate}T00:00:00`)
+        .lte("created_at", `${formattedDate}T23:59:59`);
+
+      if (dailyTasksError) throw dailyTasksError;
+
+      // Create a map for quick lookup
+      const dailyTasksMap = new Map();
+      if (dailyTasksData) {
+        dailyTasksData.forEach(task => {
+          dailyTasksMap.set(task.user_id, task.task_description);
+        });
       }
 
       setEmployeeStats(employeeStats);
@@ -1281,8 +1126,6 @@ const EmployeeAttendanceTable = () => {
       const year = parsedDate.getUTCFullYear();
       const month = parsedDate.getUTCMonth();
       const day = parsedDate.getUTCDate();
-      // const startOfDayFormat = new Date(Date.UTC(year, month, day - 1, 19, 0, 0, 0)).toISOString();
-      // const endOfDayFormat = new Date(Date.UTC(year, month, day, 23, 59, 59, 0)).toISOString();
       const startOfDayFormat = new Date(
         Date.UTC(year, month, day, 0, 0, 0, 0)
       ).toISOString(); // Start of same day
@@ -1341,9 +1184,6 @@ const EmployeeAttendanceTable = () => {
       // Get selected date's year and month
       const selectedYear = year;
       const selectedMonth = month; // Already 0-based from parsedDate.getUTCMonth()
-
-      // Create date objects for the first and last day of the selected month
-      // Set time to start of day (00:00:00) for the first day
       const monthStart = new Date(
         Date.UTC(selectedYear, selectedMonth, 1, 0, 0, 0, 0)
       );
@@ -1376,7 +1216,7 @@ const EmployeeAttendanceTable = () => {
       // Fetch holidays
       const { data: holidays, error: holidaysError } = await supabase
         .from('holidays')
-        .select('*').eq("organization_id", userProfile?.organization_id);
+        .select('*');
 
       if (holidaysError) {
         console.error('Error fetching holidays:', holidaysError);
@@ -1801,55 +1641,7 @@ const EmployeeAttendanceTable = () => {
     updateMode();
     setisModeOpen(false);
   };
-
-  // const downloadPDFFiltered = async () => {
-  //   // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
-  //   //   console.error("No data available to generate PDF");
-  //   //   return;
-  //   // }
-  //   try {
-  //     const response = await fetch('https://ems-server-0bvq.onrender.com/generate-Filtered', {
-  //       method: 'POST',
-  //       headers: {
-  //         'Content-Type': 'application/json',
-  //       },
-  //       body: JSON.stringify({ data: attendanceDataFiltered }),
-  //     });
-
-  //     if (!response.ok) {
-  //       throw new Error('Failed to generate PDF');
-  //     }
-
-  //     const blob = await response.blob();
-
-  //     if (blob.type !== "application/pdf") {
-  //       throw new Error("Received incorrect file format");
-  //     }
-
-  //     const url = window.URL.createObjectURL(blob);
-  //     const currentDate = new Date().toISOString().split('T')[0];
-  //     const fileName = `attendance_${currentDate}.pdf`;
-
-  //     // Create and trigger download
-  //     const a = document.createElement('a');
-  //     a.href = url;
-  //     a.download = fileName;
-  //     document.body.appendChild(a);
-  //     a.click();
-  //     a.remove();
-
-  //     // Open PDF manually
-  //     window.open(url, '_blank');
-  //   } catch (error) {
-  //     console.error('Error downloading PDF:', error);
-  //   }
-  // };
-
   const downloadPDFFiltered = async () => {
-    // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
-    //   console.error("No data available to generate PDF");
-    //   return;
-    // }
     try {
       const response = await fetch("https://ems-server-0bvq.onrender.com/generate-Filtered", {
         method: "POST",
@@ -1896,10 +1688,6 @@ const EmployeeAttendanceTable = () => {
   );
 
   const downloadPDFWeekly = async () => {
-    // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
-    //   console.error("No data available to generate PDF");
-    //   return;
-    // }
     try {
       const response = await fetch("https://ems-server-0bvq.onrender.com/generate-pdfWeekly", {
         method: "POST",
@@ -1939,10 +1727,6 @@ const EmployeeAttendanceTable = () => {
   };
 
   const downloadPDFMonthly = async () => {
-    // if (!dataFromWeeklyChild || dataFromWeeklyChild.length === 0) {
-    //   console.error("No data available to generate PDF");
-    //   return;
-    // }
     try {
       const response = await fetch(
         "https://ems-server-0bvq.onrender.com/generate-pdfMonthly",
@@ -2123,9 +1907,9 @@ const EmployeeAttendanceTable = () => {
         };
       });
 
+
       setAttendanceData(finalAttendanceData);
       setFilteredData(finalAttendanceData); // Initialize filtered data with all data
-
       // Calculate counts
       const lateCount = finalAttendanceData.filter(
         (entry) => entry.status.toLowerCase() === "late"
@@ -2284,14 +2068,6 @@ const EmployeeAttendanceTable = () => {
     setsearch((prev) => !prev);
   };
 
-  //  const handletableview = () => {
-  //   console.log("abc");
-
-  //  }
-  //  const handleDetailview = (y:any) => {
-  //   setmaintab(y)
-  //   console.log(y);
-  //  }
   const [DetailedVieww, setDetailedVieww] = useState(false);
   const handleGraphicViewClick = () => {
     setgraphicview(true);
@@ -2352,16 +2128,6 @@ const EmployeeAttendanceTable = () => {
         {maintab === "TableView" && (
           <>
             <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto sm:ml-5 md:flex justify-center md:space-x-4 space-x-2 ">
-              {/* <button
-            onClick={() => handlenotification()}
-            className={`px-4 py-2 rounded-lg transition-all ${
-              selectedTab === "Daily"
-                ? "bg-blue-500 text-white"
-                : "bg-white text-gray-700 hover:bg-gray-100"
-            }`}
-          >
-            notify
-          </button> */}
 
               <button
                 onClick={() => setSelectedTab("Daily")}
@@ -2766,7 +2532,7 @@ const EmployeeAttendanceTable = () => {
                             Check-in
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Check-out edited
+                            Check-out
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
                             Break Start
@@ -2774,6 +2540,9 @@ const EmployeeAttendanceTable = () => {
 
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
                             2nd Check-in
+                          </th>
+                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
+                            Today's Task
                           </th>
                           <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
                             Mode
@@ -2830,6 +2599,8 @@ const EmployeeAttendanceTable = () => {
                                 ) : null}
                               </div>
                             </td>
+
+
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                               {entry.break_start || "N/A"}
                             </td>
@@ -2853,6 +2624,18 @@ const EmployeeAttendanceTable = () => {
                               </div>
                             </td>
 
+                            <td className="relative group">
+                              {entry.today_task ? (
+                                <>
+                                  <span className="text-gray-400">{entry.today_task}</span>
+                                  <div className="hidden group-hover:block absolute bg-gray-300 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                    {entry.today_task}
+                                  </div>
+                                </>
+                              ) : (
+                                <span className="text-gray-400 italic">No task</span>
+                              )}
+                            </td>
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                               <button
                                 onClick={() => handleModeOpen(entry)}
@@ -2990,11 +2773,22 @@ const EmployeeAttendanceTable = () => {
                               <span className="truncate mr-1">
                                 {getuserbreakdate(entry?.attendance_id) || "---"}
                               </span>
+                              <span>
+                                <TaskCell task={entry.today_task} />
+                              </span>
                               {entry.break_in ? (
                                 <span className="text-yellow-600 bg-yellow-100 px-1 py-0.5 font-semibold rounded-xl text-[9px]">
                                   Auto
                                 </span>
                               ) : null}
+                            </div>
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                              Today's Task
+                            </span>
+                            <div className="font-medium p-1">
+                              <TaskCell task={entry.today_task} />
                             </div>
                           </div>
 
@@ -3151,82 +2945,6 @@ const EmployeeAttendanceTable = () => {
                                     onChange={setSelectedMode}
                                     className="space-y-4"
                                   >
-                                    {/* <RadioGroup.Option value="Absent">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                              }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Absent
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                    <RadioGroup.Option value="Full Day">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                              }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Casual Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                    <RadioGroup.Option value="Half Day">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                              }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Half Day Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                    <RadioGroup.Option value="Sick Leave">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                              }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Sick Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-
-                                    <RadioGroup.Option value="Emergency Leave">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${checked
-                                              ? "border-4 border-blue-500"
-                                              : "border border-gray-300"
-                                              }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Emergency Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option> */}
                                   </RadioGroup>
                                 </div>
 
@@ -3905,7 +3623,7 @@ const EmployeeAttendanceTable = () => {
                             <div className="flex items-center mb-4 sm:mb-6">
                               <BarChart className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 mr-2" />
                               <h2 className="text-base sm:text-xl font-semibold">
-                                Monthly Overview  -{" "}
+                                Monthly Overview -{" "}
                                 {format(new Date(), "MMMM yyyy")}
                               </h2>
                             </div>

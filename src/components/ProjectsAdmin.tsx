@@ -113,6 +113,9 @@ function ProjectsAdmin() {
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
   const [expandedProjects, setExpandedProjects] = useState({});
 
+  // Story points filter state
+  const [storyPointsFilter, setStoryPointsFilter] = useState<'all' | 'weekly' | 'monthly'>('all');
+
   const toggleExpandProjects = (projectId) => {
     setExpandedProjects((prev) => ({
       ...prev,
@@ -125,6 +128,36 @@ function ProjectsAdmin() {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  const filterTasksByTimePeriod = (tasks: any[], filter: 'all' | 'weekly' | 'monthly') => {
+    if (filter === 'all') return tasks;
+
+    const now = new Date();
+    const filterDate = new Date();
+
+    if (filter === 'weekly') {
+      filterDate.setDate(now.getDate() - 7);
+    } else if (filter === 'monthly') {
+      filterDate.setDate(now.getDate() - 30);
+    }
+
+    // Set time to start of day
+    filterDate.setHours(0, 0, 0, 0);
+
+    const filteredTasks = tasks.filter(task => {
+      if (!task.created_at) return false;
+
+      // Parse the ISO timestamp
+      const taskCreatedDate = new Date(task.created_at);
+
+      // Check if task was created after the filter date
+      return taskCreatedDate >= filterDate;
+    });
+
+    console.log(`Filter: ${filter}, Now: ${now.toISOString()}, FilterDate: ${filterDate.toISOString()}, Tasks before filter: ${tasks.length}, Tasks after filter: ${filteredTasks.length}`);
+
+    return filteredTasks;
   };
 
   const filteredEmployees = Devs.filter(Dev =>
@@ -343,12 +376,15 @@ function ProjectsAdmin() {
             };
           }
 
+          // Filter tasks based on story points filter
+          const filteredTasks = filterTasksByTimePeriod(tasksData, storyPointsFilter);
+
           // Calculate scores
-          const completedScore = tasksData
+          const completedScore = filteredTasks
             .filter(task => task.status === "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-          const pendingScore = tasksData
+          const pendingScore = filteredTasks
             .filter(task => task.status !== "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -405,7 +441,7 @@ function ProjectsAdmin() {
     };
 
     fetchProjects();
-  }, [userProfile?.organization_id]);
+  }, [userProfile?.organization_id, storyPointsFilter]);
 
   const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
     if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
@@ -571,15 +607,18 @@ function ProjectsAdmin() {
           // Get tasks for this project
           const projectTasks = tasksData.filter(task => task.project_id === project.id);
 
+          // Filter tasks based on story points filter
+          const filteredProjectTasks = filterTasksByTimePeriod(projectTasks, storyPointsFilter);
+
           // Calculate scores
-          const completedScore = projectTasks
+          const completedScore = filteredProjectTasks
             .filter(task =>
               task.status === "done" &&
               task.devops?.some((dev: any) => dev.id === employee.id)
             )
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-          const pendingScore = projectTasks
+          const pendingScore = filteredProjectTasks
             .filter(task =>
               task.status !== "done" &&
               task.devops?.some((dev: any) => dev.id === employee.id)
@@ -681,11 +720,15 @@ function ProjectsAdmin() {
 
           // Calculate scores for this project
           const projectTasks = tasksData.filter(task => task.project_id === project.id);
-          const completedScore = projectTasks
+
+          // Filter tasks based on story points filter
+          const filteredProjectTasks = filterTasksByTimePeriod(projectTasks, storyPointsFilter);
+
+          const completedScore = filteredProjectTasks
             .filter(task => task.status === "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-          const pendingScore = projectTasks
+          const pendingScore = filteredProjectTasks
             .filter(task => task.status !== "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -726,6 +769,15 @@ function ProjectsAdmin() {
       fetchManagersWithProjects();
     }
   };
+
+  // Effect to refresh data when story points filter changes
+  useEffect(() => {
+    if (sortView === 'employees') {
+      fetchEmployeesWithProjects();
+    } else if (sortView === 'managers') {
+      fetchManagersWithProjects();
+    }
+  }, [storyPointsFilter, sortView]);
 
   // Render the workload employees modal
   const renderWorkloadModal = () => {
@@ -973,12 +1025,15 @@ function ProjectsAdmin() {
               };
             }
 
+            // Filter tasks based on story points filter
+            const filteredTasks = filterTasksByTimePeriod(tasksData, storyPointsFilter);
+
             // Calculate scores
-            const completedScore = tasksData
+            const completedScore = filteredTasks
               .filter(task => task.status === "done")
               .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-            const pendingScore = tasksData
+            const pendingScore = filteredTasks
               .filter(task => task.status !== "done")
               .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -1535,7 +1590,19 @@ function ProjectsAdmin() {
                                 Projects
                               </th>
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Story Points
+                                <div className="flex items-center gap-2">
+                                  <span>Story Points</span>
+                                  <select
+                                    value={storyPointsFilter}
+                                    onChange={(e) => setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly')}
+                                    className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <option value="all">All</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                  </select>
+                                </div>
                               </th>
                             </tr>
                           </thead>
@@ -1702,7 +1769,19 @@ function ProjectsAdmin() {
                             Projects
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total Story Points
+                            <div className="flex items-center gap-2">
+                              <span>Total Story Points</span>
+                              <select
+                                value={storyPointsFilter}
+                                onChange={(e) => setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly')}
+                                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="all">All</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
                           </th>
                         </tr>
                       </thead>
@@ -1861,8 +1940,23 @@ function ProjectsAdmin() {
                       >
                         <div className="flex items-center justify-between mb-4">
                           <div className="flex flex-col items-start pl-2 pr-4 py-2 bg-[#f7eaff] rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold">Story Points:</span>
+                              <select
+                                value={storyPointsFilter}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly');
+                                }}
+                                className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="all">All</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
                             <span className="text-sm font-semibold">
-                              <label>Story Points : </label>
                               <span className="text-green-600">{project.completedScore}</span>
                               <span className="text-gray-500"> / </span>
                               <span className="text-red-500">{project.totalScore}</span>
@@ -1951,7 +2045,19 @@ function ProjectsAdmin() {
                             Developers
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Story Points
+                            <div className="flex items-center gap-2">
+                              <span>Story Points</span>
+                              <select
+                                value={storyPointsFilter}
+                                onChange={(e) => setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly')}
+                                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="all">All</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Created
