@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useContext, useRef } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PlusCircle, User, X, ArrowLeft, Plus } from 'lucide-react';
+import { PlusCircle, User, X, ArrowLeft, Plus, LayoutGrid, Table2 } from 'lucide-react';
 import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import { formatDistanceToNow } from 'date-fns';
@@ -8,6 +8,7 @@ import { useNavigate } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { AttendanceContext } from '../pages/AttendanceContext';
 import Comments from '../pages/Comments';
+import NotionTableView from './NotionTableView';
 
 interface Developer {
   id: string;
@@ -74,6 +75,7 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
   const [openedTask, setOpenedTask] = useState<Task | null>(null);
   const [isFullImageOpen, setIsFullImageOpen] = useState(false);
   const [fullImageUrl, setFullImageUrl] = useState("");
+  const [view, setView] = useState<"card" | "table">("card");
 
 
 
@@ -145,6 +147,84 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
 
     fetchUserRoleAndProjectInfo();
   }, [id, projectIdd]); // Removed devopsss.length to avoid infinite loops
+
+  const ViewToggle = ({ view, setView }) => (
+    <div className="flex items-center gap-2 bg-[#232326] rounded-lg p-1">
+      <button
+        className={`flex items-center gap-1 px-3 py-1 rounded-md transition-colors duration-200
+          ${view === "card" ? "bg-[#9A00FF] text-white" : "text-gray-300 hover:bg-[#18181A]"}
+        `}
+        onClick={() => setView("card")}
+      >
+        <LayoutGrid size={18} />
+        <span className="hidden sm:inline">Card</span>
+      </button>
+      <button
+        className={`flex items-center gap-1 px-3 py-1 rounded-md transition-colors duration-200
+          ${view === "table" ? "bg-[#9A00FF] text-white" : "text-gray-300 hover:bg-[#18181A]"}
+        `}
+        onClick={() => setView("table")}
+      >
+        <Table2 size={18} />
+        <span className="hidden sm:inline">Table</span>
+      </button>
+    </div>
+  );
+
+  const handleQuickAddTask = async (title: string) => {
+    try {
+      const currentUserId = localStorage.getItem("user_id");
+      const { data: currentUserData, error: userError } = await supabase
+        .from('users')
+        .select('id, full_name')
+        .eq('id', currentUserId)
+        .single();
+
+      const assignedDevs = currentUserData && !userError ? [{
+        id: currentUserId!,
+        name: currentUserData.full_name || 'Unknown'
+      }] : [];
+
+      const newTask = {
+        title: title,
+        project_id: id || projectIdd[0],
+        status: 'todo',
+        score: 0,
+        priority: 'Low',
+        devops: assignedDevs,
+        description: '',
+        created_at: new Date().toISOString(),
+      };
+
+      const { data, error } = await supabase
+        .from('tasks_of_projects')
+        .insert([newTask])
+        .select()
+        .single();
+
+      if (error) throw error;
+      await fetchTasks();
+    } catch (error) {
+      console.error('Error creating task:', error);
+    }
+  };
+
+  const handleTaskStatusChange = async (taskId: string, newStatus: 'done' | Task['status']) => {
+    try {
+      const { error } = await supabase
+        .from('tasks_of_projects')
+        .update({ status: newStatus })
+        .eq('id', taskId);
+
+      if (error) throw error;
+
+      setTasks(tasks.map(task =>
+        task.id === taskId ? { ...task, status: newStatus } : task
+      ));
+    } catch (error) {
+      console.error('Error updating task status:', error);
+    }
+  };
 
 
 
@@ -758,237 +838,250 @@ function TaskBoard({ setSelectedTAB }: { setSelectedTAB: (tab: string) => void }
               <span className='font-semibold text-[13px] text-yellow-600'>Pending Tasks: <strong>{String(pendingTasks).padStart(2, '0')}</strong></span>
               <span className="mx-3 font-semibold text-[13px] text-green-500">Completed Tasks: <strong>{completedTasks}</strong></span>
             </div>
+            <ViewToggle view={view} setView={setView} />
           </div>
         </div>
 
-        <DragDropContext onDragEnd={handleDragEnd}>
-          <div className="grid grid-cols-[repeat(auto-fit,_minmax(200px,_1fr))] gap-6">
-            {/* Todo Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
-              <div className="flex justify-between items-center mb-6 flex-shrink-0">
-                <h2 className="font-semibold text-xl leading-7 text-[#9A00FF]">To do</h2>
-                <span className="text-gray-600">{getStatusCount('todo')}</span>
-              </div>
-              <Droppable droppableId={COLUMN_IDS.todo}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
-                    style={{ minHeight: '100px' }}
-                  >
-                    {getTasksByStatus('todo').length > 0 ? (
-                      getTasksByStatus('todo').map((task, index) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          index={index}
-                          commentByTaskID={commentByTaskID}
-                          descriptionOpen={descriptionOpen}
-                          setDescriptionOpen={setDescriptionOpen}
-                          fetchTasks={fetchTasks}
-                          setOpenedTask={setOpenedTask}
-                          isFullImageOpen={isFullImageOpen}
-                          setIsFullImageOpen={setIsFullImageOpen}
-                          fullImageUrl={fullImageUrl}
-                          setFullImageUrl={setFullImageUrl}
-                        />
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-gray-400">
-                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
-                      </div>
-                    )}
-                    {provided.placeholder}
-                    
-                    {/* Quick Add Task Button */}
-                    <div className="mt-2">
-                      <button
-                        onClick={() => setIsCreateTaskModalOpen(true)}
-                        className="w-full flex items-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
-                      >
-                        <Plus size={16} />
-                        <span className="text-sm">Add a task</span>
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </Droppable>
-            </div>
-
-
-            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
-              <div className="flex justify-between items-center mb-6 flex-shrink-0">
-                <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>
-                <span className="text-gray-600">{getStatusCount('inProgress')}</span>
-              </div>
-              <Droppable droppableId={COLUMN_IDS.inProgress}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
-                    style={{ minHeight: '100px' }}
-                  >
-                    {getTasksByStatus('inProgress').length > 0 ? (
-                      getTasksByStatus('inProgress').map((task, index) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          index={index}
-                          commentByTaskID={commentByTaskID}
-                          descriptionOpen={descriptionOpen}
-                          setDescriptionOpen={setDescriptionOpen}
-                          fetchTasks={fetchTasks}
-                          setOpenedTask={setOpenedTask}
-                          isFullImageOpen={isFullImageOpen}
-                          setIsFullImageOpen={setIsFullImageOpen}
-                          fullImageUrl={fullImageUrl}
-                          setFullImageUrl={setFullImageUrl}
-                        />
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-gray-400">
-                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
-                      </div>
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-
-            {/* Review Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
-              <div className="flex justify-between items-center mb-6 flex-shrink-0">
-                <h2 className="font-semibold text-xl leading-7 text-yellow-600">Review</h2>
-                <span className="text-gray-600">{String(getStatusCount('review')).padStart(2, '0')}</span>
-              </div>
-              <Droppable droppableId={COLUMN_IDS.review}>
-                {(provided, snapshot) => (
-                  <div
-                    ref={provided.innerRef}
-                    {...provided.droppableProps}
-                    className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
-                    style={{ minHeight: '100px' }}
-                  >
-                    {getTasksByStatus('review').length > 0 ? (
-                      getTasksByStatus('review').map((task, index) => (
-                        <TaskCard
-                          key={task.id}
-                          task={task}
-                          index={index}
-                          commentByTaskID={commentByTaskID}
-                          descriptionOpen={descriptionOpen}
-                          setDescriptionOpen={setDescriptionOpen}
-                          fetchTasks={fetchTasks}
-                          setOpenedTask={setOpenedTask}
-                          isFullImageOpen={isFullImageOpen}
-                          setIsFullImageOpen={setIsFullImageOpen}
-                          fullImageUrl={fullImageUrl}
-                          setFullImageUrl={setFullImageUrl}
-                        />
-                      ))
-                    ) : (
-                      <div className="p-4 text-center text-gray-400">
-                        {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
-                      </div>
-                    )}
-                    {provided.placeholder}
-                  </div>
-                )}
-              </Droppable>
-            </div>
-
-            {/* Done Column */}
-            <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
-              <div className="flex justify-between items-center mb-6 flex-shrink-0">
-                <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
-                <span className="text-gray-600">{getStatusCount('done')}</span>
-              </div>
-
-              <div className="flex-1 overflow-y-auto space-y-4 pr-2 task-scroll" style={{ minHeight: '100px' }}>
-                <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
-
-                {getTasksByStatus('done').length > 0 ? (
-                  getTasksByStatus('done').map((task, index) => (
-                    // Render a simplified version of TaskCard without Draggable
+        {view === "card" ? (
+          <DragDropContext onDragEnd={handleDragEnd}>
+            <div className="grid grid-cols-[repeat(auto-fit,_minmax(200px,_1fr))] gap-6">
+              {/* Todo Column */}
+              <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+                <div className="flex justify-between items-center mb-6 flex-shrink-0">
+                  <h2 className="font-semibold text-xl leading-7 text-[#9A00FF]">To do</h2>
+                  <span className="text-gray-600">{getStatusCount('todo')}</span>
+                </div>
+                <Droppable droppableId={COLUMN_IDS.todo}>
+                  {(provided, snapshot) => (
                     <div
-                      key={task.id}
-                      className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                      style={{ minHeight: '100px' }}
                     >
-                      {/* Title */}
-                      <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
-
-                      {/* Priority & Score */}
-                      <div className="flex flex-row items-center gap-3">
-                        {task.priority && (
-                          <span className={`text-[12px] text-white font-semibold rounded px-2 py-[2px] capitalize
-                ${task.priority === "High" ? "bg-red-500" :
-                              task.priority === "Medium" ? "bg-yellow-600" :
-                                task.priority === "Low" ? "bg-green-400" : ""}`}>
-                            {task.priority}
-                          </span>
-                        )}
-                        <span className="text-[13px] text-[#404142] font-medium">{task.score}</span>
-                      </div>
-
-                      {/* Devops Info + Comments */}
-                      {task.devops && task.devops.length > 0 && (
-                        <div className="flex justify-between items-center mt-1">
-                          <div className="flex items-center gap-2">
-                            <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-semibold flex items-center justify-center">
-                              {task.devops.map((dev) => {
-                                const displayName = dev.name || dev.full_name || 'U';
-                                return displayName[0].toUpperCase();
-                              }).join("")}
-                            </div>
-                            <span className="text-[13px] text-[#404142]">
-                              {task.devops.map((dev) => {
-                                const displayName = dev.name || dev.full_name || 'Unknown';
-                                return displayName.charAt(0).toUpperCase() + displayName.slice(1);
-                              }).join(", ")}
-                            </span>
-                          </div>
-                          {(task.commentCount || 0) > 0 && (
-                            <span className="text-sm text-gray-600">
-                              {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
-                            </span>
-                          )}
+                      {getTasksByStatus('todo').length > 0 ? (
+                        getTasksByStatus('todo').map((task, index) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            commentByTaskID={commentByTaskID}
+                            descriptionOpen={descriptionOpen}
+                            setDescriptionOpen={setDescriptionOpen}
+                            fetchTasks={fetchTasks}
+                            setOpenedTask={setOpenedTask}
+                            isFullImageOpen={isFullImageOpen}
+                            setIsFullImageOpen={setIsFullImageOpen}
+                            fullImageUrl={fullImageUrl}
+                            setFullImageUrl={setFullImageUrl}
+                          />
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-gray-400">
+                          {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
                         </div>
                       )}
+                      {provided.placeholder}
 
-                      {/* Time */}
-                      <div className="flex justify-between items-center">
-                        <p className="text-[12px] text-[#949597]">{formatDistanceToNow(new Date(task.created_at))} ago</p>
-                      </div>
-
-                      {/* Comments Section */}
-                      <div>
-                        <Comments
-                          taskid={task.id}
-                          onCommentAdded={fetchTasks}
-                        />
+                      {/* Quick Add Task Button */}
+                      <div className="mt-2">
+                        <button
+                          onClick={() => setIsCreateTaskModalOpen(true)}
+                          className="w-full flex items-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                        >
+                          <Plus size={16} />
+                          <span className="text-sm">Add a task</span>
+                        </button>
                       </div>
                     </div>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-gray-400">
-                    No completed tasks
-                  </div>
-                )}
+                  )}
+                </Droppable>
               </div>
-            </div>
 
+
+              <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+                <div className="flex justify-between items-center mb-6 flex-shrink-0">
+                  <h2 className="font-semibold text-xl leading-7 text-orange-600">In Progress</h2>
+                  <span className="text-gray-600">{getStatusCount('inProgress')}</span>
+                </div>
+                <Droppable droppableId={COLUMN_IDS.inProgress}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                      style={{ minHeight: '100px' }}
+                    >
+                      {getTasksByStatus('inProgress').length > 0 ? (
+                        getTasksByStatus('inProgress').map((task, index) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            commentByTaskID={commentByTaskID}
+                            descriptionOpen={descriptionOpen}
+                            setDescriptionOpen={setDescriptionOpen}
+                            fetchTasks={fetchTasks}
+                            setOpenedTask={setOpenedTask}
+                            isFullImageOpen={isFullImageOpen}
+                            setIsFullImageOpen={setIsFullImageOpen}
+                            fullImageUrl={fullImageUrl}
+                            setFullImageUrl={setFullImageUrl}
+                          />
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-gray-400">
+                          {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                        </div>
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+
+              {/* Review Column */}
+              <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+                <div className="flex justify-between items-center mb-6 flex-shrink-0">
+                  <h2 className="font-semibold text-xl leading-7 text-yellow-600">Review</h2>
+                  <span className="text-gray-600">{String(getStatusCount('review')).padStart(2, '0')}</span>
+                </div>
+                <Droppable droppableId={COLUMN_IDS.review}>
+                  {(provided, snapshot) => (
+                    <div
+                      ref={provided.innerRef}
+                      {...provided.droppableProps}
+                      className={`flex-1 overflow-y-auto space-y-4 pr-2 task-scroll ${snapshot.isDraggingOver ? 'bg-gray-50 rounded-lg' : ''}`}
+                      style={{ minHeight: '100px' }}
+                    >
+                      {getTasksByStatus('review').length > 0 ? (
+                        getTasksByStatus('review').map((task, index) => (
+                          <TaskCard
+                            key={task.id}
+                            task={task}
+                            index={index}
+                            commentByTaskID={commentByTaskID}
+                            descriptionOpen={descriptionOpen}
+                            setDescriptionOpen={setDescriptionOpen}
+                            fetchTasks={fetchTasks}
+                            setOpenedTask={setOpenedTask}
+                            isFullImageOpen={isFullImageOpen}
+                            setIsFullImageOpen={setIsFullImageOpen}
+                            fullImageUrl={fullImageUrl}
+                            setFullImageUrl={setFullImageUrl}
+                          />
+                        ))
+                      ) : (
+                        <div className="p-4 text-center text-gray-400">
+                          {snapshot.isDraggingOver ? 'Drop here' : 'No tasks'}
+                        </div>
+                      )}
+                      {provided.placeholder}
+                    </div>
+                  )}
+                </Droppable>
+              </div>
+
+              {/* Done Column */}
+              <div className="bg-white rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+                <div className="flex justify-between items-center mb-6 flex-shrink-0">
+                  <h2 className="font-semibold text-xl leading-7 text-[#05C815]">Done</h2>
+                  <span className="text-gray-600">{getStatusCount('done')}</span>
+                </div>
+
+                <div className="flex-1 overflow-y-auto space-y-4 pr-2 task-scroll" style={{ minHeight: '100px' }}>
+                  <p className='text-sm text-gray-400 font-semibold text-center'>Completed Tasks</p>
+
+                  {getTasksByStatus('done').length > 0 ? (
+                    getTasksByStatus('done').map((task, index) => (
+                      // Render a simplified version of TaskCard without Draggable
+                      <div
+                        key={task.id}
+                        className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3"
+                      >
+                        {/* Title */}
+                        <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
+
+                        {/* Priority & Score */}
+                        <div className="flex flex-row items-center gap-3">
+                          {task.priority && (
+                            <span className={`text-[12px] text-white font-semibold rounded px-2 py-[2px] capitalize
+                ${task.priority === "High" ? "bg-red-500" :
+                                task.priority === "Medium" ? "bg-yellow-600" :
+                                  task.priority === "Low" ? "bg-green-400" : ""}`}>
+                              {task.priority}
+                            </span>
+                          )}
+                          <span className="text-[13px] text-[#404142] font-medium">{task.score}</span>
+                        </div>
+
+                        {/* Devops Info + Comments */}
+                        {task.devops && task.devops.length > 0 && (
+                          <div className="flex justify-between items-center mt-1">
+                            <div className="flex items-center gap-2">
+                              <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-semibold flex items-center justify-center">
+                                {task.devops.map((dev) => {
+                                  const displayName = dev.name || dev.full_name || 'U';
+                                  return displayName[0].toUpperCase();
+                                }).join("")}
+                              </div>
+                              <span className="text-[13px] text-[#404142]">
+                                {task.devops.map((dev) => {
+                                  const displayName = dev.name || dev.full_name || 'Unknown';
+                                  return displayName.charAt(0).toUpperCase() + displayName.slice(1);
+                                }).join(", ")}
+                              </span>
+                            </div>
+                            {(task.commentCount || 0) > 0 && (
+                              <span className="text-sm text-gray-600">
+                                {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
+                              </span>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Time */}
+                        <div className="flex justify-between items-center">
+                          <p className="text-[12px] text-[#949597]">{formatDistanceToNow(new Date(task.created_at))} ago</p>
+                        </div>
+
+                        {/* Comments Section */}
+                        <div>
+                          <Comments
+                            taskid={task.id}
+                            onCommentAdded={fetchTasks}
+                          />
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="p-4 text-center text-gray-400">
+                      No completed tasks
+                    </div>
+                  )}
+                </div>
+              </div>
+
+            </div>
+          </DragDropContext>
+        ) : (
+          <div className="bg-white rounded-xl p-4">
+            <NotionTableView
+              tasks={tasks}
+              developers={devopsss}
+              onAddTask={() => setIsCreateTaskModalOpen(true)}
+              onTaskStatusChange={handleTaskStatusChange}
+              onQuickAddTask={handleQuickAddTask}
+            />
           </div>
-        </DragDropContext>
+        )}
       </div>
       <div className={` ${descriptionOpen ? "hidden" : ""} fixed bottom-6 flex flex-row right-16 bg-[#ffffff] rounded-2xl shadow-lg p-4 mr-5 text-right gap-3 z-50`}>
         <p className='font-bold text-[13px] text-red-500'>Total KPIs: {totalKPI}</p>
         <p className='font-bold text-[13px] text-yellow-600'>Assigned KPIs: {assignedKPIs}</p>
         <p className='font-bold text-[13px] text-green-600'>Earned KPIs: {earnedKPI}</p>
       </div>
-      
+
       {/* Task Detail Modal - Moved to main component level */}
       {descriptionOpen && openedTask && (
         <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center">
@@ -1371,22 +1464,22 @@ const TaskCard = ({ task, index, commentByTaskID, descriptionOpen, setDescriptio
   const handleTaskClick = (e: React.MouseEvent) => {
     // Only open the task details if the user clicked on the card itself, not on interactive elements
     const target = e.target as HTMLElement;
-    
+
     // Check if the click was on a button or interactive element that should not trigger the modal
     const isInteractiveElement = (
-      target.tagName === 'BUTTON' || 
-      target.tagName === 'INPUT' || 
+      target.tagName === 'BUTTON' ||
+      target.tagName === 'INPUT' ||
       target.tagName === 'TEXTAREA' ||
       target.closest('button') ||
       target.closest('input') ||
       target.closest('textarea')
     );
-    
+
     // If it's an interactive element, don't open the task details
     if (isInteractiveElement) {
       return;
     }
-    
+
     // Open the task details when clicking on the card
     setOpenedTask(task);
     setDescriptionOpen(true);

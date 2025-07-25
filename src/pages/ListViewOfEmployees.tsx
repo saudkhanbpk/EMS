@@ -717,12 +717,15 @@ const EmployeeAttendanceTable = () => {
     // Fetch leave requests when component mounts
     const fetchLeaveRequests = async () => {
       try {
+        const { data: userprofile, error: usererror } = await supabase.from("users").select("id,organization_id").eq("id", user?.id).single();
+
         const today = new Date().toISOString().split('T')[0];
         const { data, error } = await supabase
           .from("leave_requests")
-          .select("full_name, user_email, status, leave_type, leave_date")
+          .select("full_name, user_email, status, leave_type, leave_date, users!inner(organization_id)")
           .eq("status", "approved")
-          .eq("leave_date", today);
+          .eq("leave_date", today)
+          .eq("users.organization_id", userprofile?.organization_id);
 
         if (error) {
           console.error("Error fetching leave requests:", error);

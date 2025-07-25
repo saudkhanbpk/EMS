@@ -81,7 +81,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
         project_id: ProjectId,
         status: 'todo',
         score: 0,
-        priority: 'Medium',
+        priority: 'Low',
         devops: [], // Empty by default, user can assign later
         description: '',
         created_at: new Date().toISOString(),
