@@ -362,7 +362,7 @@ function ProjectsAdmin() {
           // Fetch tasks for this project
           const { data: tasksData, error: tasksError } = await supabase
             .from("tasks_of_projects")
-            .select("score, status, devops")
+            .select("score, status, devops,created_at,action_date")
             .eq("project_id", project.id);
 
           if (tasksError) {
@@ -1009,7 +1009,7 @@ function ProjectsAdmin() {
             // Fetch tasks for this project
             const { data: tasksData, error: tasksError } = await supabase
               .from("tasks_of_projects")
-              .select("score, status")
+              .select("score, status,created_at,action_date")
               .eq("project_id", project.id);
 
             if (tasksError) {
