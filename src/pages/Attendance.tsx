@@ -10,6 +10,7 @@ import { error } from 'console';
 import { useUser } from '../contexts/UserContext';
 import TaskModal from '../component/TaskModal';
 import CheckoutModal from '../component/CheckOutModal';
+import { Content } from 'vaul';
 
 const GEOFENCE_RADIUS = 0.15; // km - increased from 0.15km to 1km for better tolerance
 
@@ -44,16 +45,14 @@ interface TaskOfProject {
   id: string;
   created_at: string;
   project_id?: string;
-  taskname: string;
+  title?: string;
   description?: string;
-  assignee?: any;
+  developer?: string;
   status: string;
   score?: number;
-  position?: string;
   priority?: string;
-  important?: string;
   deadline?: string;
-  action_date: string;
+  section_date?: string;
   daily_task?: string;
   daily_log?: string;
   user_id: string;
@@ -156,8 +155,18 @@ const Attendance: React.FC = () => {
     setIsTaskModalOpen(true);
   };
   
-  // Function to handle applying tasks and proceeding with check-in
+  // IMPROVED: Function to handle applying tasks and proceeding with check-in
   const handleApplyTasks = async (tasks: string) => {
+
+const {data:checkintask,error}=await supabase.from("daily check_in task").insert({
+ content:tasks,
+ user_id:userProfile?.id
+})
+if(error){
+  console.error(error)
+} console.log(checkintask)
+
+
     setIsTaskModalOpen(false);
     
     try {
@@ -213,6 +222,7 @@ const Attendance: React.FC = () => {
 
       // 6. Now save the tasks with the attendance ID
       if (tasks.trim()) {
+        // Save to daily_tasks table
         const { error: tasksError } = await supabase
           .from('daily_tasks')
           .insert([
@@ -229,50 +239,58 @@ const Attendance: React.FC = () => {
           // We won't throw this error, as we want to continue even if task saving fails
         }
         
-        // 7. ADDED: Save to tasks_of_projects table - daily_task field
+        // 7. IMPROVED: Save user input to tasks_of_projects table's daily_task field
         const today = new Date().toISOString().split('T')[0];
         
-        // Check if a task record already exists for today
-        const { data: existingTask, error: existingTaskError } = await supabase
+        // First check if a record exists for today
+        const { data: existingTask, error: fetchError } = await supabase
           .from('tasks_of_projects')
           .select('id')
-          .eq('user_id', localStorage.getItem('user_id'))
-          .eq('action_date', today)
+          .eq('developer', localStorage.getItem('user_id'))
+          .eq('section_date', today)
           .maybeSingle();
           
-        if (existingTaskError) {
-          console.error('Error checking for existing task:', existingTaskError);
+        if (fetchError) {
+          console.error('Error checking for existing task:', fetchError);
         }
         
         if (existingTask) {
-          // Update existing task with daily_task
+          // Update existing record with the user's task input
+          console.log("Updating existing task record with daily_task:", tasks);
           const { error: updateError } = await supabase
             .from('tasks_of_projects')
-            .update({
-              daily_task: tasks.trim(),
-              updated_at: new Date().toISOString()
+            .update({ 
+              daily_task: tasks.trim() // Save user input to daily_task column
             })
             .eq('id', existingTask.id);
             
           if (updateError) {
-            console.error('Error updating daily_task:', updateError);
+            console.error('Error updating tasks_of_projects record:', updateError);
+          } else {
+            console.log("Successfully updated daily_task in existing record");
           }
         } else {
-          // Create new task entry for today
+          // Create new record with the user's task input
+          console.log("Creating new task record with daily_task:", tasks);
           const { error: insertError } = await supabase
             .from('tasks_of_projects')
             .insert([{
-              id: crypto.randomUUID(), // Generate UUID
+              id: crypto.randomUUID(),
               created_at: new Date().toISOString(),
-              action_date: today,
-              taskname: `Daily Task - ${today}`,
-              status: 'inprogress',
-              daily_task: tasks.trim(),
-              user_id: localStorage.getItem('user_id') // Adding user_id to track ownership
+              title: `Daily Task - ${today}`,
+              description: "Daily task entry from attendance check-in",
+              developer: localStorage.getItem('user_id'),
+              status: 'inProgress',
+              priority: "Medium",
+              section_date: today,
+              daily_task: tasks.trim(), // Save user input to daily_task column
+              user_id: localStorage.getItem('user_id')
             }]);
             
           if (insertError) {
-            console.error('Error inserting daily_task:', insertError);
+            console.error('Error inserting tasks_of_projects record:', insertError);
+          } else {
+            console.log("Successfully created new record with daily_task");
           }
         }
       }
@@ -286,6 +304,7 @@ const Attendance: React.FC = () => {
       // 9. Reload attendance records
       await loadAttendanceRecords();
     } catch (err) {
+      console.error("Error in handleApplyTasks:", err);
       setError(handleSupabaseError(err));
     } finally {
       setLoading(false);
@@ -298,7 +317,7 @@ const Attendance: React.FC = () => {
     handleCheckIn();
   };
 
-  // Function to handle checkout task submission
+  // IMPROVED: Function to handle checkout task submission
   const handleCheckoutTaskSubmit = async (taskUpdate: string) => {
     if (!taskUpdate.trim() || !user?.id) return;
     
@@ -319,53 +338,66 @@ const Attendance: React.FC = () => {
           }
         ]);
         
-      if (error) throw error;
+      if (error) {
+        console.error("Error saving to dailylog:", error);
+      } else {
+        console.log("Successfully saved to dailylog table");
+      }
       
-      // ADDED: Save to tasks_of_projects table - daily_log field
+      // IMPROVED: Save user input to tasks_of_projects table's daily_log field
       const today = new Date().toISOString().split('T')[0];
       
-      // Check if a task record already exists for today
-      const { data: existingTask, error: existingTaskError } = await supabase
+      // First check if a record exists for today
+      const { data: existingTask, error: fetchError } = await supabase
         .from('tasks_of_projects')
         .select('id')
-        .eq('user_id', localStorage.getItem('user_id'))
-        .eq('action_date', today)
+        .eq('developer', localStorage.getItem('user_id'))
+        .eq('section_date', today)
         .maybeSingle();
         
-      if (existingTaskError) {
-        console.error('Error checking for existing task:', existingTaskError);
+      if (fetchError) {
+        console.error('Error checking for existing task:', fetchError);
       }
       
       if (existingTask) {
-        // Update existing task with daily_log
+        // Update existing record with the user's daily log input
+        console.log("Updating existing task record with daily_log:", taskUpdate);
         const { error: updateError } = await supabase
           .from('tasks_of_projects')
-          .update({
-            daily_log: taskUpdate.trim(),
-            updated_at: new Date().toISOString(),
-            status: 'done' // Update status to done on checkout
+          .update({ 
+            daily_log: taskUpdate.trim(), // Save user input to daily_log column
+            status: 'done'
           })
           .eq('id', existingTask.id);
           
         if (updateError) {
-          console.error('Error updating daily_log:', updateError);
+          console.error('Error updating tasks_of_projects record with daily_log:', updateError);
+        } else {
+          console.log("Successfully updated daily_log in existing record");
         }
       } else {
-        // Create new task entry for today
+        // Create new record with the user's daily log input
+        console.log("Creating new task record with daily_log:", taskUpdate);
         const { error: insertError } = await supabase
           .from('tasks_of_projects')
           .insert([{
-            id: crypto.randomUUID(), // Generate UUID
+            id: crypto.randomUUID(),
             created_at: new Date().toISOString(),
-            action_date: today,
-            taskname: `Daily Summary - ${today}`,
+            title: `Daily Summary - ${today}`,
+            description: "Daily log entry from attendance check-out",
+            developer: localStorage.getItem('user_id'),
             status: 'done',
-            daily_log: taskUpdate.trim(),
-            user_id: localStorage.getItem('user_id') // Adding user_id to track ownership
+            priority: "Medium",
+            section_date: today,
+            daily_log: taskUpdate.trim(), // Save user input to daily_log column
+            daily_task: "",  // Initialize with empty string
+            user_id: localStorage.getItem('user_id')
           }]);
           
         if (insertError) {
-          console.error('Error inserting daily_log:', insertError);
+          console.error('Error inserting tasks_of_projects record with daily_log:', insertError);
+        } else {
+          console.log("Successfully created new record with daily_log");
         }
       }
       
@@ -710,6 +742,48 @@ const Attendance: React.FC = () => {
       );
 
       if (dbError) throw dbError;
+
+      // IMPROVED: Create empty entry in tasks_of_projects for today
+      const today = new Date().toISOString().split('T')[0];
+      
+      // Check if a record exists for today first
+      const { data: existingTask, error: fetchError } = await supabase
+        .from('tasks_of_projects')
+        .select('id')
+        .eq('developer', localStorage.getItem('user_id'))
+        .eq('section_date', today)
+        .maybeSingle();
+        
+      if (fetchError) {
+        console.error('Error checking for existing task:', fetchError);
+      }
+      
+      if (!existingTask) {
+        // Create new empty task entry for today
+        console.log("Creating new empty task record for today");
+        const { error: insertError } = await supabase
+          .from('tasks_of_projects')
+          .insert([{
+            id: crypto.randomUUID(),
+            created_at: new Date().toISOString(),
+            title: `Daily Task - ${today}`,
+            description: "Created via attendance system",
+            developer: localStorage.getItem('user_id'),
+            status: 'inProgress',
+            priority: "Medium",
+            section_date: today,
+            daily_task: '', // Empty daily_task initially
+            user_id: localStorage.getItem('user_id')
+          }]);
+          
+        if (insertError) {
+          console.error('Error inserting empty task record:', insertError);
+        } else {
+          console.log("Successfully created empty task record");
+        }
+      } else {
+        console.log("Task record already exists for today");
+      }
 
       setIsCheckedIn(true);
       setCheckIn(data.check_in);
