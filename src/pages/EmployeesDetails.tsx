@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useContext } from "react";
 import { supabase, supabaseAdmin } from "../lib/supabase";
 import { createClient } from '@supabase/supabase-js';
 import Employeeprofile from "./Employeeprofile";
+import toast from 'react-hot-toast';
 
 import {
   FiPlus,
@@ -25,8 +26,6 @@ interface Employee {
   TotalKPI?: number;
   role?: string;
   // Add other employee properties as needed
-  lastincrement?: string | null; // Last increment date (nullable)
-  upcomingincrement?: string | null; // Upcoming increment date (nullable)
   rating?: number; // Employee rating (nullable)
   daily_log?: string | null; // Add daily log property
 }
@@ -71,12 +70,19 @@ const EmployeesDetails = () => {
   const [showAllProjects, setShowAllProjects] = useState<{ [key: string]: boolean }>({});
   const [showLogModal, setShowLogModal] = useState(false);
   const [modalLogText, setModalLogText] = useState("");
-  
+
   // Add state to track expanded daily logs
   const [expandedLogs, setExpandedLogs] = useState<{ [key: string]: boolean }>({});
 
   const { openTaskBoard } = useContext(AttendanceContext);
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Custom function to handle task board navigation
+  const handleOpenTaskBoard = (projectId: string, devops: any[]) => {
+    setProjectId(projectId);
+    setDevopss(devops);
+    setSelectedTAB("TaskBoard");
+  };
 
   // Form states
   const [signupData, setSignupData] = useState({
@@ -132,15 +138,15 @@ const EmployeesDetails = () => {
   // Function to get daily log display text
   const getLogDisplayText = (log: string | null, isExpanded: boolean) => {
     if (!log) return "No log";
-    
+
     // Split log into lines
     const lines = log.split('\n');
-    
+
     // If expanded or fewer than 2 lines, show all
     if (isExpanded || lines.length <= 2) {
       return log;
     }
-    
+
     // Otherwise show first 2 lines
     return lines.slice(0, 2).join('\n') + '...';
   };
@@ -149,178 +155,155 @@ const EmployeesDetails = () => {
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
 
   // Fetch employees with their projects and tasks
-const fetchEmployees = async () => {
-  setLoading(true);
-  try {
-    // Fetch employees
-    const { data: employeesData, error: employeesError } = await supabase
-      .from("users")
-      .select("*")
-      .eq("organization_id", userProfile?.organization_id);
-    if (employeesError) throw employeesError;
+  const fetchEmployees = async () => {
+    setLoading(true);
+    try {
+      // Fetch employees
+      const { data: employeesData, error: employeesError } = await supabase
+        .from("users")
+        .select("*")
+        .eq("organization_id", userProfile?.organization_id)
+        .neq("role", "client");  // Exclude users with role equal to "client"
+      if (employeesError) throw employeesError;
 
-    // Fetch projects
-    const { data: projectsData, error: projectsError } = await supabase
-      .from("projects")
-      .select("id, title, devops");
-    if (projectsError) throw projectsError;
+      // Fetch projects
+      const { data: projectsData, error: projectsError } = await supabase
+        .from("projects")
+        .select("id, title, devops");
+      if (projectsError) throw projectsError;
 
-    // Fetch tasks
-    const { data: tasksData, error: tasksError } = await supabase
-      .from("tasks_of_projects")
-      .select("*");
-    if (tasksError) throw tasksError;
+      // Fetch tasks
+      const { data: tasksData, error: tasksError } = await supabase
+        .from("tasks_of_projects")
+        .select("*");
+      if (tasksError) throw tasksError;
 
-    // Fetch increments
-    const { data: increamentdata, error: increamenterror } = await supabase
-      .from("sallery_increment")
-      .select("*");
-    if (increamenterror) {
-      console.error("Error fetching increment data:", increamenterror.message);
-    }
-
-    // Fetch daily logs from tasks_of_projects
-    const { data: dailyLogsData, error: dailyLogsError } = await supabase
-      .from("tasks_of_projects")
-      .select("userid, daily_log, action_date")
-      .not("daily_log", "is", null)
-      .order("action_date", { ascending: false });
-    if (dailyLogsError) {
-      console.error("Error fetching daily logs:", dailyLogsError.message);
-    }
-
-    const latestDailyLogs: { [key: string]: any } = {};
-    if (dailyLogsData) {
-      dailyLogsData.forEach((row) => {
-        if (!row.userid) return;
-        if (!latestDailyLogs[row.userid]) {
-          latestDailyLogs[row.userid] = row.daily_log;
-        }
-      });
-    }
-
-    // Calculate period start date
-    let startDate;
-    const today = new Date();
-    if (performancePeriod === "daily") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    } else if (performancePeriod === "weekly") {
-      const dayOfWeek = today.getDay();
-      startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
-    } else if (performancePeriod === "monthly") {
-      startDate = new Date(today.getFullYear(), today.getMonth(), 1);
-    }
-
-    if (!startDate) return;
-
-    // Fetch ratings
-    const { data: ratingsData, error: ratingsError } = await supabase
-      .from("dailylog")
-      .select("userid, rating, rated_at")
-      .not("rating", "is", null)
-      .gte("rated_at", startDate.toISOString());
-    if (ratingsError) {
-      console.error("Error fetching ratings:", ratingsError.message);
-    }
-
-    const latestRatings: { [key: string]: any } = {};
-    if (ratingsData) {
-      ratingsData.forEach((row) => {
-        if (!row.userid) return;
-        if (
-          !latestRatings[row.userid] ||
-          new Date(row.rated_at) > new Date(latestRatings[row.userid]?.rated_at)
-        ) {
-          latestRatings[row.userid] = row;
-        }
-      });
-    }
-
-    // === ✅ Fetch today's daily logs using `userid` ===
-    const todayStart = new Date();
-    todayStart.setHours(0, 0, 0, 0);
-    const tomorrowStart = new Date(todayStart);
-    tomorrowStart.setDate(todayStart.getDate() + 1);
-
-    const { data: todayLogs, error: todayLogsError } = await supabase
-      .from("dailylog")
-      .select("userid, dailylog")
-      .gte("created_at", todayStart.toISOString())
-      .lt("created_at", tomorrowStart.toISOString());
-
-    if (todayLogsError) {
-      console.error("Error fetching today's logs:", todayLogsError.message);
-    }
-
-    const dailyLogMap: { [key: string]: string } = {};
-    todayLogs?.forEach((log) => {
-      if (log.userid && !dailyLogMap[log.userid]) {
-        dailyLogMap[log.userid] = log.dailylog;
-      }
-    });
-
-    // Final processing
-    const employeesWithProjects = employeesData.map((employee) => {
-      const employeeProjects = projectsData.filter((project) =>
-        project.devops?.some((dev: any) => dev.id === employee.id)
-      );
-
-      let increamentdataone = "N/A";
-      let upcomingIncrementDate = "N/A";
-      const incrementone = increamentdata?.filter((increament) => increament.user_id === employee.id);
-      const sortedIncrements = [...(incrementone || [])].sort(
-        (a, b) => new Date(b.created_at || 0).getTime() - new Date(a.created_at || 0).getTime()
-      );
-      if (sortedIncrements.length > 0) {
-        const latestIncrement = sortedIncrements[0];
-        if (latestIncrement.increment_date) {
-          increamentdataone = latestIncrement.increment_date;
-        }
-        if (latestIncrement.upcomming_increment) {
-          upcomingIncrementDate = latestIncrement.upcomming_increment;
-        }
+      
+      // Fetch daily logs from tasks_of_projects
+      const { data: dailyLogsData, error: dailyLogsError } = await supabase
+        .from("tasks_of_projects")
+        .select("userid, daily_log, action_date")
+        .not("daily_log", "is", null)
+        .order("action_date", { ascending: false });
+      if (dailyLogsError) {
+        console.error("Error fetching daily logs:", dailyLogsError.message);
       }
 
-      const employeeTasks = tasksData.filter(
-        (task) =>
-          task.devops?.some((dev: any) => dev.id === employee.id) &&
-          task.status?.toLowerCase() !== "done"
-      );
+      const latestDailyLogs: { [key: string]: any } = {};
+      if (dailyLogsData) {
+        dailyLogsData.forEach((row) => {
+          if (!row.userid) return;
+          if (!latestDailyLogs[row.userid]) {
+            latestDailyLogs[row.userid] = row.daily_log;
+          }
+        });
+      }
 
-      const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+      // Calculate period start date
+      let startDate;
+      const today = new Date();
+      if (performancePeriod === "daily") {
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+      } else if (performancePeriod === "weekly") {
+        const dayOfWeek = today.getDay();
+        startDate = new Date(today.getFullYear(), today.getMonth(), today.getDate() - dayOfWeek);
+      } else if (performancePeriod === "monthly") {
+        startDate = new Date(today.getFullYear(), today.getMonth(), 1);
+      }
 
-      const employeeTaskscompleted = tasksData.filter(
-        (task) =>
-          task.devops?.some((dev: any) => dev.id === employee.id) &&
-          task.status?.toLowerCase() === "done"
-      );
+      if (!startDate) return;
 
-      const completedKPI = employeeTaskscompleted.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+      // Fetch ratings
+      const { data: ratingsData, error: ratingsError } = await supabase
+        .from("dailylog")
+        .select("userid, rating, rated_at")
+        .not("rating", "is", null)
+        .gte("rated_at", startDate.toISOString());
+      if (ratingsError) {
+        console.error("Error fetching ratings:", ratingsError.message);
+      }
 
-      const latestRating = latestRatings[employee.id]?.rating || null;
+      const latestRatings: { [key: string]: any } = {};
+      if (ratingsData) {
+        ratingsData.forEach((row) => {
+          if (!row.userid) return;
+          if (
+            !latestRatings[row.userid] ||
+            new Date(row.rated_at) > new Date(latestRatings[row.userid]?.rated_at)
+          ) {
+            latestRatings[row.userid] = row;
+          }
+        });
+      }
 
-      return {
-        ...employee,
-        joining_date: employee.joining_date || "NA",
-        lastincrement: increamentdataone,
-        upcomingincrement: upcomingIncrementDate.split("T")[0] || "N/A",
-        projects: employeeProjects,
-        projectid: employeeProjects.map((project) => project.id),
-        TotalKPI: totalKPI,
-        activeTaskCount: employeeTasks.length,
-        completedKPI: completedKPI,
-        rating: latestRating,
-        daily_log: dailyLogMap[employee.id] || "No task today",
-      };
-    });
+      // === ✅ Fetch today's daily logs using `userid` ===
+      const todayStart = new Date();
+      todayStart.setHours(0, 0, 0, 0);
+      const tomorrowStart = new Date(todayStart);
+      tomorrowStart.setDate(todayStart.getDate() + 1);
 
-    setEmployees(employeesWithProjects);
-    setLoading(false);
-  } catch (error) {
-    console.error("Error fetching data:", error);
-    setLoading(false);
-  }
-};
+      const { data: todayLogs, error: todayLogsError } = await supabase
+        .from("dailylog")
+        .select("userid, dailylog")
+        .gte("created_at", todayStart.toISOString())
+        .lt("created_at", tomorrowStart.toISOString());
+
+      if (todayLogsError) {
+        console.error("Error fetching today's logs:", todayLogsError.message);
+      }
+
+      const dailyLogMap: { [key: string]: string } = {};
+      todayLogs?.forEach((log) => {
+        if (log.userid && !dailyLogMap[log.userid]) {
+          dailyLogMap[log.userid] = log.dailylog;
+        }
+      });
+
+      // Final processing
+      const employeesWithProjects = employeesData.map((employee) => {
+        const employeeProjects = projectsData.filter((project) =>
+          project.devops?.some((dev: any) => dev.id === employee.id)
+        );
+
+        
+        const employeeTasks = tasksData.filter(
+          (task) =>
+            task.devops?.some((dev: any) => dev.id === employee.id) &&
+            task.status?.toLowerCase() !== "done"
+        );
+
+        const totalKPI = employeeTasks.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+        const employeeTaskscompleted = tasksData.filter(
+          (task) =>
+            task.devops?.some((dev: any) => dev.id === employee.id) &&
+            task.status?.toLowerCase() === "done"
+        );
+
+        const completedKPI = employeeTaskscompleted.reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+        const latestRating = latestRatings[employee.id]?.rating || null;
+
+        return {
+          ...employee,
+          joining_date: employee.joining_date || "NA",
+          projects: employeeProjects,
+          projectid: employeeProjects.map((project) => project.id),
+          TotalKPI: totalKPI,
+          activeTaskCount: employeeTasks.length,
+          completedKPI: completedKPI,
+          rating: latestRating,
+          daily_log: dailyLogMap[employee.id] || "No task today",
+        };
+      });
+
+      setEmployees(employeesWithProjects);
+      setLoading(false);
+    } catch (error) {
+      console.error("Error fetching data:", error);
+      setLoading(false);
+    }
+  };
 
 
 
@@ -356,11 +339,21 @@ const fetchEmployees = async () => {
   };
 
   const handleAssignSubmit = async () => {
+    // Show loading toast
+    const loadingToast = toast.loading('Assigning task...');
+
     try {
       const selectedProject = userProjects.find(
         (p) => p.title === assignment.project
       );
-      if (!selectedProject) throw new Error("Project not found");
+      if (!selectedProject) {
+        throw new Error("Project not found");
+      }
+
+      // Validate required fields
+      if (!assignment.title.trim()) {
+        throw new Error("Task title is required");
+      }
 
       // Insert the task into the database
       const { data: insertedTask, error } = await supabase
@@ -443,11 +436,11 @@ const fetchEmployees = async () => {
                 result.message &&
                 result.message.includes("No valid FCM tokens found")
               ) {
-                // Show a message to the user that the employee needs to enable notifications
-                alert(
-                  `${userData?.full_name || "Employee"
-                  } needs to enable notifications. Please ask them to log in and allow notifications.`
-                );
+                // Show a warning toast instead of alert
+                toast('Employee needs to enable notifications', {
+                  icon: '⚠️',
+                  duration: 4000,
+                });
 
                 // Clear any invalid tokens for this user
                 try {
@@ -492,6 +485,7 @@ const fetchEmployees = async () => {
         }
       }
 
+      // Reset form and close modal
       setAssignment({
         title: "",
         project: "",
@@ -499,13 +493,31 @@ const fetchEmployees = async () => {
         score: "",
       });
       setShowModal(false);
-      fetchEmployees(); // Refresh data
-      alert("Task assigned successfully!");
+      
+      // Refresh data
+      await fetchEmployees();
+      
+      // Dismiss loading toast and show success
+      toast.dismiss(loadingToast);
+      toast.success(
+        `Task "${assignment.title}" assigned to ${currentEmployee?.full_name || 'employee'} successfully!`,
+        {
+          duration: 4000,
+          icon: '✅',
+        }
+      );
+
     } catch (err) {
       console.error("Error assigning task:", err);
-      alert(
-        "Failed to assign task: " +
-        (err instanceof Error ? err.message : String(err))
+      
+      // Dismiss loading toast and show error
+      toast.dismiss(loadingToast);
+      toast.error(
+        err instanceof Error ? err.message : "Failed to assign task. Please try again.",
+        {
+          duration: 5000,
+          icon: '❌',
+        }
       );
     }
   };
@@ -1288,19 +1300,6 @@ const fetchEmployees = async () => {
                                 >
                                   Joined
                                 </th>
-
-                                <th
-                                  scope="col"
-                                  className="px-3 lg:px-34 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                  Last increament
-                                </th>
-                                <th
-                                  scope="col"
-                                  className="px-3 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
-                                >
-                                  Upcoming increament
-                                </th>
                                 <th
                                   scope="col"
                                   className="px-4 lg:px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider"
@@ -1440,12 +1439,6 @@ const fetchEmployees = async () => {
                                       <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                         {entry.joining_date && entry.joining_date !== 'NA' ? new Date(entry.joining_date).toLocaleDateString() : 'N/A'}
                                       </td>
-                                      <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {entry.lastincrement && entry.lastincrement !== 'N/A' ? new Date(entry.lastincrement).toLocaleDateString() : 'N/A'}
-                                      </td>
-                                      <td className="px-3 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        {entry.upcomingincrement && entry.upcomingincrement !== 'N/A' ? new Date(entry.upcomingincrement).toLocaleDateString() : 'N/A'}
-                                      </td>
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                         {entry.projects && entry.projects.length > 0 ? (
                                           <div className="flex flex-wrap gap-1.5">
@@ -1454,7 +1447,7 @@ const fetchEmployees = async () => {
                                                 key={project.id}
                                                 onClick={(e) => {
                                                   e.stopPropagation();
-                                                  openTaskBoard(project.id, project.devops);
+                                                  handleOpenTaskBoard(project.id, project.devops);
                                                 }}
                                                 className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
                                               >
@@ -1615,23 +1608,6 @@ const fetchEmployees = async () => {
                                       {entry.joining_date && entry.joining_date !== 'NA' ? new Date(entry.joining_date).toLocaleDateString() : 'N/A'}
                                     </p>
                                   </div>
-
-                                  <div className="space-y-0.5">
-                                    <p className="text-gray-500 font-medium">
-                                      Last Increment
-                                    </p>
-                                    <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
-                                      {entry.lastincrement && entry.lastincrement !== 'N/A' ? new Date(entry.lastincrement).toLocaleDateString() : 'N/A'}
-                                    </p>
-                                  </div>
-                                  <div className="space-y-0.5">
-                                    <p className="text-gray-500 font-medium">
-                                      Upcoming Increment
-                                    </p>
-                                    <p className="text-gray-700 truncate font-semibold max-w-[120px] ">
-                                      {entry.upcomingincrement && entry.upcomingincrement !== 'N/A' ? new Date(entry.upcomingincrement).toLocaleDateString() : 'N/A'}
-                                    </p>
-                                  </div>
                                   <div className="space-y-0.5">
                                     <p className="text-gray-500 font-medium">
                                       Projects
@@ -1643,7 +1619,7 @@ const fetchEmployees = async () => {
                                             key={project.id}
                                             onClick={(e) => {
                                               e.stopPropagation();
-                                              openTaskBoard(project.id, project.devops);
+                                              handleOpenTaskBoard(project.id, project.devops);
                                             }}
                                             className="px-2 py-0.5 text-xs rounded-full bg-indigo-50 text-indigo-700 hover:bg-indigo-100 transition-colors"
                                           >

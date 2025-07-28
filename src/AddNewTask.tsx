@@ -30,7 +30,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks, projectN
   const [developers, setDevelopers] = useState<Developer[]>(devopss || []);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
-  const [score, setScore] = useState("");
+  const [score, setScore] = useState("0");
   const [priority, setPriority] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
@@ -195,7 +195,7 @@ const AddNewTask = ({ setselectedtab, ProjectId, devopss, refreshTasks, projectN
       setTitle("");
       setDescription("");
       setSelectedDevs([]);
-      setScore("");
+      setScore("0");
       setPriority("");
       setError("");
       refreshTasks(); // Call the refresh function to update the task list

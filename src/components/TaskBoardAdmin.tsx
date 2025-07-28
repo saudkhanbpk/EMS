@@ -979,6 +979,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                       value={currentTask.score}
                       onChange={(e) => setCurrentTask({ ...currentTask, score: Number(e.target.value) })}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
+
                     />
                   </div>
 
