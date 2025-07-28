@@ -1,4 +1,5 @@
-import ImageWithText from './ImageWithText';
+import ImageWithText from "./ImagewithText";
+
 
 const ImageWithTextBlock = () => {
     const blocks = [
