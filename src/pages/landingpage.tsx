@@ -9,8 +9,9 @@ import Testimonials from "../components/landingpage/Testimonials";
 import FAQ from "../components/landingpage/FAQ";
 import Contact from "../components/landingpage/Contact";
 import Footer from "../components/landingpage/Footer";
-import ImageWithText from "../components/landingpage/ImageWithText";
-import ImageWithTextBlock from "../components/landingpage/ImageWithTextBlock";
+
+import ImageWithTextBlock from "../components/landingpage/ImagewithTextBackground";
+
 const LandingPage: React.FC = () => {
     useEffect(() => {
         AOS.init({
@@ -26,7 +27,7 @@ const LandingPage: React.FC = () => {
             <Header />
             <Hero />
             <Features />
-            <ImageWithTextBlock></ImageWithTextBlock>
+            <ImageWithTextBlock />
             <Pricing />
 
             <Testimonials />
