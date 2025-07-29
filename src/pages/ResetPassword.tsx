@@ -21,61 +21,47 @@ const ResetPassword: React.FC = () => {
   useEffect(() => {
     const handleAuthCallback = async () => {
       try {
-        // Listen for auth state changes
-        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-          if (event === 'PASSWORD_RECOVERY') {
-            console.log('Password recovery event detected');
-            // Session is automatically set by Supabase
-            return;
-          }
-          
-          if (event === 'SIGNED_IN' && session) {
-            console.log('User signed in for password recovery');
-            return;
-          }
-        });
-
-        // Check current session
-        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        
-        if (sessionError) {
-          console.error('Session error:', sessionError);
-        }
-
         // Check URL parameters for tokens
         const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
-        const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
-        const type = hashParams.get('type') || searchParams.get('type');
+        const queryParams = new URLSearchParams(window.location.search);
 
-        console.log('URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+        // Try to get token from multiple sources
+        const accessToken = hashParams.get('access_token') ||
+          queryParams.get('access_token') ||
+          queryParams.get('token'); // Also check for 'token' parameter
+
+        const type = hashParams.get('type') || queryParams.get('type');
+
+        console.log('Token search:', {
+          hashToken: hashParams.get('access_token'),
+          queryToken: queryParams.get('token'),
+          accessToken: !!accessToken,
+          type
+        });
 
         if (type === 'recovery' && accessToken) {
-          // Set session with recovery tokens
-          const { data, error } = await supabase.auth.setSession({
-            access_token: accessToken,
-            refresh_token: refreshToken || '',
+          // Exchange the recovery token for a session
+          const { data, error } = await supabase.auth.verifyOtp({
+            token_hash: accessToken,
+            type: 'recovery'
           });
 
           if (error) {
-            console.error('Failed to set session:', error);
+            console.error('Failed to verify OTP:', error);
             setError('Invalid or expired reset link. Please request a new password reset.');
             return;
           }
 
-          console.log('Recovery session set successfully');
+          console.log('Recovery session established');
           return;
         }
 
-        if (!session && !accessToken) {
+        // If no token found
+        if (!accessToken) {
           setError('Invalid reset link. Please request a new password reset.');
           return;
         }
 
-        // Cleanup subscription
-        return () => {
-          subscription.unsubscribe();
-        };
       } catch (err) {
         console.error('Auth callback error:', err);
         setError('Invalid or expired reset link. Please request a new password reset.');
@@ -83,7 +69,7 @@ const ResetPassword: React.FC = () => {
     };
 
     handleAuthCallback();
-  }, [searchParams]);
+  }, []);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 6) {
