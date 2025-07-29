@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { useUser } from '../contexts/UserContext';
@@ -241,9 +241,9 @@ const Login: React.FC = () => {
 
             {/* Forgot Password Link */}
             <div className="flex items-center justify-end">
-              <a href="#" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
+              <Link to="/forgot-password" className="text-sm text-blue-400 hover:text-blue-300 transition-colors">
                 Forgot your password?
-              </a>
+              </Link>
             </div>
 
             {/* Submit Button */}

@@ -273,6 +273,8 @@ import {
 import { useAuthStore } from './lib/store';
 import EmployeeLayout from './components/EmployeeLayout';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
 import Attendance from './pages/Attendance';
@@ -492,8 +494,10 @@ function App() {
 
           {/* App Routes */}
           <Routes>
-            {/* Public Route: Login */}
+            {/* Public Routes */}
             <Route path="/login" element={<Login />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
             <Route path="/home" element={<LandingPage />} />
 
             {/* Widget Demo Route */}
