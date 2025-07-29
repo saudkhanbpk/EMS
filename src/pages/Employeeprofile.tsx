@@ -43,6 +43,7 @@ const calculateOvertimeEarnings = (overtimeHours: number, basicPerHourRate: numb
 import React, { useEffect, useState } from "react";
 
 import { supabase } from "../lib/supabase";
+import ChangePasswordAdminModal from "../components/ChangePasswordAdminModal";
 import {
   Mail,
   Phone,
@@ -74,6 +75,7 @@ import {
   TrendingUp,
   FileText,
   History,
+  Key,
 } from "lucide-react";
 
 const Employeeprofile = ({
@@ -806,6 +808,7 @@ const Employeeprofile = ({
   const [incrementHistory, setIncrementHistory] = useState<
     IncrementHistoryItem[]
   >([]);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const getEmploymentDuration = (joinDate) => {
     const joined = new Date(joinDate);
     const today = new Date();
@@ -1703,6 +1706,14 @@ const Employeeprofile = ({
         </div>
 
         <div className="flex flex-col sm:flex-row gap-3 sm:gap-2 items-stretch sm:items-center w-full sm:w-auto">
+          <button
+            onClick={() => setIsChangePasswordModalOpen(true)}
+            className="flex justify-center items-center px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-500 transition duration-200 w-full sm:w-auto"
+          >
+
+            Change Password
+          </button>
+
           <button
             onClick={() => {
               // Initialize the incrementData with default values
@@ -2932,6 +2943,12 @@ const Employeeprofile = ({
           </div>
         </div>
       )}
+
+      <ChangePasswordAdminModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+        employeeId={employeeid}
+      />
     </div>
   );
 };
