@@ -16,6 +16,7 @@ const TaskBoardLayout: React.FC = () => {
     const [userRole, setUserRole] = useState<string>('');
     const [devops, setDevops] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isProjectManager, setIsProjectManager] = useState<boolean>(false);
 
     const handleSetSelectedTAB = (tab: string) => {
         if (tab === "Projects" || tab === "") {
@@ -44,33 +45,42 @@ const TaskBoardLayout: React.FC = () => {
                     }
                 }
 
-                // Fetch project-specific devops and all users
+                // Fetch project-specific data including created_by and devops
                 if (projectId) {
                     const { data: projectData, error: projectError } = await supabase
                         .from('projects')
-                        .select('devops')
+                        .select('devops, created_by')
                         .eq('id', projectId)
                         .single();
 
-                    if (!projectError && projectData?.devops && projectData.devops.length > 0) {
-                        console.log('Project devops:', projectData.devops);
-                        setDevops(projectData.devops);
-                    } else {
-                        // Fallback to all users if project devops is empty
-                        const { data: usersData, error: usersError } = await supabase
-                            .from('users')
-                            .select('id, full_name')
-                            .neq('role', 'admin')
-                            .neq('role', 'superadmin');
+                    if (!projectError && projectData) {
+                        // Check if current user is the project manager (created_by)
+                        const userId = authUser?.id || localStorage.getItem('user_id');
+                        if (userId && projectData.created_by === userId) {
+                            setIsProjectManager(true);
+                        }
 
-                        if (!usersError && usersData) {
-                            const formattedUsers = usersData.map(user => ({
-                                id: user.id,
-                                name: user.full_name,
-                                full_name: user.full_name
-                            }));
-                            console.log('Formatted users:', formattedUsers);
-                            setDevops(formattedUsers);
+                        // Handle devops data
+                        if (projectData.devops && projectData.devops.length > 0) {
+                            console.log('Project devops:', projectData.devops);
+                            setDevops(projectData.devops);
+                        } else {
+                            // Fallback to all users if project devops is empty
+                            const { data: usersData, error: usersError } = await supabase
+                                .from('users')
+                                .select('id, full_name')
+                                .neq('role', 'admin')
+                                .neq('role', 'superadmin');
+
+                            if (!usersError && usersData) {
+                                const formattedUsers = usersData.map(user => ({
+                                    id: user.id,
+                                    name: user.full_name,
+                                    full_name: user.full_name
+                                }));
+                                console.log('Formatted users:', formattedUsers);
+                                setDevops(formattedUsers);
+                            }
                         }
                     }
                 }
@@ -94,8 +104,8 @@ const TaskBoardLayout: React.FC = () => {
         );
     }
 
-    // If user role is "client", render TaskBoardAdmin
-    if (userRole === "client" || userRole === "product manager") {
+    // If user role is "client", "product manager", or user is the project manager (created_by), render TaskBoardAdmin
+    if (userRole === "client" || userRole === "product manager" || isProjectManager) {
         console.log('Passing devops to TaskBoardAdmin:', devops);
         return (
             <TaskBoardAdmin
