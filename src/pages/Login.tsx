@@ -5,24 +5,24 @@ import { useAuthStore } from '../lib/store';
 import { useUser } from '../contexts/UserContext';
 import { Clock, User, Eye, EyeOff } from 'lucide-react';
 
-
 const Login: React.FC = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [passwordVisible, setPasswordVisible] = useState(false);
-  const passwordref = useRef<HTMLInputElement>(null)
+  const passwordref = useRef<HTMLInputElement>(null);
   const [error, setError] = useState<string | null>(null);
   const isFocusedRef = useRef(false);
   const navigate = useNavigate();
   const setUser = useAuthStore((state) => state.setUser);
   const { setUserProfile } = useUser();
 
-
   // 🔁 Redirect if already logged in
   useEffect(() => {
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       if (session?.user) {
         setUser(session.user);
 
@@ -66,10 +66,11 @@ const Login: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const { data: authData, error: signInError } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const { data: authData, error: signInError } =
+        await supabase.auth.signInWithPassword({
+          email,
+          password,
+        });
 
       if (signInError) {
         if (signInError.message.includes('Invalid login credentials')) {
@@ -112,16 +113,19 @@ const Login: React.FC = () => {
             navigate('/superadmin', { replace: true });
           } else if (userProfile.role === 'admin') {
             navigate('/admin', { replace: true });
-          } else if (userProfile.role == "user") {
+          } else if (userProfile.role == 'user') {
             navigate('/user', { replace: true });
-          }
-          else {
+          } else {
             navigate('/', { replace: true });
           }
         }, 100);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'An error occurred during authentication');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'An error occurred during authentication'
+      );
     } finally {
       setLoading(false);
     }
@@ -147,7 +151,10 @@ const Login: React.FC = () => {
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="email"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Email
               </label>
               <input
@@ -156,13 +163,16 @@ const Login: React.FC = () => {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                className="mt-1 block w-full  p-2 rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                 placeholder="Enter your email"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700">
+              <label
+                htmlFor="password"
+                className="block text-sm font-medium text-gray-700"
+              >
                 Password
               </label>
               <div className="relative">
@@ -179,7 +189,7 @@ const Login: React.FC = () => {
                   onBlur={() => {
                     isFocusedRef.current = false;
                   }}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                  className="mt-1 block w-full rounded-md p-2 border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
                   placeholder="Enter your password"
                 />
                 <span
@@ -192,7 +202,11 @@ const Login: React.FC = () => {
                   }}
                   className="absolute top-1 right-2 text-slate-700 cursor-pointer"
                 >
-                  {passwordVisible ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+                  {passwordVisible ? (
+                    <EyeOff className="size-5" />
+                  ) : (
+                    <Eye className="size-5" />
+                  )}
                 </span>
               </div>
             </div>
