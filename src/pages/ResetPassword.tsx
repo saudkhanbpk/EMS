@@ -19,33 +19,75 @@ const ResetPassword: React.FC = () => {
   const isConfirmFocusedRef = useRef(false);
 
   useEffect(() => {
-    // Check if we have the required tokens from the URL
-    const accessToken = searchParams.get('access_token');
-    const refreshToken = searchParams.get('refresh_token');
-    
-    if (!accessToken || !refreshToken) {
-      setError('Invalid reset link. Please request a new password reset.');
-      return;
-    }
+    const handleAuthCallback = async () => {
+      try {
+        // Listen for auth state changes
+        const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+          if (event === 'PASSWORD_RECOVERY') {
+            console.log('Password recovery event detected');
+            // Session is automatically set by Supabase
+            return;
+          }
+          
+          if (event === 'SIGNED_IN' && session) {
+            console.log('User signed in for password recovery');
+            return;
+          }
+        });
 
-    // Set the session with the tokens from the URL
-    const setSession = async () => {
-      const { error } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
+        // Check current session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError) {
+          console.error('Session error:', sessionError);
+        }
 
-      if (error) {
+        // Check URL parameters for tokens
+        const hashParams = new URLSearchParams(window.location.hash.substring(1));
+        const accessToken = hashParams.get('access_token') || searchParams.get('access_token');
+        const refreshToken = hashParams.get('refresh_token') || searchParams.get('refresh_token');
+        const type = hashParams.get('type') || searchParams.get('type');
+
+        console.log('URL params:', { accessToken: !!accessToken, refreshToken: !!refreshToken, type });
+
+        if (type === 'recovery' && accessToken) {
+          // Set session with recovery tokens
+          const { data, error } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken || '',
+          });
+
+          if (error) {
+            console.error('Failed to set session:', error);
+            setError('Invalid or expired reset link. Please request a new password reset.');
+            return;
+          }
+
+          console.log('Recovery session set successfully');
+          return;
+        }
+
+        if (!session && !accessToken) {
+          setError('Invalid reset link. Please request a new password reset.');
+          return;
+        }
+
+        // Cleanup subscription
+        return () => {
+          subscription.unsubscribe();
+        };
+      } catch (err) {
+        console.error('Auth callback error:', err);
         setError('Invalid or expired reset link. Please request a new password reset.');
       }
     };
 
-    setSession();
+    handleAuthCallback();
   }, [searchParams]);
 
   const validatePassword = (password: string): string | null => {
-    if (password.length < 8) {
-      return 'Password must be at least 8 characters long';
+    if (password.length < 6) {
+      return 'Password must be at least 6 characters long';
     }
     if (!/(?=.*[a-z])/.test(password)) {
       return 'Password must contain at least one lowercase letter';
@@ -91,7 +133,7 @@ const ResetPassword: React.FC = () => {
       }
 
       setSuccess(true);
-      
+
       // Redirect to login after 3 seconds
       setTimeout(() => {
         navigate('/login');
@@ -285,7 +327,7 @@ const ResetPassword: React.FC = () => {
             <div className="bg-blue-900/30 border border-blue-700/40 rounded-xl p-4">
               <p className="text-blue-200 text-sm font-medium mb-2">Password Requirements:</p>
               <ul className="text-blue-200 text-xs space-y-1">
-                <li>• At least 8 characters long</li>
+                <li>• At least 6 characters long</li>
                 <li>• Contains uppercase and lowercase letters</li>
                 <li>• Contains at least one number</li>
               </ul>
