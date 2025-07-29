@@ -2,6 +2,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from './supabase'; 
 import type { Session, User } from '@supabase/supabase-js';
 import { useAuthStore } from './store';
+import { sessionManager } from './sessionManager';
 
 interface AuthContextType {
   user: User | null;
@@ -19,39 +20,48 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const setStoreUser = useAuthStore((state) => state.setUser);
 
   useEffect(() => {
-    // Restore session on app load
-    const restoreSession = async () => {
-      const { data, error } = await supabase.auth.getSession();
-      if (error) {
-        console.error('Error fetching session:', error.message);
+    const initializeAuth = async () => {
+      try {
+        // Initialize session manager
+        await sessionManager.initialize();
+        
+        // Get current session
+        const session = await sessionManager.getCurrentSession();
+        if (session?.user) {
+          setUser(session.user);
+          setStoreUser(session.user);
+        }
+      } catch (error) {
+        console.error('Error initializing auth:', error);
+      } finally {
+        setLoading(false);
       }
-      if (data?.session) {
-        setUser(data.session.user);
-        setStoreUser(data.session.user);
-      }
-      setLoading(false);
     };
 
-    restoreSession();
+    initializeAuth();
 
     // Listen for auth state changes
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((event, session) => {
+    } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log('Auth Provider - Auth state change:', event, session?.user?.email);
+      
       if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
-        localStorage.setItem('supabaseSession', JSON.stringify(session));
-        setUser(session?.user ?? null);
-        setStoreUser(session?.user ?? null);
+        if (session?.user) {
+          setUser(session.user);
+          setStoreUser(session.user);
+        }
       }
-    
+      
       if (event === 'SIGNED_OUT') {
-        localStorage.removeItem('supabaseSession');
         setUser(null);
         setStoreUser(null);
       }
     });
 
-    return () => subscription.unsubscribe();
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [setStoreUser]);
 
   return (

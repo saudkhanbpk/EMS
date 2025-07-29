@@ -114,7 +114,7 @@ function ProjectsAdmin() {
   const [expandedProjects, setExpandedProjects] = useState({});
 
   // Story points filter state
-  const [storyPointsFilter, setStoryPointsFilter] = useState<'all' | 'weekly' | 'monthly'>('all');
+  const [storyPointsFilter, setStoryPointsFilter] = useState<'all' | 'weekly' | 'monthly'>('monthly');
   const [projectFilters, setProjectFilters] = useState<Record<string, 'all' | 'weekly' | 'monthly'>>({});
 
   const toggleExpandProjects = (projectId) => {
@@ -1390,7 +1390,7 @@ function ProjectsAdmin() {
                   >
                     <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                     <span className="text-sm font-medium">
-                      Medium: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
+                      Fair Load: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
                     </span>
                   </button>
                   <button
@@ -1399,7 +1399,7 @@ function ProjectsAdmin() {
                   >
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     <span className="text-sm font-medium">
-                      Good: {Object.values(employeeWorkloads).filter(score => score >= 100 && score < 150).length} developers
+                      Normal Load: {Object.values(employeeWorkloads).filter(score => score >= 100 && score < 150).length} developers
                     </span>
                   </button>
                   <button
@@ -1992,7 +1992,7 @@ function ProjectsAdmin() {
                             <div className="flex items-center gap-2 mb-1">
                               <span className="text-sm font-semibold">Story Points:</span>
                               <select
-                                value={projectFilters[project.id] || 'all'}
+                                value={projectFilters[project.id] || 'monthly'}
                                 onChange={(e) => {
                                   e.stopPropagation();
                                   handleProjectFilterChange(project.id, e.target.value as 'all' | 'weekly' | 'monthly');

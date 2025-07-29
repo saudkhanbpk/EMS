@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useContext } from 'react';
 import { FiPlus, FiTrash2 } from 'react-icons/fi';
 import AddClientModal from '../components/addclientModal';
 import { supabase, supabaseAdmin } from '../lib/supabase';
 import { useUser } from '../contexts/UserContext';
+import { AttendanceContext } from './AttendanceContext';
+import TaskBoardAdmin from '../components/TaskBoardAdmin';
+import Employeeprofile from './Employeeprofile';
 
 interface Client {
     id: string;
@@ -27,6 +30,47 @@ const AdminClient: React.FC = () => {
     const { userProfile } = useUser();
     const [error, setError] = useState<string | null>(null);
     const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
+    // Navigation state management
+    const [selectedTAB, setSelectedTAB] = useState("");
+    const [clientview, setClientView] = useState<"generalview" | "detailview">("generalview");
+    const [currentClient, setCurrentClient] = useState<Client | null>(null);
+    const [clientId, setClientId] = useState<string>("");
+
+    // Task board state for project navigation
+    const [devopss, setDevopss] = useState<any[]>([]);
+    const [ProjectId, setProjectId] = useState<string>("");
+
+    const { openTaskBoard } = useContext(AttendanceContext);
+
+    // Navigation handlers
+    const handleClientClick = (client: Client) => {
+        setCurrentClient(client);
+        setClientId(client.id);
+        setClientView("detailview");
+    };
+
+    const handleOpenTaskBoard = async (projectId: string) => {
+        try {
+            // Fetch project details including devops
+            const { data: projectData, error } = await supabase
+                .from('projects')
+                .select('id, title, devops')
+                .eq('id', projectId)
+                .single();
+
+            if (error) {
+                console.error('Error fetching project:', error);
+                return;
+            }
+
+            setProjectId(projectId);
+            setDevopss(projectData?.devops || []);
+            setSelectedTAB("TaskBoard");
+        } catch (error) {
+            console.error('Error navigating to task board:', error);
+        }
+    };
 
     // Fetch clients and their projects - optimized with single query
     const fetchClients = useCallback(async () => {
@@ -206,136 +250,170 @@ const AdminClient: React.FC = () => {
     }
 
     return (
-        <div className="p-6 bg-white max-w-7xl mx-auto">
-            <div className="flex justify-between items-center">
-                <div>
-                    <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
-                    <p className="mt-1 text-sm text-gray-500">View and manage your Client here</p>
-                </div>
-                <div className="flex items-center space-x-3">
-                    <input
-                        type="text"
-                        placeholder="Search Client"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="px-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                    />
-                    <button
-                        className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
-                        onClick={() => setModalOpen(true)}
-                    >
-                        + Add Client
-                    </button>
-                    <AddClientModal
-                        isOpen={modalOpen}
-                        onClose={() => setModalOpen(false)}
-                        onClientAdded={handleClientAdded}
-                    />
-                </div>
-            </div>
+        <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6">
+            {selectedTAB === "TaskBoard" ? (
+                <TaskBoardAdmin
+                    devopss={devopss}
+                    ProjectId={ProjectId}
+                    setSelectedTAB={setSelectedTAB}
+                    selectedTAB={selectedTAB}
+                />
+            ) : clientview === "detailview" ? (
+                <Employeeprofile
+                    employeeid={clientId}
+                    employeeview={clientview}
+                    employee={currentClient}
+                    setemployeeview={setClientView}
+                />
+            ) : (
+                <div className="max-w-7xl mx-auto">
+                    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                        <div className="p-6 border-b border-gray-200">
+                            <div className="flex justify-between items-center">
+                                <div>
+                                    <h1 className="text-2xl font-bold text-gray-900">Client Management</h1>
+                                    <p className="mt-1 text-sm text-gray-500">View and manage your Client here</p>
+                                </div>
+                                <div className="flex items-center space-x-3">
+                                    <input
+                                        type="text"
+                                        placeholder="Search Client"
+                                        value={searchTerm}
+                                        onChange={(e) => setSearchTerm(e.target.value)}
+                                        className="px-4 py-2 text-sm border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                                    />
+                                    <button
+                                        className="px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-md hover:bg-purple-700 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:ring-offset-2"
+                                        onClick={() => setModalOpen(true)}
+                                    >
+                                        + Add Client
+                                    </button>
+                                    <AddClientModal
+                                        isOpen={modalOpen}
+                                        onClose={() => setModalOpen(false)}
+                                        onClientAdded={handleClientAdded}
+                                    />
+                                </div>
+                            </div>
 
-            {/* Error Message */}
-            {error && (
-                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
-                    <div className="flex">
-                        <div className="text-sm text-red-700">
-                            {error}
+                            {/* Error Message */}
+                            {error && (
+                                <div className="mt-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                                    <div className="flex">
+                                        <div className="text-sm text-red-700">
+                                            {error}
+                                        </div>
+                                        <button
+                                            onClick={() => setError(null)}
+                                            className="ml-auto text-red-400 hover:text-red-600"
+                                        >
+                                            ×
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
                         </div>
-                        <button
-                            onClick={() => setError(null)}
-                            className="ml-auto text-red-400 hover:text-red-600"
-                        >
-                            ×
-                        </button>
+
+                        {/* Table */}
+                        <div className="overflow-x-auto">
+                            <table className="min-w-full bg-white">
+                                <thead>
+                                    <tr className="bg-gray-50">
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projects</th>
+                                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Count</th>
+                                        <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {filteredClients.length === 0 ? (
+                                        <tr>
+                                            <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
+                                                {searchTerm ? 'No clients found matching your search.' : 'No clients found.'}
+                                            </td>
+                                        </tr>
+                                    ) : (
+                                        filteredClients.map((client) => (
+                                            <tr
+                                                key={client.id}
+                                                className="border-b hover:bg-gray-50 transition-colors cursor-pointer"
+                                                onClick={() => handleClientClick(client)}
+                                            >
+                                                {/* Client */}
+                                                <td className="px-6 py-4 whitespace-nowrap flex items-center">
+                                                    <div className="flex-shrink-0 h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold uppercase mr-4">
+                                                        {client.full_name.charAt(0)}
+                                                    </div>
+                                                    <div>
+                                                        <div className="text-sm font-medium text-gray-900 hover:text-purple-600 transition-colors">
+                                                            {client.full_name}
+                                                        </div>
+                                                        <div className="text-sm text-gray-500">{client.email}</div>
+                                                    </div>
+                                                </td>
+
+                                                {/* Projects */}
+                                                <td className="px-6 py-4">
+                                                    <div className="text-sm text-gray-900">
+                                                        {client.projects.length > 0 ? (
+                                                            <div className="space-y-1">
+                                                                {client.projects.slice(0, 2).map((project) => (
+                                                                    <button
+                                                                        key={project.id}
+                                                                        onClick={(e) => {
+                                                                            e.stopPropagation();
+                                                                            handleOpenTaskBoard(project.id);
+                                                                        }}
+                                                                        className="text-xs bg-purple-50 text-purple-700 hover:bg-purple-100 px-2 py-1 rounded transition-colors cursor-pointer block"
+                                                                    >
+                                                                        {project.title}
+                                                                    </button>
+                                                                ))}
+                                                                {client.projects.length > 2 && (
+                                                                    <div className="text-xs text-gray-500">+{client.projects.length - 2} more</div>
+                                                                )}
+                                                            </div>
+                                                        ) : (
+                                                            <span className="text-gray-400">No projects</span>
+                                                        )}
+                                                    </div>
+                                                </td>
+
+                                                {/* Project Count */}
+                                                <td className="px-6 py-4 whitespace-nowrap">
+                                                    <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
+                                                        {client.projects.length}
+                                                    </span>
+                                                </td>
+
+                                                {/* Actions */}
+                                                <td className="px-6 py-4 whitespace-nowrap text-center">
+                                                    <button
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            handleDeleteClient(client.id);
+                                                        }}
+                                                        disabled={isDeleting === client.id}
+                                                        className={`text-red-600 hover:text-red-900 transition-colors ${isDeleting === client.id ? 'opacity-50 cursor-not-allowed' : ''
+                                                            }`}
+                                                        title="Delete Client"
+                                                    >
+                                                        {isDeleting === client.id ? (
+                                                            <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
+                                                        ) : (
+                                                            <FiTrash2 className="h-4 w-4" />
+                                                        )}
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))
+                                    )}
+                                </tbody>
+                            </table>
+                        </div>
                     </div>
                 </div>
             )}
-
-            {/* Table */}
-            <div className="mt-8">
-                <div className="overflow-x-auto rounded-lg border border-gray-200">
-                    <table className="min-w-full bg-white">
-                        <thead>
-                            <tr className="bg-gray-50">
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Client</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Projects</th>
-                                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Count</th>
-                                <th className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredClients.length === 0 ? (
-                                <tr>
-                                    <td colSpan={4} className="px-6 py-8 text-center text-gray-500">
-                                        {searchTerm ? 'No clients found matching your search.' : 'No clients found.'}
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredClients.map((client) => (
-                                    <tr key={client.id} className="border-b">
-                                        {/* Client */}
-                                        <td className="px-6 py-4 whitespace-nowrap flex items-center">
-                                            <div className="flex-shrink-0 h-10 w-10 rounded-full bg-purple-600 flex items-center justify-center text-white font-bold uppercase mr-4">
-                                                {client.full_name.charAt(0)}
-                                            </div>
-                                            <div>
-                                                <div className="text-sm font-medium text-gray-900">{client.full_name}</div>
-                                                <div className="text-sm text-gray-500">{client.email}</div>
-                                            </div>
-                                        </td>
-
-                                        {/* Projects */}
-                                        <td className="px-6 py-4">
-                                            <div className="text-sm text-gray-900">
-                                                {client.projects.length > 0 ? (
-                                                    <div className="space-y-1">
-                                                        {client.projects.slice(0, 2).map((project) => (
-                                                            <div key={project.id} className="text-xs bg-gray-100 px-2 py-1 rounded">
-                                                                {project.title}
-                                                            </div>
-                                                        ))}
-                                                        {client.projects.length > 2 && (
-                                                            <div className="text-xs text-gray-500">+{client.projects.length - 2} more</div>
-                                                        )}
-                                                    </div>
-                                                ) : (
-                                                    <span className="text-gray-400">No projects</span>
-                                                )}
-                                            </div>
-                                        </td>
-
-                                        {/* Project Count */}
-                                        <td className="px-6 py-4 whitespace-nowrap">
-                                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-800">
-                                                {client.projects.length}
-                                            </span>
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="px-6 py-4 whitespace-nowrap text-center">
-                                            <button
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    handleDeleteClient(client.id);
-                                                }}
-                                                disabled={isDeleting === client.id}
-                                                className={`text-red-600 hover:text-red-900 ${isDeleting === client.id ? 'opacity-50 cursor-not-allowed' : ''
-                                                    }`}
-                                            >
-                                                {isDeleting === client.id ? (
-                                                    <div className="animate-spin rounded-full h-4 w-4 border-t-2 border-b-2 border-red-600"></div>
-                                                ) : (
-                                                    <FiTrash2 className="h-4 w-4" />
-                                                )}
-                                            </button>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
         </div>
     );
 };

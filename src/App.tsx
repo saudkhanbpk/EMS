@@ -59,8 +59,6 @@
 //   const user = useAuthStore((state) => state.user);
 //   const setUser = useAuthStore((state) => state.setUser);
 
-
-
 //   useEffect(() => {
 //     // ✅ Register Firebase Service Worker
 //     if ("serviceWorker" in navigator) {
@@ -81,7 +79,7 @@
 //             console.error("SW registration failed:", error);
 //           });
 
-//         }  
+//         }
 //         requestNotificationPermission();
 //     }
 //   // useEffect(()=> {
@@ -103,8 +101,6 @@
 
 // // Call this when the user clicks a button (e.g., "Enable Notifications")
 
-
-
 // // app.js
 // // Frontend code (e.g., app.js)
 // async function subscribeToPush() {
@@ -120,7 +116,7 @@
 //   // Step 3: Save subscription to Supabase
 //   const { error } = await supabase
 //     .from('users')
-//     .update({ 
+//     .update({
 //       push_subscription: JSON.stringify(subscription) // Save as JSON string
 //     })
 //     .eq('id', localStorage.getItem("user_id")); // Replace with your user ID logic
@@ -178,7 +174,6 @@
 //     };
 //   }, []);
 
-
 //   //   return (
 //   //       <Router>
 //   //           <Routes>
@@ -211,8 +206,6 @@
 //   //       </Router>
 //   //   );
 //   // }
-
-
 
 //   return (
 //     <Router>
@@ -269,10 +262,14 @@
 
 // export default App;
 
-
-
 import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+} from 'react-router-dom';
 import { useAuthStore } from './lib/store';
 import EmployeeLayout from './components/EmployeeLayout';
 import Login from './pages/Login';
@@ -292,20 +289,24 @@ import TaskBoard from './components/TaskBoard';
 import ProfileCard from './components/Profile';
 import DailyLogs from './pages/DailyLogs';
 import WidgetDemo from './components/WidgetDemo';
-import { getMessaging, onMessage } from "firebase/messaging";
-import { initializeApp } from "firebase/app";
+import { getMessaging, onMessage } from 'firebase/messaging';
+import { initializeApp } from 'firebase/app';
 import { AttendanceProvider } from './pages/AttendanceContext';
-import { Toaster } from "./component/ui/toaster";
-import { Toaster as Sonner } from "./component/ui/sonner";
-import { TooltipProvider } from "./component/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { Toaster as Sonner } from './component/ui/sonner';
+import { Toaster } from 'react-hot-toast';
+import { TooltipProvider } from './component/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Index from './pages/Index';
 import AddNewTask from './AddNewTask';
 import Chatbutton from './components/chatbtn';
 import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
-import Adminroute, { EmployeeRoute, SuperAdminRoute, UserRoute } from './components/adminroute';
+import Adminroute, {
+  EmployeeRoute,
+  SuperAdminRoute,
+  UserRoute,
+} from './components/adminroute';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './lib/AuthProvider';
 import { UserProvider } from './contexts/UserContext';
@@ -432,7 +433,8 @@ function App() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: "BFPFkVqWUS4mX-O--KPP3jzy1xyi1pHFREawLt7R9Md2kZpTj8vvbyo9XWE-RIgnsL22pTSpqoX4gOAOsm5flJQ"
+        applicationServerKey:
+          'BFPFkVqWUS4mX-O--KPP3jzy1xyi1pHFREawLt7R9Md2kZpTj8vvbyo9XWE-RIgnsL22pTSpqoX4gOAOsm5flJQ',
       });
 
       // Save to Supabase
@@ -445,11 +447,10 @@ function App() {
     }
   };
 
-
-
   return (
     <AuthProvider>
       <UserProvider>
+        <Toaster />
         <Router>
           {/* Chat Sidebar - LinkedIn style */}
           <AnimatePresence>
@@ -462,13 +463,22 @@ function App() {
                 ></div>
                 {/* The actual sidebar */}
                 <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
-                  <ChatSidebar closechat={closeChat} openchatperson={openchatperson} />
+                  <ChatSidebar
+                    closechat={closeChat}
+                    openchatperson={openchatperson}
+                  />
                 </div>
               </div>
             )}
           </AnimatePresence>
-          {chatperson && <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />}
-          {!ischatopen && <Chatlayout><Chatbutton openchat={openChat} /></Chatlayout>}
+          {chatperson && (
+            <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />
+          )}
+          {!ischatopen && (
+            <Chatlayout>
+              <Chatbutton openchat={openChat} />
+            </Chatlayout>
+          )}
 
           {/* App Routes */}
           <Routes>
@@ -480,20 +490,26 @@ function App() {
             <Route path="/widget-demo" element={<WidgetDemo />} />
 
             {/* User Routes (Protected) */}
-            <Route path="/user" element={
-              <PrivateRoute>
-                <UserRoute>
-                  <UserPage />
-                </UserRoute>
-              </PrivateRoute>
-            } />
-            <Route path="/user/:organizationId" element={
-              <PrivateRoute>
-                <UserRoute>
-                  <UserOrganizationDetail />
-                </UserRoute>
-              </PrivateRoute>
-            } />
+            <Route
+              path="/user"
+              element={
+                <PrivateRoute>
+                  <UserRoute>
+                    <UserPage />
+                  </UserRoute>
+                </PrivateRoute>
+              }
+            />
+            <Route
+              path="/user/:organizationId"
+              element={
+                <PrivateRoute>
+                  <UserRoute>
+                    <UserOrganizationDetail />
+                  </UserRoute>
+                </PrivateRoute>
+              }
+            />
 
             {/* SuperAdmin Routes (Protected) */}
             <Route
@@ -506,11 +522,20 @@ function App() {
                 </PrivateRoute>
               }
             >
-              <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
+              <Route
+                index
+                element={<Navigate to="/superadmin/dashboard" replace />}
+              />
               <Route path="dashboard" element={<SuperAdminDashboard />} />
               <Route path="organizations" element={<OrganizationsWrapper />} />
-              <Route path="softwarecomplaint" element={<SuperAdminComplaint />} />
-              <Route path="organizations/:id" element={<OrganizationDetailWrapper />} />
+              <Route
+                path="softwarecomplaint"
+                element={<SuperAdminComplaint />}
+              />
+              <Route
+                path="organizations/:id"
+                element={<OrganizationDetailWrapper />}
+              />
             </Route>
 
             {/* Admin Route (Protected) */}
@@ -519,8 +544,9 @@ function App() {
               element={
                 <PrivateRoute adminOnly>
                   <AttendanceProvider>
-
-                    <Adminroute><AdminPage /></Adminroute>
+                    <Adminroute>
+                      <AdminPage />
+                    </Adminroute>
                   </AttendanceProvider>
                 </PrivateRoute>
               }
@@ -537,19 +563,30 @@ function App() {
                 </PrivateRoute>
               }
             >
-              <Route index element={<DashboardLayout><Dashboard /></DashboardLayout>} />
+              <Route
+                index
+                element={
+                  <DashboardLayout>
+                    <Dashboard />
+                  </DashboardLayout>
+                }
+              />
               <Route path="attendance" element={<Attendance />} />
               <Route path="leave" element={<Leave />} />
               <Route path="tasks" element={<Tasks />} />
-              <Route path="software-complaint" element={<SoftwareComplaintSection />} />
-              <Route path="office-complaint" element={<OfficeComplaintSection />} />
+              <Route
+                path="software-complaint"
+                element={<SoftwareComplaintSection />}
+              />
+              <Route
+                path="office-complaint"
+                element={<OfficeComplaintSection />}
+              />
               <Route path="overtime" element={<ExtraHours />} />
               <Route path="salary-breakdown" element={<SalaryBreakdown />} />
               <Route path="board/:id" element={<TaskBoardLayout />} />
               <Route path="profile" element={<ProfileCard />} />
               <Route path="dailylogs" element={<DailyLogs />} />
-
-
             </Route>
 
             {/* Redirect unknown routes to login */}
@@ -561,10 +598,10 @@ function App() {
   );
 }
 
-const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
-  children,
-  adminOnly
-}) => {
+const PrivateRoute: React.FC<{
+  children: React.ReactNode;
+  adminOnly?: boolean;
+}> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
   if (!user) return <Navigate to="/home" replace />;
   return <>{children}</>;

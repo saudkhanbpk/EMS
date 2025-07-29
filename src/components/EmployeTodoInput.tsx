@@ -46,8 +46,8 @@ const EmployeTodoInput = ({ projectId, fetchTasks }: EmployeeTodoProps) => {
 
       if (error) throw error;
 
-      fetchTasks();
       toast.success('Task successfully added');
+      fetchTasks();
     } catch (error) {
       console.error('Error creating task:', error);
       toast.error('Failed to create task. Please try again.');
@@ -58,7 +58,7 @@ const EmployeTodoInput = ({ projectId, fetchTasks }: EmployeeTodoProps) => {
     e.preventDefault();
     if (input.length >= 3) {
       handleQuickAddTask(input);
-      toast.success(`Task submitted: ${input}`);
+
       setInput('');
     }
   };

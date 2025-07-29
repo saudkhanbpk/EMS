@@ -35,9 +35,9 @@ const AddNewTask = ({
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>(devopss || []);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState('');
-  const [score, setScore] = useState('');
-  const [priority, setPriority] = useState('');
+  const [error, setError] = useState("");
+  const [score, setScore] = useState("0");
+  const [priority, setPriority] = useState("");
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -210,9 +210,9 @@ const AddNewTask = ({
       setTitle('');
       setDescription('');
       setSelectedDevs([]);
-      setScore('');
-      setPriority('');
-      setError('');
+      setScore("0");
+      setPriority("");
+      setError("");
       refreshTasks(); // Call the refresh function to update the task list
       setImageFile(null);
       setImagePreview(null);
