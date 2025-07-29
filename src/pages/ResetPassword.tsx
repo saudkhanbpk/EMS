@@ -19,57 +19,92 @@ const ResetPassword: React.FC = () => {
   const isConfirmFocusedRef = useRef(false);
 
   useEffect(() => {
-    const handleAuthCallback = async () => {
+    const handlePasswordRecovery = async () => {
       try {
-        // Check URL parameters for tokens
-        const hashParams = new URLSearchParams(window.location.hash.substring(1));
-        const queryParams = new URLSearchParams(window.location.search);
+        console.log('=== Password Recovery Debug ===');
+        console.log('Full URL:', window.location.href);
+        console.log('Hash:', window.location.hash);
+        console.log('Search:', window.location.search);
 
-        // Try to get token from multiple sources
-        const accessToken = hashParams.get('access_token') ||
-          queryParams.get('access_token') ||
-          queryParams.get('token'); // Also check for 'token' parameter
+        // Extract all possible parameters
+        const urlHash = window.location.hash.substring(1);
+        const urlSearch = window.location.search.substring(1);
+        
+        console.log('URL Hash params:', urlHash);
+        console.log('URL Search params:', urlSearch);
 
-        const type = hashParams.get('type') || queryParams.get('type');
+        // Parse parameters from both hash and search
+        const hashParams = new URLSearchParams(urlHash);
+        const searchParamsObj = new URLSearchParams(urlSearch);
+        
+        // Try to get access token from various sources
+        let accessToken = hashParams.get('access_token') || 
+                         searchParamsObj.get('access_token') ||
+                         searchParams.get('access_token');
+        
+        let refreshToken = hashParams.get('refresh_token') || 
+                          searchParamsObj.get('refresh_token') ||
+                          searchParams.get('refresh_token');
+        
+        let type = hashParams.get('type') || 
+                  searchParamsObj.get('type') ||
+                  searchParams.get('type');
 
-        console.log('Token search:', {
-          hashToken: hashParams.get('access_token'),
-          queryToken: queryParams.get('token'),
-          accessToken: !!accessToken,
-          type
+        console.log('Extracted parameters:', {
+          accessToken: accessToken ? `${accessToken.substring(0, 20)}...` : 'null',
+          refreshToken: refreshToken ? `${refreshToken.substring(0, 20)}...` : 'null',
+          type: type
         });
 
-        if (type === 'recovery' && accessToken) {
-          // Exchange the recovery token for a session
-          const { data, error } = await supabase.auth.verifyOtp({
-            token_hash: accessToken,
-            type: 'recovery'
-          });
-
-          if (error) {
-            console.error('Failed to verify OTP:', error);
-            setError('Invalid or expired reset link. Please request a new password reset.');
-            return;
-          }
-
-          console.log('Recovery session established');
-          return;
-        }
-
-        // If no token found
+        // Check if we have the necessary tokens
         if (!accessToken) {
+          console.error('No access token found in URL');
           setError('Invalid reset link. Please request a new password reset.');
           return;
         }
 
+        // Set the session with the tokens
+        console.log('Setting session with extracted tokens...');
+        const sessionData: any = {
+          access_token: accessToken,
+        };
+        
+        if (refreshToken) {
+          sessionData.refresh_token = refreshToken;
+        }
+
+        const { data, error } = await supabase.auth.setSession(sessionData);
+
+        if (error) {
+          console.error('Session setting error:', error);
+          setError('Invalid or expired reset link. Please request a new password reset.');
+          return;
+        }
+
+        console.log('Session set successfully');
+
+        // Verify the session
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        
+        if (sessionError || !session) {
+          console.error('Session verification failed:', sessionError);
+          setError('Invalid or expired reset link. Please request a new password reset.');
+          return;
+        }
+
+        console.log('Session verified successfully. User can now reset password.');
+        
       } catch (err) {
-        console.error('Auth callback error:', err);
-        setError('Invalid or expired reset link. Please request a new password reset.');
+        console.error('Password recovery error:', err);
+        setError('An error occurred. Please request a new password reset.');
       }
     };
 
-    handleAuthCallback();
-  }, []);
+    // Only run if we're on the reset password page
+    if (window.location.pathname === '/reset-password') {
+      handlePasswordRecovery();
+    }
+  }, [searchParams]);
 
   const validatePassword = (password: string): string | null => {
     if (password.length < 6) {
@@ -110,14 +145,18 @@ const ResetPassword: React.FC = () => {
       setLoading(true);
       setError(null);
 
+      console.log('Attempting to update password...');
+
       const { error: updateError } = await supabase.auth.updateUser({
         password: password
       });
 
       if (updateError) {
+        console.error('Password update error:', updateError);
         throw updateError;
       }
 
+      console.log('Password updated successfully');
       setSuccess(true);
 
       // Redirect to login after 3 seconds
@@ -125,6 +164,7 @@ const ResetPassword: React.FC = () => {
         navigate('/login');
       }, 3000);
     } catch (err) {
+      console.error('Submit error:', err);
       setError(err instanceof Error ? err.message : 'An error occurred while resetting password');
     } finally {
       setLoading(false);
