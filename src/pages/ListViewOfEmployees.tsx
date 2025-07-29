@@ -41,7 +41,6 @@ import {
 import { AttendanceProvider } from "./AttendanceContext";
 import FilteredDataAdmin from "./filteredListAdmin";
 import { id } from "date-fns/locale/id";
-import { useUser } from "../contexts/UserContext";
 
 interface AttendanceRecord {
   id: string;
@@ -165,6 +164,114 @@ const EmployeeAttendanceTable = () => {
     };
   }, [userProfile?.id]);
 
+  // Real-time subscription for laptop status updates
+  useEffect(() => {
+    if (!userProfile?.organization_id) return;
+
+    console.log('🔔 Setting up real-time laptop status subscription...');
+
+    // Subscribe to laptop_states table changes
+    const subscription = supabase
+      .channel('laptop_states_changes')
+      .on(
+        'postgres_changes',
+        {
+          event: '*', // Listen to all events (INSERT, UPDATE, DELETE)
+          schema: 'public',
+          table: 'laptop_states'
+        },
+        (payload) => {
+          console.log('📡 Real-time laptop status update received:', payload);
+
+          // Trigger a refresh of laptop statuses when any change occurs
+          const refreshLaptopData = async () => {
+            try {
+              const realLaptopStatuses = await getAllRealLaptopStatus(userProfile.organization_id);
+
+              // Convert to display format
+              const laptopStatusMap = {};
+              Object.entries(realLaptopStatuses).forEach(([userId, status]) => {
+                const displayState = status.laptop_state === 'On' ? 'Online' :
+                                   status.laptop_state === 'Sleep' ? 'Away' : 'Offline';
+
+                const hasRealData = status.battery_level > 0 ||
+                                   (status.laptop_state === 'On' && status.is_checked_in);
+
+                laptopStatusMap[userId] = {
+                  state: displayState,
+                  batteryLevel: status.battery_level,
+                  isCharging: status.is_charging,
+                  displayText: hasRealData ? displayState : 'Offline',
+                  isRealData: hasRealData,
+                  lastActivity: status.last_activity,
+                  dataType: hasRealData ? 'Real-time' : 'No data'
+                };
+              });
+
+              setDirectLaptopStates(laptopStatusMap);
+              console.log('✅ Real-time laptop status updated');
+            } catch (error) {
+              console.error('Error refreshing laptop status:', error);
+            }
+          };
+
+          // Debounce the refresh to avoid too many updates
+          clearTimeout(window.laptopStatusRefreshTimeout);
+          window.laptopStatusRefreshTimeout = setTimeout(refreshLaptopData, 1000);
+        }
+      )
+      .subscribe();
+
+    // Cleanup subscription on unmount
+    return () => {
+      console.log('🔕 Cleaning up laptop status subscription');
+      subscription.unsubscribe();
+      clearTimeout(window.laptopStatusRefreshTimeout);
+    };
+  }, [userProfile?.organization_id]);
+
+  // Periodic refresh of laptop status (backup for real-time)
+  useEffect(() => {
+    if (!userProfile?.organization_id) return;
+
+    const refreshLaptopStatuses = async () => {
+      try {
+        console.log('🔄 Periodic refresh of laptop statuses...');
+        const realLaptopStatuses = await getAllRealLaptopStatus(userProfile.organization_id);
+
+        const laptopStatusMap = {};
+        Object.entries(realLaptopStatuses).forEach(([userId, status]) => {
+          const displayState = status.laptop_state === 'On' ? 'Online' :
+                             status.laptop_state === 'Sleep' ? 'Away' : 'Offline';
+
+          const hasRealData = status.battery_level > 0 ||
+                             (status.laptop_state === 'On' && status.is_checked_in);
+
+          laptopStatusMap[userId] = {
+            state: displayState,
+            batteryLevel: status.battery_level,
+            isCharging: status.is_charging,
+            displayText: hasRealData ? displayState : 'Offline',
+            isRealData: hasRealData,
+            lastActivity: status.last_activity,
+            dataType: hasRealData ? 'Real-time' : 'No data'
+          };
+        });
+
+        setDirectLaptopStates(laptopStatusMap);
+      } catch (error) {
+        console.error('Error in periodic laptop status refresh:', error);
+      }
+    };
+
+    // Refresh every 5 minutes as backup
+    const interval = setInterval(refreshLaptopStatuses, 5 * 60 * 1000);
+
+    return () => {
+      clearInterval(interval);
+    };
+  }, [userProfile?.organization_id]);
+
   // SIMPLE CORRECT STATUS FUNCTION
   const getCorrectLaptopStatus = (userId, userName, isCheckedIn) => {
     console.log(`🔍 ${userName}: isCheckedIn = ${isCheckedIn}`);
@@ -287,7 +394,7 @@ const EmployeeAttendanceTable = () => {
   const [selectedDateW, setselectedDateW] = useState(new Date());
   const [currentFilter, setCurrentFilter] = useState("all"); // Filter state: "all", "present", "absent", "late", "remote"
   const [dataFromWeeklyChild, setDataFromWeeklyChild] = useState("");
-  const { userProfile } = useUser()
+ 
   const [selectedEntry, setSelectedEntry] = useState(null);
   // const [newCheckOutTime, setNewCheckOutTime] = useState('00 : 00');
   const [hour, setHour] = useState(12); // Default hour

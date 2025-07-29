@@ -54,23 +54,22 @@ const ImageWithText: React.FC<ImageWithTextProps> = ({
               {description}
             </p>
             {buttonText && (
-  <div className="text-right">
-    <motion.button
-      className="relative inline-block px-6 py-3 text-white font-semibold rounded-lg bg-gradient-to-r from-blue-600 to-purple-700 shadow-md overflow-hidden"
-      whileHover={{ scale: 1.03 }}
-      whileTap={{ scale: 0.97 }}
-    >
-      <motion.div
-        className="absolute inset-0 bg-white/20"
-        initial={{ x: '-100%' }}
-        whileHover={{ x: '100%' }}
-        transition={{ duration: 0.6 }}
-      />
-      <span className="relative z-10">{buttonText}</span>
-    </motion.button>
-  </div>
-)}
-
+              <div className={reverse ? 'text-left' : 'text-right'}>
+                <motion.button
+                  className="relative inline-block px-6 py-3 text-white font-semibold rounded-lg bg-gradient-to-r from-blue-600 to-purple-700 shadow-md overflow-hidden"
+                  whileHover={{ scale: 1.03 }}
+                  whileTap={{ scale: 0.97 }}
+                >
+                  <motion.div
+                    className="absolute inset-0 bg-white/20"
+                    initial={{ x: '-100%' }}
+                    whileHover={{ x: '100%' }}
+                    transition={{ duration: 0.6 }}
+                  />
+                  <span className="relative z-10">{buttonText}</span>
+                </motion.button>
+              </div>
+            )}
           </motion.div>
         </div>
       </div>

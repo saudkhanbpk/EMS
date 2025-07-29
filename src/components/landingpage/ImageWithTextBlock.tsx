@@ -1,12 +1,10 @@
-<<<<<<< HEAD
 import React from 'react';
-import ImageWithText from './ImagewithText';
-=======
 import ImageWithText from './ImageWithText';
->>>>>>> 41b6e6ff779f4478928ee17eb5b219f5a3719ae7
 import block1 from '../../assets/block1.png';
 import block2 from '../../assets/block2.png';
 import block3 from '../../assets/block3.png';
+import block4 from '../../assets/block4.png';
+import block5 from '../../assets/block5.png';
 
 const ImageWithTextBlock = () => {
 
@@ -33,7 +31,22 @@ const blocks = [
       "Organize projects by priority with color-coded status indicators (Free, Medium, Good, Overloaded). Track story points, manage developers across multiple projects, and get instant visibility into project health. See real project data like Contentia, Bnbyond, PatronWorks, and WhisperVoice all in one unified dashboard.",
     buttonText: "Start Free Trial",
   },
-
+  {
+    imageUrl: block4, 
+    title: "Comprehensive Holiday Management System",
+    description:
+      "Streamline holiday planning with an intuitive calendar interface. Add new holidays by name, select multiple dates with visual date picker, and manage company-wide holiday schedules for 2025 and beyond. Track selected dates (0) with easy reset and save functionality, ensuring your team stays informed about upcoming holidays and time-off periods.",
+    buttonText: "Explore Holiday Features",
+    reverse: true,
+  },
+  {
+    imageUrl: block5, 
+    title: "Advanced Daily Logs & Team Communication Hub",
+    description:
+      "Monitor team productivity with detailed daily logs and integrated Slack communication. Track individual employee progress  and others with monthly performance ratings. View detailed project updates, task completions, and team conversations - from Safe Ride App development to UI component creation - all with AI-powered analysis and seamless Slack integration.",
+    buttonText: "View Daily Logs Demo",
+    
+  },
   
 
 ];
@@ -53,8 +66,4 @@ const blocks = [
   );
 };
 
-<<<<<<< HEAD
 export default ImageWithTextBlock;
-=======
-export default ImageWithTextBlock;
->>>>>>> 41b6e6ff779f4478928ee17eb5b219f5a3719ae7
