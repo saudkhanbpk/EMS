@@ -28,7 +28,7 @@ import './style.css';
 import { useRef } from 'react';
 import { ShieldCheck, LogOut, PanelLeftClose } from 'lucide-react';
 import { supabase } from '../lib/supabase';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
   format,
   startOfMonth,
@@ -535,7 +535,9 @@ const AdminPage: React.FC = () => {
     const minutes = diffInMinutes % 60;
     return `${hours}h ${minutes}m`;
   };
+  const location = useLocation();
 
+  console.log(location);
   const getTotalBreakDuration = () => {
     let totalMinutes = 0;
     todayBreak.forEach((breakRecord) => {
@@ -764,66 +766,78 @@ const AdminPage: React.FC = () => {
                   }}
                 >
                   <div className="space-y-4">
-                    <button
-                      onClick={() => {
-                        setSelectedTab('organization');
-                        // setShowEmployeeList(!showEmployeeList);
-                        handleClose();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'organization'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Dashboard
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedTab('ListView');
-                        setShowEmployeeList(!showEmployeeList);
-                        handleClose();
-                        setEmployeeListOpen(true);
-                        // setListView(!ListView);
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'ListView'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                        ///////////////
-                      }`}
-                    >
-                      Attendence
-                    </button>
+                    <Link to="organization">
+                      <button
+                        onClick={() => {
+                          setSelectedTab('organization');
+                          // setShowEmployeeList(!showEmployeeList);
+                          handleClose();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'organization'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Dashboard
+                      </button>
+                    </Link>
 
-                    <button
-                      onClick={() => {
-                        setSelectedTab('EmployeesDetails');
-                        // setShowEmployeeList(!showEmployeeList);
-                        handleClose();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'EmployeesDetails'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Members
-                    </button>
-                    <button
-                      onClick={() => {
-                        setSelectedTab('Clients');
-                        // setShowEmployeeList(!showEmployeeList);
-                        handleClose();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'Clients'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Clients
-                    </button>
+                    <Link to="employeAttandanceTable">
+                      <button
+                        onClick={() => {
+                          setSelectedTab('ListView');
+                          setShowEmployeeList(!showEmployeeList);
+                          handleClose();
+                          setEmployeeListOpen(true);
+                          // setListView(!ListView);
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          location.pathname.includes(
+                            '/admin/employeAttandanceTable'
+                          )
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                          ///////////////
+                        }`}
+                      >
+                        Attendence
+                      </button>
+                    </Link>
+
+                    <Link to="employeeDetails">
+                      <button
+                        onClick={() => {
+                          setSelectedTab('EmployeesDetails');
+                          // setShowEmployeeList(!showEmployeeList);
+                          handleClose();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          location.pathname.includes('/admin/employeeDetails')
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Members
+                      </button>
+                    </Link>
+
+                    <Link to="Clients">
+                      <button
+                        onClick={() => {
+                          setSelectedTab('Clients');
+                          // setShowEmployeeList(!showEmployeeList);
+                          handleClose();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'Clients'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Clients
+                      </button>
+                    </Link>
 
                     {/* Employee List (Mobile) */}
                     {/* {isSmallScreen && showEmployeeList && (
@@ -856,113 +870,126 @@ const AdminPage: React.FC = () => {
         </div>
       )} */}
 
-                    <button
-                      onClick={() => {
-                        setSelectedTab('Projects');
-                        // setShowEmployeeList(!showEmployeeList);
-                        handleClose();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'Projects'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Projects
-                    </button>
+                    <Link to="projects">
+                      <button
+                        onClick={() => {
+                          setSelectedTab('Projects');
+                          // setShowEmployeeList(!showEmployeeList);
+                          handleClose();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'Projects'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Projects
+                      </button>
+                    </Link>
 
-                    <button
-                      onClick={() => {
-                        handleClose();
-                        setSelectedTab('OfficeComplaints');
-                        handleOfficeComplaintsClick();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'OfficeComplaints'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Office Complaints
-                    </button>
+                    <Link to="OfficeComplaints">
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          setSelectedTab('OfficeComplaints');
+                          handleOfficeComplaintsClick();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'OfficeComplaints'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Office Complaints
+                      </button>
+                    </Link>
 
-                    <button
-                      onClick={() => {
-                        handleClose();
-                        setSelectedTab('SoftwareComplaints');
-                        handleSoftwareComplaintsClick();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'SoftwareComplaints'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Software Complaints
-                    </button>
+                    <Link to="softwareComplaints">
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          setSelectedTab('SoftwareComplaints');
+                          handleSoftwareComplaintsClick();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'SoftwareComplaints'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Software Complaints
+                      </button>
+                    </Link>
 
-                    <button
-                      onClick={() => {
-                        setSelectedTab('Holidays');
-                        handleClose();
-                        handleSoftwareComplaintsClick();
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'Holidays'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Holidays
-                    </button>
+                    <Link to="Holidays">
+                      <button
+                        onClick={() => {
+                          setSelectedTab('Holidays');
+                          handleClose();
+                          handleSoftwareComplaintsClick();
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'Holidays'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Holidays
+                      </button>
+                    </Link>
 
-                    <button
-                      onClick={() => {
-                        handleClose();
-                        setSelectedTab('leaveRequests');
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'leaveRequests'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Leave Requests
-                      {PendingLeaveRequests > 0 && (
-                        <span className="bg-blue-500 text-white rounded-full px-3 pb-[2px] ml-4 text-md">
-                          {PendingLeaveRequests}
-                        </span>
-                      )}
-                    </button>
-                    <button
-                      onClick={() => {
-                        handleClose();
-                        setSelectedTab('Updates');
+                    <Link to="leaverequest">
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          setSelectedTab('leaveRequests');
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'leaveRequests'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Leave Requests
+                        {PendingLeaveRequests > 0 && (
+                          <span className="bg-blue-500 text-white rounded-full px-3 pb-[2px] ml-4 text-md">
+                            {PendingLeaveRequests}
+                          </span>
+                        )}
+                      </button>
+                    </Link>
+                    <Link to="officealerts">
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          setSelectedTab('Updates');
 
-                        // setIsOpen(false);
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'Updates'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Office Alerts
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        handleClose();
-                        setSelectedTab('DailyLogs');
-                      }}
-                      className={`w-full text-left p-2 rounded ${
-                        selectedTab === 'DailyLogs'
-                          ? 'bg-[#9A00FF] text-White'
-                          : 'text-white hover:bg-[#9A00FF]'
-                      }`}
-                    >
-                      Daily Logs
-                    </button>
+                          // setIsOpen(false);
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'Updates'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Office Alerts
+                      </button>
+                    </Link>
+                    <Link to="dailylogs">
+                      <button
+                        onClick={() => {
+                          handleClose();
+                          setSelectedTab('DailyLogs');
+                        }}
+                        className={`w-full text-left p-2 rounded ${
+                          selectedTab === 'DailyLogs'
+                            ? 'bg-[#9A00FF] text-White'
+                            : 'text-white hover:bg-[#9A00FF]'
+                        }`}
+                      >
+                        Daily Logs
+                      </button>
+                    </Link>
                   </div>
 
                   {/* Sign Out Button (Placed at the Bottom) */}
@@ -1020,7 +1047,7 @@ const AdminPage: React.FC = () => {
         </div>
 
         {/* Main Content */}
-        {selectedTab === 'ListView' && (
+        {/* {location.pathname.includes('/admin/employeAttandanceTable') && (
           <div
             className={`flex-1  transition-all duration-300 p-4 ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
@@ -1028,17 +1055,17 @@ const AdminPage: React.FC = () => {
           >
             <EmployeeAttendanceTable />
           </div>
-        )}
-        {selectedTab === 'EmployeesDetails' && (
+        )} */}
+        {/* {location.pathname.includes('/admin/employeeDetails') && (
           <div
             className={`flex-1 transition-all duration-300 ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
             }`}
           >
-            <EmployeesDetails selectedTab={selectedTab} />
+            <EmployeesDetails />
           </div>
-        )}
-        {selectedTab === 'Projects' && (
+        )} */}
+        {/* {location.pathname.includes('/admin/projects') && (
           <div
             className={`flex-1 py-10 px-10 transition-all duration-300 ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
@@ -1046,47 +1073,43 @@ const AdminPage: React.FC = () => {
           >
             <ProjectsAdmin />
           </div>
-        )}
-        {selectedTab === 'Updates' && (
+        )} */}
+
+        {/*
+  {location.pathname.includes('officealerts') && (
+    <div
+      className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
+        permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
+      }`}
+    >
+      {/* <EmployeesDetails selectedTab={selectedTab} /> */}
+        {/* <Updates /> */}
+        {/* </div> */}
+        {/* )} */}
+
+        {/* {location.pathname.includes('/admin/Holidays') && (
+          <div
+            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
+              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
+            }`}
+          >
+            {/* <AdminHoliday /> */}
+        {/* <AdminHoliday />
+          </div> */}
+        {/* )} */}
+
+        {/* {location.pathname.includes('/admin/organization') && (
           <div
             className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
             }`}
           >
             {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-            <Updates />
-          </div>
-        )}
-        {selectedTab === 'Holidays' && (
-          <div
-            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-            <AdminHoliday />
-          </div>
-        )}
-        {selectedTab === 'organization' && (
-          <div
-            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-            <AdminOrganization />
-          </div>
-        )}
-        {selectedTab === 'Clients' && (
-          <div
-            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-            <AdminClient />
-          </div>
-        )}
+        {/* <AdminOrganization />
+          </div> */}
+        {/* )} */}
+
+
         {selectedTab === 'Employees' && (
           <div
             className={`flex-1 px-20 py-8 transition-all duration-300 ${
@@ -1444,9 +1467,8 @@ const AdminPage: React.FC = () => {
           <Chatbutton></Chatbutton>
         </Chatlayout>
 
-        {selectedTab === 'SoftwareComplaints' && <AdminSoftwareComplaint />}
 
-        {selectedTab === 'OfficeComplaints' && (
+        {location.pathname.includes('/admin/OfficeComplaints') && (
           <div
             className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
@@ -1515,7 +1537,7 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
         )}
-        {selectedTab === 'leaveRequests' && (
+        {location.pathname.includes('/admin/leaverequest') && (
           <div
             className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2  ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
@@ -1530,16 +1552,13 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
         )}
-
-        {selectedTab === 'DailyLogs' && (
-          <div
-            className={`flex-1 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <AdminDailyLogs />
-          </div>
-        )}
+        <div
+          className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
+            permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
+          }`}
+        >
+          <Outlet />
+        </div>
       </div>
     </>
   );

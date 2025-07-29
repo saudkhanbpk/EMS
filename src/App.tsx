@@ -262,7 +262,7 @@
 
 // export default App;
 
-import React, { useEffect, useState } from 'react';
+import React, { Profiler, useEffect, useState } from 'react';
 import {
   BrowserRouter as Router,
   Routes,
@@ -320,6 +320,16 @@ import LandingPage from './pages/landingpage';
 import UserPage from './pages/UserPage';
 import UserOrganizationDetail from './pages/UserOrganizationDetail';
 import SuperAdminComplaint from './pages/superadmincompalint';
+import ProjectsAdmin from './components/ProjectsAdmin';
+import AdminOrganization from './components/adminorganization';
+import EmployeeAttendanceTable from './pages/ListViewOfEmployees';
+import EmployeesDetails from './pages/EmployeesDetails';
+import AdminClient from './pages/adminclient';
+import AdminSoftwareComplaint from './pages/AdminSoftwareComplaint';
+import AdminHoliday from './pages/adminHoliday';
+import AdminDailyLogs from './components/AdminDailyLogs';
+import Updates from './pages/Updates';
+import Employeeprofile from './pages/Employeeprofile';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -550,7 +560,32 @@ function App() {
                   </AttendanceProvider>
                 </PrivateRoute>
               }
-            />
+            >
+              <Route
+                index
+                element={<Navigate to="employeAttandanceTable" replace />}
+              />
+              <Route path="projects" element={<ProjectsAdmin />} />
+              <Route path="organization" element={<AdminOrganization />} />
+              <Route
+                path="employeAttandanceTable"
+                element={<EmployeeAttendanceTable />}
+              />
+
+              <Route path="employeeDetails" element={<EmployeesDetails />} />
+
+              <Route path="Clients" element={<AdminClient />} />
+              <Route path="OfficeComplaints" />
+              <Route
+                path="softwareComplaints"
+                element={<AdminSoftwareComplaint />}
+              />
+              <Route path="Holidays" element={<AdminHoliday />} />
+              <Route path="leaverequest" />
+              <Route path="dailylogs" element={<AdminDailyLogs />} />
+              <Route path="officealerts" element={<Updates />} />
+              <Route path="profile/:Id" element={<Employeeprofile />} />
+            </Route>  
 
             {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
             <Route
