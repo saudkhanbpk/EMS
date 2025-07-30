@@ -2191,7 +2191,7 @@ const EmployeeAttendanceTable = () => {
         </select>
       </div>
       {/* Buttons and Date Navigation */}
-      <div className="w-full max-w-full flex flex-wrap justify-start items-center mb-6">
+      <div className="w-full max-w-full flex flex-wrap justify-between items-center mb-6">
         {/* Buttons Row */}
         {maintab === 'DetailedView' && <div></div>}
         {maintab === 'TableView' && (
@@ -2494,7 +2494,7 @@ const EmployeeAttendanceTable = () => {
         <>
           <div
             className={`w-full  ${
-              isSideBarOpen ? 'max-w-full self-start' : 'max-w-6xl'
+              isSideBarOpen ? 'max-w-full' : 'max-w-6xl'
             }  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
           >
             <div
@@ -2605,7 +2605,7 @@ const EmployeeAttendanceTable = () => {
             </div>
           ) : (
             // Regular Attendance View
-            <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
+            <div className="w-full overflow-x-auto max-w-7xl  bg-white p-6 rounded-lg shadow-lg">
               {error && <p className="text-red-500 text-center">{error}</p>}
               <div className="overflow-x-auto">
                 <div className="w-full shadow-sm rounded-lg">
@@ -2650,13 +2650,13 @@ const EmployeeAttendanceTable = () => {
                               </span>
                             </td>
                             <td
-                              className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                              className="py-1.5 xs:py-2 sm:py-3 text-[8px] font-bold md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
                               onClick={() => handleCheckinOpenModal(entry)}
                             >
                               {entry.check_in}
                             </td>
                             <td
-                              className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
+                              className="py-1.5 xs:py-2 sm:py-3 md:py-4 text-[8px] font-bold px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100"
                               onClick={() => handleOpenModal(entry)}
                             >
                               <div className="flex items-center">
@@ -2677,13 +2677,13 @@ const EmployeeAttendanceTable = () => {
                               </div>
                             </td>
 
-                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                            <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 text-[8px] font-bold">
                               {entry.break_start || 'N/A'}
                             </td>
 
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 hover:cursor-pointer hover:bg-gray-100">
                               <div className="flex items-center">
-                                <span className="truncate">
+                                <span className="truncate text-[8px] font-bold">
                                   {getuserbreakdate(entry?.attendance_id)}
                                 </span>
                                 {entry.break_in ? (
@@ -2813,7 +2813,7 @@ const EmployeeAttendanceTable = () => {
 
                         <div className="grid grid-cols-2 gap-2">
                           <div className="flex flex-col">
-                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            <span className="text-gray-500 text-[8px]">
                               Check-in
                             </span>
                             <div
@@ -2844,7 +2844,7 @@ const EmployeeAttendanceTable = () => {
                           </div>
 
                           <div className="flex flex-col">
-                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            <span className="text-gray-500 text-[8px]">
                               Break Start
                             </span>
                             <div className="font-medium p-1">
@@ -2854,7 +2854,7 @@ const EmployeeAttendanceTable = () => {
 
                           {/* Added 2nd Check-in for mobile view */}
                           <div className="flex flex-col">
-                            <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                            <span className="text-gray-500 text-[8px]">
                               2nd Check-in
                             </span>
                             <div className="font-medium hover:bg-gray-50 p-1 rounded cursor-pointer flex items-center">
