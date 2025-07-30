@@ -36,6 +36,8 @@ import {
 import { AttendanceProvider } from './AttendanceContext';
 import FilteredDataAdmin from './filteredListAdmin';
 import { id } from 'date-fns/locale/id';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 // --- TaskCell Component ---
 const TaskCell = ({ task }) => {
   const [showAll, setShowAll] = useState(false);
@@ -2141,13 +2143,18 @@ const EmployeeAttendanceTable = () => {
   const handleTableViewClick = () => {
     setgraphicview(false);
   };
+  const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
+  const statusFonts = ` ${isSideBarOpen ? 'text-[14px]' : 'text-xl'}`;
+  const tableHeading = `py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap ${
+    isSideBarOpen ? 'text-[8px]' : 'text-[12px]'
+  }`;
 
   return (
-    <div className="flex flex-col  justify-center items-center min-h-full min-w-full bg-gray-100 ">
+    <div className="flex flex-col  justify-center  items-center min-h-full max-w-6xl bg-gray-10">
       {/* Heading */}
-      <div className=" w-full px-3 max-w-7xl justify-between items-center flex">
+      <div className=" w-full  max-w-full flex justify-start items-center text-start ">
         {maintab === 'TableView' && (
-          <h1 className="sm:text-2xl text-xl lg:ml-[34px] font-bold text-gray-800 mb-4 border-b-2 border-gray-200 pb-2">
+          <h1 className="sm:text-2xl text-xl  font-bold text-gray-800 mb-4 border-gray-200 pb-2">
             Employee Attendance
           </h1>
         )}
@@ -2162,7 +2169,7 @@ const EmployeeAttendanceTable = () => {
           </h1>
         )}
         <select
-          className="p-2 mb-3 border border-gray-300 transition-all ease-in-out rounded-md focus:outline-none focus:ring-2 focus:ring-[#9A00FF] ml-10"
+          className="p-2 mb-3 transition-all ease-in-out rounded-md focus:outline-none focus:ring-2 focus:ring-[#9A00FF] ml-10"
           onChange={(e) => {
             setmaintab(e.target.value);
             if (e.target.value === 'GraphicView') {
@@ -2184,12 +2191,12 @@ const EmployeeAttendanceTable = () => {
         </select>
       </div>
       {/* Buttons and Date Navigation */}
-      <div className="w-full max-w-7xl flex flex-wrap justify-between items-center mb-6">
+      <div className="w-full max-w-full flex flex-wrap justify-start items-center mb-6">
         {/* Buttons Row */}
         {maintab === 'DetailedView' && <div></div>}
         {maintab === 'TableView' && (
           <>
-            <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto sm:ml-5 md:flex justify-center md:space-x-4 space-x-2 ">
+            <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto  md:flex justify-start md:space-x-4 space-x-2 ">
               <button
                 onClick={() => setSelectedTab('Daily')}
                 className={`px-4 py-2 rounded-lg transition-all ${
@@ -2485,8 +2492,16 @@ const EmployeeAttendanceTable = () => {
       {/* Attendance Summary */}
       {!loading && maintab === 'TableView' && selectedTab === 'Daily' && (
         <>
-          <div className="w-full max-w-7xl  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6">
-            <div className="flex sm:flex-nowrap flex-wrap justify-between items-center text-lg font-medium">
+          <div
+            className={`w-full  ${
+              isSideBarOpen ? 'max-w-full self-start' : 'max-w-6xl'
+            }  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
+          >
+            <div
+              className={`flex sm:flex-nowrap flex-wrap ${
+                isSideBarOpen ? 'justify-start space-x-5' : 'justify-between'
+              } items-center text-lg font-medium`}
+            >
               <button
                 onClick={() => handleFilterChange('all')}
                 className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${
@@ -2494,19 +2509,19 @@ const EmployeeAttendanceTable = () => {
                 }`}
               >
                 <span className="md:w-4 md:h-4   bg-gray-600 rounded-full"></span>
-                <h2 className="text-gray-600 md:text-xl text-sm">
+                <h2 className={`${statusFonts} text-gray-600`}>
                   Total:{' '}
                   <span className="font-bold">{present + absent + late}</span>
                 </h2>
               </button>
               <button
                 onClick={() => handleFilterChange('present')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${
+                className={`flex  items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${
                   currentFilter === 'present' ? 'bg-green-200' : ''
                 }`}
               >
                 <span className="md:w-4 md:h-4 bg-green-500 rounded-full"></span>
-                <h2 className="text-green-600 md:text-xl text-sm">
+                <h2 className={`${statusFonts}text-green-600`}>
                   Present: <span className="font-bold">{present}</span>
                 </h2>
               </button>
@@ -2517,7 +2532,7 @@ const EmployeeAttendanceTable = () => {
                 }`}
               >
                 <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
-                <h2 className="text-yellow-600 md:text-xl text-sm">
+                <h2 className={`${statusFonts} text-yellow-600`}>
                   Late: <span className="font-bold">{late}</span>
                 </h2>
               </button>
@@ -2574,10 +2589,10 @@ const EmployeeAttendanceTable = () => {
                   </thead>
                   <tbody>
                     {leaveRequestsData.map((req, idx) => (
-                      <tr key={idx} className="border-b">
-                        <td className="py-2 px-4">{req.full_name}</td>
-                        <td className="py-2 px-4">{req.user_email}</td>
-                        <td className="py-2 px-4">{req.leave_type}</td>
+                      <tr key={idx} className="border-b ">
+                        <td className="py-2  ">{req.full_name}</td>
+                        <td className="py-2 ">{req.user_email}</td>
+                        <td className="py-2 ">{req.leave_type}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -2597,33 +2612,17 @@ const EmployeeAttendanceTable = () => {
                   {/* Desktop Table View */}
                   <div className="hidden sm:block overflow-x-auto">
                     <table className="min-w-[320px] w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
-                      <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
+                      <thead className="bg-gray-50 text-gray-700 uppercase text-[10px]   sm:text-xs md:text-sm leading-normal">
                         <tr>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Name
-                          </th>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Check-in
-                          </th>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Check-out
-                          </th>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Break Start
-                          </th>
+                          <th className={tableHeading}>Name</th>
+                          <th className={tableHeading}>Check-in</th>
+                          <th className={tableHeading}>Check-out</th>
+                          <th className={tableHeading}>Break Start</th>
 
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            2nd Check-in
-                          </th>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Today's Task
-                          </th>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Mode
-                          </th>
-                          <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap">
-                            Status
-                          </th>
+                          <th className={tableHeading}>2nd Check-in</th>
+                          <th className={tableHeading}>Today's Task</th>
+                          <th className={tableHeading}>Mode</th>
+                          <th className={tableHeading}>Status</th>
                         </tr>
                       </thead>
                       <tbody className="text-[10px] xs:text-[11px] sm:text-sm md:text-md font-normal">
@@ -2637,7 +2636,7 @@ const EmployeeAttendanceTable = () => {
                           >
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
                               <span
-                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 ${
+                                className={` py-0.5 xs:py-1 ${
                                   entry.status === 'present'
                                     ? 'text-green-600'
                                     : entry.status === 'late'
@@ -2701,16 +2700,20 @@ const EmployeeAttendanceTable = () => {
                               </div>
                             </td>
 
-                            <td className="relative group">
+                            <td className={`relative group pl-6`}>
                               {entry.today_task ? (
-                                <>
+                                <div
+                                  className={`${
+                                    isSideBarOpen ? 'text-[10px]' : 'text-sm'
+                                  }`}
+                                >
                                   <span className="text-gray-400">
                                     {entry.today_task}
                                   </span>
-                                  <div className="hidden group-hover:block absolute bg-gray-300 text-white text-[9px] xs:text-xs md:text-sm px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                  <div className="hidden group-hover:block absolute bg-gray-300 text-white   px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
                                     {entry.today_task}
                                   </div>
-                                </>
+                                </div>
                               ) : (
                                 <span className="text-gray-400 italic">
                                   No task

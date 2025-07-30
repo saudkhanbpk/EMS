@@ -774,7 +774,7 @@ const EmployeesDetails = () => {
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
       <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-lg font-bold">Daily Log</h2>
+          <h2 className="text-sm font-bold">Daily Log</h2>
           <button
             onClick={() => setShowLogModal(false)}
             className="text-gray-400 hover:text-gray-600"
@@ -812,12 +812,14 @@ const EmployeesDetails = () => {
       }
     };
     return (
-      <div className="flex items-center gap-0.5">
+      <div className="flex items-center justify-center">
         {[1, 2, 3, 4, 5].map((i) => (
           <svg
             key={i}
             className={`${getStarSize(size)} ${
-              i <= rating ? getStarColor(rating) : 'text-gray-300 fill-gray-300'
+              i <= rating
+                ? getStarColor(rating)
+                : 'text-gray-300  fill-gray-300'
             }`}
             viewBox="0 0 20 20"
             fill="currentColor"
@@ -1101,7 +1103,7 @@ const EmployeesDetails = () => {
   );
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="   min-h-screen bg-gray-50 p-4 sm:p-6 ">
       {selectedTAB === 'TaskBoard' ? (
         <TaskBoardAdmin
           devopss={devopss}
@@ -1267,7 +1269,7 @@ const EmployeesDetails = () => {
           )}
 
           {/* Main Content */}
-          <div className="max-w-7xl mx-auto">
+          <div className="max-w-7xl mx-auto  ">
             {/* General Employee View */}
             {employeeview === 'generalview' && (
               <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
@@ -1352,7 +1354,7 @@ const EmployeesDetails = () => {
                                 >
                                   Workload
                                 </th>
-                                <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                <th className=" py-3 text-left text-[12px]   font-medium text-gray-500 uppercase tracking-wider">
                                   Daily Log
                                 </th>
                                 <th
@@ -1497,7 +1499,7 @@ const EmployeesDetails = () => {
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
                                         {entry.projects &&
                                         entry.projects.length > 0 ? (
-                                          <div className="flex flex-wrap gap-1.5">
+                                          <div className="flex flex-wrap gap-1.5 ">
                                             {(showAllProjects[entry.id]
                                               ? entry.projects
                                               : entry.projects.slice(0, 2)
@@ -1544,12 +1546,12 @@ const EmployeesDetails = () => {
                                           </span>
                                         )}
                                       </td>
-                                      <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-gray-700">
-                                        <span className="font-medium">
+                                      <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-sm text-center text-gray-700">
+                                        <span className="font-medium ">
                                           {entry.TotalKPI ?? 0}
                                         </span>
                                       </td>
-                                      <td className="px-4 lg:px-4 py-4 text-sm text-gray-700 max-w-xs">
+                                      <td className="px-4 lg:px-1 py-4 text-[8px] text-gray-700 max-w-xs">
                                         {entry.daily_log ? (
                                           <div>
                                             <div
@@ -1609,7 +1611,7 @@ const EmployeesDetails = () => {
                                             className="p-1.5 rounded-lg bg-[#9A00FF]/10 text-[#9A00FF] hover:bg-[#9A00FF]/20 transition-colors"
                                             title="Assign Task"
                                           >
-                                            <FiPlusSquare className="w-4 h-4" />
+                                            <FiPlusSquare className="w-3 h-3" />
                                           </button>
                                           <button
                                             onClick={(e) => {
@@ -1619,7 +1621,7 @@ const EmployeesDetails = () => {
                                             className="p-1.5 rounded-lg bg-red-50 text-red-500 hover:bg-red-100 transition-colors"
                                             title="Delete"
                                           >
-                                            <FiTrash2 className="w-4 h-4" />
+                                            <FiTrash2 className="w-3 h-3" />
                                           </button>
                                         </div>
                                       </td>
@@ -1758,7 +1760,7 @@ const EmployeesDetails = () => {
                                       </span>
                                     )}
                                   </div>
-                                  <div className="space-y-0.5">
+                                  <div className="space-y-0.5 flex ">
                                     <p className="text-gray-500 font-medium">
                                       Workload
                                     </p>

@@ -47,6 +47,10 @@ import { useUser } from '../contexts/UserContext';
 import AdminClient from './adminclient';
 import AdminSoftwareComplaint from './AdminSoftwareComplaint';
 import AdminOrganization from '../components/adminorganization';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
+import { closeSideBar, openSideBar } from '../slices/SideBar';
+import { useAppDispatch } from '../hooks/redux.CustomHooks';
 
 interface AttendanceRecord {
   id: string;
@@ -686,6 +690,7 @@ const AdminPage: React.FC = () => {
     }
   };
 
+  const dispatch = useAppDispatch();
   return (
     <>
       <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
@@ -693,25 +698,12 @@ const AdminPage: React.FC = () => {
           <PanelRightClose
             className={`${permanentopen ? 'hidden' : 'display-block'} 
         box-border-2  border-gray-300 rounded-full  m-2 fixed top-2 left-[-20px] z-40  size-[50px] p-3 text-[#7e26b8] hover:bg-gray-200 shadow-lg cursor-pointer `}
-            onClick={() => setPermanentopen(true)}
+            onClick={() => {
+              setPermanentopen(true);
+              dispatch(openSideBar());
+            }}
           />
           <div className="min-h-screen bg-gray-100 flex">
-            {/* <motion.div
-              className="fixed top-0 left-0 h-full w-64 bb-white text-white shadow-lg p-4 z-20"
-              initial={{ x: "-100%" }}
-              animate={{ 
-                x: permanentopen ? "0%" : (isOpen ? "0%" : "-100%")
-              }}
-              transition={{ duration: 0.4, ease: "easeInOut" }} // Smooth transition
-              onMouseEnter={() => setIsOpen(!isOpen)}
-              onMouseLeave={() => {
-                setIsOpen(!isOpen);
-                if (!permanentopen) {
-                  handleClose();
-                }
-              }}
-            > */}
-
             <motion.div
               className="absolute top-0 left-0 min-h-full w-64 bb-white text-white shadow-lg p-4 z-20"
               initial={{ x: '-100%' }}
@@ -725,19 +717,6 @@ const AdminPage: React.FC = () => {
                 }
               }}
             >
-              {/* Sidebar Space Filler */}
-              {/* <div className="bg-white w-64 p-4 shadow-lg h-full hidden lg:block"></div> */}
-
-              {/* Menu Button (For Small Screens) */}
-              {/* <button
-                className="lg:hidden fixed top-4 left-4 z-50 p-2 bg-white shadow-md rounded-md"
-              >
-                <Menu size={24} />
-              </button> */}
-
-              {/* Overlay (Only for Small Screens when Sidebar is Open) */}
-
-              {/* Sidebar (Fixed) */}
               <div
                 className={`bg-black w-64 p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
   ${
@@ -752,8 +731,11 @@ const AdminPage: React.FC = () => {
                     onClick={() => setPermanentopen(true)}
                   />
                   <PanelLeftClose
-                    className={`${permanentopen ? 'display-block' : 'hidden'}`}
-                    onClick={() => setPermanentopen(false)}
+                    className={`${permanentopen ? 'display-block ' : 'hidden'}`}
+                    onClick={() => {
+                      setPermanentopen(false);
+                      dispatch(closeSideBar());
+                    }}
                   />
                 </div>
 
@@ -765,7 +747,7 @@ const AdminPage: React.FC = () => {
                     msOverflowStyle: 'none' /* Internet Explorer 10+ */,
                   }}
                 >
-                  <div className="space-y-4">
+                  <div className="flex flex-col space-y-4">
                     <Link to="organization">
                       <button
                         onClick={() => {
@@ -839,37 +821,6 @@ const AdminPage: React.FC = () => {
                       </button>
                     </Link>
 
-                    {/* Employee List (Mobile) */}
-                    {/* {isSmallScreen && showEmployeeList && (
-        <div className="mt-2 bg-white rounded-lg shadow-md max-h-[300px] overflow-y-auto custom-scrollbar">
-          <ul className="space-y-2 p-2">
-      {employees.map((employee) => (
-        <li
-          key={employee.id}
-          onClick={() => {
-            setEmployeeListOpen(false);
-            handleEmployeeSelection(employee.id)
-            // handleEmployeeClick(employee.id);
-            handleClose();
-            childRef.current?.handleEmployeeClick(employee.id);
-          }}
-          className={`p-3 text-sm rounded-lg cursor-pointer transition-colors ${
-            selectedEmployee?.id === employee.id
-              ? "bg-[#9A00FF] text-white hover:bg-[#9A00FF]"
-              : "hover:bg-[#9A00FF]"
-          }`}
-        >
-          {employee.full_name}
-        </li>
-      ))}
-      <EmployeeAttendanceTable
-        ref={childRef}
-        selectedEmployeeId={selectedEmployeeId}
-        onEmployeeSelect={handleEmployeeSelection}/>
-    </ul>
-        </div>
-      )} */}
-
                     <Link to="projects">
                       <button
                         onClick={() => {
@@ -895,7 +846,8 @@ const AdminPage: React.FC = () => {
                           handleOfficeComplaintsClick();
                         }}
                         className={`w-full text-left p-2 rounded ${
-                          selectedTab === 'OfficeComplaints'
+                          selectedTab === 'OfficeComplaints' ||
+                          location.pathname.includes('OfficeComplaints')
                             ? 'bg-[#9A00FF] text-White'
                             : 'text-white hover:bg-[#9A00FF]'
                         }`}
@@ -1108,7 +1060,6 @@ const AdminPage: React.FC = () => {
         {/* <AdminOrganization />
           </div> */}
         {/* )} */}
-
 
         {selectedTab === 'Employees' && (
           <div
@@ -1466,7 +1417,6 @@ const AdminPage: React.FC = () => {
         <Chatlayout>
           <Chatbutton></Chatbutton>
         </Chatlayout>
-
 
         {location.pathname.includes('/admin/OfficeComplaints') && (
           <div
