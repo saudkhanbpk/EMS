@@ -1,10 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
-
+import projectName from './slices/AdminProjectName';
 import sideBar from './slices/SideBar';
 
 const globalStore = configureStore({
   reducer: {
     sideBar: sideBar,
+    projectName: projectName,
   },
 });
 

@@ -1,6 +1,13 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { supabase } from '../lib/supabase';
-import { eachDayOfInterval, isWeekend, format, addMonths, startOfMonth, endOfMonth } from 'date-fns';
+import {
+  eachDayOfInterval,
+  isWeekend,
+  format,
+  addMonths,
+  startOfMonth,
+  endOfMonth,
+} from 'date-fns';
 import { ChevronLeft, ChevronRight } from 'lucide-react'; // Assuming you're using Lucide icons
 import { AttendanceContext } from './AttendanceContext';
 import { DownloadIcon } from 'lucide-react';
@@ -37,39 +44,39 @@ interface EmployeeMonthlyAttendanceTableProps {
   selectedDateM: Date;
 }
 
-const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTableProps> = ({ selectedDateM }) => {
+const EmployeeMonthlyAttendanceTable: React.FC<
+  EmployeeMonthlyAttendanceTableProps
+> = ({ selectedDateM }) => {
   const [attendanceData, setAttendanceData] = useState<EmployeeStats[]>([]);
   const [filteredData, setFilteredData] = useState<EmployeeStats[]>([]); // Filtered data for display
   const [loading, setLoading] = useState(true);
   const user = useAuthStore((state) => state.user);
   const [error, setError] = useState<string | null>(null);
   const [currentFilter, setCurrentFilter] = useState('all'); // Filter state: "all", "bad", "better", "best"
-  const [selectedUser, setSelectedUser] = useState<{ id: string; name: string } | null>(null);
+  const [selectedUser, setSelectedUser] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const { setAttendanceDataMonthly } = useContext(AttendanceContext);
-
-  // Fetch data for the selected month
-  // const fetchAllEmployeesStats = async (date) => {
-  //   setLoading(true);
-  //   try {
-  //     // Fetch all users
-  //     const { data: users, error: usersError } = await supabase
-  //       .from('users')
-  //       .select('*');
 
   // Fetch data for the selected month
   const fetchAllEmployeesStats = async (date: Date) => {
     setLoading(true);
     try {
       // Fetch all users
-      const { data: userprofile, error: userprofileerror } = await supabase.from("users").select("id, full_name,organization_id").eq("id", user?.id).single();
+      const { data: userprofile, error: userprofileerror } = await supabase
+        .from('users')
+        .select('id, full_name,organization_id')
+        .eq('id', user?.id)
+        .single();
       if (userprofileerror) throw userprofileerror;
 
       // Fetch all users
       const { data: users, error: usersError } = await supabase
-        .from("users")
-        .select("id, full_name")
-        .not("role", "in", "(client,admin,superadmin)")
-        .eq("organization_id", userprofile.organization_id);
+        .from('users')
+        .select('id, full_name')
+        .not('role', 'in', '(client,admin,superadmin)')
+        .eq('organization_id', userprofile.organization_id);
 
       const monthStart = startOfMonth(date);
       const monthEnd = endOfMonth(date);
@@ -114,145 +121,182 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
       }
 
       // Calculate expected working days
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
-      const workingDaysInMonth = allDaysInMonth.filter(date => !isWeekend(date)).length;
+      const allDaysInMonth = eachDayOfInterval({
+        start: monthStart,
+        end: monthEnd,
+      });
+      const workingDaysInMonth = allDaysInMonth.filter(
+        (date) => !isWeekend(date)
+      ).length;
 
-      const stats: EmployeeStats[] = await Promise.all(users.map(async (user) => {
-        const { id, full_name } = user;
+      const stats: EmployeeStats[] = await Promise.all(
+        users.map(async (user) => {
+          const { id, full_name } = user;
 
-        // Filter attendance records for the current user
-        const userAttendance = monthlyAttendance.filter(record => record.user_id === id);
+          // Filter attendance records for the current user
+          const userAttendance = monthlyAttendance.filter(
+            (record) => record.user_id === id
+          );
 
-        // Calculate unique attendance days
-        const attendanceByDate = userAttendance.reduce((acc, curr) => {
-          const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
-          if (!acc[date] || new Date(curr.check_in) < new Date(acc[date].check_in)) {
-            acc[date] = curr;
-          }
-          return acc;
-        }, {} as Record<string, AttendanceRecord>);
+          // Calculate unique attendance days
+          const attendanceByDate = userAttendance.reduce((acc, curr) => {
+            const date = format(new Date(curr.check_in), 'yyyy-MM-dd');
+            if (
+              !acc[date] ||
+              new Date(curr.check_in) < new Date(acc[date].check_in)
+            ) {
+              acc[date] = curr;
+            }
+            return acc;
+          }, {} as Record<string, AttendanceRecord>);
 
-        const uniqueAttendance: AttendanceRecord[] = Object.values(attendanceByDate);
+          const uniqueAttendance: AttendanceRecord[] =
+            Object.values(attendanceByDate);
 
-        // Calculate total working hours and break hours separately
-        let totalRawWorkHours = 0;
-        let totalBreakHours = 0;
-        let totalNetWorkHours = 0;
+          // Calculate total working hours and break hours separately
+          let totalRawWorkHours = 0;
+          let totalBreakHours = 0;
+          let totalNetWorkHours = 0;
 
-        // First, calculate total raw hours without breaks
-        uniqueAttendance.forEach(attendance => {
-          const checkIn = new Date(attendance.check_in);
+          // First, calculate total raw hours without breaks
+          uniqueAttendance.forEach((attendance) => {
+            const checkIn = new Date(attendance.check_in);
 
-          // For no checkout, use current time but cap at 8 hours after check-in
-          let checkOut;
-          if (attendance.check_out) {
-            checkOut = new Date(attendance.check_out);
-          } else {
-            const currentTime = new Date();
-            const maxEndTime = new Date(checkIn);
-            maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
+            // For no checkout, use current time but cap at 8 hours after check-in
+            let checkOut;
+            if (attendance.check_out) {
+              checkOut = new Date(attendance.check_out);
+            } else {
+              const currentTime = new Date();
+              const maxEndTime = new Date(checkIn);
+              maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
 
-            // Use the earlier of current time or max end time (8 hours after check-in)
-            checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
-          }
+              // Use the earlier of current time or max end time (8 hours after check-in)
+              checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
+            }
 
-          let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-          // Handle negative values by using Math.max(0, hoursWorked)
-          hoursWorked = Math.max(0, hoursWorked);
-          // Cap at 12 hours per day
-          totalRawWorkHours += Math.min(hoursWorked, 12);
-        });
+            let hoursWorked =
+              (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+            // Handle negative values by using Math.max(0, hoursWorked)
+            hoursWorked = Math.max(0, hoursWorked);
+            // Cap at 12 hours per day
+            totalRawWorkHours += Math.min(hoursWorked, 12);
+          });
 
-        // Group breaks by attendance_id for more efficient processing
-        const breaksByAttendance = {};
-        const userBreaks = breaks.filter(breakEntry => uniqueAttendance.some(a => a.id === breakEntry.attendance_id));
-        userBreaks.forEach(b => {
-          if (!breaksByAttendance[b.attendance_id]) breaksByAttendance[b.attendance_id] = [];
-          breaksByAttendance[b.attendance_id].push(b);
-        });
+          // Group breaks by attendance_id for more efficient processing
+          const breaksByAttendance = {};
+          const userBreaks = breaks.filter((breakEntry) =>
+            uniqueAttendance.some((a) => a.id === breakEntry.attendance_id)
+          );
+          userBreaks.forEach((b) => {
+            if (!breaksByAttendance[b.attendance_id])
+              breaksByAttendance[b.attendance_id] = [];
+            breaksByAttendance[b.attendance_id].push(b);
+          });
 
-        // Now calculate break hours and net working hours for each attendance record
-        uniqueAttendance.forEach(attendance => {
-          const checkIn = new Date(attendance.check_in);
+          // Now calculate break hours and net working hours for each attendance record
+          uniqueAttendance.forEach((attendance) => {
+            const checkIn = new Date(attendance.check_in);
 
-          // For no checkout, use current time but cap at 8 hours after check-in
-          let checkOut;
-          if (attendance.check_out) {
-            checkOut = new Date(attendance.check_out);
-          } else {
-            const currentTime = new Date();
-            const maxEndTime = new Date(checkIn);
-            maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
+            // For no checkout, use current time but cap at 8 hours after check-in
+            let checkOut;
+            if (attendance.check_out) {
+              checkOut = new Date(attendance.check_out);
+            } else {
+              const currentTime = new Date();
+              const maxEndTime = new Date(checkIn);
+              maxEndTime.setHours(maxEndTime.getHours() + 8); // 8 hours after check-in
 
-            // Use the earlier of current time or max end time (8 hours after check-in)
-            checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
-          }
+              // Use the earlier of current time or max end time (8 hours after check-in)
+              checkOut = currentTime < maxEndTime ? currentTime : maxEndTime;
+            }
 
-          let hoursWorked = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-          // Handle negative values by using Math.max(0, hoursWorked)
-          hoursWorked = Math.max(0, hoursWorked);
+            let hoursWorked =
+              (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+            // Handle negative values by using Math.max(0, hoursWorked)
+            hoursWorked = Math.max(0, hoursWorked);
 
-          // Calculate breaks for this attendance record
-          const attendanceBreaks = breaksByAttendance[attendance.id] || [];
-          let breakHoursForThisLog = 0;
+            // Calculate breaks for this attendance record
+            const attendanceBreaks = breaksByAttendance[attendance.id] || [];
+            let breakHoursForThisLog = 0;
 
-          attendanceBreaks.forEach(b => {
-            if (b.start_time) {
-              const breakStart = new Date(b.start_time);
-              // If end_time is missing, calculate only 1 hour of break
-              const breakEnd = b.end_time
-                ? new Date(b.end_time)
-                : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
+            attendanceBreaks.forEach((b) => {
+              if (b.start_time) {
+                const breakStart = new Date(b.start_time);
+                // If end_time is missing, calculate only 1 hour of break
+                const breakEnd = b.end_time
+                  ? new Date(b.end_time)
+                  : new Date(breakStart.getTime() + 1 * 60 * 60 * 1000); // 1 hour default
 
-              const thisBreakHours = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
-              breakHoursForThisLog += thisBreakHours;
-              totalBreakHours += thisBreakHours;
+                const thisBreakHours =
+                  (breakEnd.getTime() - breakStart.getTime()) /
+                  (1000 * 60 * 60);
+                breakHoursForThisLog += thisBreakHours;
+                totalBreakHours += thisBreakHours;
+              }
+            });
+
+            // Calculate net hours for this attendance record
+            const netHoursForThisLog = Math.max(
+              0,
+              Math.min(hoursWorked - breakHoursForThisLog, 12)
+            );
+            totalNetWorkHours += netHoursForThisLog;
+          });
+
+          // Use the net hours as the total work hours
+          let totalHours = totalNetWorkHours;
+
+          // Calculate absent days
+          const userAbsentees = absentees.filter(
+            (absentee) => absentee.user_id === id
+          );
+          const leavesCount = userAbsentees.filter(
+            (absentee) => absentee.absentee_type === 'leave'
+          ).length;
+          const absenteesCount = userAbsentees.filter(
+            (absentee) => absentee.absentee_type === 'Absent'
+          ).length;
+          const remoteDays = uniqueAttendance.filter(
+            (a) => a.work_mode === 'remote'
+          ).length;
+          const presentDays = uniqueAttendance.filter(
+            (a) => a.status === 'present' || 'late'
+          ).length;
+          const absentDays = absenteesCount;
+
+          // Calculate overtime hours for the user
+          const userOvertimeRecords = overtimeRecords
+            ? overtimeRecords.filter((record) => record.user_id === id)
+            : [];
+          let totalOvertimeHours = 0;
+
+          userOvertimeRecords.forEach((record) => {
+            if (record.check_in && record.check_out) {
+              const checkIn = new Date(record.check_in);
+              const checkOut = new Date(record.check_out);
+              const overtimeHours =
+                (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
+              totalOvertimeHours += Math.max(0, overtimeHours);
             }
           });
 
-          // Calculate net hours for this attendance record
-          const netHoursForThisLog = Math.max(0, Math.min(hoursWorked - breakHoursForThisLog, 12));
-          totalNetWorkHours += netHoursForThisLog;
-        });
+          // Calculate working hours percentage (using 7 hours per working day to match Employeeprofile)
+          const workingHoursPercentage =
+            (totalHours / (workingDaysInMonth * 7)) * 100; // Using 7 hours per day
 
-        // Use the net hours as the total work hours
-        let totalHours = totalNetWorkHours;
-
-        // Calculate absent days
-        const userAbsentees = absentees.filter(absentee => absentee.user_id === id);
-        const leavesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'leave').length;
-        const absenteesCount = userAbsentees.filter(absentee => absentee.absentee_type === 'Absent').length;
-        const remoteDays = uniqueAttendance.filter(a => a.work_mode === 'remote').length;
-        const presentDays = uniqueAttendance.filter(a => a.status === 'present' || 'late').length;
-        const absentDays = absenteesCount;
-
-        // Calculate overtime hours for the user
-        const userOvertimeRecords = overtimeRecords ? overtimeRecords.filter(record => record.user_id === id) : [];
-        let totalOvertimeHours = 0;
-
-        userOvertimeRecords.forEach(record => {
-          if (record.check_in && record.check_out) {
-            const checkIn = new Date(record.check_in);
-            const checkOut = new Date(record.check_out);
-            const overtimeHours = (checkOut.getTime() - checkIn.getTime()) / (1000 * 60 * 60);
-            totalOvertimeHours += Math.max(0, overtimeHours);
-          }
-        });
-
-        // Calculate working hours percentage (using 7 hours per working day to match Employeeprofile)
-        const workingHoursPercentage = (totalHours / (workingDaysInMonth * 7)) * 100; // Using 7 hours per day
-
-        return {
-          user: { id, full_name },
-          presentDays,
-          absentDays,
-          remoteDays,
-          totalHoursWorked: totalHours,
-          workingHoursPercentage,
-          leavedays: leavesCount,
-          overtimeHours: totalOvertimeHours,
-        };
-      }));
+          return {
+            user: { id, full_name },
+            presentDays,
+            absentDays,
+            remoteDays,
+            totalHoursWorked: totalHours,
+            workingHoursPercentage,
+            leavedays: leavesCount,
+            overtimeHours: totalOvertimeHours,
+          };
+        })
+      );
 
       setAttendanceData(stats);
       setFilteredData(stats); // Initialize filtered data with all data
@@ -278,13 +322,23 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
         setFilteredData(attendanceData);
         break;
       case 'bad':
-        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage < 50));
+        setFilteredData(
+          attendanceData.filter((entry) => entry.workingHoursPercentage < 50)
+        );
         break;
       case 'better':
-        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80));
+        setFilteredData(
+          attendanceData.filter(
+            (entry) =>
+              entry.workingHoursPercentage >= 50 &&
+              entry.workingHoursPercentage < 80
+          )
+        );
         break;
       case 'best':
-        setFilteredData(attendanceData.filter((entry) => entry.workingHoursPercentage >= 80));
+        setFilteredData(
+          attendanceData.filter((entry) => entry.workingHoursPercentage >= 80)
+        );
         break;
       default:
         setFilteredData(attendanceData);
@@ -325,11 +379,13 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
         .eq('user_id', userId)
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString());
-
       if (absenteesError) throw absenteesError;
 
       // Create an array of all days in the month
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
+      const allDaysInMonth = eachDayOfInterval({
+        start: monthStart,
+        end: monthEnd,
+      });
 
       // Function to format date as [25 Jul 2025 9:00 AM]
       const formatDate = (date: Date) => {
@@ -367,15 +423,29 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
           status = 'Present'; // Set status to Present
           workmode = attendance.work_mode; // Set work mode from attendance
           checkIn = formatDate(new Date(attendance.check_in)); // Format check-in time
-          checkOut = formatDate(new Date(attendance.check_out || new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000))); // Default 4 hours if no check-out
+          checkOut = formatDate(
+            new Date(
+              attendance.check_out ||
+                new Date(new Date(checkIn).getTime() + 4 * 60 * 60 * 1000)
+            )
+          ); // Default 4 hours if no check-out
         }
         // If no attendance record exists, check for absentee record
         else if (absentee) {
-          if (absentee.absentee_Timing === 'Full Day' && absentee.absentee_type === 'Absent') {
+          if (
+            absentee.absentee_Timing === 'Full Day' &&
+            absentee.absentee_type === 'Absent'
+          ) {
             status = 'Absent'; // Override status to Absent
-          } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'Absent') {
+          } else if (
+            absentee.absentee_Timing === 'Half Day' &&
+            absentee.absentee_type === 'Absent'
+          ) {
             status = 'Half Day Absent'; // Override status to Half Day Absent
-          } else if (absentee.absentee_Timing === 'Half Day' && absentee.absentee_type === 'leave') {
+          } else if (
+            absentee.absentee_Timing === 'Half Day' &&
+            absentee.absentee_type === 'leave'
+          ) {
             status = 'Half Day Leave'; // Override status to Half Day Leave
           } else if (absentee.absentee_type === 'Sick Leave') {
             status = 'Sick Leave'; // Override status to Sick Leave
@@ -404,7 +474,6 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
 
       // Generate and download PDF
       downloadPDF(filteredDailyAttendance, fullName);
-
     } catch (error) {
       console.error('Error fetching monthly data:', error);
       alert('Error fetching monthly data');
@@ -412,15 +481,21 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
   };
 
   // Download PDF function
-  const downloadPDF = async (filteredDailyAttendance: any[], fullName: string) => {
+  const downloadPDF = async (
+    filteredDailyAttendance: any[],
+    fullName: string
+  ) => {
     try {
-      const response = await fetch('https://ems-server-0bvq.onrender.com/generate-pdfMonthlyOfEmployee', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({ data: filteredDailyAttendance }),
-      });
+      const response = await fetch(
+        'https://ems-server-0bvq.onrender.com/generate-pdfMonthlyOfEmployee',
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ data: filteredDailyAttendance }),
+        }
+      );
 
       if (!response.ok) {
         throw new Error('Failed to generate PDF');
@@ -428,8 +503,8 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
 
       const blob = await response.blob();
 
-      if (blob.type !== "application/pdf") {
-        throw new Error("Received incorrect file format");
+      if (blob.type !== 'application/pdf') {
+        throw new Error('Received incorrect file format');
       }
 
       const url = window.URL.createObjectURL(blob);
@@ -452,20 +527,18 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
     }
   };
 
-
-
-
-
-
-
-
-
-
   // Calculate counts for each category
   const totalEmployees = attendanceData.length;
-  const badCount = attendanceData.filter((entry) => entry.workingHoursPercentage < 50).length;
-  const betterCount = attendanceData.filter((entry) => entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80).length;
-  const bestCount = attendanceData.filter((entry) => entry.workingHoursPercentage >= 80).length;
+  const badCount = attendanceData.filter(
+    (entry) => entry.workingHoursPercentage < 50
+  ).length;
+  const betterCount = attendanceData.filter(
+    (entry) =>
+      entry.workingHoursPercentage >= 50 && entry.workingHoursPercentage < 80
+  ).length;
+  const bestCount = attendanceData.filter(
+    (entry) => entry.workingHoursPercentage >= 80
+  ).length;
 
   return (
     <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100">
@@ -473,7 +546,10 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
       {loading && (
         <div className="w-full max-w-5xl space-y-6">
           {[...Array(5)].map((_, index) => (
-            <div key={index} className="w-full h-16 bg-gray-200 rounded-lg animate-pulse" />
+            <div
+              key={index}
+              className="w-full h-16 bg-gray-200 rounded-lg animate-pulse"
+            />
           ))}
         </div>
       )}
@@ -484,8 +560,9 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
           <div className="flex justify-between items-center text-lg font-medium">
             <button
               onClick={() => handleFilterChange('all')}
-              className={`flex items-center space-x-2 ${currentFilter === 'all' ? 'font-bold' : ''
-                }`}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'all' ? 'font-bold' : ''
+              }`}
             >
               <span className="sm:block hidden w-4 h-4 bg-gray-600 rounded-full"></span>
               <h2 className="text-gray-600 sm:text-xl text-sm ">
@@ -494,8 +571,9 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
             </button>
             <button
               onClick={() => handleFilterChange('bad')}
-              className={`flex items-center space-x-2 ${currentFilter === 'bad' ? 'font-bold' : ''
-                }`}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'bad' ? 'font-bold' : ''
+              }`}
             >
               <span className="sm:block hidden w-4 h-4 bg-red-500 rounded-full"></span>
               <h2 className="text-red-600 sm:text-xl text-sm">
@@ -504,8 +582,9 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
             </button>
             <button
               onClick={() => handleFilterChange('better')}
-              className={`flex items-center space-x-2 ${currentFilter === 'better' ? 'font-bold' : ''
-                }`}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'better' ? 'font-bold' : ''
+              }`}
             >
               <span className="sm:block hidden w-4 h-4 bg-yellow-500 rounded-full"></span>
               <h2 className="text-yellow-600 sm:text-xl text-sm">
@@ -514,8 +593,9 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
             </button>
             <button
               onClick={() => handleFilterChange('best')}
-              className={`flex items-center space-x-2 ${currentFilter === 'best' ? 'font-bold' : ''
-                }`}
+              className={`flex items-center space-x-2 ${
+                currentFilter === 'best' ? 'font-bold' : ''
+              }`}
             >
               <span className="sm:block hidden w-4 h-4 bg-green-500 rounded-full"></span>
               <h2 className="text-green-600 sm:text-xl text-sm">
@@ -536,14 +616,30 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
               <table className="min-w-full bg-white text-[11px] xs:text-[12px] sm:text-sm">
                 <thead className="bg-gray-50 text-gray-700 uppercase text-[10px] xs:text-[11px] sm:text-xs md:text-sm leading-normal">
                   <tr>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Employee Name</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Present Days</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Absent Days</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Leave Days</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Remote Work</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Total Hours Worked</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Overtime Hours</th>
-                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Working Hours %</th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Employee Name
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Present Days
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Absent Days
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Leave Days
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Remote Work
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Total Hours Worked
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Overtime Hours
+                    </th>
+                    <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">
+                      Working Hours %
+                    </th>
                     {/* <th className="py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left">Download</th> */}
                   </tr>
                 </thead>
@@ -552,34 +648,50 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                     <tr
                       key={index}
                       className="border-b border-gray-200 hover:bg-gray-50 transition-all cursor-pointer"
-                      onClick={() => handleRowClick(entry.user.id, entry.user.full_name)}
+                      onClick={() =>
+                        handleRowClick(entry.user.id, entry.user.full_name)
+                      }
                     >
                       <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                         <span
-                          className={`${entry.workingHoursPercentage >= 80
-                            ? 'text-green-500'
-                            : entry.workingHoursPercentage >= 50
+                          className={`${
+                            entry.workingHoursPercentage >= 80
+                              ? 'text-green-500'
+                              : entry.workingHoursPercentage >= 50
                               ? 'text-yellow-500'
                               : 'text-red-500'
-                            }`}
+                          }`}
                         >
                           {entry.user.full_name}
                         </span>
                       </td>
-                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.presentDays}</td>
-                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.absentDays}</td>
-                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.leavedays}</td>
-                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.remoteDays}</td>
-                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{entry.totalHoursWorked.toFixed(2)} hrs</td>
-                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">{(entry.overtimeHours || 0).toFixed(2)} hrs</td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                        {entry.presentDays}
+                      </td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                        {entry.absentDays}
+                      </td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                        {entry.leavedays}
+                      </td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                        {entry.remoteDays}
+                      </td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                        {entry.totalHoursWorked.toFixed(2)} hrs
+                      </td>
+                      <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
+                        {(entry.overtimeHours || 0).toFixed(2)} hrs
+                      </td>
                       <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                         <span
-                          className={`px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.workingHoursPercentage >= 80
-                            ? 'bg-green-500 text-white'
-                            : entry.workingHoursPercentage >= 50
+                          className={`px-1.5 xs:px-2 sm:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${
+                            entry.workingHoursPercentage >= 80
+                              ? 'bg-green-500 text-white'
+                              : entry.workingHoursPercentage >= 50
                               ? 'bg-yellow-500 text-white'
                               : 'bg-red-500 text-white'
-                            }`}
+                          }`}
                         >
                           {entry.workingHoursPercentage.toFixed(2)}%
                         </span>
@@ -596,7 +708,10 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                   ))}
                   {filteredData.length === 0 && (
                     <tr>
-                      <td colSpan={8} className="text-center py-4 text-gray-500">
+                      <td
+                        colSpan={8}
+                        className="text-center py-4 text-gray-500"
+                      >
                         No attendance records found for this month.
                       </td>
                     </tr>
@@ -612,26 +727,30 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
                   <div
                     key={index}
                     className="bg-white rounded-lg shadow-sm mb-3 p-3 text-[11px] xs:text-[12px] cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleRowClick(entry.user.id, entry.user.full_name)}
+                    onClick={() =>
+                      handleRowClick(entry.user.id, entry.user.full_name)
+                    }
                   >
                     <div className="flex justify-between items-center mb-2 border-b pb-2">
                       <span
-                        className={`font-medium text-[12px] xs:text-[13px] ${entry.workingHoursPercentage >= 80
-                          ? 'text-green-500'
-                          : entry.workingHoursPercentage >= 50
+                        className={`font-medium text-[12px] xs:text-[13px] ${
+                          entry.workingHoursPercentage >= 80
+                            ? 'text-green-500'
+                            : entry.workingHoursPercentage >= 50
                             ? 'text-yellow-500'
                             : 'text-red-500'
-                          }`}
+                        }`}
                       >
                         {entry.user.full_name}
                       </span>
                       <span
-                        className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.workingHoursPercentage >= 80
-                          ? 'bg-green-500 text-white'
-                          : entry.workingHoursPercentage >= 50
+                        className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
+                          entry.workingHoursPercentage >= 80
+                            ? 'bg-green-500 text-white'
+                            : entry.workingHoursPercentage >= 50
                             ? 'bg-yellow-500 text-white'
                             : 'bg-red-500 text-white'
-                          }`}
+                        }`}
                       >
                         {entry.workingHoursPercentage.toFixed(2)}%
                       </span>
@@ -639,38 +758,56 @@ const EmployeeMonthlyAttendanceTable: React.FC<EmployeeMonthlyAttendanceTablePro
 
                     <div className="grid grid-cols-2 gap-2 mb-2">
                       <div className="flex flex-col">
-                        <span className="text-gray-500 text-[10px] xs:text-[11px]">Present Days</span>
+                        <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                          Present Days
+                        </span>
                         <div className="font-medium">{entry.presentDays}</div>
                       </div>
 
                       <div className="flex flex-col">
-                        <span className="text-gray-500 text-[10px] xs:text-[11px]">Absent Days</span>
+                        <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                          Absent Days
+                        </span>
                         <div className="font-medium">{entry.absentDays}</div>
                       </div>
 
                       <div className="flex flex-col">
-                        <span className="text-gray-500 text-[10px] xs:text-[11px]">Remote Work</span>
+                        <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                          Remote Work
+                        </span>
                         <div className="font-medium">{entry.remoteDays}</div>
                       </div>
 
                       <div className="flex flex-col">
-                        <span className="text-gray-500 text-[10px] xs:text-[11px]">Total Hours Worked</span>
-                        <div className="font-medium">{entry.totalHoursWorked.toFixed(2)} hrs</div>
+                        <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                          Total Hours Worked
+                        </span>
+                        <div className="font-medium">
+                          {entry.totalHoursWorked.toFixed(2)} hrs
+                        </div>
                       </div>
 
                       <div className="flex flex-col">
-                        <span className="text-gray-500 text-[10px] xs:text-[11px]">Overtime Hours</span>
-                        <div className="font-medium">{(entry.overtimeHours || 0).toFixed(2)} hrs</div>
+                        <span className="text-gray-500 text-[10px] xs:text-[11px]">
+                          Overtime Hours
+                        </span>
+                        <div className="font-medium">
+                          {(entry.overtimeHours || 0).toFixed(2)} hrs
+                        </div>
                       </div>
                     </div>
 
                     <div className="flex justify-end mt-2 pt-2 border-t">
                       <button
                         className="flex items-center gap-1 px-2 py-1 bg-gray-100 hover:bg-gray-200 rounded-md text-gray-600 transition-all"
-                        onClick={() => handleDownload(entry.user.id, entry.user.full_name)}
+                        onClick={() =>
+                          handleDownload(entry.user.id, entry.user.full_name)
+                        }
                       >
                         <DownloadIcon className="w-3 h-3 xs:w-4 xs:h-4" />
-                        <span className="text-[10px] xs:text-[11px]">Download Report</span>
+                        <span className="text-[10px] xs:text-[11px]">
+                          Download Report
+                        </span>
                       </button>
                     </div>
                   </div>

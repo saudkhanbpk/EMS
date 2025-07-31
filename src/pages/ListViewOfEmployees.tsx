@@ -38,6 +38,7 @@ import FilteredDataAdmin from './filteredListAdmin';
 import { id } from 'date-fns/locale/id';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
+import toast from 'react-hot-toast';
 // --- TaskCell Component ---
 const TaskCell = ({ task }) => {
   const [showAll, setShowAll] = useState(false);
@@ -1572,7 +1573,7 @@ const EmployeeAttendanceTable = () => {
         </div>
 
         {/* Table View */}
-        <div className="w-full bg-white p-4 rounded-lg shadow-md overflow-x-auto">
+        <div className="w-full  bg-white p-4 rounded-lg shadow-md overflow-x-auto">
           <h3 className="text-lg font-semibold mb-3">Attendance Records</h3>
           <table className="w-full border-collapse border border-gray-300">
             <thead>
@@ -1662,7 +1663,7 @@ const EmployeeAttendanceTable = () => {
       }
 
       if (!error) {
-        alert('Work Mode updated successfully.');
+        toast.success('Work Mode updated successfully.');
       } else {
         console.error('Error updating Work Mode:', error);
       }
@@ -2150,7 +2151,7 @@ const EmployeeAttendanceTable = () => {
   }`;
 
   return (
-    <div className="flex flex-col  justify-center  items-center min-h-full max-w-6xl bg-gray-10">
+    <div className="flex flex-col  justify-center   items-center min-h-full  bg-gray-10 w-full ">
       {/* Heading */}
       <div className=" w-full  max-w-full flex justify-start items-center text-start ">
         {maintab === 'TableView' && (
@@ -2192,7 +2193,7 @@ const EmployeeAttendanceTable = () => {
       </div>
       {/* Buttons and Date Navigation */}
       <div className="w-full max-w-full flex flex-wrap justify-between items-center mb-6">
-        {/* Buttons Row */}
+        {/* Buttons Row */} 
         {maintab === 'DetailedView' && <div></div>}
         {maintab === 'TableView' && (
           <>
@@ -2493,9 +2494,7 @@ const EmployeeAttendanceTable = () => {
       {!loading && maintab === 'TableView' && selectedTab === 'Daily' && (
         <>
           <div
-            className={`w-full  ${
-              isSideBarOpen ? 'max-w-full' : 'max-w-6xl'
-            }  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
+            className={`w-full  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
           >
             <div
               className={`flex sm:flex-nowrap flex-wrap ${
@@ -2605,7 +2604,7 @@ const EmployeeAttendanceTable = () => {
             </div>
           ) : (
             // Regular Attendance View
-            <div className="w-full overflow-x-auto max-w-7xl  bg-white p-6 rounded-lg shadow-lg">
+            <div className="w-full border  overflow-x-auto max-w-7xl  bg-white  rounded-lg shadow-lg">
               {error && <p className="text-red-500 text-center">{error}</p>}
               <div className="overflow-x-auto">
                 <div className="w-full shadow-sm rounded-lg">

@@ -334,6 +334,7 @@ import AdminDailyLogs from './components/AdminDailyLogs';
 import Updates from './pages/Updates';
 import Employeeprofile from './pages/Employeeprofile';
 import globalStore from './store';
+import TaskBoardAdmin from './components/TaskBoardAdmin';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -575,7 +576,9 @@ function App() {
                   index
                   element={<Navigate to="employeAttandanceTable" replace />}
                 />
-                <Route path="projects" element={<ProjectsAdmin />} />
+                <Route path="projects" element={<ProjectsAdmin />}>
+                  <Route path=":id" />
+                </Route>
                 <Route path="organization" element={<AdminOrganization />} />
                 <Route
                   path="employeAttandanceTable"

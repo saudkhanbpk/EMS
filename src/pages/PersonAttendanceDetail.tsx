@@ -27,9 +27,11 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
   selectedMonth,
   onClose,
 }) => {
-  const [attendanceDetails, setAttendanceDetails] = useState<AttendanceDetailRecord[]>([]);
+  const [attendanceDetails, setAttendanceDetails] = useState<
+    AttendanceDetailRecord[]
+  >([]);
   const [loading, setLoading] = useState(true);
-  const { userProfile } = useUser()
+  const { userProfile } = useUser();
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
@@ -78,7 +80,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
       const { data: holidays, error: holidaysError } = await supabase
         .from('holidays')
         .select('*')
-        .eq("organization_id", userProfile?.organization_id);
+        .eq('organization_id', userProfile?.organization_id);
 
       if (holidaysError) throw holidaysError;
 
@@ -86,95 +88,106 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
       const today = new Date();
       today.setHours(23, 59, 59, 999); // Set to end of today
 
-      const allDaysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd })
-        .filter(date => {
-          const dayOfWeek = date.getDay();
-          if (dayOfWeek === 0 || dayOfWeek === 6) return false; // Exclude weekends
+      const allDaysInMonth = eachDayOfInterval({
+        start: monthStart,
+        end: monthEnd,
+      }).filter((date) => {
+        const dayOfWeek = date.getDay();
+        if (dayOfWeek === 0 || dayOfWeek === 6) return false; // Exclude weekends
 
-          // Only show today and past dates
-          return date <= today;
-        });
+        // Only show today and past dates
+        return date <= today;
+      });
 
       // Process each day
-      const dailyDetails: AttendanceDetailRecord[] = allDaysInMonth.map((date) => {
-        const dateStr = format(date, 'yyyy-MM-dd');
+      const dailyDetails: AttendanceDetailRecord[] = allDaysInMonth.map(
+        (date) => {
+          const dateStr = format(date, 'yyyy-MM-dd');
 
-        // Find attendance record for this date
-        const attendance = attendanceRecords?.find(
-          (record) => format(new Date(record.check_in), 'yyyy-MM-dd') === dateStr
-        );
+          // Find attendance record for this date
+          const attendance = attendanceRecords?.find(
+            (record) =>
+              format(new Date(record.check_in), 'yyyy-MM-dd') === dateStr
+          );
 
-        // Find absentee record for this date
-        const absentee = absentees?.find(
-          (record) => format(new Date(record.created_at), 'yyyy-MM-dd') === dateStr
-        );
+          // Find absentee record for this date
+          const absentee = absentees?.find(
+            (record) =>
+              format(new Date(record.created_at), 'yyyy-MM-dd') === dateStr
+          );
 
-        // Check if this date is a holiday
-        const isHoliday = holidays?.some(holiday =>
-          holiday.dates?.some((holidayDate: string) =>
-            format(new Date(holidayDate), 'yyyy-MM-dd') === dateStr
-          )
-        );
+          // Check if this date is a holiday
+          const isHoliday = holidays?.some((holiday) =>
+            holiday.dates?.some(
+              (holidayDate: string) =>
+                format(new Date(holidayDate), 'yyyy-MM-dd') === dateStr
+            )
+          );
 
-        let checkIn: string | null = null;
-        let checkOut: string | null = null;
-        let status = isHoliday ? 'Holiday' : 'Absent';
-        let workMode = 'N/A';
-        let workedHours = 0;
-        let breakTime = 0;
+          let checkIn: string | null = null;
+          let checkOut: string | null = null;
+          let status = isHoliday ? 'Holiday' : 'Absent';
+          let workMode = 'N/A';
+          let workedHours = 0;
+          let breakTime = 0;
 
-        if (attendance) {
-          checkIn = format(new Date(attendance.check_in), 'h:mm a');
-          checkOut = attendance.check_out
-            ? format(new Date(attendance.check_out), 'h:mm a')
-            : null;
-          status = attendance.status || 'Present';
-          workMode = attendance.work_mode || 'N/A';
+          if (attendance) {
+            checkIn = format(new Date(attendance.check_in), 'h:mm a');
+            checkOut = attendance.check_out
+              ? format(new Date(attendance.check_out), 'h:mm a')
+              : null;
+            status = attendance.status || 'Present';
+            workMode = attendance.work_mode || 'N/A';
 
-          // Calculate worked hours
-          if (attendance.check_out) {
-            const start = new Date(attendance.check_in);
-            const end = new Date(attendance.check_out);
-            workedHours = (end.getTime() - start.getTime()) / (1000 * 60 * 60);
-          }
-
-          // Calculate break time for this attendance record
-          const attendanceBreaks = breaks?.filter(
-            (breakRecord) => breakRecord.attendance_id === attendance.id
-          ) || [];
-
-          breakTime = attendanceBreaks.reduce((total, breakRecord) => {
-            if (breakRecord.start_time && breakRecord.end_time) {
-              const breakStart = new Date(breakRecord.start_time);
-              const breakEnd = new Date(breakRecord.end_time);
-              const breakDuration = (breakEnd.getTime() - breakStart.getTime()) / (1000 * 60 * 60);
-              return total + breakDuration;
+            // Calculate worked hours
+            if (attendance.check_out) {
+              const start = new Date(attendance.check_in);
+              const end = new Date(attendance.check_out);
+              workedHours =
+                (end.getTime() - start.getTime()) / (1000 * 60 * 60);
             }
-            return total;
-          }, 0);
 
-          // Subtract break time from worked hours
-          workedHours = Math.max(0, workedHours - breakTime);
-        } else if (absentee) {
-          if (absentee.absentee_type === 'leave') {
-            status = 'Leave';
-          } else if (absentee.absentee_type === 'Sick Leave') {
-            status = 'Sick Leave';
-          } else {
-            status = 'Absent';
+            // Calculate break time for this attendance record
+            const attendanceBreaks =
+              breaks?.filter(
+                (breakRecord) => breakRecord.attendance_id === attendance.id
+              ) || [];
+
+            breakTime = attendanceBreaks.reduce((total, breakRecord) => {
+              if (breakRecord.start_time && breakRecord.end_time) {
+                const breakStart = new Date(breakRecord.start_time);
+                const breakEnd = new Date(breakRecord.end_time);
+                const breakDuration =
+                  (breakEnd.getTime() - breakStart.getTime()) /
+                  (1000 * 60 * 60);
+                return total + breakDuration;
+              }
+              return total;
+            }, 0);
+
+            // Subtract break time from worked hours
+            workedHours = Math.max(0, workedHours - breakTime);
+          } else if (absentee) {
+            if (absentee.absentee_type === 'leave') {
+              status = 'Leave';
+            } else if (absentee.absentee_type === 'Sick Leave') {
+              status = 'Sick Leave';
+            } else {
+              status = 'Absent';
+            }
           }
-        }
 
-        return {
-          date: dateStr,
-          checkIn,
-          checkOut,
-          breakTime,
-          workedHours,
-          status,
-          workMode,
-        };
-      });
+          return {
+            date: dateStr,
+            checkIn,
+            checkOut,
+            breakTime,
+            workedHours,
+            status,
+            workMode,
+          };
+        }
+      );
 
       setAttendanceDetails(dailyDetails);
     } catch (err) {
@@ -218,7 +231,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
           <div>
             <h2 className="text-2xl font-bold text-gray-900">{userName}</h2>
             <p className="text-gray-600">
-              Attendance Details  - {format(selectedMonth, 'MMMM yyyy')}
+              Attendance Details - {format(selectedMonth, 'MMMM yyyy')}
             </p>
           </div>
           <button
@@ -238,9 +251,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
           )}
 
           {error && (
-            <div className="text-red-600 text-center py-8">
-              {error}
-            </div>
+            <div className="text-red-600 text-center py-8">{error}</div>
           )}
 
           {!loading && !error && (
@@ -273,7 +284,10 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {attendanceDetails.map((record, index) => (
-                    <tr key={record.date} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                    <tr
+                      key={record.date}
+                      className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}
+                    >
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
                         <div className="flex items-center">
                           <Calendar className="w-4 h-4 mr-2 text-gray-400" />
@@ -281,7 +295,11 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
                         </div>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap">
-                        <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(record.status)}`}>
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(
+                            record.status
+                          )}`}
+                        >
                           {record.status}
                         </span>
                       </td>
@@ -326,15 +344,20 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
                         )}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                        <span className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${record.workMode === 'remote'
-                          ? 'bg-purple-100 text-purple-800'
-                          : record.workMode === 'on_site'
-                            ? 'bg-green-100 text-green-800'
-                            : 'bg-gray-100 text-gray-800'
-                          }`}>
-                          {record.workMode === 'on_site' ? 'On-site' :
-                            record.workMode === 'remote' ? 'Remote' :
-                              record.workMode}
+                        <span
+                          className={`inline-flex px-2 py-1 text-xs font-medium rounded-full ${
+                            record.workMode === 'remote'
+                              ? 'bg-purple-100 text-purple-800'
+                              : record.workMode === 'on_site'
+                              ? 'bg-green-100 text-green-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}
+                        >
+                          {record.workMode === 'on_site'
+                            ? 'On-site'
+                            : record.workMode === 'remote'
+                            ? 'Remote'
+                            : record.workMode}
                         </span>
                       </td>
                     </tr>

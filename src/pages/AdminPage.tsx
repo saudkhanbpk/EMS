@@ -1497,7 +1497,7 @@ const AdminPage: React.FC = () => {
               Admin Dashboard
             </h1>
 
-            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
+            <div className="bg-white w-8xl rounded-2xl sm:p-6 p-2 shadow-lg">
               <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
             </div>
           </div>
