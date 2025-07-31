@@ -87,26 +87,33 @@ export async function saveRealLaptopStatus(): Promise<void> {
     }
 
     // Check if user is checked in today
-    const today = new Date();
-    const startOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-    const endOfToday = new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1);
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
 
     const { data: todayAttendance } = await supabase
       .from('attendance_logs')
       .select('check_in, check_out')
       .eq('user_id', user.id)
-      .gte('created_at', startOfToday.toISOString())
-      .lt('created_at', endOfToday.toISOString())
-      .order('created_at', { ascending: false })
+      .gte('check_in', today + 'T00:00:00.000Z')
+      .lte('check_in', today + 'T23:59:59.999Z')
+      .order('check_in', { ascending: false })
       .limit(1);
 
     const isCheckedIn = todayAttendance && todayAttendance.length > 0 &&
                        todayAttendance[0].check_in && !todayAttendance[0].check_out;
 
+    // Debug attendance checking
+    if (todayAttendance && todayAttendance.length > 0) {
+      console.log(`✅ Found attendance for user: Check-in: ${todayAttendance[0].check_in}, Check-out: ${todayAttendance[0].check_out || 'None'}`);
+    } else {
+      console.log(`❌ No attendance found for user on ${today}`);
+    }
+
     // If not checked in, force offline status
     if (!isCheckedIn) {
       currentState = 'Off';
       console.log('❌ User not checked in today - forcing OFFLINE status');
+    } else {
+      console.log('✅ User is checked in today - allowing real laptop tracking');
     }
 
     // Try to save to DATABASE first
@@ -229,18 +236,22 @@ export async function getAllRealLaptopStatus(organizationId: string): Promise<Re
 
     if (!users) return result;
 
-    // Try to get laptop states from database, fallback to localStorage
+    // Try to get laptop states from database for users in this organization
     let laptopStates = null;
     try {
+      // Get user IDs for this organization
+      const userIds = users.map(user => user.id);
+
       const { data, error } = await supabase
         .from('laptop_states')
-        .select('*');
+        .select('*')
+        .in('user_id', userIds); // Only get states for users in this organization
 
       if (error) {
         throw error;
       }
       laptopStates = data;
-      console.log('✅ Loaded laptop states from database');
+      console.log(`✅ Loaded laptop states from database for ${laptopStates?.length || 0} users in organization`);
     } catch (error) {
       console.error('❌ Database fetch failed, using localStorage fallback:', error);
 
@@ -260,27 +271,17 @@ export async function getAllRealLaptopStatus(organizationId: string): Promise<Re
       console.log(`💾 Loaded ${laptopStates.length} states from localStorage`);
     }
 
-    // Get attendance data to determine who's checked in TODAY (with timezone handling)
-    const today = new Date();
+    // Get attendance data to determine who's checked in TODAY (simplified)
+    const today = new Date().toISOString().split('T')[0]; // Get today's date in YYYY-MM-DD format
 
-    // Try multiple date formats to catch attendance records
-    const todayFormats = [
-      // Today in local timezone
-      new Date(today.getFullYear(), today.getMonth(), today.getDate()).toISOString().split('T')[0],
-      // Today in UTC
-      today.toISOString().split('T')[0],
-      // Yesterday (in case of timezone differences)
-      new Date(today.getTime() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    ];
-
-    console.log('🔍 Checking attendance for dates:', todayFormats);
+    console.log('🔍 Checking attendance for date:', today);
 
     const { data: todayAttendance, error: attendanceError } = await supabase
       .from('attendance_logs')
       .select('user_id, check_in, check_out, created_at')
-      .gte('created_at', todayFormats[2] + 'T00:00:00.000Z') // Start from yesterday
-      .lte('created_at', todayFormats[0] + 'T23:59:59.999Z') // End at today
-      .order('created_at', { ascending: false });
+      .gte('check_in', today + 'T00:00:00.000Z')
+      .lte('check_in', today + 'T23:59:59.999Z')
+      .order('check_in', { ascending: false });
 
     if (attendanceError) {
       console.error('❌ Error fetching attendance:', attendanceError);
@@ -297,6 +298,21 @@ export async function getAllRealLaptopStatus(organizationId: string): Promise<Re
     console.log(`📅 Found attendance records for ${Object.keys(latestAttendance).length} users today`);
     console.log('📋 Sample attendance data:', todayAttendance?.slice(0, 3));
     console.log('🔍 Latest attendance map:', Object.keys(latestAttendance).slice(0, 5));
+    console.log(`💻 Laptop states found: ${laptopStates?.length || 0} records`);
+
+    // Debug specific user attendance
+    const debugUserId = '4b2b0b3f-4df5-48a1-9f95-58b6d67fee03'; // zeeshan
+    const debugUserAttendance = latestAttendance[debugUserId];
+    if (debugUserAttendance) {
+      console.log(`🔍 DEBUG - Found attendance for ${debugUserId}:`, debugUserAttendance);
+    } else {
+      console.log(`❌ DEBUG - No attendance found for ${debugUserId} in latestAttendance map`);
+      // Check if it exists in raw data
+      const rawAttendance = todayAttendance?.find(a => a.user_id === debugUserId);
+      if (rawAttendance) {
+        console.log(`🔍 DEBUG - But found in raw data:`, rawAttendance);
+      }
+    }
 
     const now = new Date();
 
@@ -306,6 +322,7 @@ export async function getAllRealLaptopStatus(organizationId: string): Promise<Re
       laptopStates.forEach(state => {
         laptopStateMap[state.user_id] = state;
       });
+      console.log(`🗺️ Laptop state map created for users:`, Object.keys(laptopStateMap));
     }
 
     // Process each user with DATABASE data
@@ -751,6 +768,218 @@ export async function showOnlyRealTrackingData(): Promise<void> {
   }
 }
 
-// Make both functions available globally
+/**
+ * Quick test to verify tracking is working for current user
+ */
+export async function testCurrentUserTracking(): Promise<void> {
+  console.log('\n🧪 ===== TESTING CURRENT USER TRACKING =====');
+
+  try {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('❌ No authenticated user found');
+      return;
+    }
+
+    console.log(`👤 Testing tracking for user: ${user.id}`);
+
+    // Force save current status
+    console.log('🔄 Forcing status save...');
+    await saveRealLaptopStatus();
+
+    // Wait a moment for database to update
+    await new Promise(resolve => setTimeout(resolve, 1000));
+
+    // Check if data was saved
+    const status = await getRealStatusForUser(user.id);
+
+    if (status) {
+      console.log('✅ TRACKING IS WORKING!');
+      console.log(`   Status: ${status.laptop_state}`);
+      console.log(`   Battery: ${status.battery_level}%`);
+      console.log(`   Last Update: ${new Date(status.updated_at).toLocaleString()}`);
+      console.log(`   Minutes Ago: ${status.minutesAgo}`);
+    } else {
+      console.log('❌ NO TRACKING DATA FOUND - Check if:');
+      console.log('   1. User is checked in today');
+      console.log('   2. Database table exists');
+      console.log('   3. Tracking system is started');
+    }
+
+  } catch (error) {
+    console.error('❌ Error testing tracking:', error);
+  }
+}
+
+/**
+ * Debug specific user tracking issue
+ */
+export async function debugUserTracking(userId: string): Promise<void> {
+  console.log(`\n🔍 ===== DEBUGGING USER TRACKING: ${userId} =====`);
+
+  try {
+    // 1. Check if user exists in database
+    const { data: user } = await supabase
+      .from('users')
+      .select('id, full_name, email, organization_id')
+      .eq('id', userId)
+      .single();
+
+    if (!user) {
+      console.log('❌ User not found in database');
+      return;
+    }
+
+    console.log(`👤 User found: ${user.full_name} (${user.email})`);
+    console.log(`🏢 Organization: ${user.organization_id}`);
+
+    // 2. Check laptop state in database
+    const { data: laptopState } = await supabase
+      .from('laptop_states')
+      .select('*')
+      .eq('user_id', userId)
+      .single();
+
+    if (laptopState) {
+      const minutesAgo = Math.floor((new Date().getTime() - new Date(laptopState.updated_at).getTime()) / (1000 * 60));
+      console.log('✅ LAPTOP STATE FOUND IN DATABASE:');
+      console.log(`   State: ${laptopState.state}`);
+      console.log(`   Battery: ${laptopState.battery_level}%`);
+      console.log(`   Charging: ${laptopState.is_charging}`);
+      console.log(`   Last Update: ${new Date(laptopState.updated_at).toLocaleString()}`);
+      console.log(`   Minutes Ago: ${minutesAgo}`);
+    } else {
+      console.log('❌ NO LAPTOP STATE FOUND IN DATABASE');
+    }
+
+    // 3. Check attendance
+    const today = new Date().toISOString().split('T')[0];
+    const { data: attendance } = await supabase
+      .from('attendance_logs')
+      .select('user_id, check_in, check_out, created_at')
+      .eq('user_id', userId)
+      .gte('created_at', today + 'T00:00:00.000Z')
+      .lte('created_at', today + 'T23:59:59.999Z')
+      .order('created_at', { ascending: false })
+      .limit(1);
+
+    if (attendance && attendance.length > 0) {
+      const att = attendance[0];
+      const isCheckedIn = att.check_in && !att.check_out;
+      console.log('✅ ATTENDANCE FOUND:');
+      console.log(`   Check-in: ${att.check_in}`);
+      console.log(`   Check-out: ${att.check_out || 'Not checked out'}`);
+      console.log(`   Status: ${isCheckedIn ? 'CHECKED IN' : 'CHECKED OUT'}`);
+    } else {
+      console.log('❌ NO ATTENDANCE FOUND FOR TODAY');
+    }
+
+    // 4. Test what getAllRealLaptopStatus returns for this user
+    console.log('\n🔍 Testing getAllRealLaptopStatus...');
+    const allStatuses = await getAllRealLaptopStatus(user.organization_id);
+    const userStatus = allStatuses[userId];
+
+    if (userStatus) {
+      console.log('✅ USER FOUND IN getAllRealLaptopStatus:');
+      console.log(`   State: ${userStatus.laptop_state}`);
+      console.log(`   Battery: ${userStatus.battery_level}%`);
+      console.log(`   Checked In: ${userStatus.is_checked_in}`);
+      console.log(`   Last Activity: ${userStatus.last_activity}`);
+    } else {
+      console.log('❌ USER NOT FOUND IN getAllRealLaptopStatus');
+    }
+
+  } catch (error) {
+    console.error('❌ Error debugging user tracking:', error);
+  }
+}
+
+/**
+ * Quick debug function to check specific user in admin dashboard
+ */
+export async function debugAdminDashboard(targetUserId: string = '859fdd44-fb7a-42dc-8643-aa539e76f7f8'): Promise<void> {
+  console.log(`\n🔍 ===== DEBUGGING ADMIN DASHBOARD FOR USER: ${targetUserId} =====`);
+
+  try {
+    // Get current admin user
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) {
+      console.log('❌ No authenticated admin user');
+      return;
+    }
+
+    // Get admin's organization
+    const { data: adminProfile } = await supabase
+      .from('users')
+      .select('organization_id, full_name')
+      .eq('id', user.id)
+      .single();
+
+    if (!adminProfile?.organization_id) {
+      console.log('❌ Admin has no organization');
+      return;
+    }
+
+    console.log(`👤 Admin: ${adminProfile.full_name}`);
+    console.log(`🏢 Organization: ${adminProfile.organization_id}`);
+
+    // Test what getAllRealLaptopStatus returns
+    console.log('\n🔍 Calling getAllRealLaptopStatus...');
+    const allStatuses = await getAllRealLaptopStatus(adminProfile.organization_id);
+
+    console.log(`📊 Total users returned: ${Object.keys(allStatuses).length}`);
+
+    // Check specific user
+    const targetUserStatus = allStatuses[targetUserId];
+    if (targetUserStatus) {
+      console.log(`\n✅ TARGET USER FOUND IN ADMIN DATA:`);
+      console.log(`   User ID: ${targetUserId}`);
+      console.log(`   State: ${targetUserStatus.laptop_state}`);
+      console.log(`   Battery: ${targetUserStatus.battery_level}%`);
+      console.log(`   Charging: ${targetUserStatus.is_charging}`);
+      console.log(`   Checked In: ${targetUserStatus.is_checked_in}`);
+      console.log(`   Last Activity: ${targetUserStatus.last_activity}`);
+      console.log(`   Updated At: ${targetUserStatus.updated_at}`);
+
+      // Calculate display state like admin dashboard does
+      const displayState = targetUserStatus.laptop_state === 'On' ? 'Online' :
+                          targetUserStatus.laptop_state === 'Sleep' ? 'Away' : 'Offline';
+      console.log(`   Display State: ${displayState}`);
+
+      const hasRealData = targetUserStatus.battery_level > 0 ||
+                         (targetUserStatus.laptop_state === 'On' && targetUserStatus.is_checked_in);
+      console.log(`   Has Real Data: ${hasRealData}`);
+
+    } else {
+      console.log(`\n❌ TARGET USER NOT FOUND IN ADMIN DATA`);
+      console.log(`Available user IDs:`, Object.keys(allStatuses).slice(0, 10));
+    }
+
+    // Also check raw database
+    console.log('\n🔍 Checking raw database...');
+    const { data: rawLaptopState } = await supabase
+      .from('laptop_states')
+      .select('*')
+      .eq('user_id', targetUserId)
+      .single();
+
+    if (rawLaptopState) {
+      console.log(`✅ RAW DATABASE RECORD FOUND:`);
+      console.log(`   State: ${rawLaptopState.state}`);
+      console.log(`   Battery: ${rawLaptopState.battery_level}%`);
+      console.log(`   Updated: ${new Date(rawLaptopState.updated_at).toLocaleString()}`);
+    } else {
+      console.log(`❌ NO RAW DATABASE RECORD FOUND`);
+    }
+
+  } catch (error) {
+    console.error('❌ Error debugging admin dashboard:', error);
+  }
+}
+
+// Make all functions available globally
 (window as any).showDetailedRealLaptopStatus = showDetailedRealLaptopStatus;
 (window as any).showOnlyRealTrackingData = showOnlyRealTrackingData;
+(window as any).testCurrentUserTracking = testCurrentUserTracking;
+(window as any).debugAdminDashboard = debugAdminDashboard;
+(window as any).debugUserTracking = debugUserTracking;

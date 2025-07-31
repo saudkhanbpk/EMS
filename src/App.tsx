@@ -299,6 +299,7 @@ import { Toaster } from "./component/ui/toaster";
 import { Toaster as Sonner } from "./component/ui/sonner";
 import { TooltipProvider } from "./component/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { startRealLaptopTracking } from './services/realLaptopTracking';
 import Index from './pages/Index';
 import AddNewTask from './AddNewTask';
 import Chatbutton from './components/chatbtn';
@@ -425,6 +426,32 @@ function App() {
     };
     registerSW();
   }, []);
+
+  // Start REAL laptop tracking for ALL authenticated users
+  useEffect(() => {
+    if (!user) return; // Only start tracking for authenticated users
+
+    console.log('🚀 Starting GLOBAL laptop tracking for authenticated user');
+
+    // Start real tracking
+    const cleanup = startRealLaptopTracking();
+
+    // Also immediately save current real status
+    const saveImmediateStatus = async () => {
+      try {
+        const { saveRealLaptopStatus } = await import('./services/realLaptopTracking');
+        await saveRealLaptopStatus();
+        console.log('✅ Immediate real status saved from App.tsx');
+      } catch (error) {
+        console.error('Error saving immediate status from App.tsx:', error);
+      }
+    };
+
+    saveImmediateStatus();
+
+    // Cleanup when user logs out or component unmounts
+    return cleanup;
+  }, [user]);
 
   // Notification Permission Handler
   const handleEnableNotifications = async () => {

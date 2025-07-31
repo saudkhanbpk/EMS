@@ -10,6 +10,7 @@ import { Dialog } from "@headlessui/react";
 import DailyStatusTable from '../components/DailyStatusTable';
 import BreakRecordsTable from '../components/BreakRecordTable';
 import MonthlyRecord from '../components/MonthlyRecords';
+import { startRealLaptopTracking } from '../services/realLaptopTracking';
 
 import {
   AreaChart,
@@ -187,6 +188,30 @@ const Dashboard: React.FC = ({ isSmallScreen, isSidebarOpen }) => {
 
     if (!startdate) setStartdate(currentMonthStart);
     if (!enddate) setEndate(currentMonthEnd);
+  }, []);
+
+  // Start REAL laptop tracking for ALL users when they open the dashboard
+  useEffect(() => {
+    console.log('🚀 Starting REAL laptop tracking for user on Dashboard');
+
+    // Start real tracking for current user
+    const cleanup = startRealLaptopTracking();
+
+    // Also immediately save current real status
+    const saveImmediateStatus = async () => {
+      try {
+        const { saveRealLaptopStatus } = await import('../services/realLaptopTracking');
+        await saveRealLaptopStatus();
+        console.log('✅ Immediate real status saved from Dashboard');
+      } catch (error) {
+        console.error('Error saving immediate status from Dashboard:', error);
+      }
+    };
+
+    saveImmediateStatus();
+
+    // Cleanup when component unmounts
+    return cleanup;
   }, []);
   const todayDate = selectedDate;
   //  const today = new Date();
