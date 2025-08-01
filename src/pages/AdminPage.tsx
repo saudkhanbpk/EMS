@@ -691,6 +691,7 @@ const AdminPage: React.FC = () => {
   };
 
   const dispatch = useAppDispatch();
+  const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   return (
     <>
       <div className="min-h-screen bg-gray-100 flex overflow-hidden ">
@@ -956,40 +957,6 @@ const AdminPage: React.FC = () => {
                       Sign Out
                     </button>
                   </div>
-                  {/* Employee List (Slide-In on Hover) */}
-                  {/* <motion.div
-                className="fixed top-0 left-64 h-full  w-[200px] bg-[#191616] shadow-lg p-1 z-20 overflow-y-auto ease-in-out custom-scrollbar"
-                initial={{ x: "-300%" }}
-                animate={{ x: employeeListOpen ? "0%" : "-300%" }}
-                transition={{ duration: 0.4, ease: "easeInOut" }}
-                // onMouseEnter={() => setEmployeeListOpen(true)}
-                // onMouseLeave={() => setEmployeeListOpen(false)}
-              >
-                <h2 className='p-2 pt-10 justify-center font-semibold text-[20px]'>Employee List</h2>
-                <ul className="space-y-2 p-2" ref={childRef}>
-      {employees.map((employee) => (
-        <li
-          key={employee.id}
-          onClick={() => {
-            setEmployeeListOpen(false);
-            handleEmployeeSelection(employee.id)
-            handleClose();
-            childRef.current?.handleEmployeeClick(employee.id);
-          }}
-          className={`p-3 text-sm rounded-lg cursor-pointer transition-colors ${
-            selectedEmployee?.id === employee.id
-              ? "bg-[#9A00FF] text-white hover:bg-[#9A00FF]"
-              : "hover:bg-[#9A00FF]"
-          }`}
-        >
-          {employee.full_name}
-        </li>
-      ))}
- <EmployeeAttendanceTable
-        ref={childRef}
-        selectedEmployeeId={selectedEmployeeId}
-        onEmployeeSelect={handleEmployeeSelection}/>    </ul>
-              </motion.div> */}
                 </div>
               </div>
             </motion.div>
@@ -997,69 +964,6 @@ const AdminPage: React.FC = () => {
             <div></div>
           </div>
         </div>
-
-        {/* Main Content */}
-        {/* {location.pathname.includes('/admin/employeAttandanceTable') && (
-          <div
-            className={`flex-1  transition-all duration-300 p-4 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <EmployeeAttendanceTable />
-          </div>
-        )} */}
-        {/* {location.pathname.includes('/admin/employeeDetails') && (
-          <div
-            className={`flex-1 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <EmployeesDetails />
-          </div>
-        )} */}
-        {/* {location.pathname.includes('/admin/projects') && (
-          <div
-            className={`flex-1 py-10 px-10 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <ProjectsAdmin />
-          </div>
-        )} */}
-
-        {/*
-  {location.pathname.includes('officealerts') && (
-    <div
-      className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-        permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-      }`}
-    >
-      {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-        {/* <Updates /> */}
-        {/* </div> */}
-        {/* )} */}
-
-        {/* {location.pathname.includes('/admin/Holidays') && (
-          <div
-            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            {/* <AdminHoliday /> */}
-        {/* <AdminHoliday />
-          </div> */}
-        {/* )} */}
-
-        {/* {location.pathname.includes('/admin/organization') && (
-          <div
-            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            {/* <EmployeesDetails selectedTab={selectedTab} /> */}
-        {/* <AdminOrganization />
-          </div> */}
-        {/* )} */}
 
         {selectedTab === 'Employees' && (
           <div
@@ -1420,7 +1324,9 @@ const AdminPage: React.FC = () => {
 
         {location.pathname.includes('/admin/OfficeComplaints') && (
           <div
-            className={`flex-1 sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${
+            className={`flex-1 ${
+              isSideBarOpen ? 'min-w-[80%]' : 'min-w-full'
+            }  sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
             }`}
           >
@@ -1428,7 +1334,7 @@ const AdminPage: React.FC = () => {
               Admin Dashboard
             </h1>
 
-            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
+            <div className="bg-white shadow-lg  rounded-2xl sm:p-6 p-2">
               <h2 className="text-xl font-semibold text-gray-800 mb-4">
                 Office Complaints
               </h2>
@@ -1442,11 +1348,13 @@ const AdminPage: React.FC = () => {
                       No complaints found.
                     </p>
                   ) : (
-                    <div className="grid md:grid-cols-2 gap-4">
+                    <div className="grid md:grid-cols-2 gap-4 w-full ">
                       {officeComplaints.map((officeComplaints, index) => (
                         <div
                           key={index}
-                          className="bg-gray-100 p-4 rounded-lg shadow"
+                          className={`bg-gray-100 p-4 rounded-lg shadow ${
+                            isSideBarOpen ? 'min-w-full mx-auto' : 'w-full'
+                          }`}
                         >
                           {/* <h3 className="text-lg font-medium text-gray-900">{officeComplaints.title}</h3> */}
                           <p className="text-15px text-gray-700 mt-1">
@@ -1497,7 +1405,7 @@ const AdminPage: React.FC = () => {
               Admin Dashboard
             </h1>
 
-            <div className="bg-white shadow-lg rounded-2xl sm:p-6 p-2">
+            <div className="bg-white w-8xl rounded-2xl sm:p-6 p-2 shadow-lg">
               <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
             </div>
           </div>

@@ -30,6 +30,8 @@ import { useContext } from 'react';
 import Comments from '../pages/Comments';
 import { title } from 'process';
 import TodoTask from './TodoTask';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store';
 
 interface Developer {
   id: string;
@@ -487,7 +489,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             {...provided.draggableProps}
             {...provided.dragHandleProps}
             style={provided.draggableProps.style}
-            className="group bg-[#F5F5F9] rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3 hover:shadow-xl transition-shadow duration-300 cursor-pointer"
+            className="group bg-[#F5F5F9]  rounded-[10px] shadow-lg px-4 pt-4 pb-3 space-y-2 mb-3 hover:shadow-xl transition-shadow duration-300 cursor-pointer"
             onClick={() => {
               setOpenedTask(task);
               setDescriptionOpen(true);
@@ -779,7 +781,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     );
 
     return (
-      <div className="bg-white lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+      <div className="bg-white  lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
         <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <h2 className={`font-semibold text-xl leading-7 text-${color}`}>
             {title}
@@ -819,6 +821,9 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     );
   };
 
+  const adminProjectName = useSelector(
+    (state: RootState) => state.projectName.projectName
+  );
   return (
     <div className="min-h-screen px-0">
       <Toaster position="top-right" />
@@ -858,17 +863,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     <ArrowLeft
                       className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                       size={35}
-                      onClick={() => {
-                        if (selectedTAB === 'TaskBoard') {
-                          setSelectedTAB('');
-                        } else {
-                          setSelectedTAB('Projects');
-                        }
-                      }}
+                      onClick={() => navigate(-1)}
                     />
                   </Link>
                   <h1 className="text-md md:text-2xl font-bold text-gray-800">
-                    Work Planner
+                    {adminProjectName}
                   </h1>
                 </div>
                 <div>
@@ -1090,7 +1089,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                         })
                       }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
-
                     />
                   </div>
 
