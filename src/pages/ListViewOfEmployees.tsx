@@ -36,9 +36,15 @@ import {
 import { AttendanceProvider } from './AttendanceContext';
 import FilteredDataAdmin from './filteredListAdmin';
 import { id } from 'date-fns/locale/id';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
 import toast from 'react-hot-toast';
+import {
+  fetchUserAbsentees,
+  useFetchUserAbsenteesQuery,
+} from '../services/AttendanceAPI';
+import { setUserAbsentCount } from '../slices/userAbsenteesSlice';
+
 // --- TaskCell Component ---
 const TaskCell = ({ task }) => {
   const [showAll, setShowAll] = useState(false);
@@ -209,7 +215,7 @@ const EmployeeAttendanceTable = () => {
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [sideopen, setsideopen] = useState(false);
-
+  const dispatch = useDispatch<AppDispatch>();
   function handleabsentclosemodal() {
     setabsentid(null);
     setslecteduser(null);
@@ -1867,7 +1873,6 @@ const EmployeeAttendanceTable = () => {
         .select('user_id, absentee_type')
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
-
       if (absenteesError) throw absenteesError;
 
       // ✅ Fetch daily tasks for the selected date
@@ -1929,6 +1934,7 @@ const EmployeeAttendanceTable = () => {
 
         const userBreaks = breaksMap.get(log.id) || [];
         const firstBreak = userBreaks[0];
+        const currentMonth = new Date().getMonth(); // 0 = January, 11 = December
 
         return {
           id: user.id,
@@ -1956,6 +1962,23 @@ const EmployeeAttendanceTable = () => {
               ? 'text-yellow-500'
               : 'text-red-500',
         };
+      });
+
+      const monthForAttendance = new Date();
+      const ids = finalAttendanceData.map((eachUser) => eachUser.id);
+      console.log('supabase idfdnkdsjfkjasfdkjanfjkdjjjjjjjjjjjjjj', ids);
+      ids.forEach(async (userId) => {
+        try {
+          const result = await dispatch(
+            fetchUserAbsentees.initiate({ userId, monthForAttendance })
+          ).unwrap(); // ✅ use unwrap() to access data
+
+          const count = result.length || 0;
+
+          dispatch(setAbsenteeCount({ userId, count })); // ✅ this must be hit
+        } catch (err) {
+          console.error('Error fetching absentee:', err);
+        }
       });
 
       // Set data and stats
@@ -2108,7 +2131,7 @@ const EmployeeAttendanceTable = () => {
   }`;
 
   return (
-    <div className="flex flex-col  justify-center   items-center min-h-full  bg-gray-10 w-full ">
+    <div className="flex flex-col  justify-center  items-center min-h-full  bg-gray-10 w-full ">
       {/* Heading */}
       <div className=" w-full  max-w-full flex justify-start items-center text-start ">
         {maintab === 'TableView' && (
