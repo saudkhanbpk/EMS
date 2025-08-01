@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
 import { supabase } from '../lib/supabase';
+import { sessionManager } from '../lib/sessionManager';
 import {
   LayoutDashboard,
   Building2,
@@ -24,14 +25,16 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      // Use SessionManager for proper logout
+      await sessionManager.signOut();
       setUser(null);
-      localStorage.removeItem('supabaseSession');
-      localStorage.removeItem('user_id');
-      localStorage.removeItem('user_email');
       navigate('/home');
     } catch (error) {
       console.error('Error logging out:', error);
+      // Fallback: clear local state even if remote logout fails
+      setUser(null);
+      localStorage.clear();
+      navigate('/home');
     }
   };
 

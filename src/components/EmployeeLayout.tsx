@@ -19,6 +19,7 @@ import {
 import { supabase } from '../lib/supabase';
 import { useAuthStore } from '../lib/store';
 import { useUser } from '../contexts/UserContext';
+import { sessionManager } from '../lib/sessionManager';
 import { toDate } from 'date-fns';
 import Header from './Header';
 import TimeTrackerWidget from './TimeTrackerWidget';
@@ -58,10 +59,18 @@ const EmployeeLayout: React.FC = () => {
   }, [location.pathname, isSmallScreen]);
 
   const handleSignOut = async () => {
-    await supabase.auth.signOut();
-    setUser(null);
-    localStorage.clear();
-    navigate('/home');
+    try {
+      // Use SessionManager for proper logout
+      await sessionManager.signOut();
+      setUser(null);
+      navigate('/home');
+    } catch (error) {
+      console.error('Error during logout:', error);
+      // Fallback: clear local state even if remote logout fails
+      setUser(null);
+      localStorage.clear();
+      navigate('/home');
+    }
   };
 
   const allNavigation = [

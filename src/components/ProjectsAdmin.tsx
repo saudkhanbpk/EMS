@@ -113,6 +113,10 @@ function ProjectsAdmin() {
   const [managerSearchTerm, setManagerSearchTerm] = useState('');
   const [expandedProjects, setExpandedProjects] = useState({});
 
+  // Story points filter state
+  const [storyPointsFilter, setStoryPointsFilter] = useState<'all' | 'weekly' | 'monthly'>('monthly');
+  const [projectFilters, setProjectFilters] = useState<Record<string, 'all' | 'weekly' | 'monthly'>>({});
+
   const toggleExpandProjects = (projectId) => {
     setExpandedProjects((prev) => ({
       ...prev,
@@ -125,6 +129,68 @@ function ProjectsAdmin() {
       ...prev,
       [key]: !prev[key],
     }));
+  };
+
+  // Function to handle individual project filter change
+  const handleProjectFilterChange = async (projectId: string, newFilter: 'all' | 'weekly' | 'monthly') => {
+    setProjectFilters(prev => ({ ...prev, [projectId]: newFilter }));
+
+    // Recalculate scores for this specific project
+    const { data: tasksData, error: tasksError } = await supabase
+      .from("tasks_of_projects")
+      .select("score, status, created_at, action_date")
+      .eq("project_id", projectId);
+
+    if (!tasksError && tasksData) {
+      const filteredTasks = filterTasksByTimePeriod(tasksData, newFilter);
+
+      const completedScore = filteredTasks
+        .filter(task => task.status === "done")
+        .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      const pendingScore = filteredTasks
+        .filter(task => task.status !== "done")
+        .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
+
+      const totalScore = completedScore + pendingScore;
+
+      // Update only this project's scores
+      setProjects(prev => prev.map(project =>
+        project.id === projectId
+          ? { ...project, completedScore, pendingScore, totalScore }
+          : project
+      ));
+    }
+  };
+
+  const filterTasksByTimePeriod = (tasks: any[], filter: 'all' | 'weekly' | 'monthly') => {
+    if (filter === 'all') return tasks;
+
+    const now = new Date();
+    const filterDate = new Date();
+
+    if (filter === 'weekly') {
+      filterDate.setDate(now.getDate() - 7);
+    } else if (filter === 'monthly') {
+      filterDate.setDate(now.getDate() - 30);
+    }
+
+    // Set time to start of day
+    filterDate.setHours(0, 0, 0, 0);
+
+    const filteredTasks = tasks.filter(task => {
+      if (!task.created_at) return false;
+
+      // Parse the ISO timestamp
+      const taskCreatedDate = new Date(task.created_at);
+
+      // Check if task was created after the filter date
+      return taskCreatedDate >= filterDate;
+    });
+
+    console.log(`Filter: ${filter}, Now: ${now.toISOString()}, FilterDate: ${filterDate.toISOString()}, Tasks before filter: ${tasks.length}, Tasks after filter: ${filteredTasks.length}`);
+
+    return filteredTasks;
   };
 
   const filteredEmployees = Devs.filter(Dev =>
@@ -329,7 +395,7 @@ function ProjectsAdmin() {
           // Fetch tasks for this project
           const { data: tasksData, error: tasksError } = await supabase
             .from("tasks_of_projects")
-            .select("score, status, devops")
+            .select("score, status, devops,created_at,action_date")
             .eq("project_id", project.id);
 
           if (tasksError) {
@@ -343,12 +409,15 @@ function ProjectsAdmin() {
             };
           }
 
+          // Filter tasks based on story points filter
+          const filteredTasks = filterTasksByTimePeriod(tasksData, storyPointsFilter);
+
           // Calculate scores
-          const completedScore = tasksData
+          const completedScore = filteredTasks
             .filter(task => task.status === "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-          const pendingScore = tasksData
+          const pendingScore = filteredTasks
             .filter(task => task.status !== "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -405,7 +474,7 @@ function ProjectsAdmin() {
     };
 
     fetchProjects();
-  }, [userProfile?.organization_id]);
+  }, [userProfile?.organization_id, storyPointsFilter]);
 
   const handleChange = (selectedEmployee: { id: string, full_name: string }) => {
     if (!selectedDevs.some(dev => dev.id === selectedEmployee.id)) {
@@ -571,15 +640,18 @@ function ProjectsAdmin() {
           // Get tasks for this project
           const projectTasks = tasksData.filter(task => task.project_id === project.id);
 
+          // Filter tasks based on story points filter
+          const filteredProjectTasks = filterTasksByTimePeriod(projectTasks, storyPointsFilter);
+
           // Calculate scores
-          const completedScore = projectTasks
+          const completedScore = filteredProjectTasks
             .filter(task =>
               task.status === "done" &&
               task.devops?.some((dev: any) => dev.id === employee.id)
             )
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-          const pendingScore = projectTasks
+          const pendingScore = filteredProjectTasks
             .filter(task =>
               task.status !== "done" &&
               task.devops?.some((dev: any) => dev.id === employee.id)
@@ -681,11 +753,15 @@ function ProjectsAdmin() {
 
           // Calculate scores for this project
           const projectTasks = tasksData.filter(task => task.project_id === project.id);
-          const completedScore = projectTasks
+
+          // Filter tasks based on story points filter
+          const filteredProjectTasks = filterTasksByTimePeriod(projectTasks, storyPointsFilter);
+
+          const completedScore = filteredProjectTasks
             .filter(task => task.status === "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-          const pendingScore = projectTasks
+          const pendingScore = filteredProjectTasks
             .filter(task => task.status !== "done")
             .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -726,6 +802,15 @@ function ProjectsAdmin() {
       fetchManagersWithProjects();
     }
   };
+
+  // Effect to refresh data when story points filter changes
+  useEffect(() => {
+    if (sortView === 'employees') {
+      fetchEmployeesWithProjects();
+    } else if (sortView === 'managers') {
+      fetchManagersWithProjects();
+    }
+  }, [storyPointsFilter, sortView]);
 
   // Render the workload employees modal
   const renderWorkloadModal = () => {
@@ -957,7 +1042,7 @@ function ProjectsAdmin() {
             // Fetch tasks for this project
             const { data: tasksData, error: tasksError } = await supabase
               .from("tasks_of_projects")
-              .select("score, status")
+              .select("score, status,created_at,action_date")
               .eq("project_id", project.id);
 
             if (tasksError) {
@@ -973,12 +1058,15 @@ function ProjectsAdmin() {
               };
             }
 
+            // Filter tasks based on story points filter
+            const filteredTasks = filterTasksByTimePeriod(tasksData, storyPointsFilter);
+
             // Calculate scores
-            const completedScore = tasksData
+            const completedScore = filteredTasks
               .filter(task => task.status === "done")
               .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
-            const pendingScore = tasksData
+            const pendingScore = filteredTasks
               .filter(task => task.status !== "done")
               .reduce((sum, task) => sum + (Number(task.score) || 0), 0);
 
@@ -1302,7 +1390,7 @@ function ProjectsAdmin() {
                   >
                     <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                     <span className="text-sm font-medium">
-                      Medium: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
+                      Fair Load: {Object.values(employeeWorkloads).filter(score => score >= 50 && score < 100).length} developers
                     </span>
                   </button>
                   <button
@@ -1311,7 +1399,7 @@ function ProjectsAdmin() {
                   >
                     <div className="w-3 h-3 rounded-full bg-green-500"></div>
                     <span className="text-sm font-medium">
-                      Good: {Object.values(employeeWorkloads).filter(score => score >= 100 && score < 150).length} developers
+                      Normal Load: {Object.values(employeeWorkloads).filter(score => score >= 100 && score < 150).length} developers
                     </span>
                   </button>
                   <button
@@ -1535,7 +1623,19 @@ function ProjectsAdmin() {
                                 Projects
                               </th>
                               <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                                Story Points
+                                <div className="flex items-center gap-2">
+                                  <span>Story Points</span>
+                                  <select
+                                    value={storyPointsFilter}
+                                    onChange={(e) => setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly')}
+                                    className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                    onClick={(e) => e.stopPropagation()}
+                                  >
+                                    <option value="all">All</option>
+                                    <option value="weekly">Weekly</option>
+                                    <option value="monthly">Monthly</option>
+                                  </select>
+                                </div>
                               </th>
                             </tr>
                           </thead>
@@ -1702,7 +1802,19 @@ function ProjectsAdmin() {
                             Projects
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Total Story Points
+                            <div className="flex items-center gap-2">
+                              <span>Total Story Points</span>
+                              <select
+                                value={storyPointsFilter}
+                                onChange={(e) => setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly')}
+                                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="all">All</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
                           </th>
                         </tr>
                       </thead>
@@ -1859,10 +1971,41 @@ function ProjectsAdmin() {
                           setProjectId(project.id);
                         }}
                       >
-                        <div className="flex items-center justify-between mb-4">
-                          <div className="flex flex-col items-start pl-2 pr-4 py-2 bg-[#f7eaff] rounded-lg">
+                        <div className="flex flex-col mb-4">
+                          <div className="flex items-center justify-end mb-2">
+                            <div className="flex space-x-2">
+                              <button
+                                className="text-gray-400 hover:text-gray-600"
+                                onClick={(e) => openEditModal(project, e)}
+                              >
+                                <Pencil size={16} color='#667085' />
+                              </button>
+                              <button
+                                className="text-gray-400 hover:text-red-600"
+                                onClick={(e) => handleDeleteProject(project.id, e)}
+                              >
+                                <Trash2 size={16} color='#667085' />
+                              </button>
+                            </div>
+                          </div>
+                          <div className="w-full flex justify-between items-center pl-2 pr-2 py-2 bg-[#f7eaff] rounded-lg">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-sm font-semibold">Story Points:</span>
+                              <select
+                                value={projectFilters[project.id] || 'monthly'}
+                                onChange={(e) => {
+                                  e.stopPropagation();
+                                  handleProjectFilterChange(project.id, e.target.value as 'all' | 'weekly' | 'monthly');
+                                }}
+                                className="text-xs bg-white border border-gray-300 rounded px-1 py-0.5 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="all">All</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
                             <span className="text-sm font-semibold">
-                              <label>Story Points : </label>
                               <span className="text-green-600">{project.completedScore}</span>
                               <span className="text-gray-500"> / </span>
                               <span className="text-red-500">{project.totalScore}</span>
@@ -1870,20 +2013,6 @@ function ProjectsAdmin() {
                             <div className="text-xs text-gray-600 mt-1">
                               Completed: {project.completedScore} | Pending: {project.pendingScore}
                             </div>
-                          </div>
-                          <div className="flex space-x-2">
-                            <button
-                              className="text-gray-400 hover:text-gray-600"
-                              onClick={(e) => openEditModal(project, e)}
-                            >
-                              <Pencil size={16} color='#667085' />
-                            </button>
-                            <button
-                              className="text-gray-400 hover:text-red-600"
-                              onClick={(e) => handleDeleteProject(project.id, e)}
-                            >
-                              <Trash2 size={16} color='#667085' />
-                            </button>
                           </div>
                         </div>
                         <h3 className="text-[22px] font-semibold text-[#263238] mb-4">{project.title}</h3>
@@ -1951,7 +2080,19 @@ function ProjectsAdmin() {
                             Developers
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                            Story Points
+                            <div className="flex items-center gap-2">
+                              <span>Story Points</span>
+                              <select
+                                value={storyPointsFilter}
+                                onChange={(e) => setStoryPointsFilter(e.target.value as 'all' | 'weekly' | 'monthly')}
+                                className="text-xs bg-white border border-gray-300 rounded px-2 py-1 focus:outline-none focus:ring-1 focus:ring-purple-500"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <option value="all">All</option>
+                                <option value="weekly">Weekly</option>
+                                <option value="monthly">Monthly</option>
+                              </select>
+                            </div>
                           </th>
                           <th scope="col" className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
                             Created

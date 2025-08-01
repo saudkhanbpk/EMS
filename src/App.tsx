@@ -59,8 +59,6 @@
 //   const user = useAuthStore((state) => state.user);
 //   const setUser = useAuthStore((state) => state.setUser);
 
-
-
 //   useEffect(() => {
 //     // ✅ Register Firebase Service Worker
 //     if ("serviceWorker" in navigator) {
@@ -81,7 +79,7 @@
 //             console.error("SW registration failed:", error);
 //           });
 
-//         }  
+//         }
 //         requestNotificationPermission();
 //     }
 //   // useEffect(()=> {
@@ -103,8 +101,6 @@
 
 // // Call this when the user clicks a button (e.g., "Enable Notifications")
 
-
-
 // // app.js
 // // Frontend code (e.g., app.js)
 // async function subscribeToPush() {
@@ -120,7 +116,7 @@
 //   // Step 3: Save subscription to Supabase
 //   const { error } = await supabase
 //     .from('users')
-//     .update({ 
+//     .update({
 //       push_subscription: JSON.stringify(subscription) // Save as JSON string
 //     })
 //     .eq('id', localStorage.getItem("user_id")); // Replace with your user ID logic
@@ -178,7 +174,6 @@
 //     };
 //   }, []);
 
-
 //   //   return (
 //   //       <Router>
 //   //           <Routes>
@@ -211,8 +206,6 @@
 //   //       </Router>
 //   //   );
 //   // }
-
-
 
 //   return (
 //     <Router>
@@ -269,15 +262,22 @@
 
 // export default App;
 
-
-
-import React, { useEffect, useState } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useParams } from 'react-router-dom';
+import React, { Profiler, useEffect, useState } from 'react';
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  Navigate,
+  useParams,
+} from 'react-router-dom';
 import { useAuthStore } from './lib/store';
 import EmployeeLayout from './components/EmployeeLayout';
 import Login from './pages/Login';
+import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import { supabase } from './lib/supabase';
 import Dashboard from './pages/Dashboard';
+import { Provider } from 'react-redux';
 import Attendance from './pages/Attendance';
 import Leave from './pages/Leave';
 import Tasks from './pages/Tasks';
@@ -292,21 +292,24 @@ import TaskBoard from './components/TaskBoard';
 import ProfileCard from './components/Profile';
 import DailyLogs from './pages/DailyLogs';
 import WidgetDemo from './components/WidgetDemo';
-import { getMessaging, onMessage } from "firebase/messaging";
-import { initializeApp } from "firebase/app";
+import { getMessaging, onMessage } from 'firebase/messaging';
+import { initializeApp } from 'firebase/app';
 import { AttendanceProvider } from './pages/AttendanceContext';
-import { Toaster } from "./component/ui/toaster";
-import { Toaster as Sonner } from "./component/ui/sonner";
-import { TooltipProvider } from "./component/ui/tooltip";
-import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { startRealLaptopTracking } from './services/realLaptopTracking';
+import { Toaster as Sonner } from './component/ui/sonner';
+import { Toaster } from 'react-hot-toast';
+import { TooltipProvider } from './component/ui/tooltip';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import Index from './pages/Index';
 import AddNewTask from './AddNewTask';
 import Chatbutton from './components/chatbtn';
 import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
 import Chatlayout from './components/chatlayout';
-import Adminroute, { EmployeeRoute, SuperAdminRoute, UserRoute } from './components/adminroute';
+import Adminroute, {
+  EmployeeRoute,
+  SuperAdminRoute,
+  UserRoute,
+} from './components/adminroute';
 import { AnimatePresence } from 'framer-motion';
 import { AuthProvider } from './lib/AuthProvider';
 import { UserProvider } from './contexts/UserContext';
@@ -321,6 +324,17 @@ import LandingPage from './pages/landingpage';
 import UserPage from './pages/UserPage';
 import UserOrganizationDetail from './pages/UserOrganizationDetail';
 import SuperAdminComplaint from './pages/superadmincompalint';
+import ProjectsAdmin from './components/ProjectsAdmin';
+import AdminOrganization from './components/adminorganization';
+import EmployeeAttendanceTable from './pages/ListViewOfEmployees';
+import EmployeesDetails from './pages/EmployeesDetails';
+import AdminClient from './pages/adminclient';
+import AdminSoftwareComplaint from './pages/AdminSoftwareComplaint';
+import AdminHoliday from './pages/adminHoliday';
+import AdminDailyLogs from './components/AdminDailyLogs';
+import Updates from './pages/Updates';
+import Employeeprofile from './pages/Employeeprofile';
+import globalStore from './store';
 
 // Wrapper components for SuperAdmin routing
 const OrganizationsWrapper: React.FC = () => {
@@ -460,7 +474,8 @@ function App() {
       const registration = await navigator.serviceWorker.ready;
       const subscription = await registration.pushManager.subscribe({
         userVisibleOnly: true,
-        applicationServerKey: "BFPFkVqWUS4mX-O--KPP3jzy1xyi1pHFREawLt7R9Md2kZpTj8vvbyo9XWE-RIgnsL22pTSpqoX4gOAOsm5flJQ"
+        applicationServerKey:
+          'BFPFkVqWUS4mX-O--KPP3jzy1xyi1pHFREawLt7R9Md2kZpTj8vvbyo9XWE-RIgnsL22pTSpqoX4gOAOsm5flJQ',
       });
 
       // Save to Supabase
@@ -473,131 +488,197 @@ function App() {
     }
   };
 
-
-
   return (
     <AuthProvider>
-      <UserProvider>
-        <LaptopStateProvider>
-        <Router>
-          {/* Chat Sidebar - LinkedIn style */}
-          <AnimatePresence>
-            {ischatopen && (
-              <div className="fixed inset-0 z-50 flex pointer-events-none">
-                {/* Invisible overlay to capture clicks outside the sidebar */}
-                <div
-                  className="fixed inset-0 pointer-events-auto"
-                  onClick={closeChat}
-                ></div>
-                {/* The actual sidebar */}
-                <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
-                  <ChatSidebar closechat={closeChat} openchatperson={openchatperson} />
+      <Provider store={globalStore}>
+        <UserProvider>
+          <Toaster />
+          <Router>
+            {/* Chat Sidebar - LinkedIn style */}
+            <AnimatePresence>
+              {ischatopen && (
+                <div className="fixed inset-0 z-50 flex pointer-events-none">
+                  {/* Invisible overlay to capture clicks outside the sidebar */}
+                  <div
+                    className="fixed inset-0 pointer-events-auto"
+                    onClick={closeChat}
+                  ></div>
+                  {/* The actual sidebar */}
+                  <div className="relative ml-auto w-full max-w-xs pointer-events-auto">
+                    <ChatSidebar
+                      closechat={closeChat}
+                      openchatperson={openchatperson}
+                    />
+                  </div>
                 </div>
-              </div>
+              )}
+            </AnimatePresence>
+            {chatperson && (
+              <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />
             )}
-          </AnimatePresence>
-          {chatperson && <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />}
-          {!ischatopen && <Chatlayout><Chatbutton openchat={openChat} /></Chatlayout>}
+            {!ischatopen && (
+              <Chatlayout>
+                <Chatbutton openchat={openChat} />
+              </Chatlayout>
+            )}
 
-          {/* App Routes */}
-          <Routes>
-            {/* Public Route: Login */}
-            <Route path="/login" element={<Login />} />
-            <Route path="/home" element={<LandingPage />} />
+            {/* App Routes */}
+            <Routes>
+              {/* Public Routes */}
+              <Route path="/login" element={<Login />} />
+              <Route path="/forgot-password" element={<ForgotPassword />} />
+              <Route path="/reset-password" element={<ResetPassword />} />
+              <Route path="/home" element={<LandingPage />} />
 
-            {/* Widget Demo Route */}
-            <Route path="/widget-demo" element={<WidgetDemo />} />
+              {/* Widget Demo Route */}
+              <Route path="/widget-demo" element={<WidgetDemo />} />
 
-            {/* User Routes (Protected) */}
-            <Route path="/user" element={
-              <PrivateRoute>
-                <UserRoute>
-                  <UserPage />
-                </UserRoute>
-              </PrivateRoute>
-            } />
-            <Route path="/user/:organizationId" element={
-              <PrivateRoute>
-                <UserRoute>
-                  <UserOrganizationDetail />
-                </UserRoute>
-              </PrivateRoute>
-            } />
+              {/* User Routes (Protected) */}
+              <Route
+                path="/user"
+                element={
+                  <PrivateRoute>
+                    <UserRoute>
+                      <UserPage />
+                    </UserRoute>
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/user/:organizationId"
+                element={
+                  <PrivateRoute>
+                    <UserRoute>
+                      <UserOrganizationDetail />
+                    </UserRoute>
+                  </PrivateRoute>
+                }
+              />
 
-            {/* SuperAdmin Routes (Protected) */}
-            <Route
-              path="/superadmin"
-              element={
-                <PrivateRoute>
-                  <SuperAdminRoute>
-                    <SuperAdminPage />
-                  </SuperAdminRoute>
-                </PrivateRoute>
-              }
-            >
-              <Route index element={<Navigate to="/superadmin/dashboard" replace />} />
-              <Route path="dashboard" element={<SuperAdminDashboard />} />
-              <Route path="organizations" element={<OrganizationsWrapper />} />
-              <Route path="softwarecomplaint" element={<SuperAdminComplaint />} />
-              <Route path="organizations/:id" element={<OrganizationDetailWrapper />} />
-            </Route>
+              {/* SuperAdmin Routes (Protected) */}
+              <Route
+                path="/superadmin"
+                element={
+                  <PrivateRoute>
+                    <SuperAdminRoute>
+                      <SuperAdminPage />
+                    </SuperAdminRoute>
+                  </PrivateRoute>
+                }
+              >
+                <Route
+                  index
+                  element={<Navigate to="/superadmin/dashboard" replace />}
+                />
+                <Route path="dashboard" element={<SuperAdminDashboard />} />
+                <Route
+                  path="organizations"
+                  element={<OrganizationsWrapper />}
+                />
+                <Route
+                  path="softwarecomplaint"
+                  element={<SuperAdminComplaint />}
+                />
+                <Route
+                  path="organizations/:id"
+                  element={<OrganizationDetailWrapper />}
+                />
+              </Route>
 
-            {/* Admin Route (Protected) */}
-            <Route
-              path="/admin"
-              element={
-                <PrivateRoute adminOnly>
-                  <AttendanceProvider>
+              {/* Admin Route (Protected) */}
+              <Route
+                path="/admin"
+                element={
+                  <PrivateRoute adminOnly>
+                    <AttendanceProvider>
+                      <Adminroute>
+                        <AdminPage />
+                      </Adminroute>
+                    </AttendanceProvider>
+                  </PrivateRoute>
+                }
+              >
+                <Route
+                  index
+                  element={<Navigate to="employeAttandanceTable" replace />}
+                />
+                <Route path="projects" element={<ProjectsAdmin />} />
+                <Route path="organization" element={<AdminOrganization />} />
+                <Route
+                  path="employeAttandanceTable"
+                  element={<EmployeeAttendanceTable />}
+                />
 
-                    <Adminroute><AdminPage /></Adminroute>
-                  </AttendanceProvider>
-                </PrivateRoute>
-              }
-            />
+                <Route path="employeeDetails" element={<EmployeesDetails />} />
 
-            {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
-            <Route
-              path="/"
-              element={
-                <PrivateRoute>
-                  <EmployeeRoute>
-                    <EmployeeLayout />
-                  </EmployeeRoute>
-                </PrivateRoute>
-              }
-            >
-              <Route index element={<DashboardLayout><Dashboard /></DashboardLayout>} />
-              <Route path="attendance" element={<Attendance />} />
-              <Route path="leave" element={<Leave />} />
-              <Route path="tasks" element={<Tasks />} />
-              <Route path="software-complaint" element={<SoftwareComplaintSection />} />
-              <Route path="office-complaint" element={<OfficeComplaintSection />} />
-              <Route path="overtime" element={<ExtraHours />} />
-              <Route path="salary-breakdown" element={<SalaryBreakdown />} />
-              <Route path="board/:id" element={<TaskBoardLayout />} />
-              <Route path="profile" element={<ProfileCard />} />
-              <Route path="dailylogs" element={<DailyLogs />} />
+                <Route path="Clients" element={<AdminClient />} />
+                <Route path="OfficeComplaints" />
+                <Route
+                  path="softwareComplaints"
+                  element={<AdminSoftwareComplaint />}
+                />
+                <Route path="Holidays" element={<AdminHoliday />} />
+                <Route path="leaverequest" />
+                <Route path="dailylogs" element={<AdminDailyLogs />} />
+                <Route path="officealerts" element={<Updates />} />
+                <Route path="profile/:Id" element={<Employeeprofile />} />
+              </Route>
 
+              {/* Employee Routes (Protected & Nested under EmployeeLayout) */}
+              <Route
+                path="/"
+                element={
+                  <PrivateRoute>
+                    <EmployeeRoute>
+                      <EmployeeLayout />
+                    </EmployeeRoute>
+                  </PrivateRoute>
+                }
+              >
+                <Route
+                  index
+                  element={
+                    <DashboardLayout>
+                      <Dashboard />
+                    </DashboardLayout>
+                  }
+                />
+                <Route path="attendance" element={<Attendance />} />
+                <Route path="leave" element={<Leave />} />
+                <Route path="tasks" element={<Tasks />} />
+                <Route
+                  path="software-complaint"
+                  element={<SoftwareComplaintSection />}
+                />
+                <Route
+                  path="office-complaint"
+                  element={<OfficeComplaintSection />}
+                />
+                <Route path="overtime" element={<ExtraHours />} />
+                <Route path="salary-breakdown" element={<SalaryBreakdown />} />
+                <Route path="board/:id" element={<TaskBoardLayout />} />
+                <Route path="profile" element={<ProfileCard />} />
+                <Route path="dailylogs" element={<DailyLogs />} />
+              </Route>
 
-            </Route>
-
-            {/* Redirect unknown routes to login */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </Router>
-        </LaptopStateProvider>
-      </UserProvider>
+              {/* Redirect unknown routes to login */}
+              <Route path="*" element={<Navigate to="/login" replace />} />
+            </Routes>
+          </Router>
+        </UserProvider>
+      </Provider>
     </AuthProvider>
   );
 }
 
-const PrivateRoute: React.FC<{ children: React.ReactNode; adminOnly?: boolean }> = ({
-  children,
-  adminOnly
-}) => {
+const PrivateRoute: React.FC<{
+  children: React.ReactNode;
+  adminOnly?: boolean;
+}> = ({ children, adminOnly }) => {
   const user = useAuthStore((state) => state.user);
   if (!user) return <Navigate to="/home" replace />;
   return <>{children}</>;
 };
 
 export default App;
+

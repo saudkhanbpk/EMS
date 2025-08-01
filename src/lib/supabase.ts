@@ -8,12 +8,35 @@ if (!supabaseUrl || !supabaseAnonKey) {
   throw new Error('Missing Supabase environment variables');
 }
 
-// Configure Supabase client with retries and better error handling
+// Configure Supabase client with extended session persistence
 export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
-    detectSessionInUrl: true
+    detectSessionInUrl: true,
+    // Extend session storage to prevent auto-logout
+    storage: {
+      getItem: (key: string) => {
+        if (typeof window !== 'undefined') {
+          return window.localStorage.getItem(key);
+        }
+        return null;
+      },
+      setItem: (key: string, value: string) => {
+        if (typeof window !== 'undefined') {
+          window.localStorage.setItem(key, value);
+        }
+      },
+      removeItem: (key: string) => {
+        if (typeof window !== 'undefined') {
+          window.localStorage.removeItem(key);
+        }
+      }
+    },
+    // Set storage key to ensure consistent session storage
+    storageKey: 'supabase.auth.token',
+    // Disable automatic sign out on tab close
+    flowType: 'pkce'
   },
   global: {
     headers: {

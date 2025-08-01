@@ -1,13 +1,27 @@
-
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { PlusCircle, User, X, ArrowLeft, DotIcon, Plus, Pencil, Trash2, Minus } from 'lucide-react';
-import { DragDropContext, Droppable, Draggable, DropResult } from '@hello-pangea/dnd';
+import {
+  PlusCircle,
+  User,
+  X,
+  ArrowLeft,
+  DotIcon,
+  Plus,
+  Pencil,
+  Trash2,
+  Minus,
+} from 'lucide-react';
+import {
+  DragDropContext,
+  Droppable,
+  Draggable,
+  DropResult,
+} from '@hello-pangea/dnd';
 import { useAuthStore } from '../lib/store';
 import { formatDistanceToNow } from 'date-fns';
 import toast, { Toaster } from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
-import { LayoutGrid, Table2 } from "lucide-react";
+import { LayoutGrid, Table2 } from 'lucide-react';
 import NotionTableView from './NotionTableView';
 import { supabase } from '../lib/supabase';
 import AddNewTask from '../AddNewTask';
@@ -15,6 +29,7 @@ import { AttendanceContext } from '../pages/AttendanceContext';
 import { useContext } from 'react';
 import Comments from '../pages/Comments';
 import { title } from 'process';
+import TodoTask from './TodoTask';
 
 interface Developer {
   id: string;
@@ -43,22 +58,22 @@ const COLUMN_IDS = {
   todo: 'todo',
   inProgress: 'inProgress',
   review: 'review',
-  done: 'done'
+  done: 'done',
 };
 
 function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
-  console.log("ProjectID : ", ProjectId);
-
   const user = useAuthStore();
   const { id } = useParams();
-  const [selectedTab, setSelectedTab] = useState("tasks");
+  const [selectedTab, setSelectedTab] = useState('tasks');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [currentTask, setCurrentTask] = useState<Task | null>(null);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const navigate = useNavigate();
   const [isAddingTask, setIsAddingTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
-  const [devopsScores, setDevopsScores] = useState<{ id: string; name: string; score: number; completed: number }[]>([]);
+  const [devopsScores, setDevopsScores] = useState<
+    { id: string; name: string; score: number; completed: number }[]
+  >([]);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -66,11 +81,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const selectedTABB = useContext(AttendanceContext).selectedTAB;
   const devopsss = useContext(AttendanceContext).devopss;
   const ProjectIdd = useContext(AttendanceContext).projectId;
-  const [comments, setcomments] = useState([])
+  const [comments, setcomments] = useState([]);
   const [commentsByTaskId, setCommentByTaskID] = useState({});
   const [selectedDeveloper, setSelectedDeveloper] = useState<string>('all');
   const [projectName, setProjectName] = useState<string>('');
-  const [view, setView] = useState<"card" | "table">("card");
+  const [view, setView] = useState<'card' | 'table'>('card');
   // const [tasks, setTasks] = useState<task[]>([]);
   // Add this function inside TaskBoardAdmin component
   const handleQuickAddTask = async (title: string) => {
@@ -81,7 +96,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
         project_id: ProjectId,
         status: 'todo',
         score: 0,
-        priority: 'Medium',
+        priority: 'Low',
         devops: [], // Empty by default, user can assign later
         description: '',
         created_at: new Date().toISOString(),
@@ -113,20 +128,20 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       return tasks;
     }
 
-    return tasks.filter(task =>
-      task.devops?.some(dev => dev.id === selectedDeveloper)
+    return tasks.filter((task) =>
+      task.devops?.some((dev) => dev.id === selectedDeveloper)
     );
   }, [tasks, selectedDeveloper]);
 
   const getTasksByStatus = (status: Task['status']) =>
-    filteredTasks.filter(task => task.status === status);
+    filteredTasks.filter((task) => task.status === status);
 
   const getStatusCount = (status: Task['status']) =>
-    filteredTasks.filter(task => task.status === status).length;
+    filteredTasks.filter((task) => task.status === status).length;
 
   const getScoreByStatus = (status: Task['status']) =>
     filteredTasks
-      .filter(task => task.status === status)
+      .filter((task) => task.status === status)
       .reduce((sum, task) => sum + task.score, 0);
 
   const totalTasks = filteredTasks.length;
@@ -135,31 +150,31 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
   const fetchTasks = async () => {
     const { data, error } = await supabase
-      .from("tasks_of_projects")
-      .select("*")
-      .eq("project_id", ProjectId);
+      .from('tasks_of_projects')
+      .select('*')
+      .eq('project_id', ProjectId);
 
     {
-      console.log("the all task is", data)
+      console.log('the all task is', data);
       // No need for image URL processing since URLs are already in the table
-      const tasksWithImages = data.map(task => ({
+      const tasksWithImages = data.map((task) => ({
         ...task,
         // Keep the existing imageurl as is
         image_url: task.imageurl,
         // You can add thumbnail_url here if you want to implement thumbnails later
-        thumbnail_url: task.imageurl
+        thumbnail_url: task.imageurl,
       }));
 
       // Rest of your existing code for comments and scores
       const { data: comments, error: commentserror } = await supabase
-        .from("comments")
-        .select("*");
+        .from('comments')
+        .select('*');
 
       if (!commentserror) {
         // Fetch users for commentor names
         const { data: users, error: userError } = await supabase
-          .from("users")
-          .select("id, full_name");
+          .from('users')
+          .select('id, full_name');
 
         if (!userError) {
           // Create map of user_id => full_name
@@ -171,7 +186,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           // Add commentor_name to each comment
           const enrichedComments = comments.map((comment) => ({
             ...comment,
-            commentor_name: userMap[comment.user_id] || "Unknown User",
+            commentor_name: userMap[comment.user_id] || 'Unknown User',
           }));
 
           setcomments(enrichedComments);
@@ -210,8 +225,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             const completed = tasksWithComments
               .filter((task) =>
                 task.devops?.some(
-                  (devop) =>
-                    devop.id === developer.id && task.status === "done"
+                  (devop) => devop.id === developer.id && task.status === 'done'
                 )
               )
               .reduce((sum, task) => sum + (task.score || 0), 0);
@@ -242,15 +256,13 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     }
   };
 
-
-
   // Fetch project name
   useEffect(() => {
     const fetchProjectName = async () => {
       const { data, error } = await supabase
-        .from("projects")
-        .select("title")
-        .eq("id", ProjectId)
+        .from('projects')
+        .select('title')
+        .eq('id', ProjectId)
         .single();
 
       if (!error && data) {
@@ -268,26 +280,33 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     fetchTasks();
   }, [ProjectIdd, ProjectId]); // Only watches prop ProjectId, not context value
 
-
   const handleDragEnd = async (result: DropResult) => {
     const { destination, source, draggableId } = result;
     if (!destination) return;
 
-    if (destination.droppableId === source.droppableId && destination.index === source.index) {
+    if (
+      destination.droppableId === source.droppableId &&
+      destination.index === source.index
+    ) {
       return;
     }
 
     // Update all tasks, not just filtered ones
     const newTasks = Array.from(tasks);
-    const draggedTask = newTasks.find(task => task.id === draggableId);
+    const draggedTask = newTasks.find((task) => task.id === draggableId);
     if (!draggedTask) return;
 
     newTasks.splice(newTasks.indexOf(draggedTask), 1);
     draggedTask.status = destination.droppableId as Task['status'];
 
     // For insertion position, use filtered tasks if we're in filtered mode
-    const destTasks = newTasks.filter(task => task.status === destination.droppableId);
-    const insertAt = destination.index > destTasks.length ? destTasks.length : destination.index;
+    const destTasks = newTasks.filter(
+      (task) => task.status === destination.droppableId
+    );
+    const insertAt =
+      destination.index > destTasks.length
+        ? destTasks.length
+        : destination.index;
     newTasks.splice(insertAt, 0, draggedTask);
 
     setTasks(newTasks);
@@ -308,18 +327,26 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     <div className="flex items-center gap-2 bg-[#232326] rounded-lg p-1">
       <button
         className={`flex items-center gap-1 px-3 py-1 rounded-md transition-colors duration-200
-          ${view === "card" ? "bg-[#9A00FF] text-white" : "text-gray-300 hover:bg-[#18181A]"}
+          ${
+            view === 'card'
+              ? 'bg-[#9A00FF] text-white'
+              : 'text-gray-300 hover:bg-[#18181A]'
+          }
         `}
-        onClick={() => setView("card")}
+        onClick={() => setView('card')}
       >
         <LayoutGrid size={18} />
         <span className="hidden sm:inline">Card</span>
       </button>
       <button
         className={`flex items-center gap-1 px-3 py-1 rounded-md transition-colors duration-200
-          ${view === "table" ? "bg-[#9A00FF] text-white" : "text-gray-300 hover:bg-[#18181A]"}
+          ${
+            view === 'table'
+              ? 'bg-[#9A00FF] text-white'
+              : 'text-gray-300 hover:bg-[#18181A]'
+          }
         `}
-        onClick={() => setView("table")}
+        onClick={() => setView('table')}
       >
         <Table2 size={18} />
         <span className="hidden sm:inline">Table</span>
@@ -346,14 +373,13 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
   const handleEditClick = (task: Task) => {
     setCurrentTask(task);
-    console.log("Current Task:", task);
+    console.log('Current Task:', task);
 
     setIsEditModalOpen(true);
   };
 
   const handleUpdateTask = async (updatedTask: Task) => {
     try {
-
       // Upload new image if selected
       let imageUrl = updatedTask.imageurl;
       if (imageFile) {
@@ -362,18 +388,16 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
         const filePath = `task-images/${fileName}`;
 
         // Upload to Supabase storage
-        const { error: uploadError } = await supabase
-          .storage
+        const { error: uploadError } = await supabase.storage
           .from('newtaskimage')
           .upload(filePath, imageFile);
 
         if (uploadError) throw uploadError;
 
         // Get public URL
-        const { data: { publicUrl } } = supabase
-          .storage
-          .from('newtaskimage')
-          .getPublicUrl(filePath);
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from('newtaskimage').getPublicUrl(filePath);
 
         imageUrl = publicUrl;
       }
@@ -387,14 +411,14 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           priority: updatedTask.priority,
           devops: updatedTask.devops,
           deadline: updatedTask.deadline,
-          imageurl: imageUrl
+          imageurl: imageUrl,
         })
 
         .eq('id', updatedTask.id);
 
       if (error) throw error;
 
-      setTasks(tasks.map(t => t.id === updatedTask.id ? updatedTask : t));
+      setTasks(tasks.map((t) => (t.id === updatedTask.id ? updatedTask : t)));
       setIsEditModalOpen(false);
     } catch (error) {
       console.error('Error updating task:', error);
@@ -402,14 +426,12 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   };
 
   const handleDelete = async (DeletedTask: Task) => {
-    const confirmed = window.confirm("Are you sure you want to delete this Task?");
+    const confirmed = window.confirm(
+      'Are you sure you want to delete this Task?'
+    );
     if (!confirmed) return;
     try {
-
-      await supabase
-        .from("comments")
-        .delete()
-        .eq("task_id", DeletedTask.id);
+      await supabase.from('comments').delete().eq('task_id', DeletedTask.id);
 
       const { error } = await supabase
         .from('tasks_of_projects')
@@ -420,14 +442,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
         throw error;
       }
 
-      setTasks(tasks.filter(t => t.id !== DeletedTask.id)); // Remove deleted task
+      setTasks(tasks.filter((t) => t.id !== DeletedTask.id)); // Remove deleted task
       setIsEditModalOpen(false);
     } catch (err) {
       console.error('Error deleting task:', err);
     }
   };
 
-  const handleTaskStatusChange = async (taskId: string, newStatus: 'done' | Task['status']) => {
+  const handleTaskStatusChange = async (
+    taskId: string,
+    newStatus: 'done' | Task['status']
+  ) => {
     try {
       const { error } = await supabase
         .from('tasks_of_projects')
@@ -436,25 +461,23 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
       if (error) throw error;
 
-      setTasks(tasks.map(task =>
-        task.id === taskId ? { ...task, status: newStatus } : task
-      ));
+      setTasks(
+        tasks.map((task) =>
+          task.id === taskId ? { ...task, status: newStatus } : task
+        )
+      );
     } catch (error) {
       console.error('Error updating task status:', error);
     }
   };
-  console.log("Developer Scores:", devopsScores);
-
+  console.log('Developer Scores:', devopsScores);
 
   const TaskCard = ({ task, index }: { task: Task; index: number }) => {
     const [descriptionOpen, setDescriptionOpen] = useState(false);
     const [openedTask, setOpenedTask] = useState<Task | null>(null);
     const [zoomLevel, setZoomLevel] = useState(1);
     const [isFullImageOpen, setIsFullImageOpen] = useState(false);
-    const [fullImageUrl, setFullImageUrl] = useState("");
-
-
-
+    const [fullImageUrl, setFullImageUrl] = useState('');
 
     return (
       <Draggable draggableId={task.id} index={index}>
@@ -487,24 +510,29 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             )}
 
             {/* Title */}
-            <p className="text-[14px] leading-5 font-semibold text-[#404142]">{task.title}</p>
+            <p className="text-[14px] leading-5 font-semibold text-[#404142]">
+              {task.title}
+            </p>
 
             {/* Priority & Score */}
             <div className="flex flex-row items-center gap-3">
               <span
                 className={`text-[12px] text-white font-semibold rounded px-2 py-[2px] capitalize
-            ${task.priority === "High"
-                    ? "bg-red-500"
-                    : task.priority === "Medium"
-                      ? "bg-yellow-600"
-                      : task.priority === "Low"
-                        ? "bg-green-400"
-                        : ""
-                  }`}
+            ${
+              task.priority === 'High'
+                ? 'bg-red-500'
+                : task.priority === 'Medium'
+                ? 'bg-yellow-600'
+                : task.priority === 'Low'
+                ? 'bg-green-400'
+                : ''
+            }`}
               >
                 {task.priority}
               </span>
-              <span className="text-[13px] text-[#404142] font-medium">{task.score}</span>
+              <span className="text-[13px] text-[#404142] font-medium">
+                {task.score}
+              </span>
             </div>
 
             {/* Devops Info + Comments */}
@@ -514,46 +542,56 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                   <div className="h-5 w-5 rounded-full bg-[#9A00FF] text-white font-medium font-semibold flex items-center justify-center">
                     {Array.isArray(task.devops)
                       ? task.devops
-                        .filter(dev => dev?.name || dev?.full_name) // Filter out items without name or full_name
-                        .map(dev => (dev.name || dev.full_name)[0].toUpperCase())
-                        .join("")
-                      : (task.devops?.name || task.devops?.full_name)?.[0]?.toUpperCase() || ""}
+                          .filter((dev) => dev?.name || dev?.full_name) // Filter out items without name or full_name
+                          .map((dev) =>
+                            (dev.name || dev.full_name)[0].toUpperCase()
+                          )
+                          .join('')
+                      : (task.devops?.name ||
+                          task.devops?.full_name)?.[0]?.toUpperCase() || ''}
                   </div>
                   <span className="text-[13px] text-[#404142]">
                     {Array.isArray(task.devops)
                       ? task.devops
-                        .filter(dev => dev?.name || dev?.full_name) // Filter out items without name or full_name
-                        .map(dev => {
-                          const displayName = dev.name || dev.full_name;
-                          return displayName.charAt(0).toUpperCase() + displayName.slice(1);
-                        })
-                        .join(", ")
-                      : (task.devops?.name || task.devops?.full_name)
-                        ? (task.devops.name || task.devops.full_name).charAt(0).toUpperCase() +
+                          .filter((dev) => dev?.name || dev?.full_name) // Filter out items without name or full_name
+                          .map((dev) => {
+                            const displayName = dev.name || dev.full_name;
+                            return (
+                              displayName.charAt(0).toUpperCase() +
+                              displayName.slice(1)
+                            );
+                          })
+                          .join(', ')
+                      : task.devops?.name || task.devops?.full_name
+                      ? (task.devops.name || task.devops.full_name)
+                          .charAt(0)
+                          .toUpperCase() +
                         (task.devops.name || task.devops.full_name).slice(1)
-                        : ""}
+                      : ''}
                   </span>
                 </div>
                 {task.commentCount > 0 && (
                   <span className="text-sm text-gray-600">
-                    {task.commentCount} {task.commentCount === 1 ? "comment" : "comments"}
+                    {task.commentCount}{' '}
+                    {task.commentCount === 1 ? 'comment' : 'comments'}
                   </span>
                 )}
-
               </div>
-
             )}
             {task.deadline && (
               <div className="flex items-center gap-2 mt-1">
                 <span className="text-[12px] text-[#404142]">
-                  <strong>Deadline:</strong> {new Date(task.deadline).toLocaleDateString()}
+                  <strong>Deadline:</strong>{' '}
+                  {new Date(task.deadline).toLocaleDateString()}
                 </span>
               </div>
             )}
 
             {/* Time & Actions */}
             <div className="flex justify-between items-center">
-              <p className="text-[12px] text-[#949597]">{formatDistanceToNow(new Date(task.created_at))} ago</p>
+              <p className="text-[12px] text-[#949597]">
+                {formatDistanceToNow(new Date(task.created_at))} ago
+              </p>
               <div className="hidden group-hover:flex space-x-2">
                 <button
                   className="text-gray-400 hover:text-gray-600"
@@ -578,10 +616,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
             {/* Comments Section */}
             <div>
-              <Comments
-                taskid={task.id}
-                onCommentAdded={fetchTasks}
-              />
+              <Comments taskid={task.id} onCommentAdded={fetchTasks} />
             </div>
 
             {/* Modal Description View */}
@@ -590,7 +625,9 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                 <div className="bg-white rounded-2xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-y-auto animate-fade-in p-6 relative">
                   {/* Modal Header */}
                   <div className="flex justify-between items-center mb-4">
-                    <h2 className="text-xl font-semibold text-gray-800">{openedTask?.title}</h2>
+                    <h2 className="text-xl font-semibold text-gray-800">
+                      {openedTask?.title}
+                    </h2>
                     <button
                       className="text-gray-400 hover:text-gray-600"
                       onClick={(e) => {
@@ -640,41 +677,44 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     </>
                   )}
 
-
                   {/* Description */}
-                  <p className="text-sm text-gray-700 leading-relaxed mb-4">{openedTask?.description}</p>
+                  <p className="text-sm text-gray-700 leading-relaxed mb-4">
+                    {openedTask?.description}
+                  </p>
 
                   {/* Info Grid */}
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 text-sm text-gray-600 mb-6">
-                    <div><span className="font-semibold">KPIs : </span> {openedTask?.score}</div>
                     <div>
-                      <span className="font-semibold">Developer : </span> {openedTask?.devops?.map((dev) => dev.name || dev.full_name).join(", ")}
+                      <span className="font-semibold">KPIs : </span>{' '}
+                      {openedTask?.score}
+                    </div>
+                    <div>
+                      <span className="font-semibold">Developer : </span>{' '}
+                      {openedTask?.devops
+                        ?.map((dev) => dev.name || dev.full_name)
+                        .join(', ')}
                     </div>
                     <div>
                       <span className="font-semibold">Priority : </span>
                       <span
-                        className={`${openedTask.priority === "High"
-                          ? "bg-red-500"
-                          : openedTask.priority === "Medium"
-                            ? "bg-yellow-600"
-                            : openedTask.priority === "Low"
-                              ? "bg-green-400"
-                              : ""
-                          } text-[14px] text-white font-semibold rounded px-2 py-[2px] capitalize`}
+                        className={`${
+                          openedTask.priority === 'High'
+                            ? 'bg-red-500'
+                            : openedTask.priority === 'Medium'
+                            ? 'bg-yellow-600'
+                            : openedTask.priority === 'Low'
+                            ? 'bg-green-400'
+                            : ''
+                        } text-[14px] text-white font-semibold rounded px-2 py-[2px] capitalize`}
                       >
                         {openedTask?.priority}
                       </span>
                     </div>
                   </div>
 
-
-
                   {/* Comments */}
                   <div className="flex flex-col gap-4">
-                    <Comments
-                      taskid={task.id}
-                      onCommentAdded={fetchTasks}
-                    />
+                    <Comments taskid={task.id} onCommentAdded={fetchTasks} />
                     {commentsByTaskId[openedTask?.id]?.length > 0 && (
                       <div className="space-y-2 max-h-60 overflow-y-auto pr-2">
                         {commentsByTaskId[openedTask?.id].map((comment) => (
@@ -687,12 +727,18 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                             </div>
                             <div className="flex-1">
                               <div className="flex justify-between">
-                                <p className="text-sm font-semibold">{comment.commentor_name}</p>
+                                <p className="text-sm font-semibold">
+                                  {comment.commentor_name}
+                                </p>
                                 <span className="text-xs text-gray-400">
-                                  {new Date(comment.created_at).toLocaleDateString()}
+                                  {new Date(
+                                    comment.created_at
+                                  ).toLocaleDateString()}
                                 </span>
                               </div>
-                              <p className="text-sm text-gray-700 whitespace-pre-wrap">{comment.comment_text}</p>
+                              <p className="text-sm text-gray-700 whitespace-pre-wrap">
+                                {comment.comment_text}
+                              </p>
                             </div>
                           </div>
                         ))}
@@ -719,21 +765,41 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           </div>
         )}
       </Draggable>
-
     );
   };
-
-
-  const renderColumn = (status: keyof typeof COLUMN_IDS, title: string, color: string) => {
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const renderColumn = (
+    status: keyof typeof COLUMN_IDS,
+    title: string,
+    color: string
+  ) => {
     // Use filteredTasks instead of tasks
-    const tasksInColumn = filteredTasks.filter(task => task.status === COLUMN_IDS[status]);
+    const tasksInColumn = filteredTasks.filter(
+      (task) => task.status === COLUMN_IDS[status]
+    );
 
     return (
       <div className="bg-white lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
         <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h2 className={`font-semibold text-xl leading-7 text-${color}`}>{title}</h2>
+          <h2 className={`font-semibold text-xl leading-7 text-${color}`}>
+            {title}
+          </h2>
           <span className="text-gray-600">{tasksInColumn.length}</span>
         </div>
+        {status === 'todo' && (
+          <>
+            <button
+              onClick={() => setIsCreateTaskModalOpen(true)}
+              className="mt-2 w-full flex mb-2 items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+            >
+              <Plus size={16} />
+              <span className="text-sm">New</span>
+            </button>
+            {isCreateTaskModalOpen && (
+              <TodoTask projectId={ProjectId} fetchTasks={fetchTasks} />
+            )}
+          </>
+        )}
         <Droppable droppableId={COLUMN_IDS[status]}>
           {(provided) => (
             <div
@@ -746,15 +812,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                 <TaskCard key={task.id} task={task} index={index} />
               ))}
               {provided.placeholder}
-              {status === 'todo' && (
-                <button
-                  onClick={() => setSelectedTab("addtask")}
-                  className="mt-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
-                >
-                  <Plus size={16} />
-                  <span className="text-sm">New</span>
-                </button>
-              )}
             </div>
           )}
         </Droppable>
@@ -766,7 +823,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     <div className="min-h-screen px-0">
       <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto">
-        {selectedTab === "addtask" && (
+        {selectedTab === 'addtask' && (
           <AddNewTask
             setselectedtab={setSelectedTab}
             ProjectId={ProjectId}
@@ -776,7 +833,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           />
         )}
 
-        {(selectedTab === "tasks" || selectedTABB === "tasks") && (
+        {(selectedTab === 'tasks' || selectedTABB === 'tasks') && (
           <>
             <div className="flex flex-col gap-4 p-3 rounded-2xl mb-4  bg-white shadow-sm border-b border-gray-100">
               {/* Arrow + Heading Grouped */}
@@ -784,32 +841,40 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                 {/* <div></div> */}
                 <div className="flex items-center gap-3">
                   <Link
-                    to={localStorage.getItem("user_email")?.endsWith("@admin.com") ? "/admin" : "/"}
+                    to={
+                      localStorage.getItem('user_email')?.endsWith('@admin.com')
+                        ? '/admin'
+                        : '/'
+                    }
                     className="text-gray-600 hover:text-gray-800"
                     onClick={(e) => {
                       e.preventDefault();
-                      const isAdmin = localStorage.getItem("user_email")?.endsWith("@admin.com");
-                      navigate(isAdmin ? "/admin" : "/tasks");
+                      const isAdmin = localStorage
+                        .getItem('user_email')
+                        ?.endsWith('@admin.com');
+                      navigate(isAdmin ? '/admin' : '/tasks');
                     }}
                   >
                     <ArrowLeft
                       className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                       size={35}
                       onClick={() => {
-                        if (selectedTAB === "TaskBoard") {
-                          setSelectedTAB("");
+                        if (selectedTAB === 'TaskBoard') {
+                          setSelectedTAB('');
                         } else {
-                          setSelectedTAB("Projects");
+                          setSelectedTAB('Projects');
                         }
                       }}
                     />
                   </Link>
-                  <h1 className="text-md md:text-2xl font-bold text-gray-800">Work Planner</h1>
+                  <h1 className="text-md md:text-2xl font-bold text-gray-800">
+                    Work Planner
+                  </h1>
                 </div>
                 <div>
                   <button
                     className=" bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
-                    onClick={() => setSelectedTab("addtask")}
+                    onClick={() => setSelectedTab('addtask')}
                   >
                     <PlusCircle size={20} className="mr-2" /> New Task
                   </button>
@@ -820,23 +885,36 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
                 {/* Status Box */}
                 <div className="bg-white w-full lg:w-[60%] p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap justify-between gap-4 font-semibold text-sm">
-                  <h1 className="text-[#9A00FF]">TO DO: {getScoreByStatus('todo')}</h1>
-                  <h1 className="text-orange-600">In Progress: {getScoreByStatus('inProgress')}</h1>
-                  <h1 className="text-yellow-600">Review: {getScoreByStatus('review')}</h1>
-                  <h1 className="text-[#05C815]">Done: this {getScoreByStatus('done')}</h1>
+                  <h1 className="text-[#9A00FF]">
+                    TO DO: {getScoreByStatus('todo')}
+                  </h1>
+                  <h1 className="text-orange-600">
+                    In Progress: {getScoreByStatus('inProgress')}
+                  </h1>
+                  <h1 className="text-yellow-600">
+                    Review: {getScoreByStatus('review')}
+                  </h1>
+                  <h1 className="text-[#05C815]">
+                    Done: this {getScoreByStatus('done')}
+                  </h1>
                 </div>
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
                   {/* Developer Filter Dropdown */}
                   <div className="relative w-full sm:w-auto">
                     <div className="flex items-center gap-2">
-                      <label className="mr-2 text-sm font-medium text-gray-700">Filter by Developer:</label>
+                      <label className="mr-2 text-sm font-medium text-gray-700">
+                        Filter by Developer:
+                      </label>
                       <div className="relative flex-1">
                         <select
                           value={selectedDeveloper}
                           onChange={(e) => setSelectedDeveloper(e.target.value)}
-                          className={`w-full sm:w-48 bg-white border ${selectedDeveloper !== 'all' ? 'border-purple-500 ring-2 ring-purple-300' : 'border-gray-300'
-                            } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
+                          className={`w-full sm:w-48 bg-white border ${
+                            selectedDeveloper !== 'all'
+                              ? 'border-purple-500 ring-2 ring-purple-300'
+                              : 'border-gray-300'
+                          } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
                         >
                           <option value="all">All Developers</option>
                           {devopss?.map((dev) => (
@@ -846,7 +924,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                           ))}
                         </select>
                         <div className="pointer-events-none absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center px-2 text-gray-700">
-                          <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20">
+                          <svg
+                            className="fill-current h-4 w-4"
+                            xmlns="http://www.w3.org/2000/svg"
+                            viewBox="0 0 20 20"
+                          >
                             <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
                           </svg>
                         </div>
@@ -864,8 +946,12 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                         <div className="mt-1 text-xs font-medium text-purple-700">
                           {(() => {
                             const selectedDevName =
-                              devopss?.find((dev) => dev.id === selectedDeveloper)?.name ||
-                              devopss?.find((dev) => dev.id === selectedDeveloper)?.full_name ||
+                              devopss?.find(
+                                (dev) => dev.id === selectedDeveloper
+                              )?.name ||
+                              devopss?.find(
+                                (dev) => dev.id === selectedDeveloper
+                              )?.full_name ||
                               'Selected developer';
                             return `Showing ${filteredTasks.length} of ${tasks.length} tasks for ${selectedDevName}`;
                           })()}
@@ -888,8 +974,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
             {/* View Toggle */}
 
-
-            {view === "card" ? (
+            {view === 'card' ? (
               <DragDropContext onDragEnd={handleDragEnd}>
                 <div className="grid grid-cols-4 gap-6">
                   {renderColumn('todo', 'To do', '[#9A00FF]')}
@@ -902,7 +987,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               <NotionTableView
                 tasks={filteredTasks}
                 developers={devopss}
-                onAddTask={() => setSelectedTab("addtask")}
+                onAddTask={() => setSelectedTab('addtask')}
                 onTaskStatusChange={handleTaskStatusChange}
                 onQuickAddTask={handleQuickAddTask} // Add this line
               />
@@ -915,14 +1000,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               key={score.id}
               className="px-3 py-1 rounded-full flex items-center bg-gray-100"
             >
-              <span className="mr-2 truncate max-w-[100px] font-medium text-gray-700">{score.name}</span>
-              <span className="text-green-600 font-semibold">: {score.completed}</span>
+              <span className="mr-2 truncate max-w-[100px] font-medium text-gray-700">
+                {score.name}
+              </span>
+              <span className="text-green-600 font-semibold">
+                : {score.completed}
+              </span>
               <span className="text-gray-600 font-semibold"> / </span>
               <span className="text-red-500 font-semibold">{score.score}</span>
             </div>
           ))}
         </div>
-
 
         {/* Edit Task Modal */}
         {isEditModalOpen && currentTask && (
@@ -933,7 +1021,9 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             >
               <div className="p-6">
                 <div className="flex justify-between items-center mb-4">
-                  <h2 className="text-2xl font-bold text-gray-800">Edit Task</h2>
+                  <h2 className="text-2xl font-bold text-gray-800">
+                    Edit Task
+                  </h2>
                   <button
                     onClick={() => setIsEditModalOpen(false)}
                     className="text-gray-500 hover:text-gray-700"
@@ -951,21 +1041,35 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                 >
                   {/* Title Input */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Title
+                    </label>
                     <input
                       type="text"
                       value={currentTask.title}
-                      onChange={(e) => setCurrentTask({ ...currentTask, title: e.target.value })}
+                      onChange={(e) =>
+                        setCurrentTask({
+                          ...currentTask,
+                          title: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     />
                   </div>
 
                   {/* Description Input */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Description
+                    </label>
                     <textarea
                       value={currentTask.description || ''}
-                      onChange={(e) => setCurrentTask({ ...currentTask, description: e.target.value })}
+                      onChange={(e) =>
+                        setCurrentTask({
+                          ...currentTask,
+                          description: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                       rows={3}
                     />
@@ -973,12 +1077,20 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                   {/* Score Input */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Score</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Score
+                    </label>
                     <input
                       type="number"
                       value={currentTask.score}
-                      onChange={(e) => setCurrentTask({ ...currentTask, score: Number(e.target.value) })}
+                      onChange={(e) =>
+                        setCurrentTask({
+                          ...currentTask,
+                          score: Number(e.target.value),
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
+
                     />
                   </div>
 
@@ -1054,11 +1166,18 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                   {/* Priority Select */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Priority
+                    </label>
                     <select
                       id="priority"
                       value={currentTask.priority || ''}
-                      onChange={(e) => setCurrentTask({ ...currentTask, priority: e.target.value })}
+                      onChange={(e) =>
+                        setCurrentTask({
+                          ...currentTask,
+                          priority: e.target.value,
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     >
                       <option value="">Select</option>
@@ -1070,10 +1189,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                   {/* Status Select */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Status
+                    </label>
                     <select
                       value={currentTask.status}
-                      onChange={(e) => setCurrentTask({ ...currentTask, status: e.target.value as Task['status'] })}
+                      onChange={(e) =>
+                        setCurrentTask({
+                          ...currentTask,
+                          status: e.target.value as Task['status'],
+                        })
+                      }
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     >
                       <option value="todo">To Do</option>
@@ -1084,12 +1210,23 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                   </div>
 
                   <div>
-                    <label className='block text-sm font-medium text-gray-700 mb-1'>Deadline</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Deadline
+                    </label>
                     <input
                       type="date"
-                      value={currentTask.deadline ? new Date(currentTask.deadline).toISOString().split('T')[0] : ''}
+                      value={
+                        currentTask.deadline
+                          ? new Date(currentTask.deadline)
+                              .toISOString()
+                              .split('T')[0]
+                          : ''
+                      }
                       onChange={(e) => {
-                        setCurrentTask({ ...currentTask, deadline: e.target.value });
+                        setCurrentTask({
+                          ...currentTask,
+                          deadline: e.target.value,
+                        });
                       }}
                       className="w-full px-3 py-2 border border-gray-300 rounded-md"
                     />
@@ -1097,17 +1234,24 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                   {/* Developers Section */}
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Developers</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Developers
+                    </label>
                     <div className="flex flex-wrap gap-2">
-                      {currentTask.devops?.map(dev => (
-                        <div key={dev.id} className="bg-blue-100 px-3 py-1 rounded-full flex items-center">
+                      {currentTask.devops?.map((dev) => (
+                        <div
+                          key={dev.id}
+                          className="bg-blue-100 px-3 py-1 rounded-full flex items-center"
+                        >
                           <span className="mr-2">{dev.name}</span>
                           <button
                             type="button"
                             onClick={() => {
                               setCurrentTask({
                                 ...currentTask,
-                                devops: currentTask.devops?.filter(d => d.id !== dev.id)
+                                devops: currentTask.devops?.filter(
+                                  (d) => d.id !== dev.id
+                                ),
                               });
                             }}
                             className="text-blue-600 hover:text-blue-800"
@@ -1120,12 +1264,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     <select
                       onChange={(e) => {
                         const devId = e.target.value;
-                        if (devId && currentTask.devops?.every(d => d.id !== devId)) {
-                          const dev = devopss.find((d: Developer) => d.id === devId);
+                        if (
+                          devId &&
+                          currentTask.devops?.every((d) => d.id !== devId)
+                        ) {
+                          const dev = devopss.find(
+                            (d: Developer) => d.id === devId
+                          );
                           if (dev) {
                             setCurrentTask({
                               ...currentTask,
-                              devops: [...(currentTask.devops || []), dev]
+                              devops: [...(currentTask.devops || []), dev],
                             });
                           }
                         }

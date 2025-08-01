@@ -4,6 +4,7 @@ import { useAuthStore } from '../lib/store';
 import { Link } from 'react-router-dom';
 import { useUserContext } from '../lib/userprovider';
 import { supabase } from '../lib/supabase';
+import ChangePasswordModal from './ChangePasswordModal';
 
 interface SelectedUser {
   id: string;
@@ -71,6 +72,7 @@ function Header(
   }, [user]); // Dependencies - runs when either changes
 
   const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const [isChangePasswordModalOpen, setIsChangePasswordModalOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -157,10 +159,21 @@ function Header(
                       <div className="text-gray-500">
                         {user?.email || "unknown@gmail.com"}
                       </div>
+
                     </div>
+
                     <Link to="/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">
                       Your Profile
                     </Link>
+                    <button
+                      onClick={() => {
+                        setIsChangePasswordModalOpen(true);
+                        setIsProfileOpen(false);
+                      }}
+                      className="block w-full text-left px-4 py-2 text-sm text-gray-700  hover:bg-gray-100"
+                    >
+                      Change Password
+                    </button>
                     <button
                       onClick={handleSignOut}
                       className="block w-full text-left px-4 py-2 text-sm text-gray-700  hover:bg-gray-100"
@@ -176,6 +189,12 @@ function Header(
           </div>
         </div>
       </nav>
+      
+      {/* Change Password Modal */}
+      <ChangePasswordModal
+        isOpen={isChangePasswordModalOpen}
+        onClose={() => setIsChangePasswordModalOpen(false)}
+      />
     </>
   )
 }
