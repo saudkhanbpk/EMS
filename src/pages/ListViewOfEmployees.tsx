@@ -209,13 +209,6 @@ const EmployeeAttendanceTable = () => {
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [sideopen, setsideopen] = useState(false);
-  //Firebase Notification permission
-
-  // RequestPermission().then((token) => {
-  //   if (token) {
-  //     console.log("FCM Token:", token);
-  //   }
-  // });
 
   function handleabsentclosemodal() {
     setabsentid(null);
@@ -989,7 +982,6 @@ const EmployeeAttendanceTable = () => {
       }
 
       setEmployeeStats(employeeStats);
-      console.log('Employee Stats:', employeeStats);
       console.log('Daily Tasks:', dailyTasksMap);
     } catch (error) {
       console.error('Error fetching employees and stats:', error);
@@ -1285,6 +1277,8 @@ const EmployeeAttendanceTable = () => {
         .gte('check_in', monthStart.toISOString())
         .lte('check_in', monthEnd.toISOString())
         .order('check_in', { ascending: true });
+
+      console.log('Monthyldfkhaskjhfkjdsahfkjsa', monthlyAttendance);
 
       console.log('Start of Month', monthStart.toISOString());
       console.log('End of Month', monthEnd.toISOString());
@@ -1827,6 +1821,7 @@ const EmployeeAttendanceTable = () => {
         .select('id, full_name, organization_id')
         .eq('id', user?.id)
         .single();
+
       if (userprofileerror) throw userprofileerror;
 
       // Fetch all users in same organization
@@ -1872,6 +1867,7 @@ const EmployeeAttendanceTable = () => {
         .select('user_id, absentee_type')
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
+
       if (absenteesError) throw absenteesError;
 
       // ✅ Fetch daily tasks for the selected date
@@ -1881,7 +1877,6 @@ const EmployeeAttendanceTable = () => {
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
       if (taskError) throw taskError;
-
       // Map attendance, absentees, and tasks
       const attendanceMap = new Map(
         attendanceLogs.map((log) => [log.user_id, log])
@@ -2012,44 +2007,6 @@ const EmployeeAttendanceTable = () => {
       FetchSelectedAttendance(fetchingid);
     }
   };
-
-  // Handle filter change
-  // const handleFilterChange = (filter) => {
-  //   setCurrentFilter(filter);
-  //   switch (filter) {
-  //     case "all":
-  //       setFilteredData(attendanceData);
-  //       break;
-  //     case "present":
-  //       setFilteredData(
-  //         attendanceData.filter(
-  //           (entry) => entry.status.toLowerCase() === "present"
-  //         )
-  //       );
-  //       break;
-  //     case "absent":
-  //       setFilteredData(
-  //         attendanceData.filter(
-  //           (entry) => entry.status.toLowerCase() === "absent"
-  //         )
-  //       );
-  //       break;
-  //     case "late":
-  //       setFilteredData(
-  //         attendanceData.filter(
-  //           (entry) => entry.status.toLowerCase() === "late"
-  //         )
-  //       );
-  //       break;
-  //     case "remote":
-  //       setFilteredData(
-  //         attendanceData.filter((entry) => entry.work_mode === "remote")
-  //       );
-  //       break;
-  //     default:
-  //       setFilteredData(attendanceData);
-  //   }
-  // };
   const handleFilterChange = async (filter) => {
     setCurrentFilter(filter);
     switch (filter) {
@@ -2155,7 +2112,7 @@ const EmployeeAttendanceTable = () => {
       {/* Heading */}
       <div className=" w-full  max-w-full flex justify-start items-center text-start ">
         {maintab === 'TableView' && (
-          <h1 className="sm:text-2xl text-xl  font-bold text-gray-800 mb-4 border-gray-200 pb-2">
+          <h1 className="sm:text-2xl text-xl   font-bold text-gray-800 mb-4 border-gray-200 pb-2">
             Employee Attendance
           </h1>
         )}
@@ -2193,7 +2150,7 @@ const EmployeeAttendanceTable = () => {
       </div>
       {/* Buttons and Date Navigation */}
       <div className="w-full max-w-full flex flex-wrap justify-between items-center mb-6">
-        {/* Buttons Row */} 
+        {/* Buttons Row */}
         {maintab === 'DetailedView' && <div></div>}
         {maintab === 'TableView' && (
           <>
@@ -2494,11 +2451,11 @@ const EmployeeAttendanceTable = () => {
       {!loading && maintab === 'TableView' && selectedTab === 'Daily' && (
         <>
           <div
-            className={`w-full  overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
+            className={`w-full overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
           >
             <div
-              className={`flex sm:flex-nowrap flex-wrap ${
-                isSideBarOpen ? 'justify-start space-x-5' : 'justify-between'
+              className={`flex sm:flex-nowrap justify-between flex-wrap ${
+                isSideBarOpen ? ' space-x-5' : ''
               } items-center text-lg font-medium`}
             >
               <button
@@ -2604,7 +2561,7 @@ const EmployeeAttendanceTable = () => {
             </div>
           ) : (
             // Regular Attendance View
-            <div className="w-full border  overflow-x-auto max-w-7xl  bg-white  rounded-lg shadow-lg">
+            <div className="w-full border  overflow-x-auto  bg-white  rounded-lg shadow-lg">
               {error && <p className="text-red-500 text-center">{error}</p>}
               <div className="overflow-x-auto">
                 <div className="w-full shadow-sm rounded-lg">
@@ -3890,8 +3847,8 @@ const EmployeeAttendanceTable = () => {
         </>
       )}
     </div>
+    // );
   );
 };
-// );
 
 export default EmployeeAttendanceTable;

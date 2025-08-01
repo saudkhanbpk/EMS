@@ -70,7 +70,6 @@ const EmployeeMonthlyAttendanceTable: React.FC<
         .eq('id', user?.id)
         .single();
       if (userprofileerror) throw userprofileerror;
-
       // Fetch all users
       const { data: users, error: usersError } = await supabase
         .from('users')
@@ -88,6 +87,10 @@ const EmployeeMonthlyAttendanceTable: React.FC<
         .gte('check_in', monthStart.toISOString())
         .lte('check_in', monthEnd.toISOString())
         .order('check_in', { ascending: true });
+      console.log(
+        'monthly attandace farjdalfdsakjfasdkjfsdjkjjjjjj',
+        monthlyAttendance
+      );
 
       if (monthlyError) throw monthlyError;
 
@@ -106,7 +109,6 @@ const EmployeeMonthlyAttendanceTable: React.FC<
         .select('*')
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString());
-
       if (absenteesError) throw absenteesError;
 
       // Fetch all overtime records for the selected month
@@ -369,7 +371,6 @@ const EmployeeMonthlyAttendanceTable: React.FC<
         .gte('check_in', monthStart.toISOString())
         .lte('check_in', monthEnd.toISOString())
         .order('check_in', { ascending: true });
-
       if (attendanceError) throw attendanceError;
 
       // Fetch absentees for the user in the current month
@@ -541,7 +542,7 @@ const EmployeeMonthlyAttendanceTable: React.FC<
   ).length;
 
   return (
-    <div className="flex flex-col justify-center items-center min-h-full min-w-full bg-gray-100">
+    <div className="flex flex-col justify-center   items-center min-h-full min-w-full bg-gray-100">
       {/* Loading Animation */}
       {loading && (
         <div className="w-full max-w-5xl space-y-6">

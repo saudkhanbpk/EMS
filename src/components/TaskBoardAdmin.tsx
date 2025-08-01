@@ -863,7 +863,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     <ArrowLeft
                       className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
                       size={35}
-                      onClick={() => history.back()}
+                      onClick={() => navigate(-1)}
                     />
                   </Link>
                   <h1 className="text-md md:text-2xl font-bold text-gray-800">

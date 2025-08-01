@@ -73,7 +73,6 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
         .eq('user_id', userId)
         .gte('created_at', monthStart.toISOString())
         .lte('created_at', monthEnd.toISOString());
-
       if (absenteesError) throw absenteesError;
 
       // Fetch holidays
@@ -98,6 +97,9 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
         // Only show today and past dates
         return date <= today;
       });
+
+      // Create a list to collect all daily statuses (optional)
+      const statuses: string[] = [];
 
       // Process each day
       const dailyDetails: AttendanceDetailRecord[] = allDaysInMonth.map(
@@ -177,6 +179,9 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
             }
           }
 
+          // ✅ Optional: collect all statuses
+          statuses.push(status);
+
           return {
             date: dateStr,
             checkIn,
@@ -188,6 +193,8 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
           };
         }
       );
+
+      console.log('All daily statuses:', statuses.length);
 
       setAttendanceDetails(dailyDetails);
     } catch (err) {
@@ -224,7 +231,7 @@ const PersonAttendanceDetail: React.FC<PersonAttendanceDetailProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+    <div className="fixed inset-0 bg-black  bg-opacity-50 flex items-center justify-center z-50 p-4">
       <div className="bg-white rounded-lg shadow-xl max-w-6xl w-full max-h-[90vh] overflow-hidden">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b">
