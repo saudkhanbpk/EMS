@@ -16,7 +16,7 @@ const TodoTask = ({
       const newTask = {
         title: title,
         project_id: projectId,
-        status: 'todo', 
+        status: 'todo',
         score: 0,
         priority: 'Low',
         devops: [], // Empty by default, user can assign later

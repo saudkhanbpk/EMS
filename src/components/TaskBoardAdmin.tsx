@@ -793,7 +793,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     );
 
     return (
-      <div className="bg-white  lg:col-span-1 md:col-span-2  sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col">
+      <div className="bg-white overflow-hidden  lg:col-span-1 md:col-span-2  sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col">
         <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <h2 className={`font-semibold text-[18px] leading-7 text-${color}`}>
             {title}
@@ -819,7 +819,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="flex-1 overflow-y-auto  space-y-4 pr-2 task-scroll"
+              className="flex-1 overflow-y-auto overflow-x-hidden  space-y-4 pr-2 task-scroll"
               style={{ minHeight: '420px', maxHeight: 'calc(100vh - 450px)' }}
             >
               {tasksInColumn.map((task, index) => (
@@ -852,11 +852,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
         {(selectedTab === 'tasks' || selectedTABB === 'tasks') && (
           <>
-            <div className="flex flex-col gap-4 p-3 rounded-2xl mb-4  bg-white shadow-sm border-b border-gray-100">
+            <div className="flex flex-col p-3 mt-12 lg:mt-0 rounded-2xl mb-4 space-x-2 bg-white shadow-sm">
               {/* Arrow + Heading Grouped */}
-              <div className="flex items-center justify-between w-full">
+              <div className=" flex-row lg:flex items-center justify-between w-full">
                 {/* <div></div> */}
-                <div className="flex items-center gap-3">
+                <div className="flex items-center">
                   <Link
                     to={
                       localStorage.getItem('user_email')?.endsWith('@admin.com')
@@ -878,24 +878,11 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                       onClick={() => navigate(-1)}
                     />
                   </Link>
-                  <h1 className="text-md md:text-2xl font-bold text-gray-800">
+                  <h1 className="text-md md:text-xl font-bold text-gray-800">
                     {adminProjectName}
                   </h1>
                 </div>
-                <div>
-                  <button
-                    className=" bg-[#9A00FF] text-white px-4 py-2 rounded-lg flex items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
-                    onClick={() => setSelectedTab('addtask')}
-                  >
-                    <PlusCircle size={20} className="mr-2" /> New Task
-                  </button>
-                </div>
-              </div>
-
-              {/* Main Content */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
-                {/* Status Box */}
-                <div className="bg-white w-full lg:w-[60%] p-4 rounded-xl shadow-sm border border-gray-100 flex flex-wrap justify-between gap-4 font-semibold text-sm">
+                <div className="bg-white w-full lg:w-[60%] p-4  flex flex-wrap justify-between font-semibold text-sm">
                   <h1 className="text-[#9A00FF]">
                     TO DO: {getScoreByStatus('todo')}
                   </h1>
@@ -909,67 +896,78 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                     Done: this {getScoreByStatus('done')}
                   </h1>
                 </div>
-
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  {/* Developer Filter Dropdown */}
-                  <div className="relative w-full sm:w-auto">
-                    <div className="flex items-center gap-2">
-                      <label className="mr-2 text-sm font-medium text-gray-700">
-                        Filter by Developer:
-                      </label>
-                      <div className="relative flex-1">
-                        <select
-                          value={selectedDeveloper}
-                          onChange={(e) => setSelectedDeveloper(e.target.value)}
-                          className={`w-full sm:w-48 bg-white border ${
-                            selectedDeveloper !== 'all'
-                              ? 'border-purple-500 ring-2 ring-purple-300'
-                              : 'border-gray-300'
-                          } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
+                <div className="relative w-full sm:w-auto">
+                  <div className="flex items-center gap-2">
+                    <label className=" text-[12px] font-medium text-gray-700">
+                      Filter by Developer:
+                    </label>
+                    <div className="relative flex-1">
+                      <select
+                        value={selectedDeveloper}
+                        onChange={(e) => setSelectedDeveloper(e.target.value)}
+                        className={`w-full sm:w-48 bg-white border ${
+                          selectedDeveloper !== 'all'
+                            ? 'border-purple-500 ring-2 ring-purple-300'
+                            : 'border-gray-300'
+                        } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
+                      >
+                        <option value="all">All Developers</option>
+                        {devopss?.map((dev) => (
+                          <option key={dev.id} value={dev.id}>
+                            {dev.name || dev.full_name}
+                          </option>
+                        ))}
+                      </select>
+                      <div className="pointer-events-none absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center px-2 text-gray-700">
+                        <svg
+                          className="fill-current h-4 w-4"
+                          xmlns="http://www.w3.org/2000/svg"
+                          viewBox="0 0 20 20"
                         >
-                          <option value="all">All Developers</option>
-                          {devopss?.map((dev) => (
-                            <option key={dev.id} value={dev.id}>
-                              {dev.name || dev.full_name}
-                            </option>
-                          ))}
-                        </select>
-                        <div className="pointer-events-none absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center px-2 text-gray-700">
-                          <svg
-                            className="fill-current h-4 w-4"
-                            xmlns="http://www.w3.org/2000/svg"
-                            viewBox="0 0 20 20"
-                          >
-                            <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                          </svg>
-                        </div>
+                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                        </svg>
                       </div>
-                      <ViewToggle view={view} setView={setView} />
                     </div>
-                    {selectedDeveloper !== 'all' && (
-                      <>
-                        {/* <button
+                    <ViewToggle view={view} setView={setView} />
+                  </div>
+                  {selectedDeveloper !== 'all' && (
+                    <>
+                      {/* <button
                           onClick={() => setSelectedDeveloper('all')}
                           className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
                         >
                           <X size={16} />
                         </button> */}
-                        <div className="mt-1 text-xs font-medium text-purple-700">
-                          {(() => {
-                            const selectedDevName =
-                              devopss?.find(
-                                (dev) => dev.id === selectedDeveloper
-                              )?.name ||
-                              devopss?.find(
-                                (dev) => dev.id === selectedDeveloper
-                              )?.full_name ||
-                              'Selected developer';
-                            return `Showing ${filteredTasks.length} of ${tasks.length} tasks for ${selectedDevName}`;
-                          })()}
-                        </div>
-                      </>
-                    )}
-                  </div>
+                      <div className="mt-1 text-xs font-medium text-purple-700">
+                        {(() => {
+                          const selectedDevName =
+                            devopss?.find((dev) => dev.id === selectedDeveloper)
+                              ?.name ||
+                            devopss?.find((dev) => dev.id === selectedDeveloper)
+                              ?.full_name ||
+                            'Selected developer';
+                          return `Showing ${filteredTasks.length} of ${tasks.length} tasks for ${selectedDevName}`;
+                        })()}
+                      </div>
+                    </>
+                  )}
+                </div>
+                <div>
+                  <button
+                    className=" bg-[#9A00FF] ml-2 text-white p-2 rounded-lg flex items-center g hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
+                    onClick={() => setSelectedTab('addtask')}
+                  >
+                    New Task
+                  </button>
+                </div>
+              </div>
+
+              {/* Main Content */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+                {/* Status Box */}
+
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                  {/* Developer Filter Dropdown */}
 
                   {/* New Task Button */}
                   {/* <button
