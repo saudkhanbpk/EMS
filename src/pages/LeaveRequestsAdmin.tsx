@@ -559,9 +559,7 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
   );
   const isOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   return (
-    <div
-      className={`mx-auto px-2 sm:px-4 ${isOpen ? 'w-[900px]' : 'w-[1150px]'}`}
-    >
+    <div className={`mx-auto px-2 sm:px-4 w-full`}>
       {/* Buttons for Selecting Tabs */}
       <div className="flex flex-col xs:flex-row justify-center gap-2 xs:gap-4 sm:gap-8 mb-4 sm:mb-6">
         <button

@@ -1397,7 +1397,7 @@ const AdminPage: React.FC = () => {
         )}
         {location.pathname.includes('/admin/leaverequest') && (
           <div
-            className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2  ${
+            className={`flex-1 sm:px-10 py-8 w-full transition-all ease-in-out duration-300 px-2  ${
               permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
             }`}
           >
@@ -1405,7 +1405,7 @@ const AdminPage: React.FC = () => {
               Admin Dashboard
             </h1>
 
-            <div className="bg-white w-8xl rounded-2xl sm:p-6 p-2 shadow-lg">
+            <div className="bg-white w-8xl rounded-2xl sm:p-6 p-2 shadow-lg w-full">
               <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
             </div>
           </div>

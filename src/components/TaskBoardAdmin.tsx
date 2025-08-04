@@ -781,7 +781,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     );
 
     return (
-      <div className="bg-white  lg:col-span-1 md:col-span-2 sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md h-[calc(100vh-300px)] flex flex-col">
+      <div className="bg-white  lg:col-span-1 md:col-span-2  sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col">
         <div className="flex justify-between items-center mb-6 flex-shrink-0">
           <h2 className={`font-semibold text-xl leading-7 text-${color}`}>
             {title}
@@ -808,7 +808,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               ref={provided.innerRef}
               {...provided.droppableProps}
               className="flex-1 overflow-y-auto space-y-4 pr-2 task-scroll"
-              style={{ minHeight: '100px' }}
+              style={{ minHeight: '420px', maxHeight: 'calc(100vh - 450px)' }}
             >
               {tasksInColumn.map((task, index) => (
                 <TaskCard key={task.id} task={task} index={index} />

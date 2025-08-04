@@ -2102,7 +2102,7 @@ const EmployeeAttendanceTable = () => {
     setgraphicview(false);
   };
   const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
-  const statusFonts = ` ${isSideBarOpen ? 'text-[14px]' : 'text-xl'}`;
+  const statusFonts = ` ${isSideBarOpen ? 'text-xl' : 'text-xl'}`;
   const tableHeading = `py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap ${
     isSideBarOpen ? 'text-[8px]' : 'text-[12px]'
   }`;
@@ -2663,11 +2663,11 @@ const EmployeeAttendanceTable = () => {
                                     isSideBarOpen ? 'text-[10px]' : 'text-sm'
                                   }`}
                                 >
-                                  <span className="text-gray-400">
+                                  <span className={`text-gray-400`}>
                                     {entry.today_task}
                                   </span>
-                                  <div className="hidden group-hover:block absolute bg-gray-300 text-white   px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
-                                    {entry.today_task}
+                                  <div className="hidden group-hover:block absolute bg-gray-300 text-white left-px px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
+                                    {}
                                   </div>
                                 </div>
                               ) : (
@@ -3852,3 +3852,4 @@ const EmployeeAttendanceTable = () => {
 };
 
 export default EmployeeAttendanceTable;
+  
