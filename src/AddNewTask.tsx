@@ -35,9 +35,9 @@ const AddNewTask = ({
   const [selectedDevs, setSelectedDevs] = useState<string[]>([]);
   const [developers, setDevelopers] = useState<Developer[]>(devopss || []);
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState("");
-  const [score, setScore] = useState("0");
-  const [priority, setPriority] = useState("");
+  const [error, setError] = useState('');
+  const [score, setScore] = useState('0');
+  const [priority, setPriority] = useState('');
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [imageFile, setImageFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -46,7 +46,6 @@ const AddNewTask = ({
   useEffect(() => {
     if (devopss) {
       setDevelopers(devopss);
-      console.log('Devops', devopss);
     }
   }, [devopss]);
 
@@ -65,7 +64,6 @@ const AddNewTask = ({
     const file = e.target.files?.[0];
     if (file) {
       setImageFile(file);
-      // Create preview
       const reader = new FileReader();
       reader.onloadend = () => {
         setImagePreview(reader.result as string);
@@ -74,7 +72,7 @@ const AddNewTask = ({
     }
   };
 
-  const uploadImage = async () => {
+  const uploadImage = async () => { 
     if (!imageFile) return null;
 
     try {
@@ -210,9 +208,9 @@ const AddNewTask = ({
       setTitle('');
       setDescription('');
       setSelectedDevs([]);
-      setScore("0");
-      setPriority("");
-      setError("");
+      setScore('0');
+      setPriority('');
+      setError('');
       refreshTasks(); // Call the refresh function to update the task list
       setImageFile(null);
       setImagePreview(null);

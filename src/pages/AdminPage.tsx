@@ -694,7 +694,7 @@ const AdminPage: React.FC = () => {
   const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   return (
     <>
-      <div className="min-h-screen bg-gray-100 flex overflow-hidden w-full ">
+      <div className="min-h-screen bg-gray-100 flex overflow-hidden w-full">
         <div className="flex flex-col">
           <PanelRightClose
             className={`${permanentopen ? 'hidden' : 'display-block'} 
@@ -1395,21 +1395,23 @@ const AdminPage: React.FC = () => {
             </div>
           </div>
         )}
-        {location.pathname.includes('/admin/leaverequest') && (
-          <div
-            className={`w-full sm:px-10 py-8 transition-all ease-in-out duration-300 px-2 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
-              Admin Dashboard
-            </h1>
+        <div className="">
+          {location.pathname.includes('/admin/leaverequest') && (
+            <div
+              className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2 w-full ${
+                permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
+              }`}
+            >
+              <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
+                Admin Dashboard
+              </h1>
 
-            <div className="bg-white rounded-2xl sm:p-6 p-2 shadow-lg w-[900px]">
-              <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
+              <div className="bg-white rounded-2xl sm:p-6 p-2 shadow-lg ">
+                <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
+              </div>
             </div>
-          </div>
-        )}
+          )}
+        </div>
         <div
           className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
             permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'

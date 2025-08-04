@@ -837,7 +837,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     (state: RootState) => state.projectName.projectName
   );
   return (
-    <div className="min-h-screen px-0">
+    <div className="min-h-screen px-0  ">
       <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto">
         {selectedTab === 'addtask' && (

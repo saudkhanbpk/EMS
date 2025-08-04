@@ -94,9 +94,9 @@ const calculateDistance = (
   const a =
     Math.sin(dLat / 2) * Math.sin(dLat / 2) +
     Math.cos((lat1 * Math.PI) / 180) *
-      Math.cos((lat2 * Math.PI) / 180) *
-      Math.sin(dLon / 2) *
-      Math.sin(dLon / 2);
+    Math.cos((lat2 * Math.PI) / 180) *
+    Math.sin(dLon / 2) *
+    Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
@@ -193,14 +193,17 @@ const Attendance: React.FC = () => {
     setIsTaskModalOpen(true);
   };
 
-  // IMPROVED: Function to handle applying tasks and proceeding with check-in
-  const handleApplyTasks = async (tasks: string) => {
+  const handleApplyTasks = async (tasks: string, selectedTaskIds: string[], projectId: string) => {
+    // Save to daily check-in tasks with task IDs
     const { data: checkintask, error } = await supabase
       .from('daily check_in task')
       .insert({
         content: tasks,
         user_id: userProfile?.id,
+        task_ids: selectedTaskIds, // Array of selected task IDs
+        project_id: projectId // Selected project ID
       });
+
     if (error) {
       console.error(error);
     }
@@ -265,15 +268,27 @@ const Attendance: React.FC = () => {
 
       if (attendanceError) throw attendanceError;
 
-      // 6. Now save the tasks with the attendance ID
+      // 6. Update selected tasks status to inProgress if they were todo
+      if (selectedTaskIds.length > 0) {
+        const { error: updateTasksError } = await supabase
+          .from('tasks_of_projects')
+          .update({ status: 'inProgress' })
+          .in('id', selectedTaskIds)
+          .eq('status', 'todo');
+
+        if (updateTasksError) {
+          console.error('Error updating task status:', updateTasksError);
+        }
+      }
+
+      // 7. Save to daily_tasks table
       if (tasks.trim()) {
-        // Save to daily_tasks table
         const { error: tasksError } = await supabase
           .from('daily_tasks')
           .insert([
             {
               user_id: localStorage.getItem('user_id'),
-              attendance_id: attendanceData.id, // Link to the attendance record
+              attendance_id: attendanceData.id,
               task_date: new Date().toISOString().split('T')[0],
               task_description: tasks,
             },
@@ -281,80 +296,69 @@ const Attendance: React.FC = () => {
 
         if (tasksError) {
           console.error('Error saving tasks:', tasksError);
-          // We won't throw this error, as we want to continue even if task saving fails
-        }
-
-        // 7. IMPROVED: Save user input to tasks_of_projects table's daily_task field
-        const today = new Date().toISOString().split('T')[0];
-
-        // First check if a record exists for today
-        const { data: existingTask, error: fetchError } = await supabase
-          .from('tasks_of_projects')
-          .select('id')
-          .eq('developer', localStorage.getItem('user_id'))
-          .eq('section_date', today)
-          .maybeSingle();
-
-        if (fetchError) {
-          console.error('Error checking for existing task:', fetchError);
-        }
-
-        if (existingTask) {
-          // Update existing record with the user's task input
-          console.log('Updating existing task record with daily_task:', tasks);
-          const { error: updateError } = await supabase
-            .from('tasks_of_projects')
-            .update({
-              daily_task: tasks.trim(), // Save user input to daily_task column
-            })
-            .eq('id', existingTask.id);
-
-          if (updateError) {
-            console.error(
-              'Error updating tasks_of_projects record:',
-              updateError
-            );
-          } else {
-            console.log('Successfully updated daily_task in existing record');
-          }
-        } else {
-          // Create new record with the user's task input
-          console.log('Creating new task record with daily_task:', tasks);
-          const { error: insertError } = await supabase
-            .from('tasks_of_projects')
-            .insert([
-              {
-                id: crypto.randomUUID(),
-                created_at: new Date().toISOString(),
-                title: `Daily Task - ${today}`,
-                description: 'Daily task entry from attendance check-in',
-                developer: localStorage.getItem('user_id'),
-                status: 'inProgress',
-                priority: 'Medium',
-                section_date: today,
-                daily_task: tasks.trim(), // Save user input to daily_task column
-                user_id: localStorage.getItem('user_id'),
-              },
-            ]);
-
-          if (insertError) {
-            console.error(
-              'Error inserting tasks_of_projects record:',
-              insertError
-            );
-          } else {
-            console.log('Successfully created new record with daily_task');
-          }
         }
       }
 
-      // 8. Update state with attendance data
+      // 8. Save to tasks_of_projects table
+      const today = new Date().toISOString().split('T')[0];
+
+      // First check if a record exists for today
+      const { data: existingTask, error: fetchError } = await supabase
+        .from('tasks_of_projects')
+        .select('id')
+        .eq('developer', localStorage.getItem('user_id'))
+        .eq('section_date', today)
+        .maybeSingle();
+
+      if (fetchError) {
+        console.error('Error checking for existing task:', fetchError);
+      }
+
+      if (existingTask) {
+        // Update existing record
+        const { error: updateError } = await supabase
+          .from('tasks_of_projects')
+          .update({
+            daily_task: tasks.trim(),
+            project_id: projectId, // Add project reference
+          })
+          .eq('id', existingTask.id);
+
+        if (updateError) {
+          console.error('Error updating tasks_of_projects record:', updateError);
+        }
+      } else {
+        // Create new record
+        const { error: insertError } = await supabase
+          .from('tasks_of_projects')
+          .insert([
+            {
+              id: crypto.randomUUID(),
+              created_at: new Date().toISOString(),
+              title: `Daily Task - ${today}`,
+              description: tasks.trim(),
+              developer: localStorage.getItem('user_id'),
+              status: 'inProgress',
+              priority: 'Medium',
+              section_date: today,
+              daily_task: tasks.trim(),
+              user_id: localStorage.getItem('user_id'),
+              project_id: projectId, // Add project reference
+            },
+          ]);
+
+        if (insertError) {
+          console.error('Error inserting tasks_of_projects record:', insertError);
+        }
+      }
+
+      // 9. Update state with attendance data
       setIsCheckedIn(true);
       setCheckIn(attendanceData.check_in);
       setWorkMode(workMode);
       setAttendanceId(attendanceData.id);
 
-      // 9. Reload attendance records
+      // 10. Reload attendance records
       await loadAttendanceRecords();
     } catch (err) {
       console.error('Error in handleApplyTasks:', err);
@@ -526,7 +530,7 @@ const Attendance: React.FC = () => {
           if (
             data.check_in &&
             localStorage.getItem('user_id') !==
-              '759960d6-9ada-4dcc-b385-9e2da0a862be'
+            '759960d6-9ada-4dcc-b385-9e2da0a862be'
           ) {
             setalreadycheckedin(true);
           }
@@ -1247,11 +1251,10 @@ const Attendance: React.FC = () => {
                       </td>
                       <td className="px-6 py-4 border whitespace-nowrap">
                         <span
-                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                            record.status === 'present'
-                              ? 'bg-green-100 text-green-800'
-                              : 'bg-yellow-100 text-yellow-800'
-                          }`}
+                          className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.status === 'present'
+                            ? 'bg-green-100 text-green-800'
+                            : 'bg-yellow-100 text-yellow-800'
+                            }`}
                         >
                           {record.status}
                         </span>
@@ -1259,11 +1262,10 @@ const Attendance: React.FC = () => {
                       <td className="px-6 py-4 border whitespace-nowrap">
                         <div className="flex flex-col space-y-1">
                           <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
-                              record.work_mode === 'on_site'
-                                ? 'bg-blue-100 text-blue-800'
-                                : 'bg-purple-100 text-purple-800'
-                            }`}
+                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${record.work_mode === 'on_site'
+                              ? 'bg-blue-100 text-blue-800'
+                              : 'bg-purple-100 text-purple-800'
+                              }`}
                           >
                             {record.work_mode}
                           </span>
@@ -1290,17 +1292,17 @@ const Attendance: React.FC = () => {
                                 </p>
                                 {record.tasks[0].task_description.length >
                                   100 && (
-                                  <button
-                                    onClick={() =>
-                                      handleViewTask(
-                                        record.tasks[0].task_description
-                                      )
-                                    }
-                                    className="text-blue-600 hover:text-blue-800 text-xs mt-1"
-                                  >
-                                    Show more
-                                  </button>
-                                )}
+                                    <button
+                                      onClick={() =>
+                                        handleViewTask(
+                                          record.tasks[0].task_description
+                                        )
+                                      }
+                                      className="text-blue-600 hover:text-blue-800 text-xs mt-1"
+                                    >
+                                      Show more
+                                    </button>
+                                  )}
                               </div>
                             </div>
                           </div>
@@ -1332,11 +1334,10 @@ const Attendance: React.FC = () => {
                             )}
                             {breakRecord.status && (
                               <span
-                                className={`ml-2 px-2 text-xs rounded-full ${
-                                  breakRecord.status === 'on_time'
-                                    ? 'bg-green-100 text-green-800'
-                                    : 'bg-yellow-100 text-yellow-800'
-                                }`}
+                                className={`ml-2 px-2 text-xs rounded-full ${breakRecord.status === 'on_time'
+                                  ? 'bg-green-100 text-green-800'
+                                  : 'bg-yellow-100 text-yellow-800'
+                                  }`}
                               >
                                 {breakRecord.status}
                               </span>
@@ -1412,6 +1413,7 @@ const Attendance: React.FC = () => {
         onClose={() => setIsTaskModalOpen(false)}
         onApply={handleApplyTasks}
         onSkip={handleSkipTasks}
+        userId={localStorage.getItem('user_id')} // Pass the current user's ID from localStorage
       />
 
       {/* Checkout Daily Update Modal */}
@@ -1439,11 +1441,10 @@ const Attendance: React.FC = () => {
             </div>
             {workMode && (
               <span
-                className={`px-3 py-1 rounded-full text-sm ${
-                  workMode === 'on_site'
-                    ? 'bg-green-100 text-green-800'
-                    : 'bg-blue-100 text-blue-800'
-                }`}
+                className={`px-3 py-1 rounded-full text-sm ${workMode === 'on_site'
+                  ? 'bg-green-100 text-green-800'
+                  : 'bg-blue-100 text-blue-800'
+                  }`}
               >
                 {workMode === 'on_site' ? 'On-site' : 'Remote'}
               </span>
@@ -1512,8 +1513,8 @@ const Attendance: React.FC = () => {
               {loading
                 ? 'Checking in...'
                 : isLocationLoading
-                ? 'Loading location...'
-                : 'Check In'}
+                  ? 'Loading location...'
+                  : 'Check In'}
             </button>
           )}
         </div>
@@ -1539,17 +1540,16 @@ const Attendance: React.FC = () => {
               <button
                 onClick={handleBreak}
                 disabled={loading || isbreak || alreadybreak}
-                className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${
-                  isOnBreak
-                    ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
-                    : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'
-                } disabled:opacity-50`}
+                className={`w-full py-2 px-4 rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 ${isOnBreak
+                  ? 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500'
+                  : 'bg-[#9A00FF] text-white hover:bg-[#9A00FF] focus:ring-[#9A00FF]'
+                  } disabled:opacity-50`}
               >
                 {loading
                   ? 'Updating...'
                   : isOnBreak
-                  ? 'End Break'
-                  : 'Start Break'}
+                    ? 'End Break'
+                    : 'Start Break'}
               </button>
             </>
           )}

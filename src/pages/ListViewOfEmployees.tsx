@@ -25,6 +25,7 @@ import { forwardRef, useImperativeHandle } from 'react';
 import './style.css';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, Transition, RadioGroup } from '@headlessui/react';
+import TaskModalAdmin from '../component/TaskModalAdmin';
 
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
 import {
@@ -36,9 +37,15 @@ import {
 import { AttendanceProvider } from './AttendanceContext';
 import FilteredDataAdmin from './filteredListAdmin';
 import { id } from 'date-fns/locale/id';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store';
+import { useDispatch, useSelector } from 'react-redux';
+import { AppDispatch, RootState } from '../store';
 import toast from 'react-hot-toast';
+import {
+  fetchUserAbsentees,
+  useFetchUserAbsenteesQuery,
+} from '../services/AttendanceAPI';
+import { setUserAbsentCount } from '../slices/userAbsenteesSlice';
+
 // --- TaskCell Component ---
 const TaskCell = ({ task }) => {
   const [showAll, setShowAll] = useState(false);
@@ -142,6 +149,7 @@ const EmployeeAttendanceTable = () => {
   const [selectedMode, setSelectedMode] = useState('remote');
   const [present, setPresent] = useState(0);
   const [leaveRequestsData, setLeaveRequestsData] = useState([]);
+  const [leaveRequestsLoading, setLeaveRequestsLoading] = useState(false);
 
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
@@ -204,12 +212,15 @@ const EmployeeAttendanceTable = () => {
   );
   const [graphicview, setgraphicview] = useState(false);
   const [tableData, setTableData] = useState('');
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
   // const [selectedDate, setSelectedDate] = useState(new Date()); // Default to current date
   const [sideopen, setsideopen] = useState(false);
-
+  const dispatch = useDispatch<AppDispatch>();
   function handleabsentclosemodal() {
     setabsentid(null);
     setslecteduser(null);
@@ -233,6 +244,7 @@ const EmployeeAttendanceTable = () => {
 
     if (error) {
       console.error('Error fetching attendance:', error);
+      return;
     } else {
       if (data.length) {
         let dataid = data[0].id;
@@ -240,6 +252,7 @@ const EmployeeAttendanceTable = () => {
       }
       console.log("Today's attendance:", data);
     }
+
     setabsentloading(false);
   }
 
@@ -718,8 +731,11 @@ const EmployeeAttendanceTable = () => {
   }, [userID]);
 
   useEffect(() => {
-    // Fetch leave requests when component mounts
+    // Fetch leave data from absentees table when component mounts or selectedDate changes
     const fetchLeaveRequests = async () => {
+      if (!user?.id) return;
+
+      setLeaveRequestsLoading(true);
       try {
         const { data: userprofile, error: usererror } = await supabase
           .from('users')
@@ -727,28 +743,112 @@ const EmployeeAttendanceTable = () => {
           .eq('id', user?.id)
           .single();
 
-        const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabase
-          .from('leave_requests')
-          .select(
-            'full_name, user_email, status, leave_type, leave_date, users!inner(organization_id)'
-          )
-          .eq('status', 'approved')
-          .eq('leave_date', today)
-          .eq('users.organization_id', userprofile?.organization_id);
+        if (usererror) {
+          console.error('Error fetching user profile:', usererror);
+          setLeaveRequestsData([]);
+          return;
+        }
+
+        const today = selectedDate.toISOString().split('T')[0];
+        console.log(
+          '🔍 Fetching leave data for date:',
+          today,
+          'and organization:',
+          userprofile?.organization_id
+        );
+
+        // First, let's check all leave records from absentees table for debugging
+        const { data: allLeaveRecords, error: allError } = await supabase
+          .from('absentees')
+          .select('*')
+          .eq('absentee_type', 'leave');
+
+        console.log('🔍 All leave records from absentees:', allLeaveRecords);
+
+        // Log the dates to see what dates we have
+        if (allLeaveRecords && allLeaveRecords.length > 0) {
+          const uniqueDates = [
+            ...new Set(
+              allLeaveRecords.map(
+                (req) => req.absentee_date || req.created_at.split('T')[0]
+              )
+            ),
+          ].sort();
+          console.log('🔍 Available leave dates:', uniqueDates);
+          console.log('🔍 Looking for date:', today);
+        }
+
+        // Get users from the same organization to filter leave records
+        const { data: orgUsers, error: orgUsersError } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('organization_id', userprofile?.organization_id);
+
+        if (orgUsersError) {
+          console.error('Error fetching organization users:', orgUsersError);
+          setLeaveRequestsData([]);
+          return;
+        }
+
+        const orgUserIds = orgUsers.map((user) => user.id);
+        console.log('🔍 Organization user IDs:', orgUserIds);
+
+        // Now fetch leave records from absentees table with proper filtering
+        // Check both absentee_date field and created_at date for today
+        const { data: leaveData, error } = await supabase
+          .from('absentees')
+          .select('*')
+          .eq('absentee_type', 'leave')
+          .in('user_id', orgUserIds)
+          .or(
+            `absentee_date.eq.${today},and(created_at.gte.${today}T00:00:00,created_at.lte.${today}T23:59:59)`
+          );
+
+        console.log('🔍 Leave records query result:', {
+          data: leaveData,
+          error,
+          today,
+          orgId: userprofile?.organization_id,
+          dataLength: leaveData?.length || 0,
+        });
 
         if (error) {
-          console.error('Error fetching leave requests:', error);
+          console.warn('❌ Error fetching leave records:', error);
+          setLeaveRequestsData([]);
         } else {
-          setLeaveRequestsData(data || []);
+          // Transform absentees data to match the expected format
+          const transformedData =
+            leaveData?.map((record) => {
+              const user = orgUsers.find((u) => u.id === record.user_id);
+              return {
+                id: record.id,
+                full_name: user?.full_name || 'Unknown User',
+                user_email: user?.email || 'No email',
+                status: 'approved', // Since it's already in absentees table
+                leave_type: record.absentee_Timing || 'Full Day',
+                leave_date:
+                  record.absentee_date || record.created_at.split('T')[0],
+                user_id: record.user_id,
+                organization_id: userprofile?.organization_id,
+              };
+            }) || [];
+
+          console.log(
+            '✅ Successfully fetched and transformed leave records:',
+            transformedData
+          );
+          setLeaveRequestsData(transformedData);
         }
       } catch (err) {
-        console.error('Error fetching leave requests:', err);
+        console.error('Error fetching leave records:', err);
+        setLeaveRequestsData([]);
+      } finally {
+        setLeaveRequestsLoading(false);
       }
     };
 
     fetchLeaveRequests();
-  }, []);
+  }, [user?.id, selectedDate]);
 
   useEffect(() => {
     console.log('selected tab on Leaves Fetching :', selectedTab);
@@ -1665,6 +1765,18 @@ const EmployeeAttendanceTable = () => {
     updateMode();
     setisModeOpen(false);
   };
+
+  const handleShowTasks = (taskIds, projectId) => {
+    setSelectedTaskIds(taskIds);
+    setSelectedProjectId(projectId);
+    setIsTasksModalOpen(true);
+  };
+
+  const handleCloseTasksModal = () => {
+    setIsTasksModalOpen(false);
+    setSelectedTaskIds([]);
+    setSelectedProjectId('');
+  };
   const downloadPDFFiltered = async () => {
     try {
       const response = await fetch(
@@ -1828,6 +1940,7 @@ const EmployeeAttendanceTable = () => {
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, full_name')
+
         .not('role', 'in', '(client,admin,superadmin)')
         .eq('organization_id', userprofile.organization_id);
       if (usersError) throw usersError;
@@ -1867,13 +1980,12 @@ const EmployeeAttendanceTable = () => {
         .select('user_id, absentee_type')
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
-
       if (absenteesError) throw absenteesError;
 
       // ✅ Fetch daily tasks for the selected date
       const { data: dailyTasks, error: taskError } = await supabase
         .from('daily check_in task')
-        .select('user_id, content, created_at')
+        .select('user_id, content, created_at, task_ids, project_id')
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
       if (taskError) throw taskError;
@@ -1887,7 +1999,11 @@ const EmployeeAttendanceTable = () => {
       const tasksMap = new Map();
       dailyTasks.forEach((task) => {
         if (!tasksMap.has(task.user_id)) {
-          tasksMap.set(task.user_id, task.content); // Use latest task if needed
+          tasksMap.set(task.user_id, {
+            content: task.content,
+            task_ids: task.task_ids || [],
+            project_id: task.project_id,
+          });
         }
       });
 
@@ -1905,7 +2021,11 @@ const EmployeeAttendanceTable = () => {
       // Final data map
       const finalAttendanceData = users.map((user) => {
         const log = attendanceMap.get(user.id);
-        const task = tasksMap.get(user.id) || 'No Task';
+        const taskData = tasksMap.get(user.id) || {
+          content: 'No Task',
+          task_ids: [],
+          project_id: null,
+        };
 
         if (!log) {
           const absenteeType = absenteesMap.get(user.id);
@@ -1919,7 +2039,9 @@ const EmployeeAttendanceTable = () => {
             check_out: 'N/A',
             autocheckout: '',
             work_mode: 'N/A',
-            today_task: task,
+            today_task: taskData.content,
+            task_ids: taskData.task_ids,
+            project_id: taskData.project_id,
             status: absenteeType || 'Absent',
             break_start: 'N/A',
             break_status: 'N/A',
@@ -1929,6 +2051,7 @@ const EmployeeAttendanceTable = () => {
 
         const userBreaks = breaksMap.get(log.id) || [];
         const firstBreak = userBreaks[0];
+        const currentMonth = new Date().getMonth(); // 0 = January, 11 = December
 
         return {
           id: user.id,
@@ -1941,7 +2064,9 @@ const EmployeeAttendanceTable = () => {
           check_out: log.check_out ? formatTime(log.check_out) : 'N/A',
           autocheckout: log.autocheckout || '',
           work_mode: log.work_mode || 'N/A',
-          today_task: task,
+          today_task: taskData.content,
+          task_ids: taskData.task_ids,
+          project_id: taskData.project_id,
           status: log.status || 'Absent',
           break_start: firstBreak ? formatTime(firstBreak.start_time) : 'N/A',
           break_status: firstBreak
@@ -1956,6 +2081,21 @@ const EmployeeAttendanceTable = () => {
               ? 'text-yellow-500'
               : 'text-red-500',
         };
+      });
+
+      const monthForAttendance = new Date();
+      const ids = finalAttendanceData.map((eachUser) => eachUser.id);
+      console.log('supabase idfdnkdsjfkjasfdkjanfjkdjjjjjjjjjjjjjj', ids);
+      ids.forEach(async (userId) => {
+        try {
+          const result = await dispatch(
+            fetchUserAbsentees.initiate({ userId, monthForAttendance })
+          ).unwrap(); // ✅ use unwrap() to access data
+
+          const count = result.length || 0;
+        } catch (err) {
+          console.error('Error fetching absentee:', err);
+        }
       });
 
       // Set data and stats
@@ -2040,26 +2180,8 @@ const EmployeeAttendanceTable = () => {
         );
         break;
       case 'leave':
-        try {
-          const today = new Date(selectedDate).toISOString().split('T')[0];
-          const { data, error } = await supabase
-            .from('leave_requests')
-            .select('full_name, user_email, status, leave_type, leave_date')
-            .eq('status', 'approved')
-            .eq('leave_date', today);
-
-          if (error) {
-            setError(error.message);
-            setLeaveRequestsData([]);
-          } else {
-            setLeaveRequestsData(data || []);
-            // Clear the filtered data to hide regular attendance table
-            setFilteredData([]);
-          }
-        } catch (err) {
-          setError('Failed to fetch leave requests');
-          setLeaveRequestsData([]);
-        }
+        // Use the already fetched leave requests data
+        setFilteredData([]);
         break;
       default:
         setFilteredData(attendanceData);
@@ -2108,7 +2230,7 @@ const EmployeeAttendanceTable = () => {
   }`;
 
   return (
-    <div className="flex flex-col  justify-center   items-center min-h-full  bg-gray-10 w-full ">
+    <div className="flex flex-col  justify-center  items-center min-h-full  bg-gray-10 w-full ">
       {/* Heading */}
       <div className=" w-full  max-w-full flex justify-start items-center text-start ">
         {maintab === 'TableView' && (
@@ -2512,7 +2634,9 @@ const EmployeeAttendanceTable = () => {
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
                   Leave:{' '}
-                  <span className="font-bold">{leaveRequestsData.length}</span>
+                  <span className="font-bold">
+                    {leaveRequestsData?.length || 0}
+                  </span>
                 </h2>
               </button>
               <button
@@ -2531,32 +2655,71 @@ const EmployeeAttendanceTable = () => {
           {currentFilter === 'leave' ? (
             // Leave Requests View
             <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-xl font-bold mb-4 text-purple-700">
-                Approved Leave Requests (Today)
-              </h2>
-              {leaveRequestsData.length > 0 ? (
-                <table className="min-w-full bg-white text-sm">
-                  <thead className="bg-gray-50 text-gray-700 uppercase">
-                    <tr>
-                      <th className="py-2 px-4 text-left">FULL NAME</th>
-                      <th className="py-2 px-4 text-left">EMAIL</th>
-                      <th className="py-2 px-4 text-left">TYPE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaveRequestsData.map((req, idx) => (
-                      <tr key={idx} className="border-b ">
-                        <td className="py-2  ">{req.full_name}</td>
-                        <td className="py-2 ">{req.user_email}</td>
-                        <td className="py-2 ">{req.leave_type}</td>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-purple-700">
+                  Approved Leave Requests
+                </h2>
+                <div className="text-sm text-gray-500">
+                  {format(selectedDate, 'MMMM d, yyyy')} •{' '}
+                  {leaveRequestsData.length}{' '}
+                  {leaveRequestsData.length === 1 ? 'person' : 'people'} on
+                  leave
+                </div>
+              </div>
+              {leaveRequestsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  <span className="ml-2 text-gray-600">
+                    Loading leave requests...
+                  </span>
+                </div>
+              ) : leaveRequestsData.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white text-sm border border-gray-200">
+                    <thead className="bg-gray-50 text-gray-700 uppercase">
+                      <tr>
+                        <th className="py-3 px-4 text-left border-b">
+                          FULL NAME
+                        </th>
+                        <th className="py-3 px-4 text-left border-b">EMAIL</th>
+                        <th className="py-3 px-4 text-left border-b">
+                          LEAVE TYPE
+                        </th>
+                        <th className="py-3 px-4 text-left border-b">DATE</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {leaveRequestsData.map((req, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">
+                            {req.full_name}
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {req.user_email}
+                          </td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                              {req.leave_type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">
+                            {req.leave_date}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <p className="text-gray-500 py-4 text-center">
-                  No approved leave requests for today
-                </p>
+                <div className="text-center py-8">
+                  <div className="text-gray-400 text-6xl mb-4">📅</div>
+                  <p className="text-gray-500 text-lg font-medium mb-2">
+                    No approved leave requests for today
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    {format(selectedDate, 'MMMM d, yyyy')}
+                  </p>
+                </div>
               )}
             </div>
           ) : (
@@ -2656,19 +2819,36 @@ const EmployeeAttendanceTable = () => {
                               </div>
                             </td>
 
-                            <td className={`relative group pl-6`}>
+                            <td className="relative group pl-6">
                               {entry.today_task ? (
                                 <div
-                                  className={`${
+                                  className={
                                     isSideBarOpen ? 'text-[10px]' : 'text-sm'
-                                  }`}
+                                  }
                                 >
-                                  <span className={`text-gray-400`}>
+                                  <span className="text-gray-400">
                                     {entry.today_task}
                                   </span>
+
                                   <div className="hidden group-hover:block absolute bg-gray-300 text-white left-px px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
-                                    {}
+                                    {/* Tooltip content here if needed */}
                                   </div>
+
+                                  {entry.task_ids &&
+                                    entry.task_ids.length > 0 && (
+                                      <button
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleShowTasks(
+                                            entry.task_ids,
+                                            entry.project_id
+                                          );
+                                        }}
+                                        className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors w-fit mt-1"
+                                      >
+                                        Show Tasks
+                                      </button>
+                                    )}
                                 </div>
                               ) : (
                                 <span className="text-gray-400 italic">
@@ -2676,6 +2856,7 @@ const EmployeeAttendanceTable = () => {
                                 </span>
                               )}
                             </td>
+
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                               <button
                                 onClick={() => handleModeOpen(entry)}
@@ -2834,6 +3015,20 @@ const EmployeeAttendanceTable = () => {
                             </span>
                             <div className="font-medium p-1">
                               <TaskCell task={entry.today_task} />
+                              {entry.task_ids && entry.task_ids.length > 0 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShowTasks(
+                                      entry.task_ids,
+                                      entry.project_id
+                                    );
+                                  }}
+                                  className="px-2 py-0.5 bg-blue-500 text-white rounded text-[9px] hover:bg-blue-600 transition-colors mt-1"
+                                >
+                                  Show Tasks
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -3846,10 +4041,17 @@ const EmployeeAttendanceTable = () => {
           </div>
         </>
       )}
+
+      {/* Tasks Modal */}
+      <TaskModalAdmin
+        isOpen={isTasksModalOpen}
+        onClose={handleCloseTasksModal}
+        taskIds={selectedTaskIds}
+        projectId={selectedProjectId}
+      />
     </div>
     // );
   );
 };
 
 export default EmployeeAttendanceTable;
-  
