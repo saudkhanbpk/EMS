@@ -20,7 +20,7 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
   const { userProfile } = useUser()
   const [fullname, setFullname] = useState<string>("");
   const [email, setEmail] = useState<string>("");
-  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedDates, setSelectedDates] = useState<string[]>([]);
   const navigate = useNavigate();  // Fix: Add parentheses to properly call useNavigate
   const [isloading, setIsLoading] = useState(false);
 
@@ -38,14 +38,15 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            senderEmail: localStorage.getItem('user_email'), // User's email
-            recipientEmail: "contact@techcreator.co", // Admin's email
+            senderEmail: localStorage.getItem('user_email'),
+            recipientEmail: "contact@techcreator.co",
             subject: `New Leave Request Submitted by ${localStorage.getItem('user_email')}`,
             employeeName: fullname,
             leaveType: leaveType,
-            startDate: selectedDate,
-            endDate: selectedDate,
+            startDate: selectedDates[0],
+            endDate: selectedDates[selectedDates.length - 1],
             reason: description,
+            selectedDates: selectedDates.join(', '),
           }),
         });
 
@@ -63,41 +64,42 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
 
 
     // Form validation
-    if (!fullname || !leaveType || !description || !selectedDate) {
-      alert("Please fill out all fields.");
+    if (!fullname || !leaveType || !description || selectedDates.length === 0) {
+      alert("Please fill out all fields and select at least one date.");
       return;
     }
 
-    const userId = localStorage.getItem("user_id"); // Get the user ID from localStorage
+    const userId = localStorage.getItem("user_id");
 
     try {
+      // Create separate leave request for each selected date
+      const leaveRequests = selectedDates.map(date => ({
+        leave_type: leaveType,
+        user_id: userId,
+        description: description,
+        start_date: new Date().toISOString(),
+        leave_date: date,
+        full_name: fullname,
+        user_email: localStorage.getItem('user_email'),
+        organization_id: userProfile?.organization_id
+      }));
+
       const { data, error } = await supabase
         .from("leave_requests")
-        .insert([
-          {
-            leave_type: leaveType,
-            user_id: userId,
-            description: description,
-            start_date: new Date().toISOString(),
-            leave_date: selectedDate,
-            full_name: fullname,
-            user_email: localStorage.getItem('user_email'),
-            organization_id: userProfile?.organization_id
-          },
-        ]);
+        .insert(leaveRequests);
 
       if (error) {
         console.error("Error inserting data: ", error.message);
         alert("An error occurred while submitting your request. Please try again.");
       } else {
-        console.log("Leave request submitted:", data);
+        console.log("Leave requests submitted:", data);
         sendEmail();
-        // Optionally reset form after submission
+        // Reset form after submission
         setLeaveType("");
         setDescription("");
         setFullname("");
-        setSelectedDate("");
-        alert("Leave request submitted successfully!");
+        setSelectedDates([]);
+        alert(`Leave requests submitted successfully for ${selectedDates.length} date(s)!`);
       }
     } catch (error) {
       console.error("An error occurred:", error);
@@ -150,20 +152,47 @@ const LeaveRequest: React.FC<LeaveRequestProps> = ({ setActiveComponent }) => {
             </div>
           </div>
 
-          {/* Date Picker */}
-          <div className="w-full grid  gap-3 grid-cols-1 md:grid-cols-2 mb-6">
+          {/* Multiple Date Selection */}
+          <div className="w-full grid gap-3 grid-cols-1 md:grid-cols-2 mb-6">
             <div>
               <label htmlFor="leaveDate" className="block text-sm font-normal text-[#565656]">
-                Leave Date
+                Select Leave Dates
               </label>
               <input
                 id="leaveDate"
                 type="date"
-                onChange={(e) => setSelectedDate(e.target.value)}
-                value={selectedDate}
-                min={today} // Ensure future dates only
+                onChange={(e) => {
+                  const date = e.target.value;
+                  if (date && !selectedDates.includes(date)) {
+                    setSelectedDates([...selectedDates, date].sort());
+                  }
+                  e.target.value = '';
+                }}
+                min={today}
                 className="mt-1 block text-[#565656] w-full px-4 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-blue-500 focus:border-blue-500"
               />
+              {selectedDates.length > 0 && (
+                <div className="mt-2">
+                  <p className="text-sm text-gray-600 mb-2">Selected dates:</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedDates.map((date) => (
+                      <span
+                        key={date}
+                        className="inline-flex items-center px-3 py-1 rounded-full text-sm bg-blue-100 text-blue-800"
+                      >
+                        {new Date(date).toLocaleDateString()}
+                        <button
+                          type="button"
+                          onClick={() => setSelectedDates(selectedDates.filter(d => d !== date))}
+                          className="ml-2 text-blue-600 hover:text-blue-800"
+                        >
+                          ×
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div>

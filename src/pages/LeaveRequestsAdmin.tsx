@@ -29,11 +29,11 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         '*, users:users!leave_requests_user_id_fkey(email, personal_email, full_name, id , slack_id , fcm_token)'
       )
       .eq('status', 'pending')
-      .eq('organization_id', userProfile?.organization_id);
+      .eq('organization_id', userProfile?.organization_id)
+      .order('created_at', { ascending: false });
     if (!error) setPendingRequests(data);
     setLoading(false);
     console.log(' Pending data', data);
-    console.log(data);
   };
 
   // Fetch Approved Requests
@@ -45,7 +45,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         '*, users:users!leave_requests_user_id_fkey(personal_email, full_name , slack_id, fcm_token)'
       )
       .eq('status', 'approved')
-      .eq('organization_id', userProfile?.organization_id);
+      .eq('organization_id', userProfile?.organization_id)
+      .order('created_at', { ascending: false });
     if (!error) setApprovedRequests(data);
     setLoading(false);
   };
@@ -59,25 +60,26 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         '*, users:users!leave_requests_user_id_fkey(personal_email, full_name , slack_id , fcm_token)'
       )
       .eq('status', 'rejected')
-      .eq('organization_id', userProfile?.organization_id);
+      .eq('organization_id', userProfile?.organization_id)
+      .order('created_at', { ascending: false });
     if (!error) {
       setRejectedRequests(data);
     }
     setLoading(false);
-    console.log('Rejected Data', data);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this request?')) return;
+  const handleDelete = async (id, skipConfirm = false) => {
+    if (!skipConfirm && !confirm('Are you sure you want to delete this request?')) return;
     const { error } = await supabase
       .from('leave_requests')
       .delete()
       .eq('id', id);
-    if (!error) {
+    if (!error && !skipConfirm) {
       if (selectedTab === 'Pending') handlePendingRequests();
       else if (selectedTab === 'Approved') handleApprovedRequests();
       else handleRejectedRequests();
     }
+    return !error;
   };
 
   const handleActionAccept = async (
@@ -446,117 +448,262 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
 
     sendAdminResponsereject();
   };
-  const renderRequests = (requests) => (
-    <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
-      {requests.length === 0 ? (
-        <p className="text-center text-gray-500">No requests available.</p>
-      ) : (
-        requests.map((request) => (
-          <div
-            key={request.id}
-            className="p-4 mb-4  text-sm text-gray=400 bg-gray-100  break-words rounded-lg shadow"
-          >
-            <div className="flex justify-between items-center">
-              <div>
-                <p>
-                  <span className="text-gray-700">Request For : </span>{' '}
-                  <span className="text-sm text-gray-500">
-                    {' '}
-                    {new Date(request.leave_date).toLocaleDateString()} (
-                    {new Date(request.leave_date).toLocaleDateString('en-US', {
-                      weekday: 'long',
-                    })}
-                    ) {'-'} {request.leave_type}
-                  </span>
-                </p>
+  // Group requests by user, leave type, and description for better organization
+  const groupRequests = (requests) => {
+    const grouped = {};
+    requests.forEach(request => {
+      const key = `${request.user_id}-${request.leave_type}-${request.description}`;
+      if (!grouped[key]) {
+        grouped[key] = {
+          ...request,
+          dates: [request.leave_date],
+          ids: [request.id]
+        };
+      } else {
+        grouped[key].dates.push(request.leave_date);
+        grouped[key].ids.push(request.id);
+      }
+    });
+    return Object.values(grouped);
+  };
+
+  const handleBulkAction = async (group, action, allRequests) => {
+    const status = action === 'approve' ? 'approved' : 'rejected';
+    
+    if (action === 'approve') {
+      setIsLoading(true);
+    } else {
+      setIsRejectLoading(true);
+    }
+
+    try {
+      // Process all leave requests in the group
+      for (const id of group.ids) {
+        const request = allRequests.find(r => r.id === id);
+        const leaveDate = request.leave_date;
+
+        // Handle absentee records
+        const { data: absenteeData, error: selectError } = await supabase
+          .from('absentees')
+          .select('*')
+          .eq('user_id', group.user_id)
+          .eq('absentee_date', leaveDate);
+
+        if (!selectError) {
+          if (absenteeData && absenteeData.length > 0) {
+            await supabase
+              .from('absentees')
+              .update({
+                absentee_type: action === 'approve' ? 'leave' : 'Absent',
+                absentee_date: leaveDate,
+                absentee_Timing: group.leave_type,
+              })
+              .eq('user_id', group.user_id)
+              .eq('absentee_date', leaveDate);
+          } else {
+            await supabase.from('absentees').insert({
+              user_id: group.user_id,
+              absentee_type: action === 'approve' ? 'leave' : 'Absent',
+              absentee_Timing: group.leave_type,
+              absentee_date: leaveDate,
+            });
+          }
+        }
+
+        // Update leave request status
+        await supabase
+          .from('leave_requests')
+          .update({ status })
+          .eq('id', id);
+      }
+
+      // Send notifications only once per group
+      const sendNotification = async () => {
+        try {
+          await fetch(
+            'https://ems-server-0bvq.onrender.com/send-singlenotifications',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                title: action === 'approve' ? 'Request Accepted' : 'Request Rejected',
+                body: action === 'approve' 
+                  ? `Your ${group.dates.length} leave request(s) have been accepted`
+                  : `Your ${group.dates.length} leave request(s) have been rejected`,
+                fcmtoken: group.users.fcm_token,
+              }),
+            }
+          );
+        } catch (error) {
+          console.error('Error sending notification:', error);
+        }
+      };
+
+      const sendSlackNotification = async () => {
+        try {
+          await fetch(
+            action === 'approve' 
+              ? 'https://ems-server-0bvq.onrender.com/send-slack'
+              : 'https://ems-server-0bvq.onrender.com/send-slackreject',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                USERID: group.users.slack_id,
+                message: action === 'approve'
+                  ? `Your ${group.dates.length} leave request(s) have been accepted.`
+                  : `Your ${group.dates.length} leave request(s) have been rejected. For more details please contact HR.`,
+              }),
+            }
+          );
+        } catch (error) {
+          console.error('Error sending Slack notification:', error);
+        }
+      };
+
+      const sendAdminResponse = async () => {
+        try {
+          await fetch(
+            action === 'approve'
+              ? 'https://ems-server-0bvq.onrender.com/send-response'
+              : 'https://ems-server-0bvq.onrender.com/send-rejectresponse',
+            {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                employeeName: group.full_name,
+                userEmail: group.users.personal_email,
+                leaveType: group.leave_type,
+                startDate: group.dates[0],
+                selectedDates: group.dates.join(', '),
+              }),
+            }
+          );
+        } catch (error) {
+          console.error('Error sending admin response:', error);
+        }
+      };
+
+      // Send all notifications
+      await Promise.all([
+        sendNotification(),
+        sendSlackNotification(),
+        sendAdminResponse()
+      ]);
+
+      // Refresh UI
+      if (selectedTab === 'Pending') handlePendingRequests();
+      else if (selectedTab === 'Approved') handleApprovedRequests();
+      else handleRejectedRequests();
+      
+      if (typeof fetchPendingCount === 'function') await fetchPendingCount();
+
+    } catch (error) {
+      console.error('Error in bulk action:', error);
+    } finally {
+      setIsLoading(false);
+      setIsRejectLoading(false);
+    }
+  };
+
+  const renderRequests = (requests) => {
+    const groupedRequests = groupRequests(requests);
+    
+    return (
+      <div className="mt-4 grid grid-cols-1 sm:grid-cols-2 gap-4">
+        {groupedRequests.length === 0 ? (
+          <p className="text-center text-gray-500">No requests available.</p>
+        ) : (
+          groupedRequests.map((group) => (
+            <div
+              key={`${group.user_id}-${group.leave_type}-${group.description.substring(0, 20)}`}
+              className="p-4 mb-4 text-sm text-gray-400 bg-gray-100 break-words rounded-lg shadow"
+            >
+              <div className="flex justify-between items-center">
+                <div>
+                  <p>
+                    <span className="text-gray-700">Request For: </span>
+                    <span className="text-sm text-gray-500">
+                      {group.dates.length > 1 ? (
+                        `${group.dates.length} dates - ${group.leave_type}`
+                      ) : (
+                        `${new Date(group.dates[0]).toLocaleDateString()} (${new Date(group.dates[0]).toLocaleDateString('en-US', { weekday: 'long' })}) - ${group.leave_type}`
+                      )}
+                    </span>
+                  </p>
+                  {group.dates.length > 1 && (
+                    <div className="mt-2">
+                      <p className="text-xs text-gray-600">Dates:</p>
+                      <div className="flex flex-wrap gap-1 mt-1">
+                        {group.dates.sort().map((date, index) => (
+                          <span key={index} className="text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded">
+                            {new Date(date).toLocaleDateString()}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+                <div>
+                  <Trash2
+                    size={25}
+                    className="hover:text-red-600 text-red-400 cursor-pointer"
+                    onClick={async () => {
+                      if (confirm(`Are you sure you want to delete ${group.dates.length} request(s)?`)) {
+                        for (const id of group.ids) {
+                          await handleDelete(id, true);
+                        }
+                        // Refresh UI after all deletions
+                        if (selectedTab === 'Pending') handlePendingRequests();
+                        else if (selectedTab === 'Approved') handleApprovedRequests();
+                        else handleRejectedRequests();
+                      }
+                    }}
+                  />
+                </div>
               </div>
 
-              <div>
-                <Trash2
-                  size={25}
-                  className=" hover:text-red-600 text-red-400 cursor-pointer"
-                  onClick={() => handleDelete(request.id)}
-                />
-              </div>
-            </div>
-
-            <p> {request.description}</p>
-            <p className="text-gray-700"> {request.full_name}</p>
-            {/* <p> 
-              <span 
-                 className={`${
-                   request.status === "pending" ? "text-yellow-600" : 
-                   request.status === "approved" ? "text-green-600" : 
-                   "text-red-600"
+              <p className="mt-2">{group.description}</p>
+              <p className="text-gray-700">{group.full_name}</p>
+              
+              <span
+                className={`inline-block mt-2 px-4 h-3 text-[0px] font-medium rounded ${
+                  group.status === 'pending'
+                    ? 'bg-yellow-500'
+                    : group.status === 'approved'
+                    ? 'bg-green-400'
+                    : 'bg-red-400'
                 }`}
               >
-                {request.status}
-               </span>
-            </p> */}
-            <span
-              className={`inline-block mt-2 px-4 h-3 text-[0px] font-medium rounded ${
-                // request.status === "pending"
-                //   ? "bg-yellow-300 text-yellow-800"
-                //   : "bg-green-300 text-green-800"
-                request.status === 'pending'
-                  ? 'bg-yellow-500 '
-                  : request.status === 'approved'
-                  ? 'bg-green-400'
-                  : 'bg-red-400'
-              }`}
-            >
-              {request.status}
-            </span>
+                {group.status}
+              </span>
 
-            <div className="mt-3 flex justify-end gap-4">
-              {(selectedTab === 'Rejected' || selectedTab === 'Pending') && (
-                <button
-                  disabled={isloading}
-                  onClick={() =>
-                    handleActionAccept(
-                      request.id,
-                      'approved',
-                      request.user_id,
-                      request.leave_type,
-                      request.users.personal_email,
-                      request.leave_date,
-                      request.full_name,
-                      request.users.slack_id,
-                      request.users.fcm_token
-                    )
-                  }
-                  className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
-                >
-                  Approve
-                </button>
-              )}
-              {(selectedTab === 'Approved' || selectedTab === 'Pending') && (
-                <button
-                  disabled={isrejectloading}
-                  onClick={() =>
-                    handleActionReject(
-                      request.id,
-                      'rejected',
-                      request.user_id,
-                      request.leave_type,
-                      request.users.personal_email,
-                      request.leave_date,
-                      request.full_name,
-                      request.users.slack_id,
-                      request.users.fcm_token
-                    )
-                  }
-                  className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
-                >
-                  Reject
-                </button>
-              )}
+              <div className="mt-3 flex justify-end gap-4">
+                {(selectedTab === 'Rejected' || selectedTab === 'Pending') && (
+                  <button
+                    disabled={isloading}
+                    onClick={() => handleBulkAction(group, 'approve', requests)}
+                    className="bg-green-200 text-green-600 px-4 py-1 rounded-lg hover:bg-green-600 hover:text-white transition"
+                  >
+                    Approve {group.dates.length > 1 ? `All (${group.dates.length})` : ''}
+                  </button>
+                )}
+                {(selectedTab === 'Approved' || selectedTab === 'Pending') && (
+                  <button
+                    disabled={isrejectloading}
+                    onClick={() => handleBulkAction(group, 'reject', requests)}
+                    className="bg-red-200 text-red-600 px-6 py-1 rounded-lg hover:bg-red-600 hover:text-white transition"
+                  >
+                    Reject {group.dates.length > 1 ? `All (${group.dates.length})` : ''}
+                  </button>
+                )}
+              </div>
             </div>
-          </div>
-        ))
-      )}
-    </div>
-  );
+          ))
+        )}
+      </div>
+    );
+  };
   const isOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   return (
     <div
