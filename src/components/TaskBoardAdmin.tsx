@@ -32,6 +32,7 @@ import { title } from 'process';
 import TodoTask from './TodoTask';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
+import { buttonVariants } from '../component/ui/button';
 
 interface Developer {
   id: string;
@@ -513,7 +514,18 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
             {/* Title */}
             <p className="text-[14px] leading-5 font-semibold text-[#404142]">
-              {task.title}
+              {task.title.slice(0, 22)}
+              {task.title.slice(0, 22) ? (
+                <span className="text-blue-600 text-[10px] cursor-pointer">
+                  {' '}
+                  see more
+                </span>
+              ) : (
+                <span className="text-blue-600 text-[10px] cursor-pointer">
+                  {' '}
+                  see less
+                </span>
+              )}
             </p>
 
             {/* Priority & Score */}
@@ -783,7 +795,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     return (
       <div className="bg-white  lg:col-span-1 md:col-span-2  sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col">
         <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h2 className={`font-semibold text-xl leading-7 text-${color}`}>
+          <h2 className={`font-semibold text-[18px] leading-7 text-${color}`}>
             {title}
           </h2>
           <span className="text-gray-600">{tasksInColumn.length}</span>
@@ -807,7 +819,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             <div
               ref={provided.innerRef}
               {...provided.droppableProps}
-              className="flex-1 overflow-y-auto space-y-4 pr-2 task-scroll"
+              className="flex-1 overflow-y-auto  space-y-4 pr-2 task-scroll"
               style={{ minHeight: '420px', maxHeight: 'calc(100vh - 450px)' }}
             >
               {tasksInColumn.map((task, index) => (
