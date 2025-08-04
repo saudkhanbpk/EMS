@@ -25,6 +25,7 @@ import { forwardRef, useImperativeHandle } from 'react';
 import './style.css';
 import { useNavigate } from 'react-router-dom';
 import { Dialog, Transition, RadioGroup } from '@headlessui/react';
+import TaskModalAdmin from '../component/TaskModalAdmin';
 
 import AbsenteeComponentAdmin from './AbsenteeDataAdmin';
 import {
@@ -148,6 +149,7 @@ const EmployeeAttendanceTable = () => {
   const [selectedMode, setSelectedMode] = useState('remote');
   const [present, setPresent] = useState(0);
   const [leaveRequestsData, setLeaveRequestsData] = useState([]);
+  const [leaveRequestsLoading, setLeaveRequestsLoading] = useState(false);
 
   const [DataEmployee, setDataEmployee] = useState(null);
   const [late, setLate] = useState(0);
@@ -210,6 +212,9 @@ const EmployeeAttendanceTable = () => {
   );
   const [graphicview, setgraphicview] = useState(false);
   const [tableData, setTableData] = useState('');
+  const [isTasksModalOpen, setIsTasksModalOpen] = useState(false);
+  const [selectedTaskIds, setSelectedTaskIds] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
 
   const [isDateModalOpen, setIsDateModalOpen] = useState(false);
 
@@ -239,6 +244,7 @@ const EmployeeAttendanceTable = () => {
 
     if (error) {
       console.error('Error fetching attendance:', error);
+      return
     } else {
       if (data.length) {
         let dataid = data[0].id;
@@ -246,6 +252,7 @@ const EmployeeAttendanceTable = () => {
       }
       console.log("Today's attendance:", data);
     }
+
     setabsentloading(false);
   }
 
@@ -337,13 +344,13 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === (newAbsenteeData.user_id || selecteduser)
             ? {
-                ...item,
-                status: newAbsenteeData.absentee_type,
-                textColor:
-                  newAbsenteeData.absentee_type === 'Absent'
-                    ? 'text-red-500'
-                    : 'text-blue-500',
-              }
+              ...item,
+              status: newAbsenteeData.absentee_type,
+              textColor:
+                newAbsenteeData.absentee_type === 'Absent'
+                  ? 'text-red-500'
+                  : 'text-blue-500',
+            }
             : item
         )
       );
@@ -351,13 +358,13 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === (newAbsenteeData.user_id || selecteduser)
             ? {
-                ...item,
-                status: newAbsenteeData.absentee_type,
-                textColor:
-                  newAbsenteeData.absentee_type === 'Absent'
-                    ? 'text-red-500'
-                    : 'text-blue-500',
-              }
+              ...item,
+              status: newAbsenteeData.absentee_type,
+              textColor:
+                newAbsenteeData.absentee_type === 'Absent'
+                  ? 'text-red-500'
+                  : 'text-blue-500',
+            }
             : item
         )
       );
@@ -367,11 +374,11 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === selecteduser
             ? {
-                ...item,
-                status: selectedMode == 'Absent' ? 'Absent' : 'leave',
-                textColor:
-                  selectedMode == 'Absent' ? 'text-red-500' : 'text-blue-500',
-              }
+              ...item,
+              status: selectedMode == 'Absent' ? 'Absent' : 'leave',
+              textColor:
+                selectedMode == 'Absent' ? 'text-red-500' : 'text-blue-500',
+            }
             : item
         )
       );
@@ -379,11 +386,11 @@ const EmployeeAttendanceTable = () => {
         prev.map((item) =>
           item.id === selecteduser
             ? {
-                ...item,
-                status: selectedMode == 'Absent' ? 'Absent' : 'leave',
-                textColor:
-                  selectedMode == 'Absent' ? 'text-red-500' : 'text-blue-500',
-              }
+              ...item,
+              status: selectedMode == 'Absent' ? 'Absent' : 'leave',
+              textColor:
+                selectedMode == 'Absent' ? 'text-red-500' : 'text-blue-500',
+            }
             : item
         )
       );
@@ -724,8 +731,11 @@ const EmployeeAttendanceTable = () => {
   }, [userID]);
 
   useEffect(() => {
-    // Fetch leave requests when component mounts
+    // Fetch leave data from absentees table when component mounts or selectedDate changes
     const fetchLeaveRequests = async () => {
+      if (!user?.id) return;
+
+      setLeaveRequestsLoading(true);
       try {
         const { data: userprofile, error: usererror } = await supabase
           .from('users')
@@ -733,28 +743,94 @@ const EmployeeAttendanceTable = () => {
           .eq('id', user?.id)
           .single();
 
-        const today = new Date().toISOString().split('T')[0];
-        const { data, error } = await supabase
-          .from('leave_requests')
-          .select(
-            'full_name, user_email, status, leave_type, leave_date, users!inner(organization_id)'
-          )
-          .eq('status', 'approved')
-          .eq('leave_date', today)
-          .eq('users.organization_id', userprofile?.organization_id);
+        if (usererror) {
+          console.error('Error fetching user profile:', usererror);
+          setLeaveRequestsData([]);
+          return;
+        }
+
+        const today = selectedDate.toISOString().split('T')[0];
+        console.log('🔍 Fetching leave data for date:', today, 'and organization:', userprofile?.organization_id);
+
+        // First, let's check all leave records from absentees table for debugging
+        const { data: allLeaveRecords, error: allError } = await supabase
+          .from('absentees')
+          .select('*')
+          .eq('absentee_type', 'leave');
+
+        console.log('🔍 All leave records from absentees:', allLeaveRecords);
+        
+        // Log the dates to see what dates we have
+        if (allLeaveRecords && allLeaveRecords.length > 0) {
+          const uniqueDates = [...new Set(allLeaveRecords.map(req => req.absentee_date || req.created_at.split('T')[0]))].sort();
+          console.log('🔍 Available leave dates:', uniqueDates);
+          console.log('🔍 Looking for date:', today);
+        }
+
+        // Get users from the same organization to filter leave records
+        const { data: orgUsers, error: orgUsersError } = await supabase
+          .from('users')
+          .select('id, full_name, email')
+          .eq('organization_id', userprofile?.organization_id);
+
+        if (orgUsersError) {
+          console.error('Error fetching organization users:', orgUsersError);
+          setLeaveRequestsData([]);
+          return;
+        }
+
+        const orgUserIds = orgUsers.map(user => user.id);
+        console.log('🔍 Organization user IDs:', orgUserIds);
+
+        // Now fetch leave records from absentees table with proper filtering
+        // Check both absentee_date field and created_at date for today
+        const { data: leaveData, error } = await supabase
+          .from('absentees')
+          .select('*')
+          .eq('absentee_type', 'leave')
+          .in('user_id', orgUserIds)
+          .or(`absentee_date.eq.${today},and(created_at.gte.${today}T00:00:00,created_at.lte.${today}T23:59:59)`);
+
+        console.log('🔍 Leave records query result:', { 
+          data: leaveData, 
+          error, 
+          today, 
+          orgId: userprofile?.organization_id,
+          dataLength: leaveData?.length || 0 
+        });
 
         if (error) {
-          console.error('Error fetching leave requests:', error);
+          console.warn('❌ Error fetching leave records:', error);
+          setLeaveRequestsData([]);
         } else {
-          setLeaveRequestsData(data || []);
+          // Transform absentees data to match the expected format
+          const transformedData = leaveData?.map(record => {
+            const user = orgUsers.find(u => u.id === record.user_id);
+            return {
+              id: record.id,
+              full_name: user?.full_name || 'Unknown User',
+              user_email: user?.email || 'No email',
+              status: 'approved', // Since it's already in absentees table
+              leave_type: record.absentee_Timing || 'Full Day',
+              leave_date: record.absentee_date || record.created_at.split('T')[0],
+              user_id: record.user_id,
+              organization_id: userprofile?.organization_id
+            };
+          }) || [];
+
+          console.log('✅ Successfully fetched and transformed leave records:', transformedData);
+          setLeaveRequestsData(transformedData);
         }
       } catch (err) {
-        console.error('Error fetching leave requests:', err);
+        console.error('Error fetching leave records:', err);
+        setLeaveRequestsData([]);
+      } finally {
+        setLeaveRequestsLoading(false);
       }
     };
 
     fetchLeaveRequests();
-  }, []);
+  }, [user?.id, selectedDate]);
 
   useEffect(() => {
     console.log('selected tab on Leaves Fetching :', selectedTab);
@@ -1671,6 +1747,18 @@ const EmployeeAttendanceTable = () => {
     updateMode();
     setisModeOpen(false);
   };
+
+  const handleShowTasks = (taskIds, projectId) => {
+    setSelectedTaskIds(taskIds);
+    setSelectedProjectId(projectId);
+    setIsTasksModalOpen(true);
+  };
+
+  const handleCloseTasksModal = () => {
+    setIsTasksModalOpen(false);
+    setSelectedTaskIds([]);
+    setSelectedProjectId('');
+  };
   const downloadPDFFiltered = async () => {
     try {
       const response = await fetch(
@@ -1834,6 +1922,7 @@ const EmployeeAttendanceTable = () => {
       const { data: users, error: usersError } = await supabase
         .from('users')
         .select('id, full_name')
+
         .not('role', 'in', '(client,admin,superadmin)')
         .eq('organization_id', userprofile.organization_id);
       if (usersError) throw usersError;
@@ -1878,7 +1967,7 @@ const EmployeeAttendanceTable = () => {
       // ✅ Fetch daily tasks for the selected date
       const { data: dailyTasks, error: taskError } = await supabase
         .from('daily check_in task')
-        .select('user_id, content, created_at')
+        .select('user_id, content, created_at, task_ids, project_id')
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
       if (taskError) throw taskError;
@@ -1892,7 +1981,11 @@ const EmployeeAttendanceTable = () => {
       const tasksMap = new Map();
       dailyTasks.forEach((task) => {
         if (!tasksMap.has(task.user_id)) {
-          tasksMap.set(task.user_id, task.content); // Use latest task if needed
+          tasksMap.set(task.user_id, {
+            content: task.content,
+            task_ids: task.task_ids || [],
+            project_id: task.project_id
+          });
         }
       });
 
@@ -1910,7 +2003,7 @@ const EmployeeAttendanceTable = () => {
       // Final data map
       const finalAttendanceData = users.map((user) => {
         const log = attendanceMap.get(user.id);
-        const task = tasksMap.get(user.id) || 'No Task';
+        const taskData = tasksMap.get(user.id) || { content: 'No Task', task_ids: [], project_id: null };
 
         if (!log) {
           const absenteeType = absenteesMap.get(user.id);
@@ -1924,7 +2017,9 @@ const EmployeeAttendanceTable = () => {
             check_out: 'N/A',
             autocheckout: '',
             work_mode: 'N/A',
-            today_task: task,
+            today_task: taskData.content,
+            task_ids: taskData.task_ids,
+            project_id: taskData.project_id,
             status: absenteeType || 'Absent',
             break_start: 'N/A',
             break_status: 'N/A',
@@ -1947,7 +2042,9 @@ const EmployeeAttendanceTable = () => {
           check_out: log.check_out ? formatTime(log.check_out) : 'N/A',
           autocheckout: log.autocheckout || '',
           work_mode: log.work_mode || 'N/A',
-          today_task: task,
+          today_task: taskData.content,
+          task_ids: taskData.task_ids,
+          project_id: taskData.project_id,
           status: log.status || 'Absent',
           break_start: firstBreak ? formatTime(firstBreak.start_time) : 'N/A',
           break_status: firstBreak
@@ -1959,8 +2056,8 @@ const EmployeeAttendanceTable = () => {
             log.status?.toLowerCase() === 'present'
               ? 'text-green-500'
               : log.status?.toLowerCase() === 'late'
-              ? 'text-yellow-500'
-              : 'text-red-500',
+                ? 'text-yellow-500'
+                : 'text-red-500',
         };
       });
 
@@ -1973,9 +2070,7 @@ const EmployeeAttendanceTable = () => {
             fetchUserAbsentees.initiate({ userId, monthForAttendance })
           ).unwrap(); // ✅ use unwrap() to access data
 
-          const count = result.length || 0;
-
-          dispatch(setAbsenteeCount({ userId, count })); // ✅ this must be hit
+          const count = result.length || 0
         } catch (err) {
           console.error('Error fetching absentee:', err);
         }
@@ -2063,26 +2158,8 @@ const EmployeeAttendanceTable = () => {
         );
         break;
       case 'leave':
-        try {
-          const today = new Date(selectedDate).toISOString().split('T')[0];
-          const { data, error } = await supabase
-            .from('leave_requests')
-            .select('full_name, user_email, status, leave_type, leave_date')
-            .eq('status', 'approved')
-            .eq('leave_date', today);
-
-          if (error) {
-            setError(error.message);
-            setLeaveRequestsData([]);
-          } else {
-            setLeaveRequestsData(data || []);
-            // Clear the filtered data to hide regular attendance table
-            setFilteredData([]);
-          }
-        } catch (err) {
-          setError('Failed to fetch leave requests');
-          setLeaveRequestsData([]);
-        }
+        // Use the already fetched leave requests data
+        setFilteredData([]);
         break;
       default:
         setFilteredData(attendanceData);
@@ -2126,9 +2203,8 @@ const EmployeeAttendanceTable = () => {
   };
   const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   const statusFonts = ` ${isSideBarOpen ? 'text-[14px]' : 'text-xl'}`;
-  const tableHeading = `py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap ${
-    isSideBarOpen ? 'text-[8px]' : 'text-[12px]'
-  }`;
+  const tableHeading = `py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap ${isSideBarOpen ? 'text-[8px]' : 'text-[12px]'
+    }`;
 
   return (
     <div className="flex flex-col  justify-center  items-center min-h-full  bg-gray-10 w-full ">
@@ -2180,41 +2256,37 @@ const EmployeeAttendanceTable = () => {
             <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto  md:flex justify-start md:space-x-4 space-x-2 ">
               <button
                 onClick={() => setSelectedTab('Daily')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Daily'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Daily'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-100'
+                  }`}
               >
                 Daily
               </button>
               <button
                 onClick={() => setSelectedTab('Weekly')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Weekly'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Weekly'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setSelectedTab('Monthly')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Monthly'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Monthly'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setSelectedTab('Filter')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Filter'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-white text-gray-700 hover:bg-gray-200'
-                }`}
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Filter'
+                  ? 'bg-blue-500 text-white'
+                  : 'bg-white text-gray-700 hover:bg-gray-200'
+                  }`}
               >
                 Filter
               </button>
@@ -2477,15 +2549,13 @@ const EmployeeAttendanceTable = () => {
             className={`w-full overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
           >
             <div
-              className={`flex sm:flex-nowrap justify-between flex-wrap ${
-                isSideBarOpen ? ' space-x-5' : ''
-              } items-center text-lg font-medium`}
+              className={`flex sm:flex-nowrap justify-between flex-wrap ${isSideBarOpen ? ' space-x-5' : ''
+                } items-center text-lg font-medium`}
             >
               <button
                 onClick={() => handleFilterChange('all')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${
-                  currentFilter === 'all' ? 'bg-gray-200' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${currentFilter === 'all' ? 'bg-gray-200' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4   bg-gray-600 rounded-full"></span>
                 <h2 className={`${statusFonts} text-gray-600`}>
@@ -2495,9 +2565,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('present')}
-                className={`flex  items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${
-                  currentFilter === 'present' ? 'bg-green-200' : ''
-                }`}
+                className={`flex  items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${currentFilter === 'present' ? 'bg-green-200' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-green-500 rounded-full"></span>
                 <h2 className={`${statusFonts}text-green-600`}>
@@ -2506,9 +2575,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('late')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${
-                  currentFilter === 'late' ? 'bg-yellow-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${currentFilter === 'late' ? 'bg-yellow-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
                 <h2 className={`${statusFonts} text-yellow-600`}>
@@ -2517,9 +2585,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('remote')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === 'remote' ? 'bg-purple-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === 'remote' ? 'bg-purple-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
@@ -2528,21 +2595,19 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('leave')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === 'leave' ? ' bg-purple-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === 'leave' ? ' bg-purple-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
                   Leave:{' '}
-                  <span className="font-bold">{leaveRequestsData.length}</span>
+                  <span className="font-bold">{leaveRequestsData?.length || 0}</span>
                 </h2>
               </button>
               <button
                 onClick={() => handleFilterChange('absent')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${
-                  currentFilter === 'absent' ? 'bg-red-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${currentFilter === 'absent' ? 'bg-red-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-red-500 rounded-full"></span>
                 <h2 className="text-red-600 md:text-xl text-sm">
@@ -2554,32 +2619,56 @@ const EmployeeAttendanceTable = () => {
           {currentFilter === 'leave' ? (
             // Leave Requests View
             <div className="w-full overflow-x-auto max-w-7xl bg-white p-6 rounded-lg shadow-lg">
-              <h2 className="text-xl font-bold mb-4 text-purple-700">
-                Approved Leave Requests (Today)
-              </h2>
-              {leaveRequestsData.length > 0 ? (
-                <table className="min-w-full bg-white text-sm">
-                  <thead className="bg-gray-50 text-gray-700 uppercase">
-                    <tr>
-                      <th className="py-2 px-4 text-left">FULL NAME</th>
-                      <th className="py-2 px-4 text-left">EMAIL</th>
-                      <th className="py-2 px-4 text-left">TYPE</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {leaveRequestsData.map((req, idx) => (
-                      <tr key={idx} className="border-b ">
-                        <td className="py-2  ">{req.full_name}</td>
-                        <td className="py-2 ">{req.user_email}</td>
-                        <td className="py-2 ">{req.leave_type}</td>
+              <div className="flex items-center justify-between mb-6">
+                <h2 className="text-xl font-bold text-purple-700">
+                  Approved Leave Requests
+                </h2>
+                <div className="text-sm text-gray-500">
+                  {format(selectedDate, 'MMMM d, yyyy')} • {leaveRequestsData.length} {leaveRequestsData.length === 1 ? 'person' : 'people'} on leave
+                </div>
+              </div>
+              {leaveRequestsLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div>
+                  <span className="ml-2 text-gray-600">Loading leave requests...</span>
+                </div>
+              ) : leaveRequestsData.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="min-w-full bg-white text-sm border border-gray-200">
+                    <thead className="bg-gray-50 text-gray-700 uppercase">
+                      <tr>
+                        <th className="py-3 px-4 text-left border-b">FULL NAME</th>
+                        <th className="py-3 px-4 text-left border-b">EMAIL</th>
+                        <th className="py-3 px-4 text-left border-b">LEAVE TYPE</th>
+                        <th className="py-3 px-4 text-left border-b">DATE</th>
                       </tr>
-                    ))}
-                  </tbody>
-                </table>
+                    </thead>
+                    <tbody>
+                      {leaveRequestsData.map((req, idx) => (
+                        <tr key={idx} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4 font-medium">{req.full_name}</td>
+                          <td className="py-3 px-4 text-gray-600">{req.user_email}</td>
+                          <td className="py-3 px-4">
+                            <span className="px-2 py-1 bg-purple-100 text-purple-800 rounded-full text-xs font-semibold">
+                              {req.leave_type}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4 text-gray-600">{req.leave_date}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
               ) : (
-                <p className="text-gray-500 py-4 text-center">
-                  No approved leave requests for today
-                </p>
+                <div className="text-center py-8">
+                  <div className="text-gray-400 text-6xl mb-4">📅</div>
+                  <p className="text-gray-500 text-lg font-medium mb-2">
+                    No approved leave requests for today
+                  </p>
+                  <p className="text-gray-400 text-sm">
+                    {format(selectedDate, 'MMMM d, yyyy')}
+                  </p>
+                </div>
               )}
             </div>
           ) : (
@@ -2615,13 +2704,12 @@ const EmployeeAttendanceTable = () => {
                           >
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
                               <span
-                                className={` py-0.5 xs:py-1 ${
-                                  entry.status === 'present'
-                                    ? 'text-green-600'
-                                    : entry.status === 'late'
+                                className={` py-0.5 xs:py-1 ${entry.status === 'present'
+                                  ? 'text-green-600'
+                                  : entry.status === 'late'
                                     ? 'text-yellow-600'
                                     : 'text-red-600'
-                                }`}
+                                  }`}
                                 title={entry.full_name}
                               >
                                 {entry.full_name.charAt(0).toUpperCase() +
@@ -2679,42 +2767,50 @@ const EmployeeAttendanceTable = () => {
                               </div>
                             </td>
 
-                            <td className={`relative group pl-6`}>
-                              {entry.today_task ? (
-                                <div
-                                  className={`${
-                                    isSideBarOpen ? 'text-[10px]' : 'text-sm'
-                                  }`}
-                                >
-                                  <span className="text-gray-400">
-                                    {entry.today_task}
-                                  </span>
-                                  <div className="hidden group-hover:block absolute bg-gray-300 text-white   px-1 xs:px-2 py-0.5 w-max rounded mt-1 -ml-2 z-10">
-                                    {entry.today_task}
+                            <td className={`pl-6`}>
+                              <div>
+                                {entry.today_task ? (
+                                  <div
+                                    className={`${isSideBarOpen ? 'text-[10px]' : 'text-sm'
+                                      }`}
+                                  >
+                                    <span className="text-gray-400">
+                                      {entry.today_task}
+                                    </span>
                                   </div>
-                                </div>
-                              ) : (
-                                <span className="text-gray-400 italic">
-                                  No task
-                                </span>
-                              )}
+                                ) : (
+                                  <span className="text-gray-400 italic">
+                                    No task
+                                  </span>
+                                )}
+                                {entry.task_ids && entry.task_ids.length > 0 && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleShowTasks(entry.task_ids, entry.project_id);
+                                    }}
+                                    className="px-2 py-1 bg-blue-500 text-white rounded text-xs hover:bg-blue-600 transition-colors w-fit mt-1"
+                                  >
+                                    Show Tasks
+                                  </button>
+                                )}
+                              </div>
                             </td>
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                               <button
                                 onClick={() => handleModeOpen(entry)}
-                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${
-                                  entry.work_mode === 'on_site'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : entry.work_mode === 'remote'
+                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === 'on_site'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : entry.work_mode === 'remote'
                                     ? 'bg-purple-100 text-purple-800'
                                     : 'bg-white text-black'
-                                }`}
+                                  }`}
                               >
                                 {entry.work_mode === 'on_site'
                                   ? 'On-site'
                                   : entry.work_mode === 'remote'
-                                  ? 'Remote'
-                                  : '---'}
+                                    ? 'Remote'
+                                    : '---'}
                               </button>
                             </td>
                             <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
@@ -2723,15 +2819,14 @@ const EmployeeAttendanceTable = () => {
                                 onClick={() => handleopenabsentmodal(entry.id)}
                               >
                                 <span
-                                  className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${
-                                    entry.status === 'present'
-                                      ? 'bg-green-100 text-green-800'
-                                      : entry.status === 'late'
+                                  className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === 'present'
+                                    ? 'bg-green-100 text-green-800'
+                                    : entry.status === 'late'
                                       ? 'bg-yellow-100 text-yellow-800'
                                       : entry.status === 'leave'
-                                      ? 'text-purple-900 bg-purple-300'
-                                      : 'bg-red-100 text-red-800'
-                                  }`}
+                                        ? 'text-purple-900 bg-purple-300'
+                                        : 'bg-red-100 text-red-800'
+                                    }`}
                                 >
                                   {entry.status == 'Full Day'
                                     ? 'Leave'
@@ -2757,13 +2852,12 @@ const EmployeeAttendanceTable = () => {
                       >
                         <div className="flex justify-between items-center mb-2 border-b pb-2">
                           <span
-                            className={`font-medium text-[12px] xs:text-[13px] ${
-                              entry.status === 'present'
-                                ? 'text-green-600'
-                                : entry.status === 'late'
+                            className={`font-medium text-[12px] xs:text-[13px] ${entry.status === 'present'
+                              ? 'text-green-600'
+                              : entry.status === 'late'
                                 ? 'text-yellow-600'
                                 : 'text-red-600'
-                            }`}
+                              }`}
                             title={entry.full_name}
                           >
                             {entry.full_name.charAt(0).toUpperCase() +
@@ -2775,13 +2869,12 @@ const EmployeeAttendanceTable = () => {
                             className="focus:outline-none"
                           >
                             <span
-                              className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
-                                entry.status === 'present'
-                                  ? 'bg-green-100 text-green-800'
-                                  : entry.status === 'late'
+                              className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === 'present'
+                                ? 'bg-green-100 text-green-800'
+                                : entry.status === 'late'
                                   ? 'bg-yellow-100 text-yellow-800'
                                   : 'bg-red-100 text-red-800'
-                              }`}
+                                }`}
                             >
                               {entry.status == 'Full Day'
                                 ? 'Leave'
@@ -2857,6 +2950,17 @@ const EmployeeAttendanceTable = () => {
                             </span>
                             <div className="font-medium p-1">
                               <TaskCell task={entry.today_task} />
+                              {entry.task_ids && entry.task_ids.length > 0 && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleShowTasks(entry.task_ids, entry.project_id);
+                                  }}
+                                  className="px-2 py-0.5 bg-blue-500 text-white rounded text-[9px] hover:bg-blue-600 transition-colors mt-1"
+                                >
+                                  Show Tasks
+                                </button>
+                              )}
                             </div>
                           </div>
 
@@ -2867,19 +2971,18 @@ const EmployeeAttendanceTable = () => {
                             <div className="mt-1">
                               <button
                                 onClick={() => handleModeOpen(entry)}
-                                className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
-                                  entry.work_mode === 'on_site'
-                                    ? 'bg-blue-100 text-blue-800'
-                                    : entry.work_mode === 'remote'
+                                className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === 'on_site'
+                                  ? 'bg-blue-100 text-blue-800'
+                                  : entry.work_mode === 'remote'
                                     ? 'bg-purple-100 text-purple-800'
                                     : 'bg-gray-100 text-gray-800'
-                                }`}
+                                  }`}
                               >
                                 {entry.work_mode === 'on_site'
                                   ? 'On-site'
                                   : entry.work_mode === 'remote'
-                                  ? 'Remote'
-                                  : '---'}
+                                    ? 'Remote'
+                                    : '---'}
                               </button>
                             </div>
                           </div>
@@ -2933,11 +3036,10 @@ const EmployeeAttendanceTable = () => {
                                       {({ checked }) => (
                                         <div className="flex items-center">
                                           <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? 'border-4 border-blue-500'
+                                              : 'border border-gray-300'
+                                              }`}
                                           />
                                           <span className="ml-3 text-gray-800">
                                             Absent
@@ -2949,11 +3051,10 @@ const EmployeeAttendanceTable = () => {
                                       {({ checked }) => (
                                         <div className="flex items-center">
                                           <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? 'border-4 border-blue-500'
+                                              : 'border border-gray-300'
+                                              }`}
                                           />
                                           <span className="ml-3 text-gray-800">
                                             Casual Leave
@@ -2965,11 +3066,10 @@ const EmployeeAttendanceTable = () => {
                                       {({ checked }) => (
                                         <div className="flex items-center">
                                           <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? 'border-4 border-blue-500'
+                                              : 'border border-gray-300'
+                                              }`}
                                           />
                                           <span className="ml-3 text-gray-800">
                                             Half Day Leave
@@ -2981,11 +3081,10 @@ const EmployeeAttendanceTable = () => {
                                       {({ checked }) => (
                                         <div className="flex items-center">
                                           <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? 'border-4 border-blue-500'
+                                              : 'border border-gray-300'
+                                              }`}
                                           />
                                           <span className="ml-3 text-gray-800">
                                             Sick Leave
@@ -2998,11 +3097,10 @@ const EmployeeAttendanceTable = () => {
                                       {({ checked }) => (
                                         <div className="flex items-center">
                                           <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
+                                            className={`w-5 h-5 rounded-full border ${checked
+                                              ? 'border-4 border-blue-500'
+                                              : 'border border-gray-300'
+                                              }`}
                                           />
                                           <span className="ml-3 text-gray-800">
                                             Emergency Leave
@@ -3077,17 +3175,15 @@ const EmployeeAttendanceTable = () => {
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            !isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           PM
                         </button>
@@ -3287,17 +3383,15 @@ const EmployeeAttendanceTable = () => {
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            !isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           PM
                         </button>
@@ -3325,7 +3419,7 @@ const EmployeeAttendanceTable = () => {
                                 e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
-                            // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                          // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
@@ -3507,13 +3601,11 @@ const EmployeeAttendanceTable = () => {
                             handleEmployeeClick(employee.id);
                             setShowEmployeeList(false); // Hide list after selection on mobile
                           }}
-                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${
-                            selectedEmployeesearch?.id === employee.id
-                              ? 'bg-blue-100 text-blue-600'
-                              : 'hover:bg-gray-100'
-                          } ${
-                            employeeStats[employee.id] < 6 ? 'text-red-600' : ''
-                          }`}
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
+                            ? 'bg-blue-100 text-blue-600'
+                            : 'hover:bg-gray-100'
+                            } ${employeeStats[employee.id] < 6 ? 'text-red-600' : ''
+                            }`}
                         >
                           <span className="truncate mr-2 text-sm">
                             {employee.full_name}
@@ -3555,13 +3647,11 @@ const EmployeeAttendanceTable = () => {
                         setDataEmployeesearch(employee);
                         handleEmployeeClick(employee.id);
                       }}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${
-                        selectedEmployeesearch?.id === employee.id
-                          ? 'bg-blue-100 text-blue-600 hover:bg-gray-50'
-                          : 'hover:bg-gray-100'
-                      } ${
-                        employeeStats[employee.id] < 6 ? 'text-red-600' : ''
-                      }`}
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
+                        ? 'bg-blue-100 text-blue-600 hover:bg-gray-50'
+                        : 'hover:bg-gray-100'
+                        } ${employeeStats[employee.id] < 6 ? 'text-red-600' : ''
+                        }`}
                     >
                       <span className="truncate mr-2 text-xs sm:text-base">
                         {employee.full_name}
@@ -3619,20 +3709,19 @@ const EmployeeAttendanceTable = () => {
                                   <span>
                                     {attendanceLogs[0].check_out
                                       ? format(
-                                          new Date(attendanceLogs[0].check_out),
-                                          'h:mm a'
-                                        )
+                                        new Date(attendanceLogs[0].check_out),
+                                        'h:mm a'
+                                      )
                                       : 'Not checked out'}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Work Mode:</span>
                                   <span
-                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${
-                                      attendanceLogs[0].work_mode === 'on_site'
-                                        ? 'bg-blue-100 text-blue-800'
-                                        : 'bg-purple-100 text-purple-800'
-                                    }`}
+                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === 'on_site'
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-purple-100 text-purple-800'
+                                      }`}
                                   >
                                     {attendanceLogs[0].work_mode}
                                   </span>
@@ -3679,9 +3768,9 @@ const EmployeeAttendanceTable = () => {
                                     <span>
                                       {breakItem.end_time
                                         ? format(
-                                            new Date(breakItem.end_time),
-                                            'hh:mm a'
-                                          )
+                                          new Date(breakItem.end_time),
+                                          'hh:mm a'
+                                        )
                                         : 'Ongoing'}
                                     </span>
                                   </div>
@@ -3869,6 +3958,14 @@ const EmployeeAttendanceTable = () => {
           </div>
         </>
       )}
+
+      {/* Tasks Modal */}
+      <TaskModalAdmin
+        isOpen={isTasksModalOpen}
+        onClose={handleCloseTasksModal}
+        taskIds={selectedTaskIds}
+        projectId={selectedProjectId}
+      />
     </div>
     // );
   );
