@@ -107,6 +107,7 @@
     "screenshot-desktop": "^1.15.1",
     "sonner": "^1.5.0",
     "supabase": "^2.15.8",
+    "swiper": "^11.2.10",
     "tailwind-merge": "^2.5.2",
     "tailwindcss-animate": "^1.0.7",
     "uuid": "^11.1.0",

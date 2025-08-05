@@ -44,7 +44,7 @@ interface Task {
   id: string;
   title: string;
   created_at: string;
-  status: 'todo' | 'inProgress' | 'review' | 'done';
+  status: string;
   score: number;
   devops?: Developer[];
   description?: string;
@@ -216,6 +216,9 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
           });
 
           setTasks(sortedTasks);
+
+          // Update columns based on task statuses
+          updateColumns(sortedTasks);
 
           // Calculate scores for all developers
           const devopsScores = devopss.map((developer) => {
@@ -781,47 +784,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       </Draggable>
     );
   };
-  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
-  const renderColumn = (
-    status: keyof typeof COLUMN_IDS,
-    title: string,
-    color: string
-  ) => {
-    // Use filteredTasks instead of tasks
+  const renderColumn = (col) => {
     const tasksInColumn = filteredTasks.filter(
-      (task) => task.status === COLUMN_IDS[status]
+      (task) => task.status === col.id
     );
 
     return (
-      <div className="bg-white overflow-hidden  lg:col-span-1 md:col-span-2  sm:col-span-2 col-span-4 rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col">
-        <div className="flex justify-between items-center mb-6 flex-shrink-0">
-          <h2 className={`font-semibold text-[18px] leading-7 text-${color}`}>
-            {title}
-          </h2>
-          <span className="text-gray-600">{tasksInColumn.length}</span>
-        </div>
-        {status === 'todo' && (
-          <>
-            <button
-              onClick={() => setIsCreateTaskModalOpen(true)}
-              className="mt-2 w-full flex mb-2 items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
-            >
-              <Plus size={16} />
-              <span className="text-sm">New</span>
-            </button>
-            {isCreateTaskModalOpen && (
-              <TodoTask projectId={ProjectId} fetchTasks={fetchTasks} />
-            )}
-          </>
-        )}
-        <Droppable droppableId={COLUMN_IDS[status]}>
+      <div className="...">
+        {/* ... */}
+        <Droppable droppableId={col.id}>
           {(provided) => (
-            <div
-              ref={provided.innerRef}
-              {...provided.droppableProps}
-              className="flex-1 overflow-y-auto overflow-x-hidden  space-y-4 pr-2 task-scroll"
-              style={{ minHeight: '420px', maxHeight: 'calc(100vh - 450px)' }}
-            >
+            <div ref={provided.innerRef} {...provided.droppableProps}>
               {tasksInColumn.map((task, index) => (
                 <TaskCard key={task.id} task={task} index={index} />
               ))}
@@ -836,6 +809,45 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   const adminProjectName = useSelector(
     (state: RootState) => state.projectName.projectName
   );
+  const [isCreateTaskModalOpen, setIsCreateTaskModalOpen] = useState(false);
+  const defaultColumns = [
+    { id: 'todo', title: 'To do', color: '#9A00FF' },
+    { id: 'inProgress', title: 'In Progress', color: '#FF9800' },
+    { id: 'review', title: 'Review', color: '#FFC107' },
+    { id: 'done', title: 'Done', color: '#05C815' },
+  ];
+
+  const [columns, setColumns] = useState(defaultColumns);
+
+  // Update columns based on task statuses
+  const updateColumns = (tasks) => {
+    const allStatuses = Array.from(new Set(tasks.map((task) => task.status)));
+    let newColumns = [...defaultColumns];
+
+    allStatuses.forEach((status) => {
+      if (!newColumns.find((col) => col.id === status)) {
+        newColumns.push({
+          id: status,
+          title: status
+            .replace(/([A-Z])/g, ' $1')
+            .replace(/^./, (str) => str.toUpperCase()),
+          color: '#888888',
+        });
+      }
+    });
+
+    setColumns(newColumns);
+  };
+
+  const handleAddColumn = () => {
+    const newTitle = prompt('Enter column name:');
+    if (!newTitle) return;
+    const newId = newTitle.toLowerCase().replace(/\s+/g, '');
+    setColumns([
+      ...columns,
+      { id: newId, title: newTitle, color: '#888888' }, // default color for new columns
+    ]);
+  };
   return (
     <div className="min-h-screen px-0  ">
       <Toaster position="top-right" />
@@ -852,60 +864,52 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
         {(selectedTab === 'tasks' || selectedTABB === 'tasks') && (
           <>
-            <div className="flex flex-col p-3 mt-12 lg:mt-0 rounded-2xl mb-4 space-x-2 bg-white shadow-sm">
+            <div className="flex flex-col p-3 mt-12 lg:mt-0 rounded-2xl mb-4 space-x-2 bg-white shadow-sm ">
               {/* Arrow + Heading Grouped */}
-              <div className=" flex-row lg:flex items-center justify-between w-full">
-                {/* <div></div> */}
-                <div className="flex items-center">
-                  <Link
-                    to={
-                      localStorage.getItem('user_email')?.endsWith('@admin.com')
-                        ? '/admin'
-                        : '/'
-                    }
-                    className="text-gray-600 hover:text-gray-800"
-                    onClick={(e) => {
-                      e.preventDefault();
-                      const isAdmin = localStorage
-                        .getItem('user_email')
-                        ?.endsWith('@admin.com');
-                      navigate(isAdmin ? '/admin' : '/tasks');
-                    }}
+              <div className="w-full ">
+                {/* Row 1: Back button + Project name */}
+                <div className="flex items-center justify-start">
+                  <button
+                    onClick={() => navigate(-1)}
+                    className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-full transition"
                   >
-                    <ArrowLeft
-                      className="p-2 hover:bg-gray-100 rounded-full transition-colors duration-200"
-                      size={35}
-                      onClick={() => navigate(-1)}
-                    />
-                  </Link>
-                  <h1 className="text-md md:text-xl font-bold text-gray-800">
+                    <ArrowLeft size={30} />
+                  </button>
+                  <h1 className="text-lg lg:text-2xl font-bold text-gray-800">
                     {adminProjectName}
                   </h1>
                 </div>
-                <div className="bg-white w-full lg:w-[60%] p-4  flex flex-wrap justify-between font-semibold text-sm">
-                  <h1 className="text-[#9A00FF]">
-                    TO DO: {getScoreByStatus('todo')}
-                  </h1>
-                  <h1 className="text-orange-600">
-                    In Progress: {getScoreByStatus('inProgress')}
-                  </h1>
-                  <h1 className="text-yellow-600">
-                    Review: {getScoreByStatus('review')}
-                  </h1>
-                  <h1 className="text-[#05C815]">
-                    Done: this {getScoreByStatus('done')}
-                  </h1>
-                </div>
-                <div className="relative w-full sm:w-auto">
-                  <div className="flex items-center gap-2">
-                    <label className=" text-[12px] font-medium text-gray-700">
+                {/* Row 2: Status + Filters + Button (all in 1 line on lg) */}
+                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
+                  {/* Task statuses */}
+                  <div className="flex flex-wrap gap-4 text-sm sm:text-base font-semibold">
+                    <span className="text-[#9A00FF]">
+                      TO DO: {getScoreByStatus('todo')}
+                    </span>
+                    <span className="text-orange-600">
+                      In Progress: {getScoreByStatus('inProgress')}
+                    </span>
+                    <span className="text-yellow-600">
+                      Review: {getScoreByStatus('review')}
+                    </span>
+                    <span className="text-[#05C815]">
+                      Done: {getScoreByStatus('done')}
+                    </span>
+                  </div>
+
+                  {/* Filter + Info + Button inline */}
+                  <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                    {/* Label */}
+                    <label className="text-xs font-medium text-gray-700">
                       Filter by Developer:
                     </label>
-                    <div className="relative flex-1">
+
+                    {/* Dropdown */}
+                    <div className="relative w-44">
                       <select
                         value={selectedDeveloper}
                         onChange={(e) => setSelectedDeveloper(e.target.value)}
-                        className={`w-full sm:w-48 bg-white border ${
+                        className={`w-full bg-white border ${
                           selectedDeveloper !== 'all'
                             ? 'border-purple-500 ring-2 ring-purple-300'
                             : 'border-gray-300'
@@ -918,7 +922,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                           </option>
                         ))}
                       </select>
-                      <div className="pointer-events-none absolute right-0 top-1/2 transform -translate-y-1/2 flex items-center px-2 text-gray-700">
+                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-700">
                         <svg
                           className="fill-current h-4 w-4"
                           xmlns="http://www.w3.org/2000/svg"
@@ -928,17 +932,10 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                         </svg>
                       </div>
                     </div>
-                    <ViewToggle view={view} setView={setView} />
-                  </div>
-                  {selectedDeveloper !== 'all' && (
-                    <>
-                      {/* <button
-                          onClick={() => setSelectedDeveloper('all')}
-                          className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                        >
-                          <X size={16} />
-                        </button> */}
-                      <div className="mt-1 text-xs font-medium text-purple-700">
+
+                    {/* Inline developer info — tightly coupled */}
+                    {selectedDeveloper !== 'all' && (
+                      <span className="text-xs font-medium text-purple-700 whitespace-nowrap">
                         {(() => {
                           const selectedDevName =
                             devopss?.find((dev) => dev.id === selectedDeveloper)
@@ -946,19 +943,22 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                             devopss?.find((dev) => dev.id === selectedDeveloper)
                               ?.full_name ||
                             'Selected developer';
-                          return `Showing ${filteredTasks.length} of ${tasks.length} tasks for ${selectedDevName}`;
+                          return `Showing ${filteredTasks.length} of ${tasks.length} for ${selectedDevName}`;
                         })()}
-                      </div>
-                    </>
-                  )}
-                </div>
-                <div>
-                  <button
-                    className=" bg-[#9A00FF] ml-2 text-white p-2 rounded-lg flex items-center g hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
-                    onClick={() => setSelectedTab('addtask')}
-                  >
-                    New Task
-                  </button>
+                      </span>
+                    )}
+
+                    {/* View toggle */}
+                    <ViewToggle view={view} setView={setView} />
+
+                    {/* New Task Button */}
+                    <button
+                      className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition whitespace-nowrap"
+                      onClick={() => setSelectedTab('addtask')}
+                    >
+                      New Task
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -966,18 +966,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
                 {/* Status Box */}
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
-                  {/* Developer Filter Dropdown */}
-
-                  {/* New Task Button */}
-                  {/* <button
-                    className="hidden lg:flex bg-[#9A00FF] text-white px-4 py-2 rounded-lg items-center gap-2 hover:bg-purple-700 transition-colors duration-200 whitespace-nowrap"
-                    onClick={() => setSelectedTab("addtask")}
-                  >
-                    <PlusCircle size={20} className="mr-2" />
-                    <span>New Task</span>
-                  </button> */}
-                </div>
+                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3"></div>
               </div>
             </div>
 
@@ -985,11 +974,94 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
             {view === 'card' ? (
               <DragDropContext onDragEnd={handleDragEnd}>
-                <div className="grid grid-cols-4 gap-6">
-                  {renderColumn('todo', 'To do', '[#9A00FF]')}
-                  {renderColumn('inProgress', 'In Progress', 'orange-600')}
-                  {renderColumn('review', 'Review', 'yellow-600')}
-                  {renderColumn('done', 'Done', '[#05C815]')}
+                <div className="flex flex-row justify-between">
+                  <div className="grid grid-flow-col lg:ml-0 lg:grid-flow-col gap-6 overflow-x-scroll overflow-y-hidden">
+                    {columns.map((col) => (
+                      <div
+                        key={col.id}
+                        className="bg-white w-[280px] rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col"
+                      >
+                        {/* Header */}
+                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
+                          <h2
+                            className="font-semibold text-[18px] leading-7"
+                            style={{ color: col.color }}
+                          >
+                            {col.title}
+                          </h2>
+                          <span className="text-gray-600">
+                            {
+                              filteredTasks.filter(
+                                (task) => task.status === col.id
+                              ).length
+                            }
+                          </span>
+                        </div>
+
+                        {/* + New Task button and inline form for only 'todo' column */}
+                        {col.id === 'todo' && (
+                          <>
+                            <button
+                              onClick={() => setIsCreateTaskModalOpen(true)}
+                              className="mb-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                            >
+                              <Plus size={16} />
+                              <span className="text-sm">New</span>
+                            </button>
+
+                            {/* Render TodoTask component (form/modal) here */}
+                            {isCreateTaskModalOpen && (
+                              <div className="mb-2">
+                                <TodoTask
+                                  projectId={ProjectId}
+                                  fetchTasks={fetchTasks}
+                                  onClose={() =>
+                                    setIsCreateTaskModalOpen(false)
+                                  }
+                                />
+                              </div>
+                            )}
+                          </>
+                        )}
+
+                        {/* Droppable area for tasks */}
+                        <Droppable droppableId={col.id}>
+                          {(provided) => (
+                            <div
+                              ref={provided.innerRef}
+                              {...provided.droppableProps}
+                              className="grow overflow-y-auto overflow-x-hidden pr-2 task-scroll space-y-4"
+                              style={{
+                                minHeight: '420px',
+                                maxHeight: 'calc(100vh - 450px)',
+                              }}
+                            >
+                              {filteredTasks
+                                .filter((task) => task.status === col.id)
+                                .map((task, index) => (
+                                  <TaskCard
+                                    key={task.id}
+                                    task={task}
+                                    index={index}
+                                  />
+                                ))}
+                              {provided.placeholder}
+                            </div>
+                          )}
+                        </Droppable>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add column button */}
+                  <div>
+                    <button
+                      className="flex items-center whitespace-nowrap mt-9 rotate-90 w-fit gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow transition-all duration-200 font-semibold text-sm"
+                      onClick={handleAddColumn}
+                    >
+                      Add Column
+                    </button>
+                  </div>
                 </div>
               </DragDropContext>
             ) : (

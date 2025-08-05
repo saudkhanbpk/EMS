@@ -838,7 +838,6 @@ const AdminPage: React.FC = () => {
                         Projects
                       </button>
                     </Link>
-
                     <Link to="OfficeComplaints">
                       <button
                         onClick={() => {

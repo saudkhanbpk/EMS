@@ -1,0 +1,80 @@
+/* Custom Swiper Styles for Task Board */
+.task-board-swiper {
+  padding-bottom: 20px !important;
+}
+
+.task-board-swiper .swiper-wrapper {
+  align-items: stretch;
+}
+
+.task-board-swiper .swiper-slide {
+  height: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Custom scrollbar for task columns */
+.task-scroll::-webkit-scrollbar {
+  width: 6px;
+}
+
+.task-scroll::-webkit-scrollbar-track {
+  background: #f1f1f1;
+  border-radius: 10px;
+}
+
+.task-scroll::-webkit-scrollbar-thumb {
+  background: #c1c1c1;
+  border-radius: 10px;
+  transition: background 0.3s ease;
+}
+
+.task-scroll::-webkit-scrollbar-thumb:hover {
+  background: #a8a8a8;
+}
+
+/* Smooth transitions for column hover effects */
+.column-hover-effect {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.column-hover-effect:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+}
+
+/* Gradient background for add column button */
+.add-column-gradient {
+  background: linear-gradient(135deg, #9A00FF 0%, #7C3AED 100%);
+  box-shadow: 0 4px 15px rgba(154, 0, 255, 0.3);
+}
+
+.add-column-gradient:hover {
+  background: linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%);
+  box-shadow: 0 6px 20px rgba(154, 0, 255, 0.4);
+}
+
+/* Navigation button styles */
+.swiper-nav-btn {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 10;
+  background: white;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  border-radius: 50%;
+  padding: 8px;
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.swiper-nav-btn:hover {
+  background: #f9fafb;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.2);
+  transform: translateY(-50%) scale(1.05);
+}
+
+.swiper-nav-btn:active {
+  transform: translateY(-50%) scale(0.95);
+}

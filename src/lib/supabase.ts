@@ -31,16 +31,16 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         if (typeof window !== 'undefined') {
           window.localStorage.removeItem(key);
         }
-      }
+      },
     },
     // Set storage key to ensure consistent session storage
     storageKey: 'supabase.auth.token',
     // Disable automatic sign out on tab close
-    flowType: 'pkce'
+    flowType: 'pkce',
   },
   global: {
     headers: {
-      'x-application-name': 'etams'
+      'x-application-name': 'etams',
     },
     // Add fetch options for better network handling
     fetch: (url, options) => {
@@ -49,17 +49,17 @@ export const supabase = createClient<Database>(supabaseUrl, supabaseAnonKey, {
         // Add timeout to prevent hanging requests
         signal: AbortSignal.timeout(30000), // 30 second timeout
       });
-    }
+    },
   },
   db: {
-    schema: 'public'
+    schema: 'public',
   },
   // Add realtime subscription options
   realtime: {
     params: {
-      eventsPerSecond: 10
-    }
-  }
+      eventsPerSecond: 10,
+    },
+  },
 });
 
 // Enhanced error handling with more specific messages
@@ -95,8 +95,17 @@ export const handleSupabaseError = (error: unknown): string => {
 
   // Handle Supabase-specific error objects
   if (typeof error === 'object' && error !== null) {
-    const supabaseError = error as { message?: string; details?: string; hint?: string };
-    return supabaseError.message || supabaseError.details || supabaseError.hint || 'An unexpected error occurred';
+    const supabaseError = error as {
+      message?: string;
+      details?: string;
+      hint?: string;
+    };
+    return (
+      supabaseError.message ||
+      supabaseError.details ||
+      supabaseError.hint ||
+      'An unexpected error occurred'
+    );
   }
 
   return 'An unexpected error occurred';
@@ -117,10 +126,12 @@ export async function withRetry<T>(
       lastError = error;
 
       // Don't retry if it's not a network error
-      if (error instanceof Error &&
+      if (
+        error instanceof Error &&
         !error.message.includes('Failed to fetch') &&
         !error.message.includes('timeout') &&
-        !error.message.includes('network')) {
+        !error.message.includes('network')
+      ) {
         throw error;
       }
 
@@ -132,7 +143,7 @@ export async function withRetry<T>(
 
       // Wait before retrying, but don't wait on the last attempt
       if (i < maxRetries - 1) {
-        await new Promise(resolve => setTimeout(resolve, delay + jitter));
+        await new Promise((resolve) => setTimeout(resolve, delay + jitter));
       }
     }
   }
@@ -143,7 +154,10 @@ export async function withRetry<T>(
 // Add a helper to check connection status
 export async function checkConnection(): Promise<boolean> {
   try {
-    const { data, error } = await supabase.from('users').select('count').limit(1);
+    const { data, error } = await supabase
+      .from('users')
+      .select('count')
+      .limit(1);
     return !error && data !== null;
   } catch {
     return false;
@@ -155,7 +169,7 @@ export const supabaseAdmin = createClient(
   {
     auth: {
       autoRefreshToken: false,
-      persistSession: false
-    }
+      persistSession: false,
+    },
   }
 );
