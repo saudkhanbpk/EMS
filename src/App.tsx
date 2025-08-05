@@ -304,6 +304,7 @@ import AddNewTask from './AddNewTask';
 import Chatbutton from './components/chatbtn';
 import ChatSidebar from './components/chat';
 import Chat from './components/personchat';
+import GroupChat from './components/groupchat';
 import Chatlayout from './components/chatlayout';
 import Adminroute, {
   EmployeeRoute,
@@ -405,10 +406,18 @@ function App() {
   const [chatperson, setchatperson] = useState<boolean>(false);
   const [selecteduser, setselecteduser] = useState<null | string>(null);
   const [ischatopen, setischatopen] = useState<boolean>(false);
+  const [groupchat, setgroupchat] = useState<boolean>(false);
+  const [selectedgroup, setselectedgroup] = useState<null | string>(null);
 
   const openchatperson = (id: string) => {
     setselecteduser(id);
     setchatperson(true);
+  };
+
+  const opengroup = (id: string) => {
+    console.log('App opengroup called with id:', id);
+    setselectedgroup(id);
+    setgroupchat(true);
   };
 
   // Functions to open and close chat
@@ -423,6 +432,11 @@ function App() {
   const closechatperson = () => {
     setchatperson(false);
     setselecteduser(null);
+  };
+
+  const closegroupchat = () => {
+    setgroupchat(false);
+    setselectedgroup(null);
   };
 
   // Register Service Worker
@@ -482,6 +496,10 @@ function App() {
                     <ChatSidebar
                       closechat={closeChat}
                       openchatperson={openchatperson}
+                      opengroup={(id: string) => {
+                        console.log('ChatSidebar received opengroup call with id:', id);
+                        opengroup(id);
+                      }}
                     />
                   </div>
                 </div>
@@ -489,6 +507,9 @@ function App() {
             </AnimatePresence>
             {chatperson && (
               <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />
+            )}
+            {groupchat && (
+              <GroupChat groupId={selectedgroup ?? ''} closegroupchat={closegroupchat} />
             )}
             {!ischatopen && (
               <Chatlayout>

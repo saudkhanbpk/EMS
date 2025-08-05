@@ -143,13 +143,14 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
             'Error updating absentee: ' + updateAbsenteesError.message
           );
       } else {
-        // Insert a new absentee record
+        // Insert a new absentee record with proper absentee_date
         const { error: insertError } = await supabase.from('absentees').insert([
           {
             user_id: userId,
             absentee_type: 'leave',
             absentee_Timing: leavetype,
-            absentee_date: leaveDate,
+            absentee_date: leaveDate, // Ensure this is the actual leave date, not today's date
+            created_at: new Date().toISOString(), // Set created_at to current timestamp
           },
         ]);
 
@@ -337,7 +338,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
         user_id: userId,
         absentee_type: 'Absent',
         absentee_Timing: leavetype,
-        absentee_date: leaveDate,
+        absentee_date: leaveDate, // Ensure this is the actual leave date
+        created_at: new Date().toISOString(), // Set created_at to current timestamp
       });
 
       if (insertError) {
@@ -505,7 +507,8 @@ const LeaveRequestsAdmin = ({ fetchPendingCount }) => {
               user_id: group.user_id,
               absentee_type: action === 'approve' ? 'leave' : 'Absent',
               absentee_Timing: group.leave_type,
-              absentee_date: leaveDate,
+              absentee_date: leaveDate, // Ensure this is the actual leave date
+              created_at: new Date().toISOString(), // Set created_at to current timestamp
             });
           }
         }
