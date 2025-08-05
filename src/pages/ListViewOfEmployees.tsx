@@ -175,6 +175,9 @@ const EmployeeAttendanceTable = () => {
   const [updatedCheckInTime, setupdatedCheckInTime] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [absentloading, setabsentloading] = useState(false);
+  const [absentError, setAbsentError] = useState(null);
+  const [saveLoading, setSaveLoading] = useState(false);
+  const [saveError, setSaveError] = useState(null);
   // const [formattedDate2, setformattedDate2] = useState('');
   const [startdate, setStartdate] = useState('');
   const [enddate, setEnddate] = useState('');
@@ -224,126 +227,148 @@ const EmployeeAttendanceTable = () => {
   function handleabsentclosemodal() {
     setabsentid(null);
     setslecteduser(null);
+    setAbsentError(null);
     setModalVisible(false);
   }
 
   async function handleopenabsentmodal(id: string) {
     setabsentloading(true);
+    setAbsentError(null);
     setslecteduser(id);
     setModalVisible(true);
     console.log('absent id', id);
-    let selectdate = new Date(selectedDate);
-    const today = selectdate.toISOString().split('T')[0];
 
-    const { data, error } = await supabase
-      .from('absentees') // your table name
-      .select('*')
-      .eq('user_id', id) // filter by user_id
-      .gte('created_at', `${today}T00:00:00`) // start of today
-      .lte('created_at', `${today}T23:59:59`); // end of today
+    try {
+      let selectdate = new Date(selectedDate);
+      const today = selectdate.toISOString().split('T')[0];
 
-    if (error) {
-      console.error('Error fetching attendance:', error);
-      return;
-    } else {
-      if (data.length) {
-        let dataid = data[0].id;
-        setabsentid(dataid);
+      const { data, error } = await supabase
+        .from('absentees') // your table name
+        .select('*')
+        .eq('user_id', id) // filter by user_id
+        .gte('created_at', `${today}T00:00:00`) // start of today
+        .lte('created_at', `${today}T23:59:59`); // end of today
+
+      if (error) {
+        console.error('Error fetching attendance:', error);
+        setAbsentError('Failed to load attendance data. Please try again.');
+        return;
+      } else {
+        if (data.length) {
+          let dataid = data[0].id;
+          setabsentid(dataid);
+        }
+        console.log("Today's attendance:", data);
       }
-      console.log("Today's attendance:", data);
+    } catch (err) {
+      console.error('Unexpected error:', err);
+      setAbsentError('An unexpected error occurred. Please try again.');
+    } finally {
+      setabsentloading(false);
     }
-
-    setabsentloading(false);
   }
 
   async function handleSaveChanges() {
-    handleabsentclosemodal();
-    console.log('the absent id is', absentid);
-    console.log('Selected work mode:', selectedMode);
+    setSaveLoading(true);
+    setSaveError(null);
 
-    let updateSuccess = false;
-    let newAbsenteeData = null;
+    try {
+      console.log('the absent id is', absentid);
+      console.log('Selected work mode:', selectedMode);
 
-    // Check if the user already has an attendance record for today
-    if (selecteduser) {
-      const today = new Date(selectedDate).toISOString().split('T')[0];
+      let updateSuccess = false;
+      let newAbsenteeData = null;
 
-      // Check for existing attendance record
-      const { data: attendanceData, error: attendanceError } = await supabase
-        .from('attendance_logs')
-        .select('id, status')
-        .eq('user_id', selecteduser)
-        .gte('check_in', `${today}T00:00:00`)
-        .lte('check_in', `${today}T23:59:59`);
+      // Check if the user already has an attendance record for today
+      if (selecteduser) {
+        const today = new Date(selectedDate).toISOString().split('T')[0];
 
-      if (attendanceError) {
-        console.error('Error checking attendance record:', attendanceError);
-      } else if (attendanceData && attendanceData.length > 0) {
-        // User has an attendance record for today (present or late)
-        console.log(
-          'Found existing attendance record, deleting before marking absent/leave'
-        );
-
-        // Delete the attendance record
-        const { error: deleteError } = await supabase
+        // Check for existing attendance record
+        const { data: attendanceData, error: attendanceError } = await supabase
           .from('attendance_logs')
-          .delete()
+          .select('id, status')
           .eq('user_id', selecteduser)
           .gte('check_in', `${today}T00:00:00`)
           .lte('check_in', `${today}T23:59:59`);
 
-        if (deleteError) {
-          console.error('Error deleting attendance record:', deleteError);
-        } else {
-          console.log('Successfully deleted attendance record');
+        if (attendanceError) {
+          console.error('Error checking attendance record:', attendanceError);
+          setSaveError('Failed to check existing attendance record.');
+          return;
+        } else if (attendanceData && attendanceData.length > 0) {
+          // User has an attendance record for today (present or late)
+          console.log(
+            'Found existing attendance record, deleting before marking absent/leave'
+          );
+
+          // Delete the attendance record
+          const { error: deleteError } = await supabase
+            .from('attendance_logs')
+            .delete()
+            .eq('user_id', selecteduser)
+            .gte('check_in', `${today}T00:00:00`)
+            .lte('check_in', `${today}T23:59:59`);
+
+          if (deleteError) {
+            console.error('Error deleting attendance record:', deleteError);
+            setSaveError('Failed to delete existing attendance record.');
+            return;
+          } else {
+            console.log('Successfully deleted attendance record');
+          }
         }
       }
-    }
 
-    if (absentid) {
-      const { data, error } = await supabase
-        .from('absentees')
-        .update({
-          absentee_Timing: selectedMode,
-          absentee_type: selectedMode == 'Absent' ? 'Absent' : 'leave',
-        })
-        .eq('id', absentid);
-
-      if (error) {
-        console.error('Error updating absentee type:', error);
-      } else {
-        alert('Absentee type updated successfully!');
-        updateSuccess = true;
-        // Sometimes Supabase returns an array, sometimes object, handle both
-        newAbsenteeData = Array.isArray(data) ? data[0] : data;
-      }
-    } else {
-      if (selecteduser) {
+      if (absentid) {
         const { data, error } = await supabase
-          .from('absentees') // your table name
-          .insert([
-            {
-              user_id: selecteduser,
-              absentee_Timing: selectedMode,
-              absentee_type: selectedMode == 'Absent' ? 'Full Day' : 'leave',
-            },
-          ])
-          .select(); // So we get inserted row(s) back
-        if (!error) {
+          .from('absentees')
+          .update({
+            absentee_Timing: selectedMode,
+            absentee_type: selectedMode == 'Absent' ? 'Absent' : 'leave',
+          })
+          .eq('id', absentid);
+
+        if (error) {
+          console.error('Error updating absentee type:', error);
+          setSaveError('Failed to update absentee record. Please try again.');
+          return;
+        } else {
           updateSuccess = true;
-          // Take the first inserted record (Supabase returns array)
+          // Sometimes Supabase returns an array, sometimes object, handle both
           newAbsenteeData = Array.isArray(data) ? data[0] : data;
         }
-      }
-    }
+      } else {
+        if (selecteduser) {
+          const { data, error } = await supabase
+            .from('absentees') // your table name
+            .insert([
+              {
+                user_id: selecteduser,
+                absentee_Timing: selectedMode,
+                absentee_type: selectedMode == 'Absent' ? 'Full Day' : 'leave',
+              },
+            ])
+            .select(); // So we get inserted row(s) back
 
-    // UI UPDATE LOGIC
-    // Try to update attendanceData and filteredData in local state so UI is refreshed instantly.
-    if (updateSuccess && newAbsenteeData) {
-      setAttendanceData((prev) =>
-        prev.map((item) =>
-          item.id === (newAbsenteeData.user_id || selecteduser)
-            ? {
+          if (error) {
+            console.error('Error creating absentee record:', error);
+            setSaveError('Failed to create absentee record. Please try again.');
+            return;
+          } else {
+            updateSuccess = true;
+            // Take the first inserted record (Supabase returns array)
+            newAbsenteeData = Array.isArray(data) ? data[0] : data;
+          }
+        }
+      }
+
+      // UI UPDATE LOGIC
+      // Try to update attendanceData and filteredData in local state so UI is refreshed instantly.
+      if (updateSuccess && newAbsenteeData) {
+        setAttendanceData((prev) =>
+          prev.map((item) =>
+            item.id === (newAbsenteeData.user_id || selecteduser)
+              ? {
                 ...item,
                 status: newAbsenteeData.absentee_type,
                 textColor:
@@ -351,13 +376,13 @@ const EmployeeAttendanceTable = () => {
                     ? 'text-red-500'
                     : 'text-blue-500',
               }
-            : item
-        )
-      );
-      setFilteredData((prev) =>
-        prev.map((item) =>
-          item.id === (newAbsenteeData.user_id || selecteduser)
-            ? {
+              : item
+          )
+        );
+        setFilteredData((prev) =>
+          prev.map((item) =>
+            item.id === (newAbsenteeData.user_id || selecteduser)
+              ? {
                 ...item,
                 status: newAbsenteeData.absentee_type,
                 textColor:
@@ -365,39 +390,47 @@ const EmployeeAttendanceTable = () => {
                     ? 'text-red-500'
                     : 'text-blue-500',
               }
-            : item
-        )
-      );
-    } else if (updateSuccess && selecteduser) {
-      // If new absentee but Supabase did not return newAbsenteeData
-      setAttendanceData((prev) =>
-        prev.map((item) =>
-          item.id === selecteduser
-            ? {
+              : item
+          )
+        );
+      } else if (updateSuccess && selecteduser) {
+        // If new absentee but Supabase did not return newAbsenteeData
+        setAttendanceData((prev) =>
+          prev.map((item) =>
+            item.id === selecteduser
+              ? {
                 ...item,
                 status: selectedMode == 'Absent' ? 'Absent' : 'leave',
                 textColor:
                   selectedMode == 'Absent' ? 'text-red-500' : 'text-blue-500',
               }
-            : item
-        )
-      );
-      setFilteredData((prev) =>
-        prev.map((item) =>
-          item.id === selecteduser
-            ? {
+              : item
+          )
+        );
+        setFilteredData((prev) =>
+          prev.map((item) =>
+            item.id === selecteduser
+              ? {
                 ...item,
                 status: selectedMode == 'Absent' ? 'Absent' : 'leave',
                 textColor:
                   selectedMode == 'Absent' ? 'text-red-500' : 'text-blue-500',
               }
-            : item
-        )
-      );
+              : item
+          )
+        );
+      }
+
+      // Show success message and close modal
+      toast.success('Employee status updated successfully!');
+      handleabsentclosemodal();
+
+    } catch (err) {
+      console.error('Unexpected error in handleSaveChanges:', err);
+      setSaveError('An unexpected error occurred. Please try again.');
+    } finally {
+      setSaveLoading(false);
     }
-    // Optionally: also re-compute absent/present counters
-    // (If user wants the summary widgets to update.)
-    // Optionally, if you maintain a query cache for absentee records, you might want to re-fetch here.
   }
   // ... (rest of the code remains unchanged below this)
 
@@ -794,15 +827,30 @@ const EmployeeAttendanceTable = () => {
         console.log('🔍 Organization user IDs:', orgUserIds);
 
         // Now fetch leave records from absentees table with proper filtering
-        // Check both absentee_date field and created_at date for today
-        const { data: leaveData, error } = await supabase
+        // First try to get records with absentee_date matching today
+        const { data: leaveDataByDate, error: dateError } = await supabase
           .from('absentees')
           .select('*')
           .eq('absentee_type', 'leave')
           .in('user_id', orgUserIds)
-          .or(
-            `absentee_date.eq.${today},and(created_at.gte.${today}T00:00:00,created_at.lte.${today}T23:59:59)`
-          );
+          .eq('absentee_date', today);
+
+        // If no records found by absentee_date, try by created_at date
+        let leaveData = leaveDataByDate;
+        if ((!leaveDataByDate || leaveDataByDate.length === 0) && !dateError) {
+          const { data: leaveDataByCreated, error: createdError } = await supabase
+            .from('absentees')
+            .select('*')
+            .eq('absentee_type', 'leave')
+            .in('user_id', orgUserIds)
+            .gte('created_at', `${today}T00:00:00`)
+            .lte('created_at', `${today}T23:59:59`);
+
+          leaveData = leaveDataByCreated;
+          console.log('🔍 Fallback query by created_at:', { data: leaveDataByCreated, error: createdError });
+        }
+
+        const error = dateError;
 
         console.log('🔍 Leave records query result:', {
           data: leaveData,
@@ -1974,13 +2022,35 @@ const EmployeeAttendanceTable = () => {
         });
       }
 
-      // Fetch absentees for the selected date
-      const { data: absentees, error: absenteesError } = await supabase
+      // Fetch absentees for the selected date - check both absentee_date and created_at
+      const { data: absenteesByDate, error: absenteesByDateError } = await supabase
+        .from('absentees')
+        .select('user_id, absentee_type')
+        .eq('absentee_date', formattedDate);
+
+      // Also fetch absentees by created_at as fallback
+      const { data: absenteesByCreated, error: absenteesByCreatedError } = await supabase
         .from('absentees')
         .select('user_id, absentee_type')
         .gte('created_at', `${formattedDate}T00:00:00`)
         .lte('created_at', `${formattedDate}T23:59:59`);
-      if (absenteesError) throw absenteesError;
+
+      // Combine both results, prioritizing absentee_date matches
+      let absentees = [];
+      if (!absenteesByDateError && absenteesByDate) {
+        absentees = [...absenteesByDate];
+      }
+      if (!absenteesByCreatedError && absenteesByCreated) {
+        // Add records from created_at query that aren't already included
+        const existingUserIds = new Set(absentees.map(a => a.user_id));
+        const additionalAbsentees = absenteesByCreated.filter(a => !existingUserIds.has(a.user_id));
+        absentees = [...absentees, ...additionalAbsentees];
+      }
+
+      console.log('🔍 Fetched absentees for date:', formattedDate, 'Count:', absentees.length);
+      console.log('🔍 Absentees data:', absentees);
+
+      if (absenteesByDateError && absenteesByCreatedError) throw absenteesByDateError;
 
       // ✅ Fetch daily tasks for the selected date
       const { data: dailyTasks, error: taskError } = await supabase
@@ -2078,8 +2148,8 @@ const EmployeeAttendanceTable = () => {
             log.status?.toLowerCase() === 'present'
               ? 'text-green-500'
               : log.status?.toLowerCase() === 'late'
-              ? 'text-yellow-500'
-              : 'text-red-500',
+                ? 'text-yellow-500'
+                : 'text-red-500',
         };
       });
 
@@ -2121,6 +2191,23 @@ const EmployeeAttendanceTable = () => {
         (entry) => entry.work_mode === 'remote'
       ).length;
       setRemote(remoteCount);
+
+      // Count leave entries separately to include in total
+      const leaveCount = finalAttendanceData.filter(
+        (entry) => entry.status.toLowerCase() === 'leave' ||
+          entry.status.toLowerCase() === 'full day' ||
+          entry.status.toLowerCase() === 'half day' ||
+          entry.status.toLowerCase() === 'sick leave' ||
+          entry.status.toLowerCase() === 'emergency leave'
+      ).length;
+
+      console.log('🔍 Status counts:', {
+        present: presentCount,
+        late: lateCount,
+        absent: absentCount,
+        leave: leaveCount,
+        total: presentCount + lateCount + absentCount + leaveCount
+      });
     } catch (error) {
       setError(error.message);
       console.error('Error fetching data:', error);
@@ -2225,9 +2312,8 @@ const EmployeeAttendanceTable = () => {
   };
   const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   const statusFonts = ` ${isSideBarOpen ? 'text-xl' : 'text-xl'}`;
-  const tableHeading = `py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap ${
-    isSideBarOpen ? 'text-[8px]' : 'text-[12px]'
-  }`;
+  const tableHeading = `py-1 xs:py-1.5 sm:py-2 md:py-3 px-1 xs:px-2 sm:px-3 md:px-6 text-left whitespace-nowrap ${isSideBarOpen ? 'text-[8px]' : 'text-[12px]'
+    }`;
 
   return (
     <div className="flex flex-col  justify-center  items-center min-h-full  bg-gray-10 w-full ">
@@ -2279,41 +2365,37 @@ const EmployeeAttendanceTable = () => {
             <div className="sm:w-[40%] w-[100%]  hidden sm:mx-0 mx-auto  md:flex justify-start md:space-x-4 space-x-2 ">
               <button
                 onClick={() => setSelectedTab('Daily')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Daily'
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Daily'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-100'
-                }`}
+                  }`}
               >
                 Daily
               </button>
               <button
                 onClick={() => setSelectedTab('Weekly')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Weekly'
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Weekly'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Weekly
               </button>
               <button
                 onClick={() => setSelectedTab('Monthly')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Monthly'
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Monthly'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Monthly
               </button>
               <button
                 onClick={() => setSelectedTab('Filter')}
-                className={`px-4 py-2 rounded-lg transition-all ${
-                  selectedTab === 'Filter'
+                className={`px-4 py-2 rounded-lg transition-all ${selectedTab === 'Filter'
                     ? 'bg-blue-500 text-white'
                     : 'bg-white text-gray-700 hover:bg-gray-200'
-                }`}
+                  }`}
               >
                 Filter
               </button>
@@ -2576,27 +2658,24 @@ const EmployeeAttendanceTable = () => {
             className={`w-full overflow-x-auto bg-white p-6 rounded-lg shadow-lg mb-6`}
           >
             <div
-              className={`flex sm:flex-nowrap justify-between flex-wrap ${
-                isSideBarOpen ? ' space-x-5' : ''
-              } items-center text-lg font-medium`}
+              className={`flex sm:flex-nowrap justify-between flex-wrap ${isSideBarOpen ? ' space-x-5' : ''
+                } items-center text-lg font-medium`}
             >
               <button
                 onClick={() => handleFilterChange('all')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${
-                  currentFilter === 'all' ? 'bg-gray-200' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-gray-200 transition-all ${currentFilter === 'all' ? 'bg-gray-200' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4   bg-gray-600 rounded-full"></span>
                 <h2 className={`${statusFonts} text-gray-600`}>
                   Total:{' '}
-                  <span className="font-bold">{present + absent + late}</span>
+                  <span className="font-bold">{present + absent + late + (leaveRequestsData?.length || 0)}</span>
                 </h2>
               </button>
               <button
                 onClick={() => handleFilterChange('present')}
-                className={`flex  items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${
-                  currentFilter === 'present' ? 'bg-green-200' : ''
-                }`}
+                className={`flex  items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-green-100 transition-all${currentFilter === 'present' ? 'bg-green-200' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-green-500 rounded-full"></span>
                 <h2 className={`${statusFonts}text-green-600`}>
@@ -2605,9 +2684,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('late')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${
-                  currentFilter === 'late' ? 'bg-yellow-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-yellow-200 transition-all${currentFilter === 'late' ? 'bg-yellow-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-yellow-500 rounded-full"></span>
                 <h2 className={`${statusFonts} text-yellow-600`}>
@@ -2616,9 +2694,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('remote')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === 'remote' ? 'bg-purple-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === 'remote' ? 'bg-purple-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
@@ -2627,9 +2704,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('leave')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${
-                  currentFilter === 'leave' ? ' bg-purple-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-purple-100 transition-all${currentFilter === 'leave' ? ' bg-purple-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-purple-500 rounded-full"></span>
                 <h2 className="text-purple-600 md:text-xl text-sm">
@@ -2641,9 +2717,8 @@ const EmployeeAttendanceTable = () => {
               </button>
               <button
                 onClick={() => handleFilterChange('absent')}
-                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${
-                  currentFilter === 'absent' ? 'bg-red-100' : ''
-                }`}
+                className={`flex items-center space-x-2 px-4 py-2 rounded-3xl hover:bg-red-100 transition-all${currentFilter === 'absent' ? 'bg-red-100' : ''
+                  }`}
               >
                 <span className="md:w-4 md:h-4 bg-red-500 rounded-full"></span>
                 <h2 className="text-red-600 md:text-xl text-sm">
@@ -2755,13 +2830,12 @@ const EmployeeAttendanceTable = () => {
                           >
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6 truncate max-w-[80px] xs:max-w-[100px] sm:max-w-none">
                               <span
-                                className={` py-0.5 xs:py-1 ${
-                                  entry.status === 'present'
+                                className={` py-0.5 xs:py-1 ${entry.status === 'present'
                                     ? 'text-green-600'
                                     : entry.status === 'late'
-                                    ? 'text-yellow-600'
-                                    : 'text-red-600'
-                                }`}
+                                      ? 'text-yellow-600'
+                                      : 'text-red-600'
+                                  }`}
                                 title={entry.full_name}
                               >
                                 {entry.full_name.charAt(0).toUpperCase() +
@@ -2860,19 +2934,18 @@ const EmployeeAttendanceTable = () => {
                             <td className="py-1.5 xs:py-2 sm:py-3 md:py-4 px-1 xs:px-2 sm:px-3 md:px-6">
                               <button
                                 onClick={() => handleModeOpen(entry)}
-                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${
-                                  entry.work_mode === 'on_site'
+                                className={`px-0.5 xs:px-1 sm:px-2 md:px-3 py-0.5 xs:py-1 rounded-full text-[9px] xs:text-[10px] sm:text-xs md:text-sm font-semibold ${entry.work_mode === 'on_site'
                                     ? 'bg-blue-100 text-blue-800'
                                     : entry.work_mode === 'remote'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : 'bg-white text-black'
-                                }`}
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-white text-black'
+                                  }`}
                               >
                                 {entry.work_mode === 'on_site'
                                   ? 'On-site'
                                   : entry.work_mode === 'remote'
-                                  ? 'Remote'
-                                  : '---'}
+                                    ? 'Remote'
+                                    : '---'}
                               </button>
                             </td>
                             <td className="py-1.5 sm:py-3 md:py-4 px-1 sm:px-3 md:px-6">
@@ -2881,15 +2954,14 @@ const EmployeeAttendanceTable = () => {
                                 onClick={() => handleopenabsentmodal(entry.id)}
                               >
                                 <span
-                                  className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${
-                                    entry.status === 'present'
+                                  className={`px-1 sm:px-2 md:px-3 py-1 rounded-full text-[10px] sm:text-xs md:text-sm font-semibold ${entry.status === 'present'
                                       ? 'bg-green-100 text-green-800'
                                       : entry.status === 'late'
-                                      ? 'bg-yellow-100 text-yellow-800'
-                                      : entry.status === 'leave'
-                                      ? 'text-purple-900 bg-purple-300'
-                                      : 'bg-red-100 text-red-800'
-                                  }`}
+                                        ? 'bg-yellow-100 text-yellow-800'
+                                        : entry.status === 'leave'
+                                          ? 'text-purple-900 bg-purple-300'
+                                          : 'bg-red-100 text-red-800'
+                                    }`}
                                 >
                                   {entry.status == 'Full Day'
                                     ? 'Leave'
@@ -2915,13 +2987,12 @@ const EmployeeAttendanceTable = () => {
                       >
                         <div className="flex justify-between items-center mb-2 border-b pb-2">
                           <span
-                            className={`font-medium text-[12px] xs:text-[13px] ${
-                              entry.status === 'present'
+                            className={`font-medium text-[12px] xs:text-[13px] ${entry.status === 'present'
                                 ? 'text-green-600'
                                 : entry.status === 'late'
-                                ? 'text-yellow-600'
-                                : 'text-red-600'
-                            }`}
+                                  ? 'text-yellow-600'
+                                  : 'text-red-600'
+                              }`}
                             title={entry.full_name}
                           >
                             {entry.full_name.charAt(0).toUpperCase() +
@@ -2933,13 +3004,12 @@ const EmployeeAttendanceTable = () => {
                             className="focus:outline-none"
                           >
                             <span
-                              className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
-                                entry.status === 'present'
+                              className={`px-1.5 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.status === 'present'
                                   ? 'bg-green-100 text-green-800'
                                   : entry.status === 'late'
-                                  ? 'bg-yellow-100 text-yellow-800'
-                                  : 'bg-red-100 text-red-800'
-                              }`}
+                                    ? 'bg-yellow-100 text-yellow-800'
+                                    : 'bg-red-100 text-red-800'
+                                }`}
                             >
                               {entry.status == 'Full Day'
                                 ? 'Leave'
@@ -3039,19 +3109,18 @@ const EmployeeAttendanceTable = () => {
                             <div className="mt-1">
                               <button
                                 onClick={() => handleModeOpen(entry)}
-                                className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${
-                                  entry.work_mode === 'on_site'
+                                className={`px-2 py-0.5 rounded-full text-[9px] xs:text-[10px] font-semibold ${entry.work_mode === 'on_site'
                                     ? 'bg-blue-100 text-blue-800'
                                     : entry.work_mode === 'remote'
-                                    ? 'bg-purple-100 text-purple-800'
-                                    : 'bg-gray-100 text-gray-800'
-                                }`}
+                                      ? 'bg-purple-100 text-purple-800'
+                                      : 'bg-gray-100 text-gray-800'
+                                  }`}
                               >
                                 {entry.work_mode === 'on_site'
                                   ? 'On-site'
                                   : entry.work_mode === 'remote'
-                                  ? 'Remote'
-                                  : '---'}
+                                    ? 'Remote'
+                                    : '---'}
                               </button>
                             </div>
                           </div>
@@ -3095,104 +3164,124 @@ const EmployeeAttendanceTable = () => {
                                   Mark Him Leave
                                 </Dialog.Title>
 
-                                <div className="mt-4">
-                                  <RadioGroup
-                                    value={selectedMode}
-                                    onChange={setSelectedMode}
-                                    className="space-y-4"
-                                  >
-                                    <RadioGroup.Option value="Absent">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Absent
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                    <RadioGroup.Option value="Full Day">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Casual Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                    <RadioGroup.Option value="Half Day">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Half Day Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                    <RadioGroup.Option value="Sick Leave">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
-                                                ? 'border-4 border-blue-500'
-                                                : 'border border-gray-300'
-                                            }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Sick Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
+                                {/* Loading State */}
+                                {absentloading && (
+                                  <div className="flex items-center justify-center py-8">
+                                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                    <span className="ml-3 text-gray-600">Loading...</span>
+                                  </div>
+                                )}
 
-                                    <RadioGroup.Option value="Emergency Leave">
-                                      {({ checked }) => (
-                                        <div className="flex items-center">
-                                          <div
-                                            className={`w-5 h-5 rounded-full border ${
-                                              checked
+                                {/* Error State */}
+                                {absentError && !absentloading && (
+                                  <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-md">
+                                    <div className="flex">
+                                      <div className="flex-shrink-0">
+                                        <svg className="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+                                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                        </svg>
+                                      </div>
+                                      <div className="ml-3">
+                                        <h3 className="text-sm font-medium text-red-800">
+                                          Error
+                                        </h3>
+                                        <div className="mt-2 text-sm text-red-700">
+                                          {absentError}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Form Content - Only show if no error and not loading */}
+                                {!absentError && !absentloading && (
+                                  <div className="mt-4">
+                                    <RadioGroup
+                                      value={selectedMode}
+                                      onChange={setSelectedMode}
+                                      className="space-y-4"
+                                    >
+                                      <RadioGroup.Option value="Absent">
+                                        {({ checked }) => (
+                                          <div className="flex items-center">
+                                            <div
+                                              className={`w-5 h-5 rounded-full border ${checked
                                                 ? 'border-4 border-blue-500'
                                                 : 'border border-gray-300'
-                                            }`}
-                                          />
-                                          <span className="ml-3 text-gray-800">
-                                            Emergency Leave
-                                          </span>
-                                        </div>
-                                      )}
-                                    </RadioGroup.Option>
-                                  </RadioGroup>
-                                </div>
+                                                }`}
+                                            />
+                                            <span className="ml-3 text-gray-800">
+                                              Absent
+                                            </span>
+                                          </div>
+                                        )}
+                                      </RadioGroup.Option>
+                                      <RadioGroup.Option value="Full Day">
+                                        {({ checked }) => (
+                                          <div className="flex items-center">
+                                            <div
+                                              className={`w-5 h-5 rounded-full border ${checked
+                                                ? 'border-4 border-blue-500'
+                                                : 'border border-gray-300'
+                                                }`}
+                                            />
+                                            <span className="ml-3 text-gray-800">
+                                              Casual Leave
+                                            </span>
+                                          </div>
+                                        )}
+                                      </RadioGroup.Option>
+                                      <RadioGroup.Option value="Half Day">
+                                        {({ checked }) => (
+                                          <div className="flex items-center">
+                                            <div
+                                              className={`w-5 h-5 rounded-full border ${checked
+                                                ? 'border-4 border-blue-500'
+                                                : 'border border-gray-300'
+                                                }`}
+                                            />
+                                            <span className="ml-3 text-gray-800">
+                                              Half Day Leave
+                                            </span>
+                                          </div>
+                                        )}
+                                      </RadioGroup.Option>
+                                      <RadioGroup.Option value="Sick Leave">
+                                        {({ checked }) => (
+                                          <div className="flex items-center">
+                                            <div
+                                              className={`w-5 h-5 rounded-full border ${checked
+                                                ? 'border-4 border-blue-500'
+                                                : 'border border-gray-300'
+                                                }`}
+                                            />
+                                            <span className="ml-3 text-gray-800">
+                                              Sick Leave
+                                            </span>
+                                          </div>
+                                        )}
+                                      </RadioGroup.Option>
 
-                                <div className="mt-4">
-                                  <RadioGroup
-                                    value={selectedMode}
-                                    onChange={setSelectedMode}
-                                    className="space-y-4"
-                                  ></RadioGroup>
-                                </div>
+                                      <RadioGroup.Option value="Emergency Leave">
+                                        {({ checked }) => (
+                                          <div className="flex items-center">
+                                            <div
+                                              className={`w-5 h-5 rounded-full border ${checked
+                                                ? 'border-4 border-blue-500'
+                                                : 'border border-gray-300'
+                                                }`}
+                                            />
+                                            <span className="ml-3 text-gray-800">
+                                              Emergency Leave
+                                            </span>
+                                          </div>
+                                        )}
+                                      </RadioGroup.Option>
+                                    </RadioGroup>
+                                  </div>
+                                )}
 
+                                {/* Action Buttons */}
                                 <div className="mt-8 flex justify-end space-x-3">
                                   <button
                                     type="button"
@@ -3201,14 +3290,27 @@ const EmployeeAttendanceTable = () => {
                                   >
                                     Cancel
                                   </button>
-                                  <button
-                                    type="button"
-                                    disabled={absentloading}
-                                    className="inline-flex justify-center rounded-md border border-transparent bg-blue-500 px-4 py-2 text-sm font-medium text-white hover:bg-blue-600 focus:outline-none"
-                                    onClick={handleSaveChanges}
-                                  >
-                                    Save
-                                  </button>
+                                  {/* Only show Save button if no error */}
+                                  {!absentError && (
+                                    <button
+                                      type="button"
+                                      disabled={absentloading}
+                                      className={`inline-flex justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium text-white focus:outline-none ${absentloading
+                                          ? 'bg-gray-400 cursor-not-allowed'
+                                          : 'bg-blue-500 hover:bg-blue-600'
+                                        }`}
+                                      onClick={handleSaveChanges}
+                                    >
+                                      {absentloading ? (
+                                        <div className="flex items-center">
+                                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                                          Saving...
+                                        </div>
+                                      ) : (
+                                        'Save'
+                                      )}
+                                    </button>
+                                  )}
                                 </div>
                               </Dialog.Panel>
                             </Transition.Child>
@@ -3249,17 +3351,15 @@ const EmployeeAttendanceTable = () => {
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={toggleAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            !isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           PM
                         </button>
@@ -3459,17 +3559,15 @@ const EmployeeAttendanceTable = () => {
                       <div className="am-pm-toggle flex justify-center space-x-4">
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           AM
                         </button>
                         <button
                           onClick={togglecheckinAMPM}
-                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${
-                            !isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
-                          }`}
+                          className={`am-pm-btn px-4 py-2 rounded-full text-lg ${!isinAM ? 'bg-blue-500 text-white' : 'bg-gray-300'
+                            }`}
                         >
                           PM
                         </button>
@@ -3497,7 +3595,7 @@ const EmployeeAttendanceTable = () => {
                                 e.target.value = value.slice(0, 2); // Trim to 2 digits if more than 2 characters
                               }
                             }}
-                            // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
+                          // className="input px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 w-full text-center"
                           />
                           <div className="absolute top-1/2 transform -translate-y-1/2 right-2 flex space-x-2">
                             <button
@@ -3679,13 +3777,11 @@ const EmployeeAttendanceTable = () => {
                             handleEmployeeClick(employee.id);
                             setShowEmployeeList(false); // Hide list after selection on mobile
                           }}
-                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${
-                            selectedEmployeesearch?.id === employee.id
+                          className={`p-2 rounded-lg cursor-pointer transition-colors flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
                               ? 'bg-blue-100 text-blue-600'
                               : 'hover:bg-gray-100'
-                          } ${
-                            employeeStats[employee.id] < 6 ? 'text-red-600' : ''
-                          }`}
+                            } ${employeeStats[employee.id] < 6 ? 'text-red-600' : ''
+                            }`}
                         >
                           <span className="truncate mr-2 text-sm">
                             {employee.full_name}
@@ -3727,13 +3823,11 @@ const EmployeeAttendanceTable = () => {
                         setDataEmployeesearch(employee);
                         handleEmployeeClick(employee.id);
                       }}
-                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${
-                        selectedEmployeesearch?.id === employee.id
+                      className={`p-2 sm:p-3 rounded-lg cursor-pointer transition-colors flex-shrink-0 flex items-center justify-between ${selectedEmployeesearch?.id === employee.id
                           ? 'bg-blue-100 text-blue-600 hover:bg-gray-50'
                           : 'hover:bg-gray-100'
-                      } ${
-                        employeeStats[employee.id] < 6 ? 'text-red-600' : ''
-                      }`}
+                        } ${employeeStats[employee.id] < 6 ? 'text-red-600' : ''
+                        }`}
                     >
                       <span className="truncate mr-2 text-xs sm:text-base">
                         {employee.full_name}
@@ -3791,20 +3885,19 @@ const EmployeeAttendanceTable = () => {
                                   <span>
                                     {attendanceLogs[0].check_out
                                       ? format(
-                                          new Date(attendanceLogs[0].check_out),
-                                          'h:mm a'
-                                        )
+                                        new Date(attendanceLogs[0].check_out),
+                                        'h:mm a'
+                                      )
                                       : 'Not checked out'}
                                   </span>
                                 </div>
                                 <div className="flex justify-between">
                                   <span>Work Mode:</span>
                                   <span
-                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${
-                                      attendanceLogs[0].work_mode === 'on_site'
+                                    className={`px-2 py-1 rounded-full text-xs sm:text-sm ${attendanceLogs[0].work_mode === 'on_site'
                                         ? 'bg-blue-100 text-blue-800'
                                         : 'bg-purple-100 text-purple-800'
-                                    }`}
+                                      }`}
                                   >
                                     {attendanceLogs[0].work_mode}
                                   </span>
@@ -3851,9 +3944,9 @@ const EmployeeAttendanceTable = () => {
                                     <span>
                                       {breakItem.end_time
                                         ? format(
-                                            new Date(breakItem.end_time),
-                                            'hh:mm a'
-                                          )
+                                          new Date(breakItem.end_time),
+                                          'hh:mm a'
+                                        )
                                         : 'Ongoing'}
                                     </span>
                                   </div>

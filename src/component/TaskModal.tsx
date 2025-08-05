@@ -106,6 +106,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
   // Fetch tasks for selected project
   useEffect(() => {
     if (selectedProject && userId) {
+      setSelectedTasks([]); // Clear selected tasks when project changes
       fetchProjectTasks();
     }
   }, [selectedProject, userId]);
@@ -116,15 +117,16 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
     console.log('Fetching tasks for project:', selectedProject.title, 'and userId:', userId);
     setIsLoadingTasks(true);
     try {
-      // Fetch all tasks and filter client-side
+      // Fetch tasks for the selected project only
       const { data, error } = await supabase
         .from('tasks_of_projects')
         .select('id, title, description, status, devops')
+        .eq('project_id', selectedProject.id)
         .in('status', ['todo', 'inProgress']);
 
       if (error) throw error;
 
-      console.log('All tasks from database:', data);
+      console.log('Tasks for project:', data);
 
       const userTasks = data?.filter(task => {
         try {
@@ -152,7 +154,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
         }
       }) || [];
 
-      console.log('Filtered user tasks:', userTasks);
+      console.log('Filtered user tasks for project:', userTasks);
       setProjectTasks(userTasks);
     } catch (error) {
       console.error('Error fetching tasks:', error);
