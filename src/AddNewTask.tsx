@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { ArrowLeft, X } from 'lucide-react';
 import { supabase } from './lib/supabase';
 import { useRef } from 'react';
+import toast from 'react-hot-toast';
 
 interface Developer {
   id: string;
@@ -72,7 +73,7 @@ const AddNewTask = ({
     }
   };
 
-  const uploadImage = async () => { 
+  const uploadImage = async () => {
     if (!imageFile) return null;
 
     try {
@@ -204,7 +205,7 @@ const AddNewTask = ({
       // Send email notifications
       await sendTaskEmail(data[0]);
 
-      alert('Task created successfully!');
+      toast.success('Task created successfully');
       setTitle('');
       setDescription('');
       setSelectedDevs([]);

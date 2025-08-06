@@ -1,6 +1,16 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import {
+  AlertDialog,
+  AlertDialogTrigger,
+  AlertDialogContent,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogFooter,
+  AlertDialogCancel,
+  AlertDialogAction,
+} from '@/components/ui/alert-dialog';
+import {
   PlusCircle,
   User,
   X,
@@ -36,6 +46,9 @@ import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { buttonVariants } from '../component/ui/button';
 import { MdDeleteForever } from 'react-icons/md';
+import TaskBoardAdminColumnDeleteIcon from './ui/TaskBoardAdminColumnDeleteIcon';
+import AddColumnDialog from './ui/AddColumnDialog';
+import DeleteTaskDialog from './ui/DeleteTaskDialog';
 
 interface Developer {
   id: string;
@@ -208,20 +221,10 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               commentCount: taskComments.length,
             };
           });
-          const sortedTasks = [...tasksWithComments].sort((a, b) => {
-            // Define the priority order
-            const priorityOrder = { high: 3, medium: 2, low: 1 };
-            // Get priority values (convert to lowercase for consistency)
-            const aPriority = priorityOrder[a.priority?.toLowerCase()] || 0;
-            const bPriority = priorityOrder[b.priority?.toLowerCase()] || 0;
-            // Sort in descending order
-            return bPriority - aPriority;
-          });
-
-          setTasks(sortedTasks);
+          setTasks(tasksWithComments);
 
           // Update columns based on task statuses
-          updateColumns(sortedTasks);
+          // updateColumns(tasksWithComments);
 
           // Calculate scores for all developers
           const devopsScores = devopss.map((developer) => {
@@ -290,9 +293,20 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   }, [ProjectIdd, ProjectId]); // Only watches prop ProjectId, not context value
 
   const handleDragEnd = async (result: DropResult) => {
-    const { destination, source, draggableId } = result;
+    const { destination, source, draggableId, type } = result;
     if (!destination) return;
 
+    // COLUMN DRAG
+    if (type === 'COLUMN') {
+      if (destination.index === source.index) return;
+      const newColumns = Array.from(columns);
+      const [removed] = newColumns.splice(source.index, 1);
+      newColumns.splice(destination.index, 0, removed);
+      setColumns(newColumns);
+      return;
+    }
+
+    // TASK DRAG (your existing logic)
     if (
       destination.droppableId === source.droppableId &&
       destination.index === source.index
@@ -300,7 +314,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       return;
     }
 
-    // Update all tasks, not just filtered ones
     const newTasks = Array.from(tasks);
     const draggedTask = newTasks.find((task) => task.id === draggableId);
     if (!draggedTask) return;
@@ -308,7 +321,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     newTasks.splice(newTasks.indexOf(draggedTask), 1);
     draggedTask.status = destination.droppableId as Task['status'];
 
-    // For insertion position, use filtered tasks if we're in filtered mode
     const destTasks = newTasks.filter(
       (task) => task.status === destination.droppableId
     );
@@ -435,10 +447,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
   };
 
   const handleDelete = async (DeletedTask: Task) => {
-    const confirmed = window.confirm(
-      'Are you sure you want to delete this Task?'
-    );
-    if (!confirmed) return;
     try {
       await supabase.from('comments').delete().eq('task_id', DeletedTask.id);
 
@@ -622,15 +630,19 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                 >
                   <Pencil size={16} />
                 </button>
-                <button
-                  className="text-gray-400 hover:text-red-600"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    handleDelete(task);
+                <DeleteTaskDialog
+                  onConfirm={async () => {
+                    await handleDelete(task);
                   }}
                 >
-                  <Trash2 size={16} />
-                </button>
+                  <button
+                    className="text-gray-400 hover:text-red-600"
+                    onClick={(e) => e.stopPropagation()}
+                    type="button"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </DeleteTaskDialog>
               </div>
             </div>
 
@@ -788,9 +800,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     );
   };
   const renderColumn = (col) => {
-    const tasksInColumn = filteredTasks.filter(
-      (task) => task.status === col.id
-    );
+    const tasksInColumn = tasks.filter((task) => task.status === col.id);
 
     return (
       <div className="...">
@@ -820,7 +830,20 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     { id: 'done', title: 'Done', color: '#05C815' },
   ];
 
-  const [columns, setColumns] = useState(defaultColumns);
+  const [columns, setColumns] = useState(() => {
+    const saved = localStorage.getItem('taskboard_column_order');
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch {
+        return defaultColumns;
+      }
+    }
+    return defaultColumns;
+  });
+  useEffect(() => {
+    localStorage.setItem('taskboard_column_order', JSON.stringify(columns));
+  }, [columns]);
 
   // Update columns based on task statuses
   const updateColumns = (tasks) => {
@@ -851,9 +874,10 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       { id: newId, title: newTitle, color: '#888888' }, // default color for new columns
     ]);
   };
+  const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
+  const [newColumnTitle, setNewColumnTitle] = useState('');
   return (
     <div className="min-h-screen px-0">
-      <Toaster position="top-right" />
       <div className="max-w-7xl mx-auto  ">
         {selectedTab === 'addtask' && (
           <AddNewTask
@@ -990,100 +1014,175 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                         {...provided.droppableProps}
                         className="grid grid-flow-col lg:ml-0 lg:grid-flow-col gap-4 overflow-x-scroll overflow-y-hidden"
                       >
-                        {columns.map((col, index) => (
-                          <Draggable
-                            draggableId={col.id}
-                            index={index}
-                            key={col.id}
-                          >
-                            {(provided) => (
-                              <div
-                                ref={provided.innerRef}
-                                {...provided.draggableProps}
-                                className="bg-white w-[280px] rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col"
-                              >
-                                {/* Header (drag handle) */}
+                        {columns.map((col, index) => {
+                          const prevCol = index > 0 ? columns[index - 1] : null;
+                          return (
+                            <Draggable
+                              draggableId={col.id}
+                              index={index}
+                              key={col.id}
+                            >
+                              {(provided) => (
                                 <div
-                                  className="flex justify-between items-center mb-4 flex-shrink-0 cursor-move"
-                                  {...provided.dragHandleProps}
+                                  ref={provided.innerRef}
+                                  {...provided.draggableProps}
+                                  className="bg-white w-[280px] rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col"
                                 >
-                                  <h2
-                                    className="font-semibold text-[18px] leading-7"
-                                    style={{ color: col.color }}
+                                  {/* Header (drag handle) */}
+                                  <div
+                                    className="flex justify-between items-center mb-4 flex-shrink-0 cursor-move"
+                                    {...provided.dragHandleProps}
                                   >
-                                    {col.title}
-                                  </h2>
-                                  <div className="flex items-center gap-2">
-                                    <Trash2Icon />
-                                    <span className="text-gray-600">
-                                      {
-                                        filteredTasks.filter(
-                                          (task) => task.status === col.id
-                                        ).length
-                                      }
-                                    </span>
-                                  </div>
-                                </div>
-
-                                {/* + New Task button and inline form for only 'todo' column */}
-                                {col.id === 'todo' && (
-                                  <>
-                                    <button
-                                      onClick={() =>
-                                        setIsCreateTaskModalOpen(true)
-                                      }
-                                      className="mb-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                                    <h2
+                                      className="font-semibold text-[18px] leading-7"
+                                      style={{ color: col.color }}
                                     >
-                                      <Plus size={16} />
-                                      <span className="text-sm">New</span>
-                                    </button>
+                                      {col.title}
+                                    </h2>
+                                    <div className="flex items-center gap-2">
+                                      <TaskBoardAdminColumnDeleteIcon
+                                        columnTitle={col.title}
+                                        prevColumnTitle={
+                                          prevCol ? prevCol.title : null
+                                        }
+                                        prevColumnId={
+                                          prevCol ? prevCol.id : null
+                                        }
+                                        onDeleteColumn={async (moveTasks) => {
+                                          if (moveTasks && prevCol) {
+                                            // 1. Update in DB
+                                            await supabase
+                                              .from('tasks_of_projects')
+                                              .update({ status: prevCol.id })
+                                              .eq('status', col.id);
 
-                                    {/* Render TodoTask component (form/modal) here */}
-                                    {isCreateTaskModalOpen && (
-                                      <div className="mb-2">
-                                        <TodoTask
-                                          projectId={ProjectId}
-                                          fetchTasks={fetchTasks}
-                                          onClose={() =>
-                                            setIsCreateTaskModalOpen(false)
+                                            // 2. Move in state and reorder: moved tasks first
+                                            setTasks((prevTasks) => {
+                                              // Tasks to move
+                                              const moved = prevTasks
+                                                .filter(
+                                                  (task) =>
+                                                    task.status === col.id
+                                                )
+                                                .map((task) => ({
+                                                  ...task,
+                                                  status: prevCol.id,
+                                                }));
+                                              // Tasks already in prevCol
+                                              const prevColTasks =
+                                                prevTasks.filter(
+                                                  (task) =>
+                                                    task.status === prevCol.id
+                                                );
+                                              // All other tasks
+                                              const others = prevTasks.filter(
+                                                (task) =>
+                                                  task.status !== col.id &&
+                                                  task.status !== prevCol.id
+                                              );
+
+                                              // Combine: moved tasks first, then previous column's old tasks, then others
+                                              return [
+                                                ...others,
+                                                ...moved,
+                                                ...prevColTasks,
+                                              ].filter(Boolean);
+                                            });
+                                          } else {
+                                            // Delete all tasks in DB
+                                            await supabase
+                                              .from('tasks_of_projects')
+                                              .delete()
+                                              .eq('status', col.id);
+
+                                            // Remove all tasks in state
+                                            setTasks((prevTasks) =>
+                                              prevTasks.filter(
+                                                (task) => task.status !== col.id
+                                              )
+                                            );
                                           }
-                                        />
+
+                                          // Remove the column
+                                          setColumns((prevCols) =>
+                                            prevCols.filter(
+                                              (c) => c.id !== col.id
+                                            )
+                                          );
+
+                                          await fetchTasks();
+                                        }}
+                                      />
+                                      <span className="text-gray-600">
+                                        {
+                                          filteredTasks.filter(
+                                            (task) => task.status === col.id
+                                          ).length
+                                        }
+                                      </span>
+                                    </div>
+                                  </div>
+
+                                  {/* + New Task button and inline form for only 'todo' column */}
+                                  {col.id === 'todo' && (
+                                    <>
+                                      <button
+                                        onClick={() =>
+                                          setIsCreateTaskModalOpen(true)
+                                        }
+                                        className="mb-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                                      >
+                                        <Plus size={16} />
+                                        <span className="text-sm">New</span>
+                                      </button>
+
+                                      {/* Render TodoTask component (form/modal) here */}
+                                      {isCreateTaskModalOpen && (
+                                        <div className="mb-2">
+                                          <TodoTask
+                                            projectId={ProjectId}
+                                            fetchTasks={fetchTasks}
+                                            onClose={() =>
+                                              setIsCreateTaskModalOpen(false)
+                                            }
+                                          />
+                                        </div>
+                                      )}
+                                    </>
+                                  )}
+
+                                  {/* Droppable area for tasks */}
+                                  <Droppable droppableId={col.id}>
+                                    {(provided) => (
+                                      <div
+                                        ref={provided.innerRef}
+                                        {...provided.droppableProps}
+                                        className="grow overflow-y-auto overflow-x-hidden pr-2 task-scroll space-y-4"
+                                        style={{
+                                          minHeight: '420px',
+                                          maxHeight: 'calc(100vh - 450px)',
+                                        }}
+                                      >
+                                        {filteredTasks
+                                          .filter(
+                                            (task) => task.status === col.id
+                                          )
+                                          .map((task, index) => (
+                                            <TaskCard
+                                              key={task.id}
+                                              task={task}
+                                              index={index}
+                                            />
+                                          ))}
+                                        {provided.placeholder}
                                       </div>
                                     )}
-                                  </>
-                                )}
-
-                                {/* Droppable area for tasks */}
-                                <Droppable droppableId={col.id}>
-                                  {(provided) => (
-                                    <div
-                                      ref={provided.innerRef}
-                                      {...provided.droppableProps}
-                                      className="grow overflow-y-auto overflow-x-hidden pr-2 task-scroll space-y-4"
-                                      style={{
-                                        minHeight: '420px',
-                                        maxHeight: 'calc(100vh - 450px)',
-                                      }}
-                                    >
-                                      {filteredTasks
-                                        .filter(
-                                          (task) => task.status === col.id
-                                        )
-                                        .map((task, index) => (
-                                          <TaskCard
-                                            key={task.id}
-                                            task={task}
-                                            index={index}
-                                          />
-                                        ))}
-                                      {provided.placeholder}
-                                    </div>
-                                  )}
-                                </Droppable>
-                              </div>
-                            )}
-                          </Draggable>
-                        ))}
+                                  </Droppable>
+                                </div>
+                              )}
+                            </Draggable>
+                          );
+                        })}
                         {provided.placeholder}
                       </div>
                     )}
@@ -1091,12 +1190,17 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
                   {/* Add column button (outside columns, as before) */}
                   <div className="">
-                    <button
-                      className="flex items-center relative left-[2.3rem]  whitespace-nowrap mt-9 rotate-90 w-fit gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow transition-all duration-200 font-semibold text-sm"
-                      onClick={handleAddColumn}
-                    >
-                      Add Column
-                    </button>
+                    <AddColumnDialog
+                      onAddColumn={(newTitle) => {
+                        const newId = newTitle
+                          .toLowerCase()
+                          .replace(/\s+/g, '');
+                        setColumns([
+                          ...columns,
+                          { id: newId, title: newTitle, color: '#888888' },
+                        ]);
+                      }}
+                    />
                   </div>
                 </div>
               </DragDropContext>
@@ -1111,7 +1215,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             )}
           </>
         )}
-        <div className="w-[95%] mx-auto mt-3 p-2 rounded-2xl bg-white shadow-md flex flex-wrap justify-end gap-2">
+        <div className="w-full mt-3 p-2 rounded-2xl bg-white shadow-md flex flex-wrap justify-end gap-2">
           {devopsScores.map((score) => (
             <div
               key={score.id}

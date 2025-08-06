@@ -5,8 +5,6 @@ import {
   FiCheckCircle,
   FiClock,
   FiCircle,
-  FiFlag,
-  FiAlertCircle,
   FiTrendingUp,
   FiCalendar,
   FiClipboard,

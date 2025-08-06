@@ -5,8 +5,10 @@ import { supabase } from '../lib/supabase';
 const TodoTask = ({
   projectId,
   fetchTasks,
+  onClose,
 }: {
   projectId: string;
+  onClose: () => void;
   fetchTasks: () => void;
 }) => {
   const [input, setInput] = useState('');
@@ -33,11 +35,12 @@ const TodoTask = ({
 
       if (error) throw error;
 
+      toast.success('Task created successfully!');
       // Refresh tasks to show the new one
       await fetchTasks();
 
       // Show success toast notification
-      toast.success('Task successfully added');
+      onClose();
     } catch (error) {
       console.error('Error creating task:', error);
       // Show error toast notification
@@ -49,7 +52,6 @@ const TodoTask = ({
 
     if (input.length >= 3) {
       handleQuickAddTask(input);
-      alert(`Task submitted: ${input}`);
       setInput('');
     }
   };
