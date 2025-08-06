@@ -10,6 +10,8 @@ import {
   Pencil,
   Trash2,
   Minus,
+  DeleteIcon,
+  Trash2Icon,
 } from 'lucide-react';
 import {
   DragDropContext,
@@ -33,6 +35,7 @@ import TodoTask from './TodoTask';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store';
 import { buttonVariants } from '../component/ui/button';
+import { MdDeleteForever } from 'react-icons/md';
 
 interface Developer {
   id: string;
@@ -849,9 +852,9 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
     ]);
   };
   return (
-    <div className="min-h-screen px-0  ">
+    <div className="min-h-screen px-0">
       <Toaster position="top-right" />
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-7xl mx-auto  ">
         {selectedTab === 'addtask' && (
           <AddNewTask
             setselectedtab={setSelectedTab}
@@ -864,9 +867,9 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
         {(selectedTab === 'tasks' || selectedTABB === 'tasks') && (
           <>
-            <div className="flex flex-col p-3 mt-12 lg:mt-0 rounded-2xl mb-4 space-x-2 bg-white shadow-sm ">
+            <div className="flex flex-col p-3 lg:mt-0 rounded-2xl mb-4 space-x-2 bg-white shadow-sm">
               {/* Arrow + Heading Grouped */}
-              <div className="w-full ">
+              <div className="w-full">
                 {/* Row 1: Back button + Project name */}
                 <div className="flex items-center justify-start">
                   <button
@@ -963,7 +966,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
               </div>
 
               {/* Main Content */}
-              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4 w-full">
+              <div className="flex flex-col  lg:flex-row lg:items-center justify-between gap-4 w-full ">
                 {/* Status Box */}
 
                 <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3"></div>
@@ -975,88 +978,121 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             {view === 'card' ? (
               <DragDropContext onDragEnd={handleDragEnd}>
                 <div className="flex flex-row justify-between">
-                  <div className="grid grid-flow-col lg:ml-0 lg:grid-flow-col gap-6 overflow-x-scroll overflow-y-hidden">
-                    {columns.map((col) => (
+                  {/* Draggable columns */}
+                  <Droppable
+                    droppableId="all-columns"
+                    direction="horizontal"
+                    type="COLUMN"
+                  >
+                    {(provided) => (
                       <div
-                        key={col.id}
-                        className="bg-white w-[280px] rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col"
+                        ref={provided.innerRef}
+                        {...provided.droppableProps}
+                        className="grid grid-flow-col lg:ml-0 lg:grid-flow-col gap-4 overflow-x-scroll overflow-y-hidden"
                       >
-                        {/* Header */}
-                        <div className="flex justify-between items-center mb-4 flex-shrink-0">
-                          <h2
-                            className="font-semibold text-[18px] leading-7"
-                            style={{ color: col.color }}
+                        {columns.map((col, index) => (
+                          <Draggable
+                            draggableId={col.id}
+                            index={index}
+                            key={col.id}
                           >
-                            {col.title}
-                          </h2>
-                          <span className="text-gray-600">
-                            {
-                              filteredTasks.filter(
-                                (task) => task.status === col.id
-                              ).length
-                            }
-                          </span>
-                        </div>
+                            {(provided) => (
+                              <div
+                                ref={provided.innerRef}
+                                {...provided.draggableProps}
+                                className="bg-white w-[280px] rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col"
+                              >
+                                {/* Header (drag handle) */}
+                                <div
+                                  className="flex justify-between items-center mb-4 flex-shrink-0 cursor-move"
+                                  {...provided.dragHandleProps}
+                                >
+                                  <h2
+                                    className="font-semibold text-[18px] leading-7"
+                                    style={{ color: col.color }}
+                                  >
+                                    {col.title}
+                                  </h2>
+                                  <div className="flex items-center gap-2">
+                                    <Trash2Icon />
+                                    <span className="text-gray-600">
+                                      {
+                                        filteredTasks.filter(
+                                          (task) => task.status === col.id
+                                        ).length
+                                      }
+                                    </span>
+                                  </div>
+                                </div>
 
-                        {/* + New Task button and inline form for only 'todo' column */}
-                        {col.id === 'todo' && (
-                          <>
-                            <button
-                              onClick={() => setIsCreateTaskModalOpen(true)}
-                              className="mb-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
-                            >
-                              <Plus size={16} />
-                              <span className="text-sm">New</span>
-                            </button>
+                                {/* + New Task button and inline form for only 'todo' column */}
+                                {col.id === 'todo' && (
+                                  <>
+                                    <button
+                                      onClick={() =>
+                                        setIsCreateTaskModalOpen(true)
+                                      }
+                                      className="mb-2 w-full flex items-center justify-center gap-2 p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg border-2 border-dashed border-gray-300 hover:border-gray-400 transition-colors duration-200"
+                                    >
+                                      <Plus size={16} />
+                                      <span className="text-sm">New</span>
+                                    </button>
 
-                            {/* Render TodoTask component (form/modal) here */}
-                            {isCreateTaskModalOpen && (
-                              <div className="mb-2">
-                                <TodoTask
-                                  projectId={ProjectId}
-                                  fetchTasks={fetchTasks}
-                                  onClose={() =>
-                                    setIsCreateTaskModalOpen(false)
-                                  }
-                                />
+                                    {/* Render TodoTask component (form/modal) here */}
+                                    {isCreateTaskModalOpen && (
+                                      <div className="mb-2">
+                                        <TodoTask
+                                          projectId={ProjectId}
+                                          fetchTasks={fetchTasks}
+                                          onClose={() =>
+                                            setIsCreateTaskModalOpen(false)
+                                          }
+                                        />
+                                      </div>
+                                    )}
+                                  </>
+                                )}
+
+                                {/* Droppable area for tasks */}
+                                <Droppable droppableId={col.id}>
+                                  {(provided) => (
+                                    <div
+                                      ref={provided.innerRef}
+                                      {...provided.droppableProps}
+                                      className="grow overflow-y-auto overflow-x-hidden pr-2 task-scroll space-y-4"
+                                      style={{
+                                        minHeight: '420px',
+                                        maxHeight: 'calc(100vh - 450px)',
+                                      }}
+                                    >
+                                      {filteredTasks
+                                        .filter(
+                                          (task) => task.status === col.id
+                                        )
+                                        .map((task, index) => (
+                                          <TaskCard
+                                            key={task.id}
+                                            task={task}
+                                            index={index}
+                                          />
+                                        ))}
+                                      {provided.placeholder}
+                                    </div>
+                                  )}
+                                </Droppable>
                               </div>
                             )}
-                          </>
-                        )}
-
-                        {/* Droppable area for tasks */}
-                        <Droppable droppableId={col.id}>
-                          {(provided) => (
-                            <div
-                              ref={provided.innerRef}
-                              {...provided.droppableProps}
-                              className="grow overflow-y-auto overflow-x-hidden pr-2 task-scroll space-y-4"
-                              style={{
-                                minHeight: '420px',
-                                maxHeight: 'calc(100vh - 450px)',
-                              }}
-                            >
-                              {filteredTasks
-                                .filter((task) => task.status === col.id)
-                                .map((task, index) => (
-                                  <TaskCard
-                                    key={task.id}
-                                    task={task}
-                                    index={index}
-                                  />
-                                ))}
-                              {provided.placeholder}
-                            </div>
-                          )}
-                        </Droppable>
+                          </Draggable>
+                        ))}
+                        {provided.placeholder}
                       </div>
-                    ))}
-                  </div>
+                    )}
+                  </Droppable>
 
-                  {/* Add column button */}
-                  <div>
+                  {/* Add column button (outside columns, as before) */}
+                  <div className="">
                     <button
-                      className="flex items-center whitespace-nowrap mt-9 rotate-90 w-fit gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow transition-all duration-200 font-semibold text-sm"
+                      className="flex items-center relative left-[2.3rem]  whitespace-nowrap mt-9 rotate-90 w-fit gap-2 px-4 py-2 bg-purple-500 hover:bg-purple-600 text-white rounded-lg shadow transition-all duration-200 font-semibold text-sm"
                       onClick={handleAddColumn}
                     >
                       Add Column
