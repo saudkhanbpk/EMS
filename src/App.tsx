@@ -497,7 +497,10 @@ function App() {
                       closechat={closeChat}
                       openchatperson={openchatperson}
                       opengroup={(id: string) => {
-                        console.log('ChatSidebar received opengroup call with id:', id);
+                        console.log(
+                          'ChatSidebar received opengroup call with id:',
+                          id
+                        );
                         opengroup(id);
                       }}
                     />
@@ -509,7 +512,10 @@ function App() {
               <Chat id={selecteduser ?? ''} closechatperson={closechatperson} />
             )}
             {groupchat && (
-              <GroupChat groupId={selectedgroup ?? ''} closegroupchat={closegroupchat} />
+              <GroupChat
+                groupId={selectedgroup ?? ''}
+                closegroupchat={closegroupchat}
+              />
             )}
             {!ischatopen && (
               <Chatlayout>
@@ -598,7 +604,7 @@ function App() {
                   element={<Navigate to="employeAttandanceTable" replace />}
                 />
                 <Route path="projects" element={<ProjectsAdmin />}>
-                  <Route path=":id" />
+                  <Route path=":id" element={<TaskBoardAdmin />} />
                 </Route>
                 <Route path="organization" element={<AdminOrganization />} />
                 <Route

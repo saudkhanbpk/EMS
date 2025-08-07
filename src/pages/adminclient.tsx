@@ -279,7 +279,7 @@ const AdminClient: React.FC = () => {
   }
 
   return (
-    <div className="w-full min-h-screen bg-gray-50 p-4 sm:p-6">
+    <div className="w-full min-h-screen overflow-x-scroll bg-gray-50 p-4 sm:p-6">
       {selectedTAB === 'TaskBoard' ? (
         <TaskBoardAdmin
           devopss={devopss}

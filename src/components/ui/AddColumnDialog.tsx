@@ -10,19 +10,17 @@ import {
   AlertDialogAction,
 } from '@/components/ui/alert-dialog';
 
-function AddColumnDialog({
-  onAddColumn,
-}: {
-  onAddColumn: (title: string) => void;
-}) {
+function AddColumnDialog({ onAddColumn }) {
   const [open, setOpen] = useState(false);
   const [newColumnTitle, setNewColumnTitle] = useState('');
+  const [color, setColor] = useState('#888888'); // Default color
 
   const handleAdd = () => {
     const newTitle = newColumnTitle.trim();
     if (!newTitle) return;
-    onAddColumn(newTitle);
+    onAddColumn(newTitle, color); // Pass color!
     setNewColumnTitle('');
+    setColor('#888888');
     setOpen(false);
   };
 
@@ -45,6 +43,19 @@ function AddColumnDialog({
           onChange={(e) => setNewColumnTitle(e.target.value)}
           autoFocus
         />
+        <div className="mt-4 flex items-center gap-2">
+          <label htmlFor="column-color" className="text-sm">
+            Color:
+          </label>
+          <input
+            id="column-color"
+            type="color"
+            value={color}
+            onChange={(e) => setColor(e.target.value)}
+            className="w-8 h-8 p-0 border-none"
+          />
+          <span className="ml-2 text-xs">{color}</span>
+        </div>
         <AlertDialogFooter>
           <AlertDialogCancel onClick={() => setNewColumnTitle('')}>
             Cancel

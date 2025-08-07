@@ -487,7 +487,6 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       console.error('Error updating task status:', error);
     }
   };
-  console.log('Developer Scores:', devopsScores);
 
   const TaskCard = ({ task, index }: { task: Task; index: number }) => {
     const [descriptionOpen, setDescriptionOpen] = useState(false);
@@ -874,11 +873,46 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
       { id: newId, title: newTitle, color: '#888888' }, // default color for new columns
     ]);
   };
-  const [isAddColumnDialogOpen, setIsAddColumnDialogOpen] = useState(false);
-  const [newColumnTitle, setNewColumnTitle] = useState('');
+
+  const [editingColumnId, setEditingColumnId] = useState(null);
+  const [editingColumnTitle, setEditingColumnTitle] = useState('');
+  const [editingColumnColor, setEditingColumnColor] = useState('#888888');
+  const [editingColumnFocusCount, setEditingColumnFocusCount] = useState(0);
+  const editAreaRef = useRef(null);
+  useEffect(() => {
+    if (editingColumnId !== null) {
+      const handleClick = (e) => {
+        if (editAreaRef.current && !editAreaRef.current.contains(e.target)) {
+          // Save changes and exit edit mode
+          if (editingColumnTitle.trim()) {
+            setColumns((cols) =>
+              cols.map((c) =>
+                c.id === editingColumnId
+                  ? {
+                      ...c,
+                      title: editingColumnTitle,
+                      color: editingColumnColor,
+                    }
+                  : c
+              )
+            );
+          }
+          setEditingColumnId(null);
+        }
+      };
+      document.addEventListener('mousedown', handleClick);
+      return () => document.removeEventListener('mousedown', handleClick);
+    }
+  }, [editingColumnId, editingColumnTitle, editingColumnColor, setColumns]);
+
+  const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   return (
-    <div className="min-h-screen px-0">
-      <div className="max-w-7xl mx-auto  ">
+    <div
+      className={`min-h-screen w-full ${
+        isSideBarOpen ? 'max-w-full' : 'max-w-full'
+      }`}
+    >
+      <div className="max-w-full mx-auto ">
         {selectedTab === 'addtask' && (
           <AddNewTask
             setselectedtab={setSelectedTab}
@@ -891,110 +925,102 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
 
         {(selectedTab === 'tasks' || selectedTABB === 'tasks') && (
           <>
-            <div className="flex flex-col p-3 lg:mt-0 rounded-2xl mb-4 space-x-2 bg-white shadow-sm">
-              {/* Arrow + Heading Grouped */}
-              <div className="w-full">
-                {/* Row 1: Back button + Project name */}
-                <div className="flex items-center justify-start">
+            <div className="flex flex-col p-4 lg:mt-0 rounded-2xl mb-4 bg-white shadow-sm space-y-3">
+              {/* Top bar: Back + project name + view toggle + new task */}
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+                {/* Left side */}
+                <div className="flex items-center gap-2">
                   <button
                     onClick={() => navigate(-1)}
                     className="text-gray-600 hover:text-gray-800 p-2 hover:bg-gray-100 rounded-full transition"
                   >
-                    <ArrowLeft size={30} />
+                    <ArrowLeft size={24} />
                   </button>
                   <h1 className="text-lg lg:text-2xl font-bold text-gray-800">
                     {adminProjectName}
                   </h1>
                 </div>
-                {/* Row 2: Status + Filters + Button (all in 1 line on lg) */}
-                <div className="flex flex-col lg:flex-row justify-between items-start lg:items-center gap-4">
-                  {/* Task statuses */}
-                  <div className="flex flex-wrap gap-4 text-sm sm:text-base font-semibold">
-                    <span className="text-[#9A00FF]">
-                      TO DO: {getScoreByStatus('todo')}
-                    </span>
-                    <span className="text-orange-600">
-                      In Progress: {getScoreByStatus('inProgress')}
-                    </span>
-                    <span className="text-yellow-600">
-                      Review: {getScoreByStatus('review')}
-                    </span>
-                    <span className="text-[#05C815]">
-                      Done: {getScoreByStatus('done')}
-                    </span>
-                  </div>
 
-                  {/* Filter + Info + Button inline */}
-                  <div className="flex flex-wrap items-center gap-3 w-full lg:w-auto">
-                    {/* Label */}
-                    <label className="text-xs font-medium text-gray-700">
-                      Filter by Developer:
-                    </label>
-
-                    {/* Dropdown */}
-                    <div className="relative w-44">
-                      <select
-                        value={selectedDeveloper}
-                        onChange={(e) => setSelectedDeveloper(e.target.value)}
-                        className={`w-full bg-white border ${
-                          selectedDeveloper !== 'all'
-                            ? 'border-purple-500 ring-2 ring-purple-300'
-                            : 'border-gray-300'
-                        } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
-                      >
-                        <option value="all">All Developers</option>
-                        {devopss?.map((dev) => (
-                          <option key={dev.id} value={dev.id}>
-                            {dev.name || dev.full_name}
-                          </option>
-                        ))}
-                      </select>
-                      <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-700">
-                        <svg
-                          className="fill-current h-4 w-4"
-                          xmlns="http://www.w3.org/2000/svg"
-                          viewBox="0 0 20 20"
-                        >
-                          <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
-                        </svg>
-                      </div>
-                    </div>
-
-                    {/* Inline developer info — tightly coupled */}
-                    {selectedDeveloper !== 'all' && (
-                      <span className="text-xs font-medium text-purple-700 whitespace-nowrap">
-                        {(() => {
-                          const selectedDevName =
-                            devopss?.find((dev) => dev.id === selectedDeveloper)
-                              ?.name ||
-                            devopss?.find((dev) => dev.id === selectedDeveloper)
-                              ?.full_name ||
-                            'Selected developer';
-                          return `Showing ${filteredTasks.length} of ${tasks.length} for ${selectedDevName}`;
-                        })()}
-                      </span>
-                    )}
-
-                    {/* View toggle */}
-                    <ViewToggle view={view} setView={setView} />
-
-                    {/* New Task Button */}
-                    <button
-                      className="bg-[#9A00FF] text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition whitespace-nowrap"
-                      onClick={() => setSelectedTab('addtask')}
-                    >
-                      New Task
-                    </button>
-                  </div>
+                {/* Right side */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <ViewToggle view={view} setView={setView} />
+                  <button
+                    onClick={() => setSelectedTab('addtask')}
+                    className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition whitespace-nowrap"
+                  >
+                    New Task
+                  </button>
                 </div>
               </div>
 
-              {/* Main Content */}
-              <div className="flex flex-col  lg:flex-row lg:items-center justify-between gap-4 w-full ">
-                {/* Status Box */}
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                {/* Status counts */}
+                <div className="flex flex-wrap gap-4 text-sm sm:text-base font-semibold">
+                  <span className="text-purple-600">
+                    TO DO: {getScoreByStatus('todo')}
+                  </span>
+                  <span className="text-orange-600">
+                    In Progress: {getScoreByStatus('inProgress')}
+                  </span>
+                  <span className="text-yellow-600">
+                    Review: {getScoreByStatus('review')}
+                  </span>
+                  <span className="text-green-600">
+                    Done: {getScoreByStatus('done')}
+                  </span>
+                </div>
 
-                <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3"></div>
+                {/* Filter dropdown + selected info */}
+                <div className="flex items-center gap-2 flex-wrap">
+                  <label className="text-xs font-medium text-gray-700 whitespace-nowrap">
+                    Filter by Developer:
+                  </label>
+                  <div className="relative w-44">
+                    <select
+                      value={selectedDeveloper}
+                      onChange={(e) => setSelectedDeveloper(e.target.value)}
+                      className={`w-full bg-white border ${
+                        selectedDeveloper !== 'all'
+                          ? 'border-purple-500 ring-2 ring-purple-300'
+                          : 'border-gray-300'
+                      } text-gray-700 py-2 px-3 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500 transition-all duration-200 appearance-none`}
+                    >
+                      <option value="all">All Developers</option>
+                      {devopss?.map((dev) => (
+                        <option key={dev.id} value={dev.id}>
+                          {dev.name || dev.full_name}
+                        </option>
+                      ))}
+                    </select>
+                    <div className="pointer-events-none absolute right-3 top-1/2 -translate-y-1/2 text-gray-700">
+                      <svg
+                        className="fill-current h-4 w-4"
+                        xmlns="http://www.w3.org/2000/svg"
+                        viewBox="0 0 20 20"
+                      >
+                        <path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" />
+                      </svg>
+                    </div>
+                  </div>
+
+                  {/* Developer info if filtered */}
+                  {selectedDeveloper !== 'all' && (
+                    <span className="text-xs font-medium text-purple-700 whitespace-nowrap">
+                      {(() => {
+                        const selectedDevName =
+                          devopss?.find((dev) => dev.id === selectedDeveloper)
+                            ?.name ||
+                          devopss?.find((dev) => dev.id === selectedDeveloper)
+                            ?.full_name ||
+                          'Selected developer';
+                        return `Showing ${filteredTasks.length} of ${tasks.length} for ${selectedDevName}`;
+                      })()}
+                    </span>
+                  )}
+                </div>
               </div>
+
+              {/* Second line: status counts */}
             </div>
 
             {/* View Toggle */}
@@ -1026,19 +1052,88 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                                 <div
                                   ref={provided.innerRef}
                                   {...provided.draggableProps}
-                                  className="bg-white w-[280px] rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col"
+                                  className={`bg-white ${
+                                    isSideBarOpen ? 'w-[260px]' : 'w-[255px]'
+                                  } rounded-[20px] p-4 shadow-md min-h-[500px] max-h-[calc(100vh-300px)] flex flex-col`}
                                 >
                                   {/* Header (drag handle) */}
                                   <div
-                                    className="flex justify-between items-center mb-4 flex-shrink-0 cursor-move"
+                                    className="flex justify-between  items-center mb-4 flex-shrink-0 cursor-move"
                                     {...provided.dragHandleProps}
                                   >
-                                    <h2
-                                      className="font-semibold text-[18px] leading-7"
-                                      style={{ color: col.color }}
-                                    >
-                                      {col.title}
-                                    </h2>
+                                    {editingColumnId === col.id ? (
+                                      <div
+                                        ref={editAreaRef}
+                                        className="flex items-center gap-2"
+                                      >
+                                        <input
+                                          autoFocus
+                                          className="font-semibold text-[18px] leading-7 border-b w-[160px] border-gray-300 bg-white"
+                                          style={{
+                                            color: editingColumnColor,
+                                            minWidth: 80,
+                                          }}
+                                          value={editingColumnTitle}
+                                          onChange={(e) =>
+                                            setEditingColumnTitle(
+                                              e.target.value
+                                            )
+                                          }
+                                          onKeyDown={(e) => {
+                                            if (
+                                              e.key === 'Enter' ||
+                                              e.key === 'Escape'
+                                            ) {
+                                              // Save and exit on Enter/Escape
+                                              if (editingColumnTitle.trim()) {
+                                                setColumns((cols) =>
+                                                  cols.map((c) =>
+                                                    c.id === col.id
+                                                      ? {
+                                                          ...c,
+                                                          title:
+                                                            editingColumnTitle,
+                                                          color:
+                                                            editingColumnColor,
+                                                        }
+                                                      : c
+                                                  )
+                                                );
+                                              }
+                                              setEditingColumnId(null);
+                                            }
+                                          }}
+                                        />
+                                        <input
+                                          type="color"
+                                          value={editingColumnColor}
+                                          onChange={(e) =>
+                                            setEditingColumnColor(
+                                              e.target.value
+                                            )
+                                          }
+                                          style={{
+                                            width: 28,
+                                            height: 28,
+                                            border: 'none',
+                                            background: 'none',
+                                          }}
+                                        />
+                                      </div>
+                                    ) : (
+                                      <h2
+                                        className="font-semibold text-[18px] leading-7 cursor-pointer"
+                                        style={{ color: col.color }}
+                                        onDoubleClick={() => {
+                                          setEditingColumnId(col.id);
+                                          setEditingColumnTitle(col.title);
+                                          setEditingColumnColor(col.color);
+                                        }}
+                                        title="Double click to edit"
+                                      >
+                                        {col.title}
+                                      </h2>
+                                    )}
                                     <div className="flex items-center gap-2">
                                       <TaskBoardAdminColumnDeleteIcon
                                         columnTitle={col.title}
@@ -1191,13 +1286,13 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
                   {/* Add column button (outside columns, as before) */}
                   <div className="">
                     <AddColumnDialog
-                      onAddColumn={(newTitle) => {
+                      onAddColumn={(newTitle, color) => {
                         const newId = newTitle
                           .toLowerCase()
                           .replace(/\s+/g, '');
                         setColumns([
                           ...columns,
-                          { id: newId, title: newTitle, color: '#888888' },
+                          { id: newId, title: newTitle, color }, // Use the color from dialog!
                         ]);
                       }}
                     />
@@ -1215,7 +1310,7 @@ function TaskBoardAdmin({ setSelectedTAB, selectedTAB, ProjectId, devopss }) {
             )}
           </>
         )}
-        <div className="w-full mt-3 p-2 rounded-2xl bg-white shadow-md flex flex-wrap justify-end gap-2">
+        <div className="w-full mt-3 p-2 rounded-2xl bg-white shadow-md flex flex-wrap justify-start gap-2 ">
           {devopsScores.map((score) => (
             <div
               key={score.id}

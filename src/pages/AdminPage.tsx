@@ -138,7 +138,6 @@ const AdminPage: React.FC = () => {
   const [sideopen, setsideopen] = useState(false);
   const [permanentopen, setPermanentopen] = useState(true);
   // console.log("isopen" , isOpen);
-  console.log('permanentopen', permanentopen);
 
   useEffect(() => {
     // Show sidebar when mouse moves to the left edge
@@ -541,7 +540,6 @@ const AdminPage: React.FC = () => {
   };
   const location = useLocation();
 
-  console.log(location);
   const getTotalBreakDuration = () => {
     let totalMinutes = 0;
     todayBreak.forEach((breakRecord) => {
@@ -694,8 +692,10 @@ const AdminPage: React.FC = () => {
   const isSideBarOpen = useSelector((state: RootState) => state.sideBar.isOpen);
   return (
     <>
-      <div className="min-h-screen bg-gray-100 flex overflow-hidden w-full">
-        <div className="flex flex-col">
+      <div className="min-h-screen bg-gray-100 flex  overflow-hidden w-full">
+        <div
+          className={`flex flex-col ${isSideBarOpen ? 'w-[15rem]' : 'w-[0%]'}`}
+        >
           <PanelRightClose
             className={`${permanentopen ? 'hidden' : 'display-block'} 
         box-border-2  border-gray-300 rounded-full  m-2 fixed top-2 left-[-20px] z-40  size-[50px] p-3 text-[#7e26b8] hover:bg-gray-200 shadow-lg cursor-pointer `}
@@ -706,7 +706,7 @@ const AdminPage: React.FC = () => {
           />
           <div className="min-h-screen bg-gray-100 flex">
             <motion.div
-              className="absolute top-0 left-0 min-h-full w-64 bb-white text-white shadow-lg p-4 z-20"
+              className="absolute top-0 left-0 min-h-full w-[15rem] bb-white text-white shadow-lg p-4 z-20"
               initial={{ x: '-100%' }}
               animate={{
                 x: permanentopen ? '0%' : '-100%',
@@ -719,7 +719,7 @@ const AdminPage: React.FC = () => {
               }}
             >
               <div
-                className={`bg-black w-64 p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-transform duration-300 ease-in-out
+                className={`bg-black w-[15rem] p-4 shadow-lg fixed left-0 top-0 bottom-0 transform transition-all duration-300 ease-in-out
   ${
     permanentopen ? 'translate-x-0' : '-translate-x-full'
   } lg:translate-x-0 h-screen flex flex-col`}
@@ -753,7 +753,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedTab('organization');
-                          // setShowEmployeeList(!showEmployeeList);
+                          dispatch(closeSideBar());
                           handleClose();
                         }}
                         className={`w-full text-left p-2 rounded ${
@@ -770,6 +770,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedTab('ListView');
+                          dispatch(closeSideBar());
                           setShowEmployeeList(!showEmployeeList);
                           handleClose();
                           setEmployeeListOpen(true);
@@ -792,7 +793,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedTab('EmployeesDetails');
-                          // setShowEmployeeList(!showEmployeeList);
+                          dispatch(closeSideBar());
                           handleClose();
                         }}
                         className={`w-full text-left p-2 rounded ${
@@ -809,7 +810,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedTab('Clients');
-                          // setShowEmployeeList(!showEmployeeList);
+                          dispatch(closeSideBar());
                           handleClose();
                         }}
                         className={`w-full text-left p-2 rounded ${
@@ -826,7 +827,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedTab('Projects');
-                          // setShowEmployeeList(!showEmployeeList);
+                          dispatch(closeSideBar());
                           handleClose();
                         }}
                         className={`w-full text-left p-2 rounded ${
@@ -843,6 +844,7 @@ const AdminPage: React.FC = () => {
                         onClick={() => {
                           handleClose();
                           setSelectedTab('OfficeComplaints');
+                          dispatch(closeSideBar());
                           handleOfficeComplaintsClick();
                         }}
                         className={`w-full text-left p-2 rounded ${
@@ -861,6 +863,7 @@ const AdminPage: React.FC = () => {
                         onClick={() => {
                           handleClose();
                           setSelectedTab('SoftwareComplaints');
+                          dispatch(closeSideBar());
                           handleSoftwareComplaintsClick();
                         }}
                         className={`w-full text-left p-2 rounded ${
@@ -877,6 +880,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           setSelectedTab('Holidays');
+                          dispatch(closeSideBar());
                           handleClose();
                           handleSoftwareComplaintsClick();
                         }}
@@ -895,6 +899,7 @@ const AdminPage: React.FC = () => {
                         onClick={() => {
                           handleClose();
                           setSelectedTab('leaveRequests');
+                          dispatch(closeSideBar());
                         }}
                         className={`w-full text-left p-2 rounded ${
                           selectedTab === 'leaveRequests'
@@ -914,6 +919,7 @@ const AdminPage: React.FC = () => {
                       <button
                         onClick={() => {
                           handleClose();
+                          dispatch(closeSideBar());
                           setSelectedTab('Updates');
 
                           // setIsOpen(false);
@@ -930,6 +936,7 @@ const AdminPage: React.FC = () => {
                     <Link to="dailylogs">
                       <button
                         onClick={() => {
+                          dispatch(closeSideBar());
                           handleClose();
                           setSelectedTab('DailyLogs');
                         }}
@@ -963,460 +970,472 @@ const AdminPage: React.FC = () => {
             <div></div>
           </div>
         </div>
-
-        {selectedTab === 'Employees' && (
-          <div
-            className={`flex-1 px-20 py-8 transition-all duration-300 ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <div className="flex flex-row justify-between px-10">
-              <div></div>
-              <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
-                Admin Dashboard
-              </h1>
-              <div className="flex gap-1">
-                <button
-                  className="bg-white rounded-lg px-3 py-2 hover:bg-gray-200"
-                  onClick={() => {
-                    setgraphicview(true);
-                  }}
-                >
-                  Graphic View
-                </button>
-                <button
-                  className="bg-white rounded-lg px-3 py-2 hover:bg-gray-200"
-                  onClick={() => {
-                    setgraphicview(false);
-                  }}
-                >
-                  General View
-                </button>
+        <div
+          className={`w-full ${isSideBarOpen ? 'max-w-[80%]' : 'max-w-full'}`}
+        >
+          {selectedTab === 'Employees' && (
+            <div
+              className={`flex-1 px-20 py-8 transition-all duration-300 ${
+                permanentopen && window.innerWidth >= 900 ? 'ml-0' : 'ml-0'
+              }`}
+            >
+              <div className="flex flex-row justify-between px-10">
+                <div></div>
+                <h1 className="text-3xl font-bold text-center text-gray-900 mb-4">
+                  Admin Dashboard
+                </h1>
+                <div className="flex gap-1">
+                  <button
+                    className="bg-white rounded-lg px-3 py-2 hover:bg-gray-200"
+                    onClick={() => {
+                      setgraphicview(true);
+                    }}
+                  >
+                    Graphic View
+                  </button>
+                  <button
+                    className="bg-white rounded-lg px-3 py-2 hover:bg-gray-200"
+                    onClick={() => {
+                      setgraphicview(false);
+                    }}
+                  >
+                    General View
+                  </button>
+                </div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-4 gap-6">
-              {/* Employee List Disktop*/}
-              {!isSmallScreen && (
-                <div className="col-span-1 ">
-                  <h2 className="text-xl font-semibold mb-4">Employee List</h2>
-                  <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 light-scroll">
-                    {employees.map((employee) => (
-                      <li
-                        key={employee.id}
-                        // onClick={() => handleEmployeeClick(employee.id)}
-                        className={`p-3 rounded-lg cursor-pointer transition-colors ${
-                          selectedEmployee?.id === employee.id
-                            ? 'bg-blue-100 text-blue-600 hover:bg-gray-50'
-                            : 'hover:bg-gray-100'
-                        } ${
-                          employeeStats[employee.id] < 6 ? 'text-red-600' : ''
-                        }`} // Apply red color if hours < 7
-                      >
-                        <div className="flex justify-between">
-                          {employee.full_name}
-                          <button
-                            className="hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl"
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              handleEmployeeDelete(employee.id);
-                            }}
-                          >
-                            <Trash2 />
-                          </button>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-              {selectedEmployee && graphicview && (
-                <div className="w-full max-w-5xl mx-auto">
-                  <GraphicViewComponent
-                    selectedEmployee={selectedEmployee}
-                    attendanceLogs={attendanceLogs}
-                    monthlyStats={monthlyStats}
-                    tableData={tableData}
-                  />
-                </div>
-              )}
-              {/* Employee Dashboard */}
-              {selectedEmployee && !graphicview && (
-                <div className=" col-span-12 sm:col-span-4 md:col-span-2 lg:col-span-3 max-w-5xl mx-auto">
-                  <div className="bg-gray-100 rounded-lg shadow-md p-6">
-                    <div className="flex items-center justify-between mb-6">
-                      <h2 className="text-2xl font-bold">
-                        {selectedEmployee.full_name}'s Dashboard
-                      </h2>
-                      <div>
-                        <p className="text-gray-600">
-                          {format(new Date(selectedDate), 'EEEE, MMMM d, yyyy')}
-                        </p>
-                      </div>
-                    </div>
-
-                    {loading ? (
-                      <div className="flex items-center justify-center h-64">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
-                      </div>
-                    ) : (
-                      <>
-                        {/* Today's Status */}
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold mb-3">
-                              Today's Status
-                            </h3>
-                            {attendanceLogs[0] ? (
-                              <div className="space-y-3">
-                                <div className="flex justify-between">
-                                  <span>Check-in:</span>
-                                  <span>
-                                    {format(
-                                      new Date(attendanceLogs[0].check_in),
-                                      'h:mm a'
-                                    )}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Check-out:</span>
-                                  <span>
-                                    {attendanceLogs[0].check_out
-                                      ? format(
-                                          new Date(attendanceLogs[0].check_out),
-                                          'h:mm a'
-                                        )
-                                      : 'Not checked out'}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Work Mode:</span>
-                                  <span
-                                    className={`px-2 py-1 rounded-full text-sm ${
-                                      attendanceLogs[0].work_mode === 'on_site'
-                                        ? 'bg-blue-100 text-blue-800'
-                                        : 'bg-purple-100 text-purple-800'
-                                    }`}
-                                  >
-                                    {attendanceLogs[0].work_mode}
-                                  </span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span>Duration:</span>
-                                  <span>
-                                    {calculateDuration(
-                                      attendanceLogs[0].check_in,
-                                      attendanceLogs[0].check_out
-                                    )}
-                                  </span>
-                                </div>
-                              </div>
-                            ) : (
-                              <p className="text-gray-500">
-                                No attendance record for today
-                              </p>
-                            )}
+              <div className="grid grid-cols-4 gap-6">
+                {/* Employee List Disktop*/}
+                {!isSmallScreen && (
+                  <div className="col-span-1 ">
+                    <h2 className="text-xl font-semibold mb-4">
+                      Employee List
+                    </h2>
+                    <ul className="space-y-2 max-h-[500px] overflow-y-auto rounded-lg pr-2.5 light-scroll">
+                      {employees.map((employee) => (
+                        <li
+                          key={employee.id}
+                          // onClick={() => handleEmployeeClick(employee.id)}
+                          className={`p-3 rounded-lg cursor-pointer transition-colors ${
+                            selectedEmployee?.id === employee.id
+                              ? 'bg-blue-100 text-blue-600 hover:bg-gray-50'
+                              : 'hover:bg-gray-100'
+                          } ${
+                            employeeStats[employee.id] < 6 ? 'text-red-600' : ''
+                          }`} // Apply red color if hours < 7
+                        >
+                          <div className="flex justify-between">
+                            {employee.full_name}
+                            <button
+                              className="hover:bg-gray-300 transition-all ease-in-out px-3 py-1 rounded-xl"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleEmployeeDelete(employee.id);
+                              }}
+                            >
+                              <Trash2 />
+                            </button>
                           </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {selectedEmployee && graphicview && (
+                  <div className="w-full max-w-5xl mx-auto">
+                    <GraphicViewComponent
+                      selectedEmployee={selectedEmployee}
+                      attendanceLogs={attendanceLogs}
+                      monthlyStats={monthlyStats}
+                      tableData={tableData}
+                    />
+                  </div>
+                )}
+                {/* Employee Dashboard */}
+                {selectedEmployee && !graphicview && (
+                  <div className=" col-span-12 sm:col-span-4 md:col-span-2 lg:col-span-3 max-w-5xl mx-auto">
+                    <div className="bg-gray-100 rounded-lg shadow-md p-6">
+                      <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-2xl font-bold">
+                          {selectedEmployee.full_name}'s Dashboard
+                        </h2>
+                        <div>
+                          <p className="text-gray-600">
+                            {format(
+                              new Date(selectedDate),
+                              'EEEE, MMMM d, yyyy'
+                            )}
+                          </p>
+                        </div>
+                      </div>
 
-                          {/* Break Summary */}
-                          <div className="bg-gray-50 rounded-lg p-4">
-                            <h3 className="text-lg font-semibold mb-3">
-                              Break Records fjdkfjod
-                            </h3>
-                            {todayBreak.length > 0 ? (
-                              todayBreak.map((breakItem, index) => (
-                                <div key={index} className="space-y-3">
+                      {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                        </div>
+                      ) : (
+                        <>
+                          {/* Today's Status */}
+                          <div className="grid grid-cols-1 lg:grid-cols-2 gap-5 mb-6">
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <h3 className="text-lg font-semibold mb-3">
+                                Today's Status
+                              </h3>
+                              {attendanceLogs[0] ? (
+                                <div className="space-y-3">
                                   <div className="flex justify-between">
-                                    <span>Start:</span>
+                                    <span>Check-in:</span>
                                     <span>
                                       {format(
-                                        new Date(breakItem.start_time),
-                                        'hh:mm a'
+                                        new Date(attendanceLogs[0].check_in),
+                                        'h:mm a'
                                       )}
                                     </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span>End:</span>
+                                    <span>Check-out:</span>
                                     <span>
-                                      {breakItem.end_time
+                                      {attendanceLogs[0].check_out
                                         ? format(
-                                            new Date(breakItem.end_time),
-                                            'hh:mm a'
+                                            new Date(
+                                              attendanceLogs[0].check_out
+                                            ),
+                                            'h:mm a'
                                           )
-                                        : 'Ongoing'}
+                                        : 'Not checked out'}
                                     </span>
                                   </div>
                                   <div className="flex justify-between">
-                                    <span>Status:</span>
-                                    <span>{breakItem.status || 'N/A'}</span>
+                                    <span>Work Mode:</span>
+                                    <span
+                                      className={`px-2 py-1 rounded-full text-sm ${
+                                        attendanceLogs[0].work_mode ===
+                                        'on_site'
+                                          ? 'bg-blue-100 text-blue-800'
+                                          : 'bg-purple-100 text-purple-800'
+                                      }`}
+                                    >
+                                      {attendanceLogs[0].work_mode}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span>Duration:</span>
+                                    <span>
+                                      {calculateDuration(
+                                        attendanceLogs[0].check_in,
+                                        attendanceLogs[0].check_out
+                                      )}
+                                    </span>
                                   </div>
                                 </div>
-                              ))
-                            ) : (
-                              <p className="text-gray-500">
-                                No break records for today
-                              </p>
-                            )}
-                          </div>
-                        </div>
-
-                        {/* Optional: Additional Tasks or Overview */}
-                        <div className="mt-6">
-                          <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
-                            <div className="flex items-center mb-6">
-                              <BarChart className="w-6 h-6 text-blue-600 mr-2" />
-                              <h2 className="text-xl font-semibold">
-                                Monthly Overview -{' '}
-                                {format(new Date(), 'MMMM yyyy')}
-                              </h2>
+                              ) : (
+                                <p className="text-gray-500">
+                                  No attendance record for today
+                                </p>
+                              )}
                             </div>
 
-                            {monthlyStats ? (
-                              <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                  <h3 className="text-sm font-medium text-gray-500 mb-3">
-                                    Attendance Summary
-                                  </h3>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Expected Working Days:{' '}
-                                      </span>
-                                      <span className="font-medium">
-                                        {' '}
-                                        {monthlyStats.expectedWorkingDays}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Days Attended:
-                                      </span>
-                                      <span className="font-medium">
-                                        {monthlyStats.totalWorkingDays}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Present Days:
-                                      </span>
-                                      <span className="font-medium text-green-600">
-                                        {monthlyStats.presentDays}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Late Days:
-                                      </span>
-                                      <span className="font-medium text-yellow-600">
-                                        {monthlyStats.lateDays}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                      <span>Absentees:</span>
-                                      <span className="text-red-600">
-                                        {absentees || 0}
-                                      </span>
-                                    </div>
-                                    <div className="flex justify-between text-gray-600">
-                                      <span>Leaves:</span>
-                                      <span className="text-green-600">
-                                        {leaves || 0}
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                  <h3 className="text-sm font-medium text-gray-500 mb-3">
-                                    Work Mode Distribution
-                                  </h3>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        On-site Days:
-                                      </span>
-                                      <span className="font-medium text-blue-600">
-                                        {monthlyStats.onSiteDays}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Remote Days:
-                                      </span>
-                                      <span className="font-medium text-purple-600">
-                                        {monthlyStats.remoteDays}
-                                      </span>
-                                    </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Attendance Rate:
-                                      </span>
-                                      <span className="font-medium">
-                                        {(
-                                          (monthlyStats.totalWorkingDays /
-                                            monthlyStats.expectedWorkingDays) *
-                                          100
-                                        ).toFixed(1)}
-                                        %
-                                      </span>
-                                    </div>
-                                  </div>
-                                </div>
-
-                                <div className="bg-gray-50 rounded-lg p-4">
-                                  <h3 className="text-sm font-medium text-gray-500 mb-3">
-                                    Work Hours
-                                  </h3>
-                                  <div className="space-y-3">
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Average Daily Hours:
-                                      </span>
-                                      <span className="font-medium">
-                                        {monthlyStats.averageWorkHours.toFixed(
-                                          1
+                            {/* Break Summary */}
+                            <div className="bg-gray-50 rounded-lg p-4">
+                              <h3 className="text-lg font-semibold mb-3">
+                                Break Records fjdkfjod
+                              </h3>
+                              {todayBreak.length > 0 ? (
+                                todayBreak.map((breakItem, index) => (
+                                  <div key={index} className="space-y-3">
+                                    <div className="flex justify-between">
+                                      <span>Start:</span>
+                                      <span>
+                                        {format(
+                                          new Date(breakItem.start_time),
+                                          'hh:mm a'
                                         )}
-                                        h
                                       </span>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Total Hours:
-                                      </span>
-                                      <span className="font-medium">
-                                        {monthlyStats.totalHours.toFixed(1)}h
+                                    <div className="flex justify-between">
+                                      <span>End:</span>
+                                      <span>
+                                        {breakItem.end_time
+                                          ? format(
+                                              new Date(breakItem.end_time),
+                                              'hh:mm a'
+                                            )
+                                          : 'Ongoing'}
                                       </span>
                                     </div>
-                                    <div className="flex items-center justify-between">
-                                      <span className="text-gray-600">
-                                        Expected Hours:
-                                      </span>
-                                      <span className="font-medium">
-                                        {7 * monthlyStats.expectedWorkingDays}h
-                                      </span>
+                                    <div className="flex justify-between">
+                                      <span>Status:</span>
+                                      <span>{breakItem.status || 'N/A'}</span>
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <p className="text-gray-500">
+                                  No break records for today
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Optional: Additional Tasks or Overview */}
+                          <div className="mt-6">
+                            <div className="lg:col-span-3 bg-white rounded-lg shadow-md p-6">
+                              <div className="flex items-center mb-6">
+                                <BarChart className="w-6 h-6 text-blue-600 mr-2" />
+                                <h2 className="text-xl font-semibold">
+                                  Monthly Overview -{' '}
+                                  {format(new Date(), 'MMMM yyyy')}
+                                </h2>
+                              </div>
+
+                              {monthlyStats ? (
+                                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                                  <div className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="text-sm font-medium text-gray-500 mb-3">
+                                      Attendance Summary
+                                    </h3>
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Expected Working Days:{' '}
+                                        </span>
+                                        <span className="font-medium">
+                                          {' '}
+                                          {monthlyStats.expectedWorkingDays}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Days Attended:
+                                        </span>
+                                        <span className="font-medium">
+                                          {monthlyStats.totalWorkingDays}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Present Days:
+                                        </span>
+                                        <span className="font-medium text-green-600">
+                                          {monthlyStats.presentDays}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Late Days:
+                                        </span>
+                                        <span className="font-medium text-yellow-600">
+                                          {monthlyStats.lateDays}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between text-gray-600">
+                                        <span>Absentees:</span>
+                                        <span className="text-red-600">
+                                          {absentees || 0}
+                                        </span>
+                                      </div>
+                                      <div className="flex justify-between text-gray-600">
+                                        <span>Leaves:</span>
+                                        <span className="text-green-600">
+                                          {leaves || 0}
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="text-sm font-medium text-gray-500 mb-3">
+                                      Work Mode Distribution
+                                    </h3>
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          On-site Days:
+                                        </span>
+                                        <span className="font-medium text-blue-600">
+                                          {monthlyStats.onSiteDays}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Remote Days:
+                                        </span>
+                                        <span className="font-medium text-purple-600">
+                                          {monthlyStats.remoteDays}
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Attendance Rate:
+                                        </span>
+                                        <span className="font-medium">
+                                          {(
+                                            (monthlyStats.totalWorkingDays /
+                                              monthlyStats.expectedWorkingDays) *
+                                            100
+                                          ).toFixed(1)}
+                                          %
+                                        </span>
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <div className="bg-gray-50 rounded-lg p-4">
+                                    <h3 className="text-sm font-medium text-gray-500 mb-3">
+                                      Work Hours
+                                    </h3>
+                                    <div className="space-y-3">
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Average Daily Hours:
+                                        </span>
+                                        <span className="font-medium">
+                                          {monthlyStats.averageWorkHours.toFixed(
+                                            1
+                                          )}
+                                          h
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Total Hours:
+                                        </span>
+                                        <span className="font-medium">
+                                          {monthlyStats.totalHours.toFixed(1)}h
+                                        </span>
+                                      </div>
+                                      <div className="flex items-center justify-between">
+                                        <span className="text-gray-600">
+                                          Expected Hours:
+                                        </span>
+                                        <span className="font-medium">
+                                          {7 * monthlyStats.expectedWorkingDays}
+                                          h
+                                        </span>
+                                      </div>
                                     </div>
                                   </div>
                                 </div>
-                              </div>
-                            ) : (
-                              <div className="text-center py-8 text-gray-500">
-                                No attendance records found for this month
-                              </div>
-                            )}
+                              ) : (
+                                <div className="text-center py-8 text-gray-500">
+                                  No attendance records found for this month
+                                </div>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                        <div className="mt-5">
-                          <AbsenteeComponentAdmin userID={userID} />
-                        </div>
-                      </>
-                    )}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        <Chatlayout>
-          <Chatbutton></Chatbutton>
-        </Chatlayout>
-
-        {location.pathname.includes('/admin/OfficeComplaints') && (
-          <div
-            className={`flex-1 ${
-              isSideBarOpen ? 'min-w-[80%]' : 'min-w-full'
-            }  sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${
-              permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-            }`}
-          >
-            <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
-              Admin Dashboard
-            </h1>
-
-            <div className="bg-white shadow-lg  rounded-2xl sm:p-6 p-2">
-              <h2 className="text-xl font-semibold text-gray-800 mb-4">
-                Office Complaints
-              </h2>
-
-              {loading ? (
-                <Loader />
-              ) : (
-                <>
-                  {officeComplaints.length === 0 ? (
-                    <p className="text-gray-600 text-center">
-                      No complaints found.
-                    </p>
-                  ) : (
-                    <div className="grid md:grid-cols-2 gap-4 w-full ">
-                      {officeComplaints.map((officeComplaints, index) => (
-                        <div
-                          key={index}
-                          className={`bg-gray-100 p-4 rounded-lg shadow ${
-                            isSideBarOpen ? 'min-w-full mx-auto' : 'w-full'
-                          }`}
-                        >
-                          {/* <h3 className="text-lg font-medium text-gray-900">{officeComplaints.title}</h3> */}
-                          <p className="text-15px text-gray-700 mt-1">
-                            {officeComplaints.complaint_text}
-                          </p>
-                          <p className="text-17px text-gray-900 mt-3">
-                            By :{' '}
-                            {officeComplaints.users?.full_name || 'Unknown'}
-                          </p>
-                          <p className="text-17px text-gray-900 mt-0.6">
-                            {' '}
-                            {new Date(
-                              officeComplaints.created_at
-                            ).toLocaleString('en-US', {
-                              year: 'numeric',
-                              month: 'short', // "Feb"
-                              day: 'numeric',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                              hour12: true, // AM/PM format
-                            })}
-                          </p>
-                          <span
-                            className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${
-                              officeComplaints.status === 'Pending'
-                                ? 'bg-yellow-300 text-yellow-800'
-                                : 'bg-green-300 text-green-800'
-                            }`}
-                          >
-                            {officeComplaints.status}
-                          </span>
-                        </div>
-                      ))}
+                          <div className="mt-5">
+                            <AbsenteeComponentAdmin userID={userID} />
+                          </div>
+                        </>
+                      )}
                     </div>
-                  )}
-                </>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        )}
-        <div className="">
-          {location.pathname.includes('/admin/leaverequest') && (
+          )}
+
+          <Chatlayout>
+            <Chatbutton></Chatbutton>
+          </Chatlayout>
+
+          {location.pathname.includes('/admin/OfficeComplaints') && (
             <div
-              className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2 w-full ${
-                permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
+              className={`flex-1 ${
+                isSideBarOpen ? 'min-w-[80%]' : 'min-w-full'
+              }  sm:px-10 px-2 py-8 transition-all duration-300 ease-in-out ${
+                permanentopen && window.innerWidth >= 900 ? 'ml-0' : 'ml-0'
               }`}
             >
               <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
                 Admin Dashboard
               </h1>
 
-              <div className="bg-white rounded-2xl sm:p-6 p-2 shadow-lg ">
-                <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
+              <div className="bg-white shadow-lg  rounded-2xl sm:p-6 p-2">
+                <h2 className="text-xl font-semibold text-gray-800 mb-4">
+                  Office Complaints
+                </h2>
+
+                {loading ? (
+                  <Loader />
+                ) : (
+                  <>
+                    {officeComplaints.length === 0 ? (
+                      <p className="text-gray-600 text-center">
+                        No complaints found.
+                      </p>
+                    ) : (
+                      <div className="grid md:grid-cols-2 gap-4 w-full ">
+                        {officeComplaints.map((officeComplaints, index) => (
+                          <div
+                            key={index}
+                            className={`bg-gray-100 p-4 rounded-lg shadow ${
+                              isSideBarOpen ? 'min-w-full mx-auto' : 'w-full'
+                            }`}
+                          >
+                            {/* <h3 className="text-lg font-medium text-gray-900">{officeComplaints.title}</h3> */}
+                            <p className="text-15px text-gray-700 mt-1">
+                              {officeComplaints.complaint_text}
+                            </p>
+                            <p className="text-17px text-gray-900 mt-3">
+                              By :{' '}
+                              {officeComplaints.users?.full_name || 'Unknown'}
+                            </p>
+                            <p className="text-17px text-gray-900 mt-0.6">
+                              {' '}
+                              {new Date(
+                                officeComplaints.created_at
+                              ).toLocaleString('en-US', {
+                                year: 'numeric',
+                                month: 'short', // "Feb"
+                                day: 'numeric',
+                                hour: '2-digit',
+                                minute: '2-digit',
+                                hour12: true, // AM/PM format
+                              })}
+                            </p>
+                            <span
+                              className={`inline-block mt-2 px-3 py-1 text-sm font-medium rounded ${
+                                officeComplaints.status === 'Pending'
+                                  ? 'bg-yellow-300 text-yellow-800'
+                                  : 'bg-green-300 text-green-800'
+                              }`}
+                            >
+                              {officeComplaints.status}
+                            </span>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
             </div>
           )}
-        </div>
-        <div
-          className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
-            permanentopen && window.innerWidth >= 900 ? 'ml-64' : 'ml-0'
-          }`}
-        >
-          <Outlet />
+          <div className="">
+            {location.pathname.includes('/admin/leaverequest') && (
+              <div
+                className={`flex-1 sm:px-10 py-8 transition-all ease-in-out duration-300 px-2 w-full ${
+                  permanentopen && window.innerWidth >= 900 ? 'ml-0' : 'ml-0'
+                }`}
+              >
+                <h1 className="text-3xl font-bold text-center text-gray-900 mb-6">
+                  Admin Dashboard
+                </h1>
+
+                <div className="bg-white rounded-2xl sm:p-6 p-2 shadow-lg ">
+                  <LeaveRequestsAdmin fetchPendingCount={fetchPendingCount} />
+                </div>
+              </div>
+            )}
+          </div>
+          <div
+            className={`flex-1 sm:py-10 sm:px-10 transition-all duration-300 ${
+              permanentopen && window.innerWidth >= 900 ? 'ml-0' : 'ml-0'
+            }`}
+          >
+            <Outlet />
+          </div>
         </div>
       </div>
     </>

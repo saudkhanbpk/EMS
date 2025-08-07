@@ -10,7 +10,7 @@ import {
   Menu,
   X,
   Shield,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-react';
 
 interface SuperAdminSidebarProps {
@@ -43,20 +43,20 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
       id: 'dashboard',
       label: 'Dashboard',
       icon: LayoutDashboard,
-      path: '/superadmin/dashboard'
+      path: '/superadmin/dashboard',
     },
     {
       id: 'organizations',
       label: 'Organizations',
       icon: Building2,
-      path: '/superadmin/organizations'
+      path: '/superadmin/organizations',
     },
     {
       id: 'softwarecomplaint',
       label: 'Software Complaints',
       icon: AlertCircle,
-      path: '/superadmin/softwarecomplaint'
-    }
+      path: '/superadmin/softwarecomplaint',
+    },
   ];
 
   const toggleSidebar = () => {
@@ -83,8 +83,9 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
 
       {/* Sidebar */}
       <div
-        className={`fixed left-0 top-0 h-full bg-white shadow-lg z-40 transition-transform duration-300 ease-in-out ${isOpen ? 'translate-x-0' : '-translate-x-full'
-          } md:translate-x-0 w-64`}
+        className={`fixed left-0 top-0 h-full bg-white shadow-lg z-40 transition-transform duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : '-translate-x-full'
+        } md:translate-x-0 w-64`}
       >
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
@@ -130,10 +131,11 @@ const SuperAdminSidebar: React.FC<SuperAdminSidebarProps> = ({ activeTab }) => {
                       navigate(item.path);
                       setIsOpen(false); // Close mobile menu
                     }}
-                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${isActive
-                      ? 'bg-[#9A00FF] text-white'
-                      : 'text-gray-700 hover:bg-gray-100'
-                      }`}
+                    className={`w-full flex items-center space-x-3 px-4 py-3 rounded-lg transition-colors duration-200 ${
+                      isActive
+                        ? 'bg-[#9A00FF] text-white'
+                        : 'text-gray-700 hover:bg-gray-100'
+                    }`}
                   >
                     <Icon size={20} />
                     <span className="font-medium">{item.label}</span>
