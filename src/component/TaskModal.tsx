@@ -189,7 +189,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
 
       const taskList = selectedTaskObjects.map(task => `- ${task.title}`).join('\n');
       const content = `I am working on ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''} of ${selectedProject.title}.`;
-      setTasks(content);
+      if (tasks.trim() === '') {
+       setTasks(content);
+      }
     }
   }, [selectedTasks, selectedProject, projectTasks]);
 
@@ -310,7 +312,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
       {/* Modal */}
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl z-10 relative animate-fadeIn overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] z-10 relative animate-fadeIn overflow-hidden flex flex-col"
         style={{
           animation: 'slideUp 0.3s ease-out',
         }}
@@ -330,7 +332,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Project Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -407,39 +409,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                         <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                         Loading tasks...
                       </div>
-                    ) : projectTasks.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">No pending tasks found</div>
                     ) : (
                       <>
-                        {projectTasks.map(task => (
-                          <button
-                            key={task.id}
-                            onClick={() => toggleTaskSelection(task.id)}
-                            className={`w-full px-4 py-3 text-left transition-all flex items-center justify-between group ${selectedTasks.includes(task.id)
-                              ? 'bg-blue-50 hover:bg-blue-100'
-                              : 'hover:bg-gray-50'
-                              }`}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className={`font-medium ${selectedTasks.includes(task.id) ? 'text-blue-900' : 'text-gray-700'}`}>
-                                {task.title}
-                              </div>
-                              {task.description && (
-                                <div className="text-sm text-gray-500 truncate mt-0.5">{task.description}</div>
-                              )}
-                            </div>
-                            <div className={`ml-3 p-1 rounded-full transition-all ${selectedTasks.includes(task.id)
-                              ? 'bg-blue-600'
-                              : 'bg-gray-200 group-hover:bg-gray-300'
-                              }`}>
-                              <Check className={`w-3.5 h-3.5 ${selectedTasks.includes(task.id)
-                                ? 'text-white'
-                                : 'text-transparent'
-                                }`} />
-                            </div>
-                          </button>
-                        ))}
-                        <div className="border-t border-gray-100 mt-1">
+                        <div className="border-b border-gray-100 mb-1">
                           <button
                             onClick={() => {
                               setShowCreateTask(true);
@@ -453,6 +425,38 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                             <span className="font-medium">Create New Task</span>
                           </button>
                         </div>
+                        {projectTasks.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">No pending tasks found</div>
+                        ) : (
+                          projectTasks.map(task => (
+                            <button
+                              key={task.id}
+                              onClick={() => toggleTaskSelection(task.id)}
+                              className={`w-full px-4 py-3 text-left transition-all flex items-center justify-between group ${selectedTasks.includes(task.id)
+                                ? 'bg-blue-50 hover:bg-blue-100'
+                                : 'hover:bg-gray-50'
+                                }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className={`font-medium ${selectedTasks.includes(task.id) ? 'text-blue-900' : 'text-gray-700'}`}>
+                                  {task.title}
+                                </div>
+                                {task.description && (
+                                  <div className="text-sm text-gray-500 truncate mt-0.5">{task.description}</div>
+                                )}
+                              </div>
+                              <div className={`ml-3 p-1 rounded-full transition-all ${selectedTasks.includes(task.id)
+                                ? 'bg-blue-600'
+                                : 'bg-gray-200 group-hover:bg-gray-300'
+                                }`}>
+                                <Check className={`w-3.5 h-3.5 ${selectedTasks.includes(task.id)
+                                  ? 'text-white'
+                                  : 'text-transparent'
+                                  }`} />
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </>
                     )}
                   </div>

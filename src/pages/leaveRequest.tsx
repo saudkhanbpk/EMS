@@ -4,6 +4,11 @@
 // ...existing code...
 // ...existing code...
 
+import { useUser } from "@/contexts/UserContext";
+import { supabase } from "@/lib/supabase";
+import { ChevronLeft, ChevronRight } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+
 interface LeaveRequestProps {
   setActiveComponent: React.Dispatch<React.SetStateAction<string>>;
 }

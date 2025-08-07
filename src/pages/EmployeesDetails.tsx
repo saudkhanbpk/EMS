@@ -76,10 +76,7 @@ const EmployeesDetails = () => {
   const [showLogModal, setShowLogModal] = useState(false);
   const [modalLogText, setModalLogText] = useState('');
 
-  // Add state to track expanded daily logs
-  const [expandedLogs, setExpandedLogs] = useState<{ [key: string]: boolean }>(
-    {}
-  );
+
 
   const { openTaskBoard } = useContext(AttendanceContext);
   const formRef = useRef<HTMLFormElement>(null);
@@ -133,30 +130,30 @@ const EmployeesDetails = () => {
     profile_image: null,
   });
 
-  // Function to toggle expanded state for daily log
-  const toggleLogExpanded = (id: string, e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent row click event
-    setExpandedLogs((prev) => ({
-      ...prev,
-      [id]: !prev[id],
-    }));
+  // Function to handle opening daily log modal
+  const handleLogClick = (logText: string) => {
+    setModalLogText(logText);
+    setShowLogModal(true);
   };
 
-  // Function to get daily log display text
-  const getLogDisplayText = (log: string | null, isExpanded: boolean) => {
-    if (!log) return 'No log';
-
-    // Split log into lines
-    const lines = log.split('\n');
-
-    // If expanded or fewer than 2 lines, show all
-    if (isExpanded || lines.length <= 2) {
-      return log;
-    }
-
-    // Otherwise show first 2 lines
-    return lines.slice(0, 2).join('\n') + '...';
+  // Function to handle profile navigation
+  const handleProfileClick = (employee: Employee, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEmployee(employee);
+    setEmployeeId(employee.id);
+    setEmployeeView('detailview');
   };
+
+  // Function to handle opening check-out message modal
+  const handleCheckOutClick = (checkOutMessage: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setModalLogText(checkOutMessage || "didn't update tasks");
+    setShowLogModal(true);
+  };
+
+
+
+
 
   const [step, setStep] = useState(1);
   const [isCreatingEmployee, setIsCreatingEmployee] = useState(false);
@@ -771,23 +768,31 @@ const EmployeesDetails = () => {
 
   // Log Modal Component
   const LogModal = () => (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm">
-      <div className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+      onClick={() => setShowLogModal(false)}
+    >
+      <div
+        className="bg-white rounded-xl shadow-2xl w-full max-w-lg p-6"
+        onClick={(e) => e.stopPropagation()}
+      >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-sm font-bold">Daily Log</h2>
+          <h2 className="text-lg font-bold text-gray-800">Daily Log</h2>
           <button
             onClick={() => setShowLogModal(false)}
-            className="text-gray-400 hover:text-gray-600"
+            className="text-gray-400 hover:text-gray-600 p-1 hover:bg-gray-100 rounded-lg transition-colors"
           >
             <FiX className="w-5 h-5" />
           </button>
         </div>
-        <div className="text-gray-700 whitespace-pre-wrap max-h-[60vh] overflow-y-auto">
+        <div className="text-gray-700 whitespace-pre-wrap max-h-[60vh] overflow-y-auto p-4 bg-gray-50 rounded-lg border">
           {modalLogText}
         </div>
       </div>
     </div>
   );
+
+
 
   // Inline StarDisplay component for ratings
   const StarDisplay: React.FC<{
@@ -1354,7 +1359,7 @@ const EmployeesDetails = () => {
                                 >
                                   Workload
                                 </th>
-                                <th className=" py-3 text-left text-[12px]   font-medium text-gray-500 uppercase tracking-wider">
+                                <th className="py-3 text-left text-[12px] font-medium text-gray-500 uppercase tracking-wider">
                                   Daily Log
                                 </th>
                                 <th
@@ -1461,8 +1466,6 @@ const EmployeesDetails = () => {
                                       .includes(searchQuery.toLowerCase())
                                 )
                                 .map((entry) => {
-                                  const isLogExpanded =
-                                    expandedLogs[entry.id] || false;
                                   return (
                                     <tr
                                       key={entry.id}
@@ -1552,44 +1555,17 @@ const EmployeesDetails = () => {
                                         </span>
                                       </td>
                                       <td className="px-4 lg:px-1 py-4 text-[8px] text-gray-700 max-w-xs">
-                                        {entry.daily_log ? (
-                                          <div>
-                                            <div
-                                              className={`${
-                                                isLogExpanded
-                                                  ? ''
-                                                  : 'line-clamp-2'
-                                              } text-gray-700`}
-                                            >
-                                              {entry.daily_log}
-                                            </div>
-                                            {entry.daily_log.split('\n')
-                                              .length > 2 && (
-                                              <button
-                                                onClick={(e) =>
-                                                  toggleLogExpanded(entry.id, e)
-                                                }
-                                                className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center"
-                                              >
-                                                {isLogExpanded ? (
-                                                  <>
-                                                    <FiChevronUp className="mr-1" />
-                                                    Show less
-                                                  </>
-                                                ) : (
-                                                  <>
-                                                    <FiChevronDown className="mr-1" />
-                                                    Show more
-                                                  </>
-                                                )}
-                                              </button>
-                                            )}
+                                        <div
+                                          className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-all"
+                                          onClick={(e) => handleCheckOutClick(entry.daily_log || "didn't update tasks", e)}
+                                          title="Click to view full message"
+                                        >
+                                          <div className="text-gray-700 truncate">
+                                            {entry.daily_log && entry.daily_log.length > 50
+                                              ? entry.daily_log.substring(0, 50) + '...'
+                                              : entry.daily_log || "didn't update tasks"}
                                           </div>
-                                        ) : (
-                                          <span className="text-xs text-gray-400">
-                                            No log
-                                          </span>
-                                        )}
+                                        </div>
                                       </td>
                                       <td className="px-4 lg:px-4 py-4 whitespace-nowrap text-center">
                                         <StarDisplay
@@ -1647,7 +1623,6 @@ const EmployeesDetails = () => {
                               .includes(searchQuery.toLowerCase())
                         )
                         .map((entry) => {
-                          const isLogExpanded = expandedLogs[entry.id] || false;
                           return (
                             <div
                               key={entry.id}
@@ -1772,42 +1747,17 @@ const EmployeesDetails = () => {
                                     <p className="text-gray-500 font-medium">
                                       Daily Log
                                     </p>
-                                    {entry.daily_log ? (
-                                      <div>
-                                        <div
-                                          className={`${
-                                            isLogExpanded ? '' : 'line-clamp-2'
-                                          } text-gray-700 text-xs`}
-                                        >
-                                          {entry.daily_log}
-                                        </div>
-                                        {entry.daily_log.split('\n').length >
-                                          2 && (
-                                          <button
-                                            onClick={(e) =>
-                                              toggleLogExpanded(entry.id, e)
-                                            }
-                                            className="mt-1 text-xs text-blue-600 hover:text-blue-800 flex items-center"
-                                          >
-                                            {isLogExpanded ? (
-                                              <>
-                                                <FiChevronUp className="mr-1" />
-                                                Show less
-                                              </>
-                                            ) : (
-                                              <>
-                                                <FiChevronDown className="mr-1" />
-                                                Show more
-                                              </>
-                                            )}
-                                          </button>
-                                        )}
+                                    <div
+                                      className="cursor-pointer hover:bg-gray-50 p-2 rounded-lg transition-all"
+                                      onClick={(e) => handleCheckOutClick(entry.daily_log || "didn't update tasks", e)}
+                                      title="Click to view full message"
+                                    >
+                                      <div className="text-gray-700 text-xs truncate">
+                                        {entry.daily_log && entry.daily_log.length > 50
+                                          ? entry.daily_log.substring(0, 50) + '...'
+                                          : entry.daily_log || "didn't update tasks"}
                                       </div>
-                                    ) : (
-                                      <span className="text-xs text-gray-400">
-                                        No log
-                                      </span>
-                                    )}
+                                    </div>
                                   </div>
                                   <div className="space-y-0.5">
                                     <p className="text-gray-500 font-medium">
