@@ -532,7 +532,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
             </div>
           )}
 
-          {/* Task Description */}
+          {/* Task Description   */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Task Summary
