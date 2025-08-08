@@ -39,9 +39,38 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [isEditingTaskSummary, setIsEditingTaskSummary] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Function to handle task summary edit mode
+  const handleTaskSummaryClick = () => {
+    setIsEditingTaskSummary(true);
+    // Focus the textarea after state update
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
+      }
+    }, 0);
+  };
+
+  // Function to handle task summary blur (exit edit mode)
+  const handleTaskSummaryBlur = () => {
+    setIsEditingTaskSummary(false);
+  };
+
+  // Function to handle Enter key in task summary
+  const handleTaskSummaryKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      setIsEditingTaskSummary(false);
+      inputRef.current?.blur();
+    }
+    // Call the original handleKeyDown for Ctrl+Enter functionality
+    handleKeyDown(e);
+  };
 
   // Fetch user's projects
   useEffect(() => {
@@ -174,6 +203,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
       setShowCreateTask(false);
       setNewTaskTitle('');
       setNewTaskDescription('');
+      setIsEditingTaskSummary(false); // Reset edit mode when modal opens
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
@@ -532,26 +562,52 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
             </div>
           )}
 
-          {/* Task Description   */}
+          {/* Task Summary */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Task Summary
+              {!isEditingTaskSummary && (
+                <span className="text-xs text-gray-500 ml-2">(Click to edit)</span>
+              )}
             </label>
             <div className="relative">
-              <textarea
-                ref={inputRef}
-                value={tasks}
-                onChange={(e) => setTasks(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none bg-gray-50"
-                rows={5}
-                placeholder="Your task summary will appear here..."
-                disabled
-                style={{ lineHeight: '1.6' }}
-              />
-              <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
-                Auto-generated
-              </div>
+              {!isEditingTaskSummary ? (
+                // Display mode - clickable text
+                <div
+                  onClick={handleTaskSummaryClick}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all min-h-[120px] flex items-start"
+                  style={{ lineHeight: '1.6' }}
+                >
+                  <div className="flex-1">
+                    {tasks ? (
+                      <div className="text-gray-700 whitespace-pre-wrap">{tasks}</div>
+                    ) : (
+                      <div className="text-gray-400">Your task summary will appear here...</div>
+                    )}
+                  </div>
+                  <div className="ml-2 text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded opacity-70">
+                    Click to edit
+                  </div>
+                </div>
+              ) : (
+                // Edit mode - textarea
+                <textarea
+                  ref={inputRef}
+                  value={tasks}
+                  onChange={(e) => setTasks(e.target.value)}
+                  onKeyDown={handleTaskSummaryKeyDown}
+                  onBlur={handleTaskSummaryBlur}
+                  className="w-full p-4 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all resize-none bg-white"
+                  rows={5}
+                  placeholder="Enter your task summary here..."
+                  style={{ lineHeight: '1.6' }}
+                />
+              )}
+              {isEditingTaskSummary && (
+                <div className="absolute bottom-3 right-3 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm">
+                  Press Enter to save, Shift+Enter for new line
+                </div>
+              )}
             </div>
           </div>
 
