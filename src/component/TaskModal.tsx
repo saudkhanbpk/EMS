@@ -39,9 +39,38 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskDescription, setNewTaskDescription] = useState('');
   const [isCreatingTask, setIsCreatingTask] = useState(false);
+  const [isEditingTaskSummary, setIsEditingTaskSummary] = useState(false);
 
   const modalRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  // Function to handle task summary edit mode
+  const handleTaskSummaryClick = () => {
+    setIsEditingTaskSummary(true);
+    // Focus the textarea after state update
+    setTimeout(() => {
+      if (inputRef.current) {
+        inputRef.current.focus();
+        inputRef.current.setSelectionRange(inputRef.current.value.length, inputRef.current.value.length);
+      }
+    }, 0);
+  };
+
+  // Function to handle task summary blur (exit edit mode)
+  const handleTaskSummaryBlur = () => {
+    setIsEditingTaskSummary(false);
+  };
+
+  // Function to handle Enter key in task summary
+  const handleTaskSummaryKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      setIsEditingTaskSummary(false);
+      inputRef.current?.blur();
+    }
+    // Call the original handleKeyDown for Ctrl+Enter functionality
+    handleKeyDown(e);
+  };
 
   // Fetch user's projects
   useEffect(() => {
@@ -174,6 +203,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
       setShowCreateTask(false);
       setNewTaskTitle('');
       setNewTaskDescription('');
+      setIsEditingTaskSummary(false); // Reset edit mode when modal opens
       setTimeout(() => {
         inputRef.current?.focus();
       }, 100);
@@ -189,7 +219,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
 
       const taskList = selectedTaskObjects.map(task => `- ${task.title}`).join('\n');
       const content = `I am working on ${selectedTasks.length} task${selectedTasks.length > 1 ? 's' : ''} of ${selectedProject.title}.`;
-      setTasks(content);
+      if (tasks.trim() === '') {
+       setTasks(content);
+      }
     }
   }, [selectedTasks, selectedProject, projectTasks]);
 
@@ -310,7 +342,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
       {/* Modal */}
       <div
         ref={modalRef}
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl z-10 relative animate-fadeIn overflow-hidden"
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] z-10 relative animate-fadeIn overflow-hidden flex flex-col"
         style={{
           animation: 'slideUp 0.3s ease-out',
         }}
@@ -330,7 +362,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
         </div>
 
         {/* Body */}
-        <div className="p-6 space-y-6">
+        <div className="p-6 space-y-6 overflow-y-auto flex-1">
           {/* Project Selection */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
@@ -407,39 +439,9 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                         <div className="w-5 h-5 border-2 border-gray-300 border-t-transparent rounded-full animate-spin mx-auto mb-2"></div>
                         Loading tasks...
                       </div>
-                    ) : projectTasks.length === 0 ? (
-                      <div className="p-4 text-center text-gray-500">No pending tasks found</div>
                     ) : (
                       <>
-                        {projectTasks.map(task => (
-                          <button
-                            key={task.id}
-                            onClick={() => toggleTaskSelection(task.id)}
-                            className={`w-full px-4 py-3 text-left transition-all flex items-center justify-between group ${selectedTasks.includes(task.id)
-                              ? 'bg-blue-50 hover:bg-blue-100'
-                              : 'hover:bg-gray-50'
-                              }`}
-                          >
-                            <div className="flex-1 min-w-0">
-                              <div className={`font-medium ${selectedTasks.includes(task.id) ? 'text-blue-900' : 'text-gray-700'}`}>
-                                {task.title}
-                              </div>
-                              {task.description && (
-                                <div className="text-sm text-gray-500 truncate mt-0.5">{task.description}</div>
-                              )}
-                            </div>
-                            <div className={`ml-3 p-1 rounded-full transition-all ${selectedTasks.includes(task.id)
-                              ? 'bg-blue-600'
-                              : 'bg-gray-200 group-hover:bg-gray-300'
-                              }`}>
-                              <Check className={`w-3.5 h-3.5 ${selectedTasks.includes(task.id)
-                                ? 'text-white'
-                                : 'text-transparent'
-                                }`} />
-                            </div>
-                          </button>
-                        ))}
-                        <div className="border-t border-gray-100 mt-1">
+                        <div className="border-b border-gray-100 mb-1">
                           <button
                             onClick={() => {
                               setShowCreateTask(true);
@@ -453,6 +455,38 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                             <span className="font-medium">Create New Task</span>
                           </button>
                         </div>
+                        {projectTasks.length === 0 ? (
+                          <div className="p-4 text-center text-gray-500">No pending tasks found</div>
+                        ) : (
+                          projectTasks.map(task => (
+                            <button
+                              key={task.id}
+                              onClick={() => toggleTaskSelection(task.id)}
+                              className={`w-full px-4 py-3 text-left transition-all flex items-center justify-between group ${selectedTasks.includes(task.id)
+                                ? 'bg-blue-50 hover:bg-blue-100'
+                                : 'hover:bg-gray-50'
+                                }`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className={`font-medium ${selectedTasks.includes(task.id) ? 'text-blue-900' : 'text-gray-700'}`}>
+                                  {task.title}
+                                </div>
+                                {task.description && (
+                                  <div className="text-sm text-gray-500 truncate mt-0.5">{task.description}</div>
+                                )}
+                              </div>
+                              <div className={`ml-3 p-1 rounded-full transition-all ${selectedTasks.includes(task.id)
+                                ? 'bg-blue-600'
+                                : 'bg-gray-200 group-hover:bg-gray-300'
+                                }`}>
+                                <Check className={`w-3.5 h-3.5 ${selectedTasks.includes(task.id)
+                                  ? 'text-white'
+                                  : 'text-transparent'
+                                  }`} />
+                              </div>
+                            </button>
+                          ))
+                        )}
                       </>
                     )}
                   </div>
@@ -528,26 +562,52 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
             </div>
           )}
 
-          {/* Task Description */}
+          {/* Task Summary */}
           <div>
             <label className="block text-sm font-semibold text-gray-700 mb-2">
               Task Summary
+              {!isEditingTaskSummary && (
+                <span className="text-xs text-gray-500 ml-2">(Click to edit)</span>
+              )}
             </label>
             <div className="relative">
-              <textarea
-                ref={inputRef}
-                value={tasks}
-                onChange={(e) => setTasks(e.target.value)}
-                onKeyDown={handleKeyDown}
-                className="w-full p-4 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 focus:border-blue-500 transition-all resize-none bg-gray-50"
-                rows={5}
-                placeholder="Your task summary will appear here..."
-                disabled
-                style={{ lineHeight: '1.6' }}
-              />
-              <div className="absolute bottom-3 right-3 text-xs text-gray-400 bg-gray-50 px-2 py-1 rounded">
-                Auto-generated
-              </div>
+              {!isEditingTaskSummary ? (
+                // Display mode - clickable text
+                <div
+                  onClick={handleTaskSummaryClick}
+                  className="w-full p-4 border-2 border-gray-200 rounded-xl bg-gray-50 hover:bg-gray-100 cursor-pointer transition-all min-h-[120px] flex items-start"
+                  style={{ lineHeight: '1.6' }}
+                >
+                  <div className="flex-1">
+                    {tasks ? (
+                      <div className="text-gray-700 whitespace-pre-wrap">{tasks}</div>
+                    ) : (
+                      <div className="text-gray-400">Your task summary will appear here...</div>
+                    )}
+                  </div>
+                  <div className="ml-2 text-xs text-gray-400 bg-gray-200 px-2 py-1 rounded opacity-70">
+                    Click to edit
+                  </div>
+                </div>
+              ) : (
+                // Edit mode - textarea
+                <textarea
+                  ref={inputRef}
+                  value={tasks}
+                  onChange={(e) => setTasks(e.target.value)}
+                  onKeyDown={handleTaskSummaryKeyDown}
+                  onBlur={handleTaskSummaryBlur}
+                  className="w-full p-4 border-2 border-blue-500 rounded-xl focus:outline-none focus:ring-4 focus:ring-blue-100 transition-all resize-none bg-white"
+                  rows={5}
+                  placeholder="Enter your task summary here..."
+                  style={{ lineHeight: '1.6' }}
+                />
+              )}
+              {isEditingTaskSummary && (
+                <div className="absolute bottom-3 right-3 text-xs text-gray-500 bg-white px-2 py-1 rounded shadow-sm">
+                  Press Enter to save, Shift+Enter for new line
+                </div>
+              )}
             </div>
           </div>
 
