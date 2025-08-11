@@ -2813,7 +2813,7 @@ const EmployeeAttendanceTable = () => {
                           <th className={tableHeading}>Check-out</th>
                           <th className={tableHeading}>Break Start</th>
 
-                          <th className={tableHeading}>2nd Check-in</th>
+                          <th className={tableHeading}>Break End</th>
                           <th className={tableHeading}>Today's Task</th>
                           <th className={tableHeading}>Mode</th>
                           <th className={tableHeading}>Status</th>
