@@ -631,7 +631,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
           </div>
         </div>
 
-        {/* Footer */}
+        {/* Footer Section*/}
         <div className="px-6 py-4 bg-gradient-to-t from-gray-50 to-white border-t border-gray-100 flex justify-end space-x-3">
           <button
             onClick={onSkip}
