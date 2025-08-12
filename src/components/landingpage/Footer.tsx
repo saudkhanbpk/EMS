@@ -12,7 +12,7 @@ const Footer = () => {
     <footer className="bg-gradient-to-r from-blue-600 to-purple-700 text-white">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          <div>
+          <div className="col-span-1">
             {/* EstroWork heading in yellow */}
             <h3 className="text-2xl font-bold mb-4 text-yellow-400">EstroWork</h3>
             {/* Paragraph in white */}
@@ -20,48 +20,73 @@ const Footer = () => {
               Transform your workplace with intelligent employee management solutions powered by AI and modern technology.
             </p>
             <div className="flex space-x-4">
-              {[Facebook, Twitter, Linkedin, Instagram].map((Icon, i) => (
-                <a
-                  key={i}
-                  href="#"
-                  className="hover:text-yellow-400 transition-colors duration-200"
-                >
-                  {/* Icons in yellow */}
-                  <Icon size={20} className="text-yellow-400" />
-                </a>
-              ))}
+              <a
+                href="https://www.facebook.com/techcreatorfb/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-yellow-400 transition-colors duration-200"
+              >
+                <Facebook size={20} className="text-yellow-400" />
+              </a>
+              <a
+                href="https://x.com/TechCreatorCo"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-yellow-400 transition-colors duration-200"
+              >
+                <Twitter size={20} className="text-yellow-400" />
+              </a>
+              <a
+                href="https://www.linkedin.com/company/techcreator?trk=public_profile_topcard-current-company"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-yellow-400 transition-colors duration-200"
+              >
+                <Linkedin size={20} className="text-yellow-400" />
+              </a>
+              <a
+                href="https://www.instagram.com/techcreatorco/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="hover:text-yellow-400 transition-colors duration-200"
+              >
+                <Instagram size={20} className="text-yellow-400" />
+              </a>
             </div>
           </div>
 
-          <div>
-            {/* Quick Links heading in yellow */}
-            <h4 className="text-lg font-semibold mb-4 text-yellow-400">Quick Links</h4>
-            <ul className="space-y-2">
-              {['home', 'features', 'pricing', 'contact'].map((section) => (
-                <li key={section}>
-                  <button
-                    onClick={() => scrollToSection(section)}
-                    className="hover:text-yellow-400 transition-colors duration-200"
-                  >
-                    {/* Button text white */}
-                    <span className="text-white">{section.charAt(0).toUpperCase() + section.slice(1)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
+          {/* Quick Links and Features in a nested grid for mobile */}
+          <div className="col-span-1 grid grid-cols-2 gap-8 md:col-span-2 md:grid-cols-2 lg:col-span-2 lg:grid-cols-2">
+            <div>
+              {/* Quick Links heading in yellow */}
+              <h4 className="text-lg font-semibold mb-4 text-yellow-400">Quick Links</h4>
+              <ul className="space-y-2">
+                {['home', 'features', 'pricing', 'contact'].map((section) => (
+                  <li key={section}>
+                    <button
+                      onClick={() => scrollToSection(section)}
+                      className="hover:text-yellow-400 transition-colors duration-200"
+                    >
+                      {/* Button text white */}
+                      <span className="text-white">{section.charAt(0).toUpperCase() + section.slice(1)}</span>
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            </div>
+
+            <div>
+              {/* Features heading in yellow */}
+              <h4 className="text-lg font-semibold mb-4 text-yellow-400">Features</h4>
+              <ul className="space-y-2">
+                {['Location Tracking', 'AI Daily Logs', 'Project Management', 'Leave Management', 'Overtime Tracking', '24/7 Support'].map((feature) => (
+                  <li key={feature} className="text-white">{feature}</li>
+                ))}
+              </ul>
+            </div>
           </div>
 
-          <div>
-            {/* Features heading in yellow */}
-            <h4 className="text-lg font-semibold mb-4 text-yellow-400">Features</h4>
-            <ul className="space-y-2">
-              {['Location Tracking', 'AI Daily Logs', 'Project Management', 'Leave Management', 'Overtime Tracking', '24/7 Support'].map((feature) => (
-                <li key={feature} className="text-white">{feature}</li>
-              ))}
-            </ul>
-          </div>
-
-          <div>
+          <div className="col-span-1">
             {/* Contact Info heading in yellow */}
             <h4 className="text-lg font-semibold mb-4 text-yellow-400">Contact Info</h4>
             <div className="space-y-3">
@@ -73,7 +98,6 @@ const Footer = () => {
                 <Phone size={16} className="text-yellow-400" />
                 <span className="text-white">+1(321)364-6803</span>
               </div>
-
             </div>
           </div>
         </div>

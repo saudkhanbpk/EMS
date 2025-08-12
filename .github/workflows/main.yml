@@ -47,11 +47,15 @@ jobs:
         with:
           node-version: '18'
 
-      - name: Install Dependencies
-        run: npm install
+      - name: Install Backend Dependencies
+        run: |
+          cd backend
+          npm install
 
       - name: Run FetchUsers Script
-        run: node --experimental-modules fetchUsers.js
+        run: |
+          cd backend
+          npm run fetch-users
         env:
-          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
-          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+          VITE_SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          VITE_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}

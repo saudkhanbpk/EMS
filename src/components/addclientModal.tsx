@@ -367,8 +367,9 @@ const AddClientModal: React.FC<AddClientModalProps> = ({
 
                       try {
                         // Call the backend API
+                        const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
                         const response = await axios.post(
-                          'https://ems-server-0bvq.onrender.com/inviteClient',
+                          `${backendUrl}/inviteClient`,
                           {
                             email,
                             personalEmail,

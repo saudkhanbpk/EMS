@@ -131,8 +131,9 @@ const AddNewTask = ({
         if (user.personal_email) {
           console.log('Sending email to:', user.personal_email);
 
+          const backendUrl = import.meta.env.VITE_BACKEND_URL || 'http://localhost:5000';
           const response = await fetch(
-            'https://ems-server-0bvq.onrender.com/sendtaskemail',
+            `${backendUrl}/sendtaskemail`,
             {
               method: 'POST',
               headers: {

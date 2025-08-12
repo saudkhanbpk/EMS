@@ -113,14 +113,14 @@ const Contact = () => {
               </div>
             </div>
 
-            <div className="mt-8 p-6 bg-blue-50 rounded-lg">
+            {/* <div className="mt-8 p-6 bg-blue-50 rounded-lg">
               <h4 className="font-semibold text-gray-900 mb-2">Business Hours</h4>
               <p className="text-gray-600">
                 Monday - Friday: 9:00 AM - 6:00 PM<br />
                 Saturday: Closed<br />
                 Sunday: Closed
               </p>
-            </div>
+            </div> */}
           </div>
 
           <div>
