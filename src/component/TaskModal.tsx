@@ -558,6 +558,22 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                     )}
                   </button>
                 </div>
+                {/* No Task Today Button */}
+                <div className="flex justify-end mt-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowCreateTask(false);
+                      setNewTaskTitle('');
+                      setNewTaskDescription('');
+                      setSelectedTasks([]); // Clear any selected tasks
+                      setTasks('No task today'); // Set summary for admin/member section
+                    }}
+                    className="px-4 py-2 text-sm font-medium bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition-all"
+                  >
+                    No Task Today
+                  </button>
+                </div>
               </div>
             </div>
           )}
