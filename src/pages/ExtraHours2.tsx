@@ -707,8 +707,8 @@ const ExtraHours: React.FC = () => {
               <thead>
                 <tr className="bg-gray-50">
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check In</th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Check Out</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Over Time Start</th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Over Time End</th>
                   {/* <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th> */}
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Work Mode</th>
                   <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Breaks</th>
@@ -830,7 +830,7 @@ const ExtraHours: React.FC = () => {
                 className="w-full flex items-center justify-center bg-red-600 text-white py-2 px-4 rounded-lg hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2 disabled:opacity-50"
               >
                 <LogOut className="w-5 h-5 mr-2" />
-                {loading ? 'Checking out...' : 'Check Out'}
+                {loading ? 'Checking out...' : 'Over Time End'}
               </button>
             </div>
           ) : (
@@ -839,7 +839,7 @@ const ExtraHours: React.FC = () => {
               disabled={loading || isRemoteDisabled || isDisabled} // Button is disabled if loading or if the condition is met
               className="w-full bg-blue-600 text-white py-2 px-4 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50"
             >
-              {loading ? 'Checking in...' : 'Check In'}
+              {loading ? 'Checking in...' : 'Over Time Start'}
             </button>
           )}
         </div>

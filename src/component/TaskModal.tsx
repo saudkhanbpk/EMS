@@ -570,7 +570,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                     )}
                   </button>
                 </div>
-                {/* No Task Today Button */}
+                {/* No Task Today Button
                 <div className="flex justify-end mt-2">
                   <button
                     type="button"
@@ -585,7 +585,7 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
                   >
                     No Task Today
                   </button>
-                </div>
+                </div> */}
               </div>
             </div>
           )}
@@ -648,28 +648,48 @@ const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose, onApply, onSkip,
         </div>
 
         {/* Footer Section*/}
-        <div className="px-6 py-4 bg-gradient-to-t from-gray-50 to-white border-t border-gray-100 flex justify-end space-x-3">
-          <button
-            onClick={onSkip}
-            disabled={isSaving}
-            className="px-5 py-2.5 border-2 border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-all focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:opacity-50"
-          >
-            Skip for now
-          </button>
-          <button
-            onClick={handleApply}
-            disabled={!tasks.trim() || isSaving}
-            className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
-          >
-            {isSaving ? (
-              <div className="flex items-center space-x-2">
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                <span>Saving...</span>
-              </div>
-            ) : (
-              'Start Working'
-            )}
-          </button>
+        <div className="px-6 py-4 bg-gradient-to-t from-gray-50 to-white border-t border-gray-100 flex justify-between">
+          {/* Left side buttons */}
+          <div>
+            <button
+              type="button"
+              onClick={() => {
+                setShowCreateTask(false);
+                setNewTaskTitle('');
+                setNewTaskDescription('');
+                setSelectedTasks([]);
+                setTasks('No task today');
+              }}
+              className="px-5 py-2.5 bg-gray-200 text-gray-700 rounded-lg font-medium hover:bg-gray-300 transition-all mr-3"
+            >
+              No Task Today
+            </button>
+          </div>
+          
+          {/* Right side buttons */}
+          <div className="flex space-x-3">
+            <button
+              onClick={onSkip}
+              disabled={isSaving}
+              className="px-5 py-2.5 border-2 border-gray-200 rounded-lg text-gray-700 font-medium hover:bg-gray-50 hover:border-gray-300 transition-all focus:outline-none focus:ring-4 focus:ring-gray-100 disabled:opacity-50"
+            >
+              Skip for now
+            </button>
+            <button
+              onClick={handleApply}
+              disabled={!tasks.trim() || isSaving}
+              className="px-5 py-2.5 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-all focus:outline-none focus:ring-4 focus:ring-blue-100 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm hover:shadow-md"
+            >
+              {isSaving ? (
+                <div className="flex items-center space-x-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  <span>Saving...</span>
+                </div>
+              ) : (
+                'Start Working'
+              )}
+            </button>
+          </div>
         </div>
       </div>
 
